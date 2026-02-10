@@ -1,0 +1,235 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Phone, PhoneOff, Mic, MicOff, Loader2 } from 'lucide-react';
+import type { RetellWebClient as BaseRetellWebClient } from 'retell-client-js-sdk';
+
+// Extend the SDK type with methods that exist at runtime but aren't in the type definitions
+interface RetellWebClient extends BaseRetellWebClient {
+    muteMicrophone?: () => void;
+    unmuteMicrophone?: () => void;
+}
+
+interface TestCallProps {
+    agentId: string;
+    agentName: string;
+}
+
+export function TestCall({ agentId, agentName }: TestCallProps) {
+    const retellClientRef = useRef<RetellWebClient | null>(null);
+    const [sdkLoaded, setSdkLoaded] = useState(false);
+    const [isCallActive, setIsCallActive] = useState(false);
+    const [isConnecting, setIsConnecting] = useState(false);
+    const [isMuted, setIsMuted] = useState(false);
+    const [transcript, setTranscript] = useState<{ role: string; content: string }[]>([]);
+    const [error, setError] = useState<string | null>(null);
+
+    // Load Retell SDK on mount
+    useEffect(() => {
+        const loadSDK = async () => {
+            try {
+                const { RetellWebClient } = await import('retell-client-js-sdk');
+                retellClientRef.current = new RetellWebClient();
+                setSdkLoaded(true);
+            } catch (err) {
+                console.log('Retell SDK loading issue:', err);
+                setSdkLoaded(false);
+            }
+        };
+        loadSDK();
+
+        // Cleanup: stop call and remove listeners on unmount
+        return () => {
+            const client = retellClientRef.current;
+            if (client) {
+                client.stopCall();
+                client.removeAllListeners();
+            }
+        };
+    }, []);
+
+    const startCall = async () => {
+        setIsConnecting(true);
+        setError(null);
+        setTranscript([]);
+
+        try {
+            // Get access token from our API
+            const response = await fetch(`/api/agents/${agentId}/webcall`, {
+                method: 'POST',
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to create call');
+            }
+
+            const { data } = await response.json();
+
+            const client = retellClientRef.current;
+            if (!client) {
+                setError('Retell SDK not loaded. Please refresh the page.');
+                setIsConnecting(false);
+                return;
+            }
+
+            // Set up event listeners
+            client.on('call_started', () => {
+                setIsCallActive(true);
+                setIsConnecting(false);
+            });
+
+            client.on('call_ended', () => {
+                setIsCallActive(false);
+                setIsConnecting(false);
+            });
+
+            client.on('error', (err: Error) => {
+                setError(err.message);
+                setIsCallActive(false);
+                setIsConnecting(false);
+            });
+
+            client.on('update', (update: { transcript?: { role: string; content: string }[] }) => {
+                if (update.transcript) {
+                    setTranscript(update.transcript);
+                }
+            });
+
+            // Start the call
+            await client.startCall({
+                accessToken: data.access_token,
+            });
+
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to start call');
+            setIsConnecting(false);
+        }
+    };
+
+    const endCall = () => {
+        const client = retellClientRef.current;
+        if (client) {
+            client.stopCall();
+        }
+        setIsCallActive(false);
+        setIsConnecting(false);
+    };
+
+    const toggleMute = () => {
+        const client = retellClientRef.current;
+        if (client) {
+            if (isMuted) {
+                client.unmuteMicrophone?.();
+            } else {
+                client.muteMicrophone?.();
+            }
+            setIsMuted(!isMuted);
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Phone className="h-5 w-5" />
+                    Test Call
+                </CardTitle>
+                <CardDescription>
+                    Make a test call to {agentName}
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {/* Controls */}
+                <div className="flex items-center gap-4">
+                    {!isCallActive ? (
+                        <Button
+                            onClick={startCall}
+                            disabled={isConnecting || !sdkLoaded}
+                            variant="default"
+                            style={{ backgroundColor: '#16a34a', color: 'white' }}
+                        >
+                            {isConnecting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Connecting...
+                                </>
+                            ) : (
+                                <>
+                                    <Phone className="mr-2 h-4 w-4" />
+                                    Start Test Call
+                                </>
+                            )}
+                        </Button>
+                    ) : (
+                        <>
+                            <Button
+                                onClick={endCall}
+                                variant="destructive"
+                            >
+                                <PhoneOff className="mr-2 h-4 w-4" />
+                                End Call
+                            </Button>
+                            <Button
+                                onClick={toggleMute}
+                                variant="outline"
+                            >
+                                {isMuted ? (
+                                    <>
+                                        <MicOff className="mr-2 h-4 w-4" />
+                                        Unmute
+                                    </>
+                                ) : (
+                                    <>
+                                        <Mic className="mr-2 h-4 w-4" />
+                                        Mute
+                                    </>
+                                )}
+                            </Button>
+                        </>
+                    )}
+                </div>
+
+                {/* Error */}
+                {error && (
+                    <div className="text-sm text-red-500 bg-red-50 dark:bg-red-950 p-3 rounded-lg">
+                        {error}
+                    </div>
+                )}
+
+                {/* Live Transcript */}
+                {(isCallActive || transcript.length > 0) && (
+                    <div className="space-y-2">
+                        <p className="text-sm font-medium">Live Transcript</p>
+                        <div className="max-h-48 overflow-y-auto bg-slate-50 dark:bg-slate-900 rounded-lg p-3 space-y-2">
+                            {transcript.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                    Waiting for conversation...
+                                </p>
+                            ) : (
+                                transcript.map((msg, i) => (
+                                    <div key={i} className="text-sm">
+                                        <span className={`font-medium ${msg.role === 'agent' ? 'text-blue-600' : 'text-green-600'}`}>
+                                            {msg.role === 'agent' ? 'Agent' : 'You'}:
+                                        </span>{' '}
+                                        <span className="text-muted-foreground">{msg.content}</span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Status Indicator */}
+                {isCallActive && (
+                    <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                        <span className="text-sm text-muted-foreground">Call in progress</span>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
