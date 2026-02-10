@@ -174,7 +174,7 @@ export function AnalyticsCards({
 
     if (loading) {
         return (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {[1, 2, 3, 4].map((i) => (
                     <CardSkeleton key={i} index={i - 1} />
                 ))}
@@ -183,7 +183,7 @@ export function AnalyticsCards({
     }
 
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
             {cards.map((card, index) => {
                 const theme = cardThemes[card.theme];
                 return (
@@ -236,7 +236,7 @@ export function AnalyticsCards({
 // Export skeleton for use elsewhere
 export function AnalyticsCardsSkeleton() {
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
                 <CardSkeleton key={i} index={i - 1} />
             ))}

@@ -109,7 +109,7 @@ export default async function DashboardPage() {
                 userAvatar={user.profile.avatar_url}
             />
 
-            <div className="flex-1 p-6 space-y-8">
+            <div className="flex-1 p-4 sm:p-6 space-y-6 sm:space-y-8">
                 <div className="animate-fade-up">
                     <h2 className="text-2xl font-bold tracking-tight">
                         Welcome back, {user.profile.full_name?.split(' ')[0] || 'there'}
@@ -132,7 +132,7 @@ export default async function DashboardPage() {
                 <div className="grid gap-4 md:grid-cols-7">
                     <UsageChart data={callVolumeData} />
 
-                    <Card className="col-span-3">
+                    <Card className="md:col-span-3">
                         <CardHeader>
                             <CardTitle>Your Agents</CardTitle>
                         </CardHeader>

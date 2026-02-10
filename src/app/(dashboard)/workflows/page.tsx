@@ -30,15 +30,15 @@ export default async function WorkflowsPage() {
                 userAvatar={user.profile.avatar_url}
             />
 
-            <div className="flex-1 p-6 space-y-6 overflow-auto">
-                <div className="flex items-center justify-between">
+            <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight">Workflows</h2>
                         <p className="text-muted-foreground">
                             Automate actions after each call
                         </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         <Button variant="outline" asChild>
                             <Link href="/workflows/history">
                                 <History className="mr-2 h-4 w-4" />

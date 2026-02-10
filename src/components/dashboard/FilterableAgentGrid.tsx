@@ -48,7 +48,7 @@ export function FilterableAgentGrid({ agents, agentPhoneMap }: FilterableAgentGr
             />
 
             {filteredAgents.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredAgents.map((agent) => (
                         <AgentCard
                             key={agent.id}

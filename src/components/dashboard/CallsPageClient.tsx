@@ -181,7 +181,7 @@ export function CallsPageClient({
                             <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-8 w-8"
+                                className="h-10 w-10 sm:h-8 sm:w-8"
                                 onClick={() => goToPage(1)}
                                 disabled={currentPage === 1}
                                 aria-label="First page"
@@ -191,7 +191,7 @@ export function CallsPageClient({
                             <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-8 w-8"
+                                className="h-10 w-10 sm:h-8 sm:w-8"
                                 onClick={() => goToPage(currentPage - 1)}
                                 disabled={currentPage === 1}
                                 aria-label="Previous page"
@@ -204,7 +204,7 @@ export function CallsPageClient({
                             <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-8 w-8"
+                                className="h-10 w-10 sm:h-8 sm:w-8"
                                 onClick={() => goToPage(currentPage + 1)}
                                 disabled={currentPage === pagination.totalPages}
                                 aria-label="Next page"
@@ -214,7 +214,7 @@ export function CallsPageClient({
                             <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-8 w-8"
+                                className="h-10 w-10 sm:h-8 sm:w-8"
                                 onClick={() => goToPage(pagination.totalPages)}
                                 disabled={currentPage === pagination.totalPages}
                                 aria-label="Last page"

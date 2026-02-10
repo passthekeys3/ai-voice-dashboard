@@ -28,7 +28,7 @@ export default async function ClientsPage() {
                 userAvatar={user.profile.avatar_url}
             />
 
-            <div className="flex-1 p-6 space-y-6">
+            <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight">Clients</h2>

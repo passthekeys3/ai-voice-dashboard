@@ -190,73 +190,28 @@ export function WorkflowsList({ workflows }: WorkflowsListProps) {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Trigger</TableHead>
-                            <TableHead>Agent</TableHead>
-                            <TableHead>Actions</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Options</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {workflows.map((workflow) => (
-                            <TableRow key={workflow.id}>
-                                <TableCell>
-                                    <div>
-                                        <div className="font-medium">{workflow.name}</div>
-                                        {workflow.description && (
-                                            <div className="text-sm text-muted-foreground truncate max-w-[200px]">
-                                                {workflow.description}
-                                            </div>
-                                        )}
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge variant="outline">
-                                        {triggerLabels[workflow.trigger] || workflow.trigger}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    {workflow.agent ? (
-                                        <div className="flex items-center gap-2">
-                                            <Bot className="h-4 w-4 text-muted-foreground" />
-                                            <span>{workflow.agent.name}</span>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-2 text-muted-foreground">
-                                            <Globe className="h-4 w-4" />
-                                            <span>All Agents</span>
+                {/* Mobile card view */}
+                <div className="md:hidden space-y-3">
+                    {workflows.map((workflow) => (
+                        <div key={workflow.id} className="border rounded-lg p-4 space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                    <div className="font-medium truncate">{workflow.name}</div>
+                                    {workflow.description && (
+                                        <div className="text-sm text-muted-foreground truncate">
+                                            {workflow.description}
                                         </div>
                                     )}
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-1">
-                                        {workflow.actions.map((action, i) => (
-                                            <Badge
-                                                key={i}
-                                                variant="secondary"
-                                                className="flex items-center gap-1"
-                                            >
-                                                {actionTypeIcons[action.type]}
-                                                {actionTypeLabels[action.type]}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </TableCell>
-                                <TableCell>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
                                     <Switch
                                         checked={workflow.is_active}
                                         disabled={updatingId === workflow.id}
                                         onCheckedChange={(checked) => handleToggleActive(workflow.id, checked)}
                                     />
-                                </TableCell>
-                                <TableCell className="text-right">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon">
+                                            <Button variant="ghost" size="icon-sm">
                                                 <MoreHorizontal className="h-4 w-4" />
                                             </Button>
                                         </DropdownMenuTrigger>
@@ -267,9 +222,7 @@ export function WorkflowsList({ workflows }: WorkflowsListProps) {
                                                     Edit
                                                 </Link>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() => handleDuplicate(workflow)}
-                                            >
+                                            <DropdownMenuItem onClick={() => handleDuplicate(workflow)}>
                                                 <Copy className="h-4 w-4 mr-2" />
                                                 Duplicate
                                             </DropdownMenuItem>
@@ -279,20 +232,148 @@ export function WorkflowsList({ workflows }: WorkflowsListProps) {
                                                     History
                                                 </Link>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() => handleDelete(workflow.id)}
-                                                className="text-red-600"
-                                            >
+                                            <DropdownMenuItem onClick={() => handleDelete(workflow.id)} className="text-red-600">
                                                 <Trash2 className="h-4 w-4 mr-2" />
                                                 Delete
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
-                                </TableCell>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="outline">
+                                    {triggerLabels[workflow.trigger] || workflow.trigger}
+                                </Badge>
+                                {workflow.agent ? (
+                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                        <Bot className="h-3.5 w-3.5" />
+                                        {workflow.agent.name}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                        <Globe className="h-3.5 w-3.5" />
+                                        All Agents
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                                {workflow.actions.map((action, i) => (
+                                    <Badge key={i} variant="secondary" className="flex items-center gap-1 text-xs">
+                                        {actionTypeIcons[action.type]}
+                                        {actionTypeLabels[action.type]}
+                                    </Badge>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Desktop table view */}
+                <div className="hidden md:block">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Trigger</TableHead>
+                                <TableHead>Agent</TableHead>
+                                <TableHead>Actions</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Options</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {workflows.map((workflow) => (
+                                <TableRow key={workflow.id}>
+                                    <TableCell>
+                                        <div>
+                                            <div className="font-medium">{workflow.name}</div>
+                                            {workflow.description && (
+                                                <div className="text-sm text-muted-foreground truncate max-w-[200px]">
+                                                    {workflow.description}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline">
+                                            {triggerLabels[workflow.trigger] || workflow.trigger}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        {workflow.agent ? (
+                                            <div className="flex items-center gap-2">
+                                                <Bot className="h-4 w-4 text-muted-foreground" />
+                                                <span>{workflow.agent.name}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <Globe className="h-4 w-4" />
+                                                <span>All Agents</span>
+                                            </div>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-1">
+                                            {workflow.actions.map((action, i) => (
+                                                <Badge
+                                                    key={i}
+                                                    variant="secondary"
+                                                    className="flex items-center gap-1"
+                                                >
+                                                    {actionTypeIcons[action.type]}
+                                                    {actionTypeLabels[action.type]}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Switch
+                                            checked={workflow.is_active}
+                                            disabled={updatingId === workflow.id}
+                                            onCheckedChange={(checked) => handleToggleActive(workflow.id, checked)}
+                                        />
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/workflows/${workflow.id}`}>
+                                                        <Edit className="h-4 w-4 mr-2" />
+                                                        Edit
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => handleDuplicate(workflow)}
+                                                >
+                                                    <Copy className="h-4 w-4 mr-2" />
+                                                    Duplicate
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/workflows/history?workflow_id=${workflow.id}`}>
+                                                        <History className="h-4 w-4 mr-2" />
+                                                        History
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => handleDelete(workflow.id)}
+                                                    className="text-red-600"
+                                                >
+                                                    <Trash2 className="h-4 w-4 mr-2" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             </CardContent>
         </Card>
     );

@@ -139,7 +139,7 @@ export default async function AnalyticsPage({ searchParams }: Props) {
                 userAvatar={user.profile.avatar_url}
             />
 
-            <div className="flex-1 p-6 space-y-6 overflow-auto">
+            <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight">Analytics</h2>
@@ -162,7 +162,7 @@ export default async function AnalyticsPage({ searchParams }: Props) {
                 <div className="grid gap-4 md:grid-cols-7">
                     <UsageChart data={analytics.calls_by_day} />
 
-                    <Card className="col-span-3">
+                    <Card className="md:col-span-3">
                         <CardHeader>
                             <CardTitle>Calls by Agent</CardTitle>
                         </CardHeader>

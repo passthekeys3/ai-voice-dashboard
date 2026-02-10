@@ -355,7 +355,7 @@ export function AgentBuilder({ clients, phoneNumbers, context }: AgentBuilderPro
     return (
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
             {/* Chat Panel */}
-            <div className="flex-1 flex flex-col min-w-0 lg:max-w-[55%] border-r border-border">
+            <div className="flex-1 flex flex-col min-w-0 lg:max-w-[55%] border-b lg:border-b-0 lg:border-r border-border">
                 <AgentBuilderChat
                     messages={messages}
                     isStreaming={isStreaming}
@@ -368,7 +368,7 @@ export function AgentBuilder({ clients, phoneNumbers, context }: AgentBuilderPro
             </div>
 
             {/* Preview Panel */}
-            <div className="lg:flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-slate-950">
+            <div className="lg:flex-1 flex flex-col min-w-0 min-h-[400px] lg:min-h-0 bg-slate-50 dark:bg-slate-950">
                 <AgentBuilderPreview
                     draft={draft}
                     onDraftUpdate={handleDraftUpdate}

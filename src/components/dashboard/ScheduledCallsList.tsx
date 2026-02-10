@@ -82,27 +82,19 @@ export function ScheduledCallsList({ upcomingCalls, pastCalls }: ScheduledCallsL
     };
 
     const CallsTable = ({ calls, showActions = false }: { calls: ScheduledCall[]; showActions?: boolean }) => (
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Agent</TableHead>
-                    <TableHead>Scheduled For</TableHead>
-                    <TableHead>Status</TableHead>
-                    {showActions && <TableHead className="text-right">Actions</TableHead>}
-                </TableRow>
-            </TableHeader>
-            <TableBody>
+        <>
+            {/* Mobile card view */}
+            <div className="md:hidden space-y-3">
                 {calls.map((call) => {
                     const status = statusConfig[call.status] || statusConfig.pending;
                     const StatusIcon = status.icon;
                     const dt = formatDateTime(call.scheduled_at);
 
                     return (
-                        <TableRow key={call.id}>
-                            <TableCell>
-                                <div>
-                                    <div className="font-medium">
+                        <div key={call.id} className="border rounded-lg p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                    <div className="font-medium truncate">
                                         {call.contact_name || call.to_number}
                                     </div>
                                     <div className="text-sm text-muted-foreground flex items-center gap-1">
@@ -110,59 +102,135 @@ export function ScheduledCallsList({ upcomingCalls, pastCalls }: ScheduledCallsL
                                         {call.to_number}
                                     </div>
                                 </div>
-                            </TableCell>
-                            <TableCell>
-                                <div className="flex items-center gap-2">
-                                    <Bot className="h-4 w-4 text-muted-foreground" />
+                                <div className={`flex items-center gap-1.5 shrink-0 ${status.color}`}>
+                                    <StatusIcon className={`h-4 w-4 ${call.status === 'in_progress' ? 'animate-spin' : ''}`} />
+                                    <span className="text-sm">{status.label}</span>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 text-sm">
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                    <Bot className="h-3.5 w-3.5" />
                                     {call.agent?.name || 'Unknown'}
                                 </div>
-                            </TableCell>
-                            <TableCell>
-                                <div>
-                                    <div className="font-medium">{dt.date}</div>
-                                    <div className="text-sm text-muted-foreground">{dt.time}</div>
-                                    {call.status === 'pending' && (
-                                        <Badge variant="outline" className="mt-1 text-xs">
-                                            {formatTimeUntil(call.scheduled_at)}
-                                        </Badge>
-                                    )}
-                                </div>
-                            </TableCell>
-                            <TableCell>
-                                <div className={`flex items-center gap-2 ${status.color}`}>
-                                    <StatusIcon className={`h-4 w-4 ${call.status === 'in_progress' ? 'animate-spin' : ''}`} />
-                                    <span>{status.label}</span>
-                                </div>
-                                {call.error_message && (
-                                    <div className="text-xs text-red-500 mt-1 truncate max-w-[200px]">
-                                        {call.error_message}
-                                    </div>
+                                <span className="text-muted-foreground">·</span>
+                                <span>{dt.date} {dt.time}</span>
+                                {call.status === 'pending' && (
+                                    <Badge variant="outline" className="text-xs">
+                                        {formatTimeUntil(call.scheduled_at)}
+                                    </Badge>
                                 )}
-                            </TableCell>
-                            {showActions && (
-                                <TableCell className="text-right">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleCancel(call.id)}
-                                        disabled={cancelling === call.id || call.status !== 'pending'}
-                                    >
-                                        {cancelling === call.id ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <>
-                                                <XCircle className="h-4 w-4 mr-1" />
-                                                Cancel
-                                            </>
-                                        )}
-                                    </Button>
-                                </TableCell>
+                            </div>
+                            {call.error_message && (
+                                <div className="text-xs text-red-500 truncate">{call.error_message}</div>
                             )}
-                        </TableRow>
+                            {showActions && call.status === 'pending' && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleCancel(call.id)}
+                                    disabled={cancelling === call.id}
+                                    className="w-full mt-1"
+                                >
+                                    {cancelling === call.id ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <XCircle className="h-4 w-4 mr-1" />
+                                            Cancel Call
+                                        </>
+                                    )}
+                                </Button>
+                            )}
+                        </div>
                     );
                 })}
-            </TableBody>
-        </Table>
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden md:block">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Contact</TableHead>
+                            <TableHead>Agent</TableHead>
+                            <TableHead>Scheduled For</TableHead>
+                            <TableHead>Status</TableHead>
+                            {showActions && <TableHead className="text-right">Actions</TableHead>}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {calls.map((call) => {
+                            const status = statusConfig[call.status] || statusConfig.pending;
+                            const StatusIcon = status.icon;
+                            const dt = formatDateTime(call.scheduled_at);
+
+                            return (
+                                <TableRow key={call.id}>
+                                    <TableCell>
+                                        <div>
+                                            <div className="font-medium">
+                                                {call.contact_name || call.to_number}
+                                            </div>
+                                            <div className="text-sm text-muted-foreground flex items-center gap-1">
+                                                <Phone className="h-3 w-3" />
+                                                {call.to_number}
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            <Bot className="h-4 w-4 text-muted-foreground" />
+                                            {call.agent?.name || 'Unknown'}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div>
+                                            <div className="font-medium">{dt.date}</div>
+                                            <div className="text-sm text-muted-foreground">{dt.time}</div>
+                                            {call.status === 'pending' && (
+                                                <Badge variant="outline" className="mt-1 text-xs">
+                                                    {formatTimeUntil(call.scheduled_at)}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className={`flex items-center gap-2 ${status.color}`}>
+                                            <StatusIcon className={`h-4 w-4 ${call.status === 'in_progress' ? 'animate-spin' : ''}`} />
+                                            <span>{status.label}</span>
+                                        </div>
+                                        {call.error_message && (
+                                            <div className="text-xs text-red-500 mt-1 truncate max-w-[200px]">
+                                                {call.error_message}
+                                            </div>
+                                        )}
+                                    </TableCell>
+                                    {showActions && (
+                                        <TableCell className="text-right">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleCancel(call.id)}
+                                                disabled={cancelling === call.id || call.status !== 'pending'}
+                                            >
+                                                {cancelling === call.id ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <>
+                                                        <XCircle className="h-4 w-4 mr-1" />
+                                                        Cancel
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </TableCell>
+                                    )}
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            </div>
+        </>
     );
 
     if (upcomingCalls.length === 0 && pastCalls.length === 0) {

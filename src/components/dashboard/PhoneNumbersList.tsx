@@ -126,21 +126,12 @@ export function PhoneNumbersList({ phoneNumbers, agents }: PhoneNumbersListProps
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Phone Number</TableHead>
-                            <TableHead>Inbound Agent</TableHead>
-                            <TableHead>Outbound Agent</TableHead>
-                            <TableHead>Monthly Cost</TableHead>
-                            <TableHead>Purchased</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {phoneNumbers.map((phone) => (
-                            <TableRow key={phone.id}>
-                                <TableCell>
+                {/* Mobile card view */}
+                <div className="md:hidden space-y-3">
+                    {phoneNumbers.map((phone) => (
+                        <div key={phone.id} className="border rounded-lg p-4 space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <div>
                                     <div className="flex items-center gap-2">
                                         <PhoneIcon className="h-4 w-4 text-muted-foreground" />
                                         <span className="font-mono font-medium">
@@ -148,105 +139,227 @@ export function PhoneNumbersList({ phoneNumbers, agents }: PhoneNumbersListProps
                                         </span>
                                     </div>
                                     {phone.nickname && (
-                                        <div className="text-sm text-muted-foreground">
-                                            {phone.nickname}
-                                        </div>
+                                        <div className="text-sm text-muted-foreground mt-0.5">{phone.nickname}</div>
                                     )}
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-1">
-                                        <PhoneIncoming className="h-3.5 w-3.5 text-blue-500" />
-                                        <Select
-                                            value={phone.inbound_agent_id || 'unassigned'}
-                                            onValueChange={(value) =>
-                                                handleAssign(phone.id, value === 'unassigned' ? null : value, 'inbound')
-                                            }
-                                            disabled={assigning?.phoneId === phone.id && assigning?.type === 'inbound'}
-                                        >
-                                            <SelectTrigger className="w-[160px]">
-                                                {assigning?.phoneId === phone.id && assigning?.type === 'inbound' ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <SelectValue placeholder="Select agent" />
-                                                )}
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="unassigned">
-                                                    <span className="text-muted-foreground">Unassigned</span>
-                                                </SelectItem>
-                                                {agents.map((agent) => (
-                                                    <SelectItem key={agent.id} value={agent.id}>
-                                                        <div className="flex items-center gap-2">
-                                                            <Bot className="h-3 w-3" />
-                                                            {agent.name}
-                                                        </div>
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-1">
-                                        <PhoneOutgoing className="h-3.5 w-3.5 text-violet-500" />
-                                        <Select
-                                            value={phone.outbound_agent_id || 'unassigned'}
-                                            onValueChange={(value) =>
-                                                handleAssign(phone.id, value === 'unassigned' ? null : value, 'outbound')
-                                            }
-                                            disabled={assigning?.phoneId === phone.id && assigning?.type === 'outbound'}
-                                        >
-                                            <SelectTrigger className="w-[160px]">
-                                                {assigning?.phoneId === phone.id && assigning?.type === 'outbound' ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <SelectValue placeholder="Select agent" />
-                                                )}
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="unassigned">
-                                                    <span className="text-muted-foreground">Unassigned</span>
-                                                </SelectItem>
-                                                {agents.map((agent) => (
-                                                    <SelectItem key={agent.id} value={agent.id}>
-                                                        <div className="flex items-center gap-2">
-                                                            <Bot className="h-3 w-3" />
-                                                            {agent.name}
-                                                        </div>
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge variant="outline">
-                                        ${(phone.monthly_cost_cents / 100).toFixed(2)}/mo
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    {new Date(phone.purchased_at).toLocaleDateString()}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleDelete(phone.id)}
-                                        disabled={deleting === phone.id}
-                                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                                        aria-label={`Delete phone number ${formatPhoneNumber(phone.phone_number)}`}
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    onClick={() => handleDelete(phone.id)}
+                                    disabled={deleting === phone.id}
+                                    className="text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0"
+                                >
+                                    {deleting === phone.id ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Trash2 className="h-4 w-4" />
+                                    )}
+                                </Button>
+                            </div>
+                            <div className="space-y-2">
+                                <div>
+                                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                                        <PhoneIncoming className="h-3 w-3 text-blue-500" />
+                                        Inbound Agent
+                                    </label>
+                                    <Select
+                                        value={phone.inbound_agent_id || 'unassigned'}
+                                        onValueChange={(value) =>
+                                            handleAssign(phone.id, value === 'unassigned' ? null : value, 'inbound')
+                                        }
+                                        disabled={assigning?.phoneId === phone.id && assigning?.type === 'inbound'}
                                     >
-                                        {deleting === phone.id ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Trash2 className="h-4 w-4" />
-                                        )}
-                                    </Button>
-                                </TableCell>
+                                        <SelectTrigger className="w-full">
+                                            {assigning?.phoneId === phone.id && assigning?.type === 'inbound' ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <SelectValue placeholder="Select agent" />
+                                            )}
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="unassigned">
+                                                <span className="text-muted-foreground">Unassigned</span>
+                                            </SelectItem>
+                                            {agents.map((agent) => (
+                                                <SelectItem key={agent.id} value={agent.id}>
+                                                    <div className="flex items-center gap-2">
+                                                        <Bot className="h-3 w-3" />
+                                                        {agent.name}
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                                        <PhoneOutgoing className="h-3 w-3 text-violet-500" />
+                                        Outbound Agent
+                                    </label>
+                                    <Select
+                                        value={phone.outbound_agent_id || 'unassigned'}
+                                        onValueChange={(value) =>
+                                            handleAssign(phone.id, value === 'unassigned' ? null : value, 'outbound')
+                                        }
+                                        disabled={assigning?.phoneId === phone.id && assigning?.type === 'outbound'}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            {assigning?.phoneId === phone.id && assigning?.type === 'outbound' ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <SelectValue placeholder="Select agent" />
+                                            )}
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="unassigned">
+                                                <span className="text-muted-foreground">Unassigned</span>
+                                            </SelectItem>
+                                            {agents.map((agent) => (
+                                                <SelectItem key={agent.id} value={agent.id}>
+                                                    <div className="flex items-center gap-2">
+                                                        <Bot className="h-3 w-3" />
+                                                        {agent.name}
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                <Badge variant="outline">
+                                    ${(phone.monthly_cost_cents / 100).toFixed(2)}/mo
+                                </Badge>
+                                <span>{new Date(phone.purchased_at).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Desktop table view */}
+                <div className="hidden md:block">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Phone Number</TableHead>
+                                <TableHead>Inbound Agent</TableHead>
+                                <TableHead>Outbound Agent</TableHead>
+                                <TableHead>Monthly Cost</TableHead>
+                                <TableHead>Purchased</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {phoneNumbers.map((phone) => (
+                                <TableRow key={phone.id}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            <PhoneIcon className="h-4 w-4 text-muted-foreground" />
+                                            <span className="font-mono font-medium">
+                                                {formatPhoneNumber(phone.phone_number)}
+                                            </span>
+                                        </div>
+                                        {phone.nickname && (
+                                            <div className="text-sm text-muted-foreground">
+                                                {phone.nickname}
+                                            </div>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-1">
+                                            <PhoneIncoming className="h-3.5 w-3.5 text-blue-500" />
+                                            <Select
+                                                value={phone.inbound_agent_id || 'unassigned'}
+                                                onValueChange={(value) =>
+                                                    handleAssign(phone.id, value === 'unassigned' ? null : value, 'inbound')
+                                                }
+                                                disabled={assigning?.phoneId === phone.id && assigning?.type === 'inbound'}
+                                            >
+                                                <SelectTrigger className="w-[160px]">
+                                                    {assigning?.phoneId === phone.id && assigning?.type === 'inbound' ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <SelectValue placeholder="Select agent" />
+                                                    )}
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="unassigned">
+                                                        <span className="text-muted-foreground">Unassigned</span>
+                                                    </SelectItem>
+                                                    {agents.map((agent) => (
+                                                        <SelectItem key={agent.id} value={agent.id}>
+                                                            <div className="flex items-center gap-2">
+                                                                <Bot className="h-3 w-3" />
+                                                                {agent.name}
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-1">
+                                            <PhoneOutgoing className="h-3.5 w-3.5 text-violet-500" />
+                                            <Select
+                                                value={phone.outbound_agent_id || 'unassigned'}
+                                                onValueChange={(value) =>
+                                                    handleAssign(phone.id, value === 'unassigned' ? null : value, 'outbound')
+                                                }
+                                                disabled={assigning?.phoneId === phone.id && assigning?.type === 'outbound'}
+                                            >
+                                                <SelectTrigger className="w-[160px]">
+                                                    {assigning?.phoneId === phone.id && assigning?.type === 'outbound' ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <SelectValue placeholder="Select agent" />
+                                                    )}
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="unassigned">
+                                                        <span className="text-muted-foreground">Unassigned</span>
+                                                    </SelectItem>
+                                                    {agents.map((agent) => (
+                                                        <SelectItem key={agent.id} value={agent.id}>
+                                                            <div className="flex items-center gap-2">
+                                                                <Bot className="h-3 w-3" />
+                                                                {agent.name}
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline">
+                                            ${(phone.monthly_cost_cents / 100).toFixed(2)}/mo
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        {new Date(phone.purchased_at).toLocaleDateString()}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleDelete(phone.id)}
+                                            disabled={deleting === phone.id}
+                                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                            aria-label={`Delete phone number ${formatPhoneNumber(phone.phone_number)}`}
+                                        >
+                                            {deleting === phone.id ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Trash2 className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             </CardContent>
         </Card>
     );
