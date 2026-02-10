@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import type { AuthUser, Profile, Agency, AgencyBranding, Client } from '@/types';
 
@@ -7,8 +8,9 @@ import type { AuthUser, Profile, Agency, AgencyBranding, Client } from '@/types'
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
     // DEMO MODE: Return demo user when enabled
+    // Uses service client to bypass RLS (demo user has no real Supabase auth session)
     if (process.env.DEMO_MODE === 'true') {
-        const supabase = await createClient();
+        const supabase = createServiceClient();
         const { data: agency } = await supabase
             .from('agencies')
             .select('*')
@@ -146,9 +148,9 @@ export async function requireAuth(): Promise<AuthUser> {
     }
 
     // DEMO MODE: Bypass authentication for demo/sharing purposes
-    // Set DEMO_MODE=true in environment variables to enable
+    // Uses service client to bypass RLS (demo user has no real Supabase auth session)
     if (process.env.DEMO_MODE === 'true') {
-        const supabase = await createClient();
+        const supabase = createServiceClient();
         const { data: agency } = await supabase
             .from('agencies')
             .select('*')
