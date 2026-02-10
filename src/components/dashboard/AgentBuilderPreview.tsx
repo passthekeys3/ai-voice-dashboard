@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { AgentBuilderIntegrationCard } from './AgentBuilderIntegrationCard';
+import { AgentBuilderVoicePicker } from './AgentBuilderVoicePicker';
 import type { AgentDraft, BuilderContext, IntegrationSelection } from '@/lib/agent-builder/types';
 import type { WorkflowTemplate } from '@/lib/agent-builder/templates';
 
@@ -123,24 +124,14 @@ export function AgentBuilderPreview({
 
                         {/* Voice */}
                         <Section icon={<Mic className="h-3.5 w-3.5" />} label="Voice">
-                            {draft.voiceName ? (
-                                <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-xs">
-                                        {draft.voiceName}
-                                    </Badge>
-                                    <Badge variant="secondary" className="text-xs">
-                                        {PROVIDER_LABELS[draft.provider] || draft.provider}
-                                    </Badge>
-                                </div>
-                            ) : draft.voiceId ? (
-                                <Badge variant="outline" className="text-xs">
-                                    {draft.voiceId.slice(0, 20)}...
-                                </Badge>
-                            ) : (
-                                <p className="text-xs text-muted-foreground italic">
-                                    No voice selected yet — recommendations will appear in chat
-                                </p>
-                            )}
+                            <AgentBuilderVoicePicker
+                                selectedVoiceId={draft.voiceId}
+                                selectedVoiceName={draft.voiceName || ''}
+                                provider={draft.provider}
+                                onVoiceSelect={(voiceId, voiceName) =>
+                                    onDraftUpdate({ voiceId, voiceName })
+                                }
+                            />
                         </Section>
 
                         {/* First Message */}
