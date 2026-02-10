@@ -20,27 +20,28 @@ interface AgentBuilderProps {
     clients: { id: string; name: string }[];
     phoneNumbers: { id: string; phone_number: string; nickname?: string; agent_id?: string | null }[];
     context: BuilderContext;
+    availableProviders: ('retell' | 'vapi' | 'bland')[];
 }
-
-const EMPTY_DRAFT: AgentDraft = Object.freeze({
-    name: '',
-    systemPrompt: '',
-    firstMessage: '',
-    voiceId: '',
-    voiceName: '',
-    language: 'en',
-    integrations: [],
-}) as AgentDraft;
 
 let messageIdCounter = 0;
 function generateMessageId(role: string) {
     return `msg-${Date.now()}-${++messageIdCounter}-${role}`;
 }
 
-export function AgentBuilder({ clients, phoneNumbers, context }: AgentBuilderProps) {
+export function AgentBuilder({ clients, phoneNumbers, context, availableProviders }: AgentBuilderProps) {
     const router = useRouter();
+    const defaultProvider = availableProviders[0] || 'retell';
     const [messages, setMessages] = useState<BuilderMessage[]>([]);
-    const [draft, setDraft] = useState<AgentDraft>({ ...EMPTY_DRAFT, integrations: [] });
+    const [draft, setDraft] = useState<AgentDraft>({
+        name: '',
+        provider: defaultProvider,
+        systemPrompt: '',
+        firstMessage: '',
+        voiceId: '',
+        voiceName: '',
+        language: 'en',
+        integrations: [],
+    });
     const [isStreaming, setIsStreaming] = useState(false);
     const [voiceRecommendations, setVoiceRecommendations] = useState<VoiceRecommendation[]>([]);
     const [isCreating, setIsCreating] = useState(false);
@@ -68,9 +69,11 @@ export function AgentBuilder({ clients, phoneNumbers, context }: AgentBuilderPro
         [context.hasGHL, context.hasHubSpot, context.hasGCal, context.hasCalendly, context.hasSlack]
     );
 
-    const fetchAndMatchVoices = useCallback(async (characteristics: VoiceCharacteristics) => {
+    const fetchAndMatchVoices = useCallback(async (characteristics: VoiceCharacteristics, provider?: string) => {
         try {
-            const response = await fetch('/api/voices');
+            const providerParam = provider || draftRef.current.provider;
+            const url = providerParam ? `/api/voices?provider=${providerParam}` : '/api/voices';
+            const response = await fetch(url);
             if (!response.ok) return;
 
             const { data: voices } = await response.json();
@@ -116,6 +119,7 @@ export function AgentBuilder({ clients, phoneNumbers, context }: AgentBuilderPro
 
         // Handle voice recommendations
         if (updates.voiceCharacteristics) {
+            lastVoiceCharacteristicsRef.current = updates.voiceCharacteristics;
             fetchAndMatchVoices(updates.voiceCharacteristics);
         }
 
@@ -300,9 +304,31 @@ export function AgentBuilder({ clients, phoneNumbers, context }: AgentBuilderPro
         }
     }, [isStreaming, context.hasGHL, context.hasHubSpot, context.hasGCal, context.hasCalendly, context.hasSlack, handleLLMResult]);
 
+    // Track last voice characteristics so we can re-match when provider changes
+    const lastVoiceCharacteristicsRef = useRef<VoiceCharacteristics | null>(null);
+
     const handleDraftUpdate = useCallback((updates: Partial<AgentDraft>) => {
-        setDraft(prev => ({ ...prev, ...updates }));
-    }, []);
+        setDraft(prev => {
+            const newDraft = { ...prev, ...updates };
+
+            // When provider changes, clear voice selection so user picks from new provider's voices
+            if (updates.provider && updates.provider !== prev.provider) {
+                newDraft.voiceId = '';
+                newDraft.voiceName = '';
+            }
+
+            return newDraft;
+        });
+
+        // When provider changes, re-fetch voices for the new provider
+        if (updates.provider) {
+            setVoiceRecommendations([]);
+            const lastChars = lastVoiceCharacteristicsRef.current;
+            if (lastChars) {
+                fetchAndMatchVoices(lastChars, updates.provider);
+            }
+        }
+    }, [fetchAndMatchVoices]);
 
     const handleVoiceSelect = useCallback((voiceId: string, voiceName: string) => {
         setDraft(prev => ({ ...prev, voiceId, voiceName }));
@@ -379,6 +405,7 @@ export function AgentBuilder({ clients, phoneNumbers, context }: AgentBuilderPro
                     phoneNumbers={phoneNumbers}
                     context={context}
                     availableTemplates={availableTemplates}
+                    availableProviders={availableProviders}
                 />
             </div>
         </div>

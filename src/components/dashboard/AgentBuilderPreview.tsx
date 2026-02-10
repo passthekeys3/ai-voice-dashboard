@@ -15,6 +15,12 @@ import { AgentBuilderIntegrationCard } from './AgentBuilderIntegrationCard';
 import type { AgentDraft, BuilderContext, IntegrationSelection } from '@/lib/agent-builder/types';
 import type { WorkflowTemplate } from '@/lib/agent-builder/templates';
 
+const PROVIDER_LABELS: Record<string, string> = {
+    retell: 'Retell AI',
+    vapi: 'Vapi',
+    bland: 'Bland.ai',
+};
+
 interface AgentBuilderPreviewProps {
     draft: AgentDraft;
     onDraftUpdate: (updates: Partial<AgentDraft>) => void;
@@ -25,6 +31,7 @@ interface AgentBuilderPreviewProps {
     phoneNumbers: { id: string; phone_number: string; nickname?: string; agent_id?: string | null }[];
     context: BuilderContext;
     availableTemplates: WorkflowTemplate[];
+    availableProviders: ('retell' | 'vapi' | 'bland')[];
 }
 
 export function AgentBuilderPreview({
@@ -37,6 +44,7 @@ export function AgentBuilderPreview({
     phoneNumbers,
     context,
     availableTemplates,
+    availableProviders,
 }: AgentBuilderPreviewProps) {
     const [isPromptExpanded, setIsPromptExpanded] = useState(false);
     const [selectedClientId, setSelectedClientId] = useState<string>('');
@@ -120,9 +128,9 @@ export function AgentBuilderPreview({
                                     <Badge variant="outline" className="text-xs">
                                         {draft.voiceName}
                                     </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                        ID: {draft.voiceId.slice(0, 12)}...
-                                    </span>
+                                    <Badge variant="secondary" className="text-xs">
+                                        {PROVIDER_LABELS[draft.provider] || draft.provider}
+                                    </Badge>
                                 </div>
                             ) : draft.voiceId ? (
                                 <Badge variant="outline" className="text-xs">
@@ -215,6 +223,28 @@ export function AgentBuilderPreview({
             {/* Create Section */}
             {hasContent && (
                 <div className="flex-shrink-0 p-4 border-t border-border bg-white dark:bg-slate-900 space-y-3">
+                    {/* Provider selector — only show when multiple providers available */}
+                    {availableProviders.length > 1 && (
+                        <div>
+                            <Label htmlFor="builder-provider-select" className="text-xs text-muted-foreground mb-1 block">Voice Provider</Label>
+                            <div className="flex gap-1.5">
+                                {availableProviders.map(p => (
+                                    <button
+                                        key={p}
+                                        onClick={() => onDraftUpdate({ provider: p })}
+                                        className={`flex-1 text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                                            draft.provider === p
+                                                ? 'border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 font-medium'
+                                                : 'border-input bg-background text-muted-foreground hover:bg-muted'
+                                        }`}
+                                    >
+                                        {PROVIDER_LABELS[p] || p}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Optional selectors */}
                     <div className="grid grid-cols-2 gap-2">
                         {clients.length > 0 && (

@@ -41,6 +41,13 @@ export default async function AgentBuilderPage() {
         hasSlack: !!user.agency.integrations?.slack?.enabled,
     };
 
+    // Determine which providers the agency has configured
+    const availableProviders = [
+        ...(user.agency.retell_api_key ? ['retell' as const] : []),
+        ...(user.agency.vapi_api_key ? ['vapi' as const] : []),
+        ...(user.agency.bland_api_key ? ['bland' as const] : []),
+    ];
+
     return (
         <div className="flex flex-col h-full">
             <Header
@@ -54,6 +61,7 @@ export default async function AgentBuilderPage() {
                 clients={clientsResult.data || []}
                 phoneNumbers={phoneNumbersResult.data || []}
                 context={context}
+                availableProviders={availableProviders}
             />
         </div>
     );

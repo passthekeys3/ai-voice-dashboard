@@ -88,15 +88,33 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Get provider API key (Retell first, then Vapi, then Bland)
+        // Get provider API keys
         const { data: agency } = await supabase
             .from('agencies')
             .select('retell_api_key, vapi_api_key, bland_api_key')
             .eq('id', user.agency.id)
             .single();
 
-        const provider = agency?.retell_api_key ? 'retell' : agency?.vapi_api_key ? 'vapi' : agency?.bland_api_key ? 'bland' : null;
-        const apiKey = agency?.retell_api_key || agency?.vapi_api_key || agency?.bland_api_key;
+        // Use the provider from draft if specified and valid, otherwise auto-select
+        const requestedProvider = draft.provider as string | undefined;
+        const providerApiKeys: Record<string, string | null> = {
+            retell: agency?.retell_api_key || null,
+            vapi: agency?.vapi_api_key || null,
+            bland: agency?.bland_api_key || null,
+        };
+
+        let provider: string | null = null;
+        let apiKey: string | null = null;
+
+        if (requestedProvider && ['retell', 'vapi', 'bland'].includes(requestedProvider) && providerApiKeys[requestedProvider]) {
+            // User explicitly chose a provider and it has a valid API key
+            provider = requestedProvider;
+            apiKey = providerApiKeys[requestedProvider];
+        } else {
+            // Auto-select: Retell → Vapi → Bland
+            provider = agency?.retell_api_key ? 'retell' : agency?.vapi_api_key ? 'vapi' : agency?.bland_api_key ? 'bland' : null;
+            apiKey = agency?.retell_api_key || agency?.vapi_api_key || agency?.bland_api_key || null;
+        }
 
         if (!provider || !apiKey) {
             return NextResponse.json(

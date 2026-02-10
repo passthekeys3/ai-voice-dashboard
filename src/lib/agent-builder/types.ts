@@ -4,6 +4,7 @@
 
 export interface AgentDraft {
     name: string;
+    provider: 'retell' | 'vapi' | 'bland';
     systemPrompt: string;
     firstMessage: string;
     voiceId: string;
