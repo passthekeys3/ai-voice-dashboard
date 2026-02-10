@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Eye, Palette, Mail, Phone, Globe, Clock, Webhook, Copy, RefreshCw, Key, Hash, CalendarCheck, Loader2 } from 'lucide-react';
+import { Eye, Palette, Mail, Phone, Globe, Clock, Webhook, Copy, RefreshCw, Key, Hash, CalendarCheck, Loader2, CheckCircle2 } from 'lucide-react';
 import type { Agency } from '@/types';
 
 interface SettingsFormProps {
@@ -24,6 +24,10 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
     const [error, setError] = useState<string | null>(null);
     const [showPreview, setShowPreview] = useState(false);
     const [apiGuideTab, setApiGuideTab] = useState<'zapier' | 'generic'>('zapier');
+    const [savingKeys, setSavingKeys] = useState(false);
+    const [keysSaved, setKeysSaved] = useState(false);
+    const [syncing, setSyncing] = useState(false);
+    const [syncResult, setSyncResult] = useState<string | null>(null);
     const [slackTesting, setSlackTesting] = useState(false);
     const [slackTestResult, setSlackTestResult] = useState<string | null>(null);
     const [calendlyValidating, setCalendlyValidating] = useState(false);
@@ -76,6 +80,63 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
         callingWindowEnd: agency.calling_window?.end_hour ?? agency.integrations?.ghl?.calling_window?.end_hour ?? 20,
         callingWindowDays: agency.calling_window?.days_of_week ?? agency.integrations?.ghl?.calling_window?.days_of_week ?? [1, 2, 3, 4, 5],
     });
+
+    const handleSaveApiKeys = async () => {
+        setSavingKeys(true);
+        setKeysSaved(false);
+        setSyncResult(null);
+        try {
+            const response = await fetch('/api/settings', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    retell_api_key: formData.retellApiKey || null,
+                    vapi_api_key: formData.vapiApiKey || null,
+                }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                setError(data.error || 'Failed to save API keys');
+                return;
+            }
+
+            setKeysSaved(true);
+            setError(null);
+            router.refresh();
+        } catch {
+            setError('Failed to save API keys');
+        } finally {
+            setSavingKeys(false);
+        }
+    };
+
+    const handleSyncAgents = async () => {
+        setSyncing(true);
+        setSyncResult(null);
+        try {
+            const response = await fetch('/api/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'agents' }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                setSyncResult(`Error: ${data.error || 'Sync failed'}`);
+                return;
+            }
+
+            const data = await response.json();
+            const agentCount = data.results?.agents?.synced || data.synced || 0;
+            setSyncResult(`Synced ${agentCount} agent${agentCount !== 1 ? 's' : ''} successfully`);
+            router.refresh();
+        } catch {
+            setSyncResult('Error: Sync failed unexpectedly');
+        } finally {
+            setSyncing(false);
+        }
+    };
 
     const validateForm = (): string | null => {
         const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
@@ -610,7 +671,10 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
             {/* API Keys */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Voice Provider API Keys</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                        <Key className="h-5 w-5" />
+                        Voice Provider API Keys
+                    </CardTitle>
                     <CardDescription>
                         Connect your Retell and Vapi accounts to sync agents and calls
                     </CardDescription>
@@ -622,9 +686,19 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                             id="retellApiKey"
                             type="password"
                             value={formData.retellApiKey}
-                            onChange={(e) => setFormData({ ...formData, retellApiKey: e.target.value })}
+                            onChange={(e) => {
+                                setFormData({ ...formData, retellApiKey: e.target.value });
+                                setKeysSaved(false);
+                                setSyncResult(null);
+                            }}
                             placeholder="Enter your Retell API key"
                         />
+                        <p className="text-xs text-muted-foreground">
+                            Find your API key at{' '}
+                            <a href="https://beta.retellai.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                beta.retellai.com/dashboard
+                            </a>
+                        </p>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="vapiApiKey">Vapi API Key</Label>
@@ -632,9 +706,66 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                             id="vapiApiKey"
                             type="password"
                             value={formData.vapiApiKey}
-                            onChange={(e) => setFormData({ ...formData, vapiApiKey: e.target.value })}
+                            onChange={(e) => {
+                                setFormData({ ...formData, vapiApiKey: e.target.value });
+                                setKeysSaved(false);
+                                setSyncResult(null);
+                            }}
                             placeholder="Enter your Vapi API key"
                         />
+                        <p className="text-xs text-muted-foreground">
+                            Find your API key at{' '}
+                            <a href="https://dashboard.vapi.ai" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                dashboard.vapi.ai
+                            </a>
+                        </p>
+                    </div>
+
+                    {syncResult && (
+                        <div className={`p-3 text-sm rounded-md ${syncResult.startsWith('Error') ? 'text-red-600 bg-red-50 dark:bg-red-950/50' : 'text-green-600 bg-green-50 dark:bg-green-950/50'}`}>
+                            {syncResult}
+                        </div>
+                    )}
+
+                    <Separator />
+
+                    <div className="flex gap-3">
+                        <Button
+                            onClick={handleSaveApiKeys}
+                            disabled={savingKeys || (!formData.retellApiKey && !formData.vapiApiKey)}
+                            variant={keysSaved ? 'outline' : 'default'}
+                        >
+                            {savingKeys ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : keysSaved ? (
+                                <>
+                                    <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />
+                                    Keys Saved
+                                </>
+                            ) : (
+                                'Save API Keys'
+                            )}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={handleSyncAgents}
+                            disabled={syncing || (!formData.retellApiKey && !formData.vapiApiKey)}
+                        >
+                            {syncing ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Syncing...
+                                </>
+                            ) : (
+                                <>
+                                    <RefreshCw className="h-4 w-4 mr-2" />
+                                    Sync Agents
+                                </>
+                            )}
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
