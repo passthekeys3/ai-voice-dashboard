@@ -173,11 +173,11 @@ export function CallsPageClient({
 
                 {/* Pagination controls */}
                 {pagination.totalPages > 1 && (
-                    <div className="flex items-center justify-between pt-4 border-t mt-4">
-                        <p className="text-sm text-muted-foreground">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-4 border-t mt-4">
+                        <p className="text-sm text-muted-foreground text-center sm:text-left">
                             Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, pagination.total)} of {pagination.total} calls
                         </p>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-center sm:justify-start gap-1">
                             <Button
                                 variant="outline"
                                 size="icon"

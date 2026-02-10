@@ -31,6 +31,7 @@ export function ActiveCallsList() {
     });
     const channelRef = useRef<RealtimeChannel | null>(null);
     const supabaseRef = useRef(createClient());
+    const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const fetchActiveCalls = useCallback(async () => {
         try {
@@ -124,8 +125,14 @@ export function ActiveCallsList() {
                     setConnectionStatus((prev) => ({
                         ...prev,
                         connected: false,
-                        error: 'Channel error',
+                        reconnecting: false,
+                        error: 'Realtime unavailable',
                     }));
+                    // Increase polling frequency when realtime fails
+                    if (pollIntervalRef.current) {
+                        clearInterval(pollIntervalRef.current);
+                    }
+                    pollIntervalRef.current = setInterval(fetchActiveCalls, 10000);
                 }
             });
 
@@ -144,11 +151,13 @@ export function ActiveCallsList() {
         }, 1000);
 
         // Fallback polling every 30 seconds (reduced from 5s since we have real-time)
-        const pollInterval = setInterval(fetchActiveCalls, 30000);
+        pollIntervalRef.current = setInterval(fetchActiveCalls, 30000);
 
         return () => {
             clearInterval(durationInterval);
-            clearInterval(pollInterval);
+            if (pollIntervalRef.current) {
+                clearInterval(pollIntervalRef.current);
+            }
             if (channelRef.current) {
                 supabase.removeChannel(channelRef.current);
             }
@@ -297,6 +306,10 @@ export function ActiveCallsList() {
                             {connectionStatus.connected ? (
                                 <span className="block mt-2 text-green-600 text-sm">
                                     Real-time updates are active
+                                </span>
+                            ) : connectionStatus.error ? (
+                                <span className="block mt-2 text-muted-foreground text-sm">
+                                    Auto-refreshing every 10 seconds
                                 </span>
                             ) : (
                                 <span className="block mt-2 text-yellow-600 text-sm">

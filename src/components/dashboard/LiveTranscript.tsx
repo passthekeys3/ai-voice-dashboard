@@ -81,6 +81,7 @@ export function LiveTranscript({ callId }: LiveTranscriptProps) {
     const isActiveRef = useRef(false);
     const channelRef = useRef<RealtimeChannel | null>(null);
     const supabaseRef = useRef(createClient());
+    const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const fetchCall = useCallback(async () => {
         try {
@@ -218,8 +219,10 @@ export function LiveTranscript({ callId }: LiveTranscriptProps) {
                     setConnectionStatus((prev) => ({
                         ...prev,
                         connected: false,
-                        error: 'Channel error',
+                        reconnecting: false,
+                        error: 'Realtime unavailable',
                     }));
+                    // Already polling at 3s, no change needed — polling handles updates
                 }
             });
 
@@ -248,7 +251,7 @@ export function LiveTranscript({ callId }: LiveTranscriptProps) {
 
         // Fallback polling every 3 seconds for transcript updates
         // (webhooks may have delays, this ensures we catch all updates)
-        const pollInterval = setInterval(() => {
+        pollIntervalRef.current = setInterval(() => {
             if (isActiveRef.current) {
                 fetchCall();
             }
@@ -257,7 +260,9 @@ export function LiveTranscript({ callId }: LiveTranscriptProps) {
         return () => {
             clearInterval(durationInterval);
             clearInterval(typingInterval);
-            clearInterval(pollInterval);
+            if (pollIntervalRef.current) {
+                clearInterval(pollIntervalRef.current);
+            }
             if (channelRef.current) {
                 supabase.removeChannel(channelRef.current);
             }
@@ -387,6 +392,11 @@ export function LiveTranscript({ callId }: LiveTranscriptProps) {
                         {call.is_active && connectionStatus.connected && (
                             <span className="text-xs font-normal text-green-600">
                                 (real-time)
+                            </span>
+                        )}
+                        {call.is_active && connectionStatus.error && (
+                            <span className="text-xs font-normal text-muted-foreground">
+                                (polling)
                             </span>
                         )}
                     </CardTitle>

@@ -48,7 +48,7 @@ export function UsageChart({ data }: UsageChartProps) {
     }));
 
     return (
-        <Card className="col-span-4">
+        <Card className="md:col-span-4">
             <CardHeader>
                 <CardTitle>Call Volume</CardTitle>
             </CardHeader>

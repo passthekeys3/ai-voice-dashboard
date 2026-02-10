@@ -25,7 +25,7 @@ export function ConnectionStatus({
   const getStatusText = () => {
     if (status.connected) return 'Live';
     if (status.reconnecting) return 'Reconnecting...';
-    if (status.error) return 'Disconnected';
+    if (status.error) return 'Polling';
     return 'Connecting...';
   };
 
