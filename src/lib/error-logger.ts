@@ -1,24 +1,8 @@
 /**
  * Error Logger utility
- * 
- * Provides centralized error logging with optional Sentry integration.
- * To enable Sentry, install @sentry/nextjs and set SENTRY_DSN env var.
+ *
+ * Provides centralized error logging. Add Sentry or other providers here later.
  */
-
-// Check if Sentry is available (will be undefined if not installed)
-let Sentry: typeof import('@sentry/nextjs') | null = null;
-
-// Dynamically import Sentry if available
-if (process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN) {
-    import('@sentry/nextjs')
-        .then((module) => {
-            Sentry = module;
-            console.log('Sentry error logging enabled');
-        })
-        .catch(() => {
-            console.log('Sentry not installed - using fallback logging');
-        });
-}
 
 export interface ErrorContext {
     userId?: string;
@@ -34,41 +18,17 @@ export interface ErrorContext {
 export function logError(error: Error | unknown, context?: ErrorContext): void {
     const err = error instanceof Error ? error : new Error(String(error));
 
-    // Always log to console
     console.error('[ERROR]', err.message, {
         stack: err.stack,
         ...context,
     });
-
-    // Send to Sentry if available
-    if (Sentry) {
-        const sentry = Sentry;
-        sentry.withScope((scope) => {
-            if (context?.userId) scope.setUser({ id: context.userId });
-            if (context?.agencyId) scope.setTag('agency_id', context.agencyId);
-            if (context?.route) scope.setTag('route', context.route);
-            if (context?.action) scope.setTag('action', context.action);
-            if (context?.metadata) scope.setExtras(context.metadata);
-
-            sentry.captureException(err);
-        });
-    }
 }
 
 /**
- * Log an info-level message 
+ * Log an info-level message
  */
 export function logInfo(message: string, data?: Record<string, unknown>): void {
     console.log('[INFO]', message, data);
-
-    if (Sentry) {
-        Sentry.addBreadcrumb({
-            category: 'info',
-            message,
-            data,
-            level: 'info',
-        });
-    }
 }
 
 /**
@@ -76,13 +36,6 @@ export function logInfo(message: string, data?: Record<string, unknown>): void {
  */
 export function logWarning(message: string, data?: Record<string, unknown>): void {
     console.warn('[WARN]', message, data);
-
-    if (Sentry) {
-        Sentry.captureMessage(message, {
-            level: 'warning',
-            extra: data,
-        });
-    }
 }
 
 /**
