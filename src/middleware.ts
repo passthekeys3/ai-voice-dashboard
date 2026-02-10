@@ -57,6 +57,12 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
+    // DEMO MODE: Bypass authentication for demo/sharing purposes
+    // Set DEMO_MODE=true in environment variables to enable
+    if (process.env.DEMO_MODE === 'true') {
+        return NextResponse.next();
+    }
+
     // Get client IP for rate limiting
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
         request.headers.get('x-real-ip') ||

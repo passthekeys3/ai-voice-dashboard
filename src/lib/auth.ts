@@ -6,6 +6,35 @@ import type { AuthUser, Profile, Agency, AgencyBranding, Client } from '@/types'
  * Get the current authenticated user with their profile, agency, and client data
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
+    // DEMO MODE: Return demo user when enabled
+    if (process.env.DEMO_MODE === 'true') {
+        const supabase = await createClient();
+        const { data: agency } = await supabase
+            .from('agencies')
+            .select('*')
+            .limit(1)
+            .single();
+
+        if (agency) {
+            return {
+                id: 'demo-user-id',
+                email: 'demo@prosody.ai',
+                profile: {
+                    id: 'demo-user-id',
+                    email: 'demo@prosody.ai',
+                    full_name: 'Demo User',
+                    role: 'agency_admin',
+                    agency_id: agency.id,
+                    client_id: undefined,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                } as Profile,
+                agency: agency as Agency,
+            };
+        }
+        return null;
+    }
+
     const supabase = await createClient();
 
     const {
@@ -109,6 +138,58 @@ export async function requireAuth(): Promise<AuthUser> {
                 id: 'dev-agency-id',
                 name: 'Dev Agency',
                 slug: 'dev-agency',
+                branding: {} as AgencyBranding,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            } as Agency,
+        };
+    }
+
+    // DEMO MODE: Bypass authentication for demo/sharing purposes
+    // Set DEMO_MODE=true in environment variables to enable
+    if (process.env.DEMO_MODE === 'true') {
+        const supabase = await createClient();
+        const { data: agency } = await supabase
+            .from('agencies')
+            .select('*')
+            .limit(1)
+            .single();
+
+        if (agency) {
+            return {
+                id: 'demo-user-id',
+                email: 'demo@prosody.ai',
+                profile: {
+                    id: 'demo-user-id',
+                    email: 'demo@prosody.ai',
+                    full_name: 'Demo User',
+                    role: 'agency_admin',
+                    agency_id: agency.id,
+                    client_id: undefined,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                } as Profile,
+                agency: agency as Agency,
+            };
+        }
+
+        return {
+            id: 'demo-user-id',
+            email: 'demo@prosody.ai',
+            profile: {
+                id: 'demo-user-id',
+                email: 'demo@prosody.ai',
+                full_name: 'Demo User',
+                role: 'agency_admin',
+                agency_id: 'demo-agency-id',
+                client_id: undefined,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            } as Profile,
+            agency: {
+                id: 'demo-agency-id',
+                name: 'Demo Agency',
+                slug: 'demo-agency',
                 branding: {} as AgencyBranding,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
