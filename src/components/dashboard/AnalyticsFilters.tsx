@@ -26,7 +26,7 @@ export function AnalyticsFilters() {
     };
 
     return (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted-foreground mr-2">Time Range:</span>
             {DATE_RANGES.map((range) => (
                 <Button
