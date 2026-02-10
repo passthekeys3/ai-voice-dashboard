@@ -59,7 +59,32 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Retell API key not configured' }, { status: 400 });
         }
 
-        // Create agent in Retell
+        // Step 1: Create a Retell LLM with the prompt and first message
+        const llmResponse = await fetch('https://api.retellai.com/create-retell-llm', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${agency.retell_api_key}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                general_prompt: system_prompt || undefined,
+                begin_message: first_message || null,
+                model: 'gpt-4o-mini',
+                start_speaker: 'agent',
+            }),
+        });
+
+        if (!llmResponse.ok) {
+            const errorData = await llmResponse.text();
+            console.error('Retell create LLM error:', errorData);
+            return NextResponse.json({
+                error: 'Failed to create agent on provider'
+            }, { status: 500 });
+        }
+
+        const retellLlm = await llmResponse.json();
+
+        // Step 2: Create the agent with the LLM ID and voice
         const retellResponse = await fetch('https://api.retellai.com/create-agent', {
             method: 'POST',
             headers: {
@@ -71,13 +96,9 @@ export async function POST(request: NextRequest) {
                 voice_id,
                 response_engine: {
                     type: 'retell-llm',
-                    llm_id: undefined, // Will create new LLM
+                    llm_id: retellLlm.llm_id,
                 },
-                llm_websocket_url: undefined,
-                // Agent settings
                 enable_backchannel: true,
-                begin_message: first_message || null,
-                general_prompt: system_prompt || undefined,
             }),
         });
 

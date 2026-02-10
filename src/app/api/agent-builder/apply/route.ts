@@ -109,6 +109,32 @@ export async function POST(request: NextRequest) {
         let externalId: string;
 
         if (provider === 'retell') {
+            // Step 1: Create a Retell LLM with the prompt and first message
+            const llmResponse = await fetch('https://api.retellai.com/create-retell-llm', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    general_prompt: safeSystemPrompt,
+                    begin_message: safeFirstMessage || null,
+                    model: 'gpt-4o-mini',
+                    start_speaker: 'agent',
+                }),
+            });
+
+            if (!llmResponse.ok) {
+                console.error('Retell create LLM error:', llmResponse.status, await llmResponse.text());
+                return NextResponse.json(
+                    { error: 'Failed to create agent on voice provider' },
+                    { status: 500 }
+                );
+            }
+
+            const retellLlm = await llmResponse.json();
+
+            // Step 2: Create the agent with the LLM ID
             const retellResponse = await fetch('https://api.retellai.com/create-agent', {
                 method: 'POST',
                 headers: {
@@ -118,9 +144,12 @@ export async function POST(request: NextRequest) {
                 body: JSON.stringify({
                     agent_name: safeName,
                     voice_id: draft.voiceId,
+                    response_engine: {
+                        type: 'retell-llm',
+                        llm_id: retellLlm.llm_id,
+                    },
                     enable_backchannel: true,
-                    begin_message: safeFirstMessage || null,
-                    general_prompt: safeSystemPrompt,
+                    language: safeLanguage === 'en' ? 'en-US' : safeLanguage,
                 }),
             });
 
