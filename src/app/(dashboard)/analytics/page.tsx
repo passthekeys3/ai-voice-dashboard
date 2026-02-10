@@ -159,7 +159,7 @@ export default async function AnalyticsPage({ searchParams }: Props) {
                 />
 
                 {/* Charts */}
-                <div className="grid gap-4 md:grid-cols-7">
+                <div className="grid gap-4 md:grid-cols-7 overflow-hidden">
                     <UsageChart data={analytics.calls_by_day} />
 
                     <Card className="md:col-span-3">

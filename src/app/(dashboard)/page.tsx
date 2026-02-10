@@ -129,7 +129,7 @@ export default async function DashboardPage() {
                 />
 
                 {/* Charts */}
-                <div className="grid gap-4 md:grid-cols-7">
+                <div className="grid gap-4 md:grid-cols-7 overflow-hidden">
                     <UsageChart data={callVolumeData} />
 
                     <Card className="md:col-span-3">

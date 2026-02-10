@@ -52,7 +52,7 @@ export function UsageChart({ data }: UsageChartProps) {
             <CardHeader>
                 <CardTitle>Call Volume</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-hidden">
                 <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={formattedData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>

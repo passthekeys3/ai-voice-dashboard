@@ -60,83 +60,100 @@ export function ActiveCallsList() {
         fetchActiveCalls();
 
         // Subscribe to real-time changes on the calls table
-        const channel = supabase
-            .channel('active-calls-realtime')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'calls',
-                },
-                (payload) => {
-                    const newCall = payload.new as {
-                        id: string;
-                        external_id: string;
-                        agent_id: string;
-                        status: string;
-                        started_at: string;
-                        from_number?: string;
-                        to_number?: string;
-                        direction: string;
-                        provider: 'retell' | 'vapi';
-                    };
+        // Wrapped in try-catch because Supabase Realtime may throw a DOMException
+        // ("The operation is insecure") if WebSocket creation fails, which would
+        // otherwise be caught by the ErrorBoundary and crash the page.
+        try {
+            const channel = supabase
+                .channel('active-calls-realtime')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'calls',
+                    },
+                    (payload) => {
+                        const newCall = payload.new as {
+                            id: string;
+                            external_id: string;
+                            agent_id: string;
+                            status: string;
+                            started_at: string;
+                            from_number?: string;
+                            to_number?: string;
+                            direction: string;
+                            provider: 'retell' | 'vapi';
+                        };
 
-                    // Only add if it's an active call
-                    if (newCall.status === 'in_progress' || newCall.status === 'queued') {
-                        // Refresh to get full data including agent name
-                        fetchActiveCalls();
+                        // Only add if it's an active call
+                        if (newCall.status === 'in_progress' || newCall.status === 'queued') {
+                            // Refresh to get full data including agent name
+                            fetchActiveCalls();
+                        }
                     }
-                }
-            )
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'calls',
-                },
-                (payload) => {
-                    const updatedCall = payload.new as {
-                        id: string;
-                        status: string;
-                    };
+                )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'calls',
+                    },
+                    (payload) => {
+                        const updatedCall = payload.new as {
+                            id: string;
+                            status: string;
+                        };
 
-                    // If call ended, remove from active list
-                    if (updatedCall.status === 'completed' || updatedCall.status === 'failed') {
-                        setCalls((prev) => prev.filter((c) => c.id !== updatedCall.id));
+                        // If call ended, remove from active list
+                        if (updatedCall.status === 'completed' || updatedCall.status === 'failed') {
+                            setCalls((prev) => prev.filter((c) => c.id !== updatedCall.id));
+                        }
                     }
-                }
-            )
-            .subscribe((status) => {
-                if (status === 'SUBSCRIBED') {
-                    setConnectionStatus({
-                        connected: true,
-                        lastConnected: new Date(),
-                        reconnecting: false,
-                    });
-                } else if (status === 'CLOSED') {
-                    setConnectionStatus((prev) => ({
-                        ...prev,
-                        connected: false,
-                        reconnecting: true,
-                    }));
-                } else if (status === 'CHANNEL_ERROR') {
-                    setConnectionStatus((prev) => ({
-                        ...prev,
-                        connected: false,
-                        reconnecting: false,
-                        error: 'Realtime unavailable',
-                    }));
-                    // Increase polling frequency when realtime fails
-                    if (pollIntervalRef.current) {
-                        clearInterval(pollIntervalRef.current);
+                )
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        setConnectionStatus({
+                            connected: true,
+                            lastConnected: new Date(),
+                            reconnecting: false,
+                        });
+                    } else if (status === 'CLOSED') {
+                        setConnectionStatus((prev) => ({
+                            ...prev,
+                            connected: false,
+                            reconnecting: true,
+                        }));
+                    } else if (status === 'CHANNEL_ERROR') {
+                        setConnectionStatus((prev) => ({
+                            ...prev,
+                            connected: false,
+                            reconnecting: false,
+                            error: 'Realtime unavailable',
+                        }));
+                        // Increase polling frequency when realtime fails
+                        if (pollIntervalRef.current) {
+                            clearInterval(pollIntervalRef.current);
+                        }
+                        pollIntervalRef.current = setInterval(fetchActiveCalls, 10000);
                     }
-                    pollIntervalRef.current = setInterval(fetchActiveCalls, 10000);
-                }
+                });
+
+            channelRef.current = channel;
+        } catch (err) {
+            // WebSocket creation failed (e.g. insecure context) — fall back to polling
+            console.warn('Realtime subscription failed, using polling fallback:', err);
+            setConnectionStatus({
+                connected: false,
+                reconnecting: false,
+                error: 'Realtime unavailable',
             });
-
-        channelRef.current = channel;
+            if (pollIntervalRef.current) {
+                clearInterval(pollIntervalRef.current);
+            }
+            pollIntervalRef.current = setInterval(fetchActiveCalls, 10000);
+        }
 
         // Update duration every second for active calls
         const durationInterval = setInterval(() => {

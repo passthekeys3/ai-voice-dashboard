@@ -140,93 +140,106 @@ export function LiveTranscript({ callId }: LiveTranscriptProps) {
         fetchCall();
 
         // Subscribe to real-time changes for this specific call
-        const channel = supabase
-            .channel(`live-transcript:${callId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'calls',
-                    filter: `id=eq.${callId}`,
-                },
-                (payload) => {
-                    const updatedCall = payload.new as {
-                        id: string;
-                        status: string;
-                        duration_seconds: number;
-                        transcript?: string;
-                        ended_at?: string;
-                    };
-
-                    setCall((prev) => {
-                        if (!prev) return null;
-
-                        const newTranscript = parseTranscript(updatedCall.transcript || '');
-                        const currentLineCount = prev.transcript.length;
-
-                        // Mark new lines
-                        const markedTranscript = newTranscript.map((line, idx) => ({
-                            ...line,
-                            isNew: idx >= currentLineCount,
-                        }));
-
-                        if (newTranscript.length > currentLineCount) {
-                            setPrevLineCount(newTranscript.length);
-                            lastActivityRef.current = Date.now();
-                            setIsTyping(true);
-
-                            // Clear "new" flag after animation
-                            setTimeout(() => {
-                                setCall(p => p ? {
-                                    ...p,
-                                    transcript: p.transcript.map(l => ({ ...l, isNew: false }))
-                                } : null);
-                            }, 1000);
-                        }
-
-                        const isActive = updatedCall.status === 'in_progress' || updatedCall.status === 'ongoing';
-                        isActiveRef.current = isActive;
-
-                        if (!isActive) {
-                            setIsTyping(false);
-                        }
-
-                        return {
-                            ...prev,
-                            status: updatedCall.status,
-                            duration_seconds: updatedCall.duration_seconds || prev.duration_seconds,
-                            transcript: markedTranscript,
-                            is_active: isActive,
+        // Wrapped in try-catch because Supabase Realtime may throw a DOMException
+        // ("The operation is insecure") if WebSocket creation fails, which would
+        // otherwise be caught by the ErrorBoundary and crash the page.
+        try {
+            const channel = supabase
+                .channel(`live-transcript:${callId}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'calls',
+                        filter: `id=eq.${callId}`,
+                    },
+                    (payload) => {
+                        const updatedCall = payload.new as {
+                            id: string;
+                            status: string;
+                            duration_seconds: number;
+                            transcript?: string;
+                            ended_at?: string;
                         };
-                    });
-                }
-            )
-            .subscribe((status) => {
-                if (status === 'SUBSCRIBED') {
-                    setConnectionStatus({
-                        connected: true,
-                        lastConnected: new Date(),
-                        reconnecting: false,
-                    });
-                } else if (status === 'CLOSED') {
-                    setConnectionStatus((prev) => ({
-                        ...prev,
-                        connected: false,
-                        reconnecting: true,
-                    }));
-                } else if (status === 'CHANNEL_ERROR') {
-                    setConnectionStatus((prev) => ({
-                        ...prev,
-                        connected: false,
-                        reconnecting: false,
-                        error: 'Realtime unavailable',
-                    }));
-                    // Already polling at 3s, no change needed — polling handles updates
-                }
-            });
 
-        channelRef.current = channel;
+                        setCall((prev) => {
+                            if (!prev) return null;
+
+                            const newTranscript = parseTranscript(updatedCall.transcript || '');
+                            const currentLineCount = prev.transcript.length;
+
+                            // Mark new lines
+                            const markedTranscript = newTranscript.map((line, idx) => ({
+                                ...line,
+                                isNew: idx >= currentLineCount,
+                            }));
+
+                            if (newTranscript.length > currentLineCount) {
+                                setPrevLineCount(newTranscript.length);
+                                lastActivityRef.current = Date.now();
+                                setIsTyping(true);
+
+                                // Clear "new" flag after animation
+                                setTimeout(() => {
+                                    setCall(p => p ? {
+                                        ...p,
+                                        transcript: p.transcript.map(l => ({ ...l, isNew: false }))
+                                    } : null);
+                                }, 1000);
+                            }
+
+                            const isActive = updatedCall.status === 'in_progress' || updatedCall.status === 'ongoing';
+                            isActiveRef.current = isActive;
+
+                            if (!isActive) {
+                                setIsTyping(false);
+                            }
+
+                            return {
+                                ...prev,
+                                status: updatedCall.status,
+                                duration_seconds: updatedCall.duration_seconds || prev.duration_seconds,
+                                transcript: markedTranscript,
+                                is_active: isActive,
+                            };
+                        });
+                    }
+                )
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        setConnectionStatus({
+                            connected: true,
+                            lastConnected: new Date(),
+                            reconnecting: false,
+                        });
+                    } else if (status === 'CLOSED') {
+                        setConnectionStatus((prev) => ({
+                            ...prev,
+                            connected: false,
+                            reconnecting: true,
+                        }));
+                    } else if (status === 'CHANNEL_ERROR') {
+                        setConnectionStatus((prev) => ({
+                            ...prev,
+                            connected: false,
+                            reconnecting: false,
+                            error: 'Realtime unavailable',
+                        }));
+                        // Already polling at 3s, no change needed — polling handles updates
+                    }
+                });
+
+            channelRef.current = channel;
+        } catch (err) {
+            // WebSocket creation failed (e.g. insecure context) — fall back to polling
+            console.warn('Realtime subscription failed, using polling fallback:', err);
+            setConnectionStatus({
+                connected: false,
+                reconnecting: false,
+                error: 'Realtime unavailable',
+            });
+        }
 
         // Update duration every second if call is active
         const durationInterval = setInterval(() => {

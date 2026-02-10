@@ -81,6 +81,7 @@ export async function GET(_request: NextRequest) {
             transcript?: string;
         }) => ({
             id: call.call_id,
+            external_id: call.call_id,
             agent_id: call.agent_id,
             agent_name: agentMap.get(call.agent_id)?.name || 'Unknown Agent',
             status: call.call_status,
@@ -89,6 +90,7 @@ export async function GET(_request: NextRequest) {
             from_number: call.from_number,
             to_number: call.to_number,
             direction: call.direction || 'outbound',
+            provider: 'retell' as const,
         }));
 
         return NextResponse.json({ data: activeCalls });
