@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { broadcastCallUpdate } from '@/lib/realtime/broadcast';
 import { executeWorkflows } from '@/lib/workflows/executor';
+import { detectTimezone } from '@/lib/timezone/detector';
 import { accumulateUsage } from '@/lib/billing/usage';
 import { calculateCallScore, inferBasicSentiment } from '@/lib/scoring/call-score';
 import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-analyzer';
@@ -24,6 +25,20 @@ function verifyVapiSignature(body: string, signature: string | null, apiKey: str
     }
 }
 
+// Forward call data to agent's webhook URL
+async function forwardToWebhook(webhookUrl: string, callData: Record<string, unknown>) {
+    try {
+        await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(callData),
+        });
+        console.log(`Vapi webhook forwarded to: ${webhookUrl}`);
+    } catch (err) {
+        console.error(`Failed to forward Vapi webhook to ${webhookUrl}:`, err);
+    }
+}
+
 // Vapi webhook payload types
 interface VapiWebhookPayload {
     message: {
@@ -41,6 +56,7 @@ interface VapiWebhookPayload {
             cost?: number;
             customer?: { number?: string };
             phoneNumber?: { number?: string };
+            metadata?: Record<string, unknown>;
         };
         endedReason?: string;
     };
@@ -54,20 +70,26 @@ export async function POST(request: NextRequest) {
 
         const payload: VapiWebhookPayload = JSON.parse(rawBody);
 
-        // Only process end-of-call-report for now
-        if (payload.message.type !== 'end-of-call-report' || !payload.message.call) {
+        // Process end-of-call-report and status-update (for call_started)
+        const messageType = payload.message.type;
+        if ((messageType !== 'end-of-call-report' && messageType !== 'status-update') || !payload.message.call) {
             return NextResponse.json({ received: true });
         }
 
         const call = payload.message.call;
 
+        // For status-update, only process 'in-progress' (call started) — skip queued/ringing
+        if (messageType === 'status-update' && call.status !== 'in-progress') {
+            return NextResponse.json({ received: true });
+        }
+
         // Use service client for webhook operations (bypasses RLS)
         const supabase = createServiceClient();
 
-        // Find agent by external_id (include agency_id, name, and vapi_api_key for broadcast and verification)
+        // Find agent by external_id (include agency_id, name, webhook_url, and vapi_api_key)
         const { data: agent } = await supabase
             .from('agents')
-            .select('id, name, client_id, agency_id, agencies(vapi_api_key)')
+            .select('id, name, client_id, agency_id, webhook_url, agencies(vapi_api_key)')
             .eq('external_id', call.assistantId)
             .eq('provider', 'vapi')
             .single();
@@ -101,11 +123,31 @@ export async function POST(request: NextRequest) {
             : 0;
 
         let status: string = 'completed';
-        if (call.status === 'in-progress') status = 'in_progress';
-        else if (call.status === 'queued' || call.status === 'ringing') status = 'queued';
-        else if (call.status === 'failed' || payload.message.endedReason === 'error') status = 'failed';
+        if (messageType === 'status-update' && call.status === 'in-progress') {
+            status = 'in_progress';
+        } else if (call.status === 'in-progress') {
+            status = 'in_progress';
+        } else if (call.status === 'queued' || call.status === 'ringing') {
+            status = 'queued';
+        } else if (call.status === 'failed' || payload.message.endedReason === 'error') {
+            status = 'failed';
+        }
 
         const direction = call.type === 'inboundPhoneCall' ? 'inbound' : 'outbound';
+
+        // Detect lead timezone from phone number
+        const leadPhone = direction === 'inbound'
+            ? call.customer?.number
+            : call.phoneNumber?.number;
+        const leadTimezone = leadPhone ? detectTimezone(leadPhone) : null;
+
+        // Check for A/B experiment metadata
+        let experimentId: string | null = null;
+        let variantId: string | null = null;
+        if (call.metadata?.experiment_id && call.metadata?.variant_id) {
+            experimentId = call.metadata.experiment_id as string;
+            variantId = call.metadata.variant_id as string;
+        }
 
         // Infer sentiment from transcript (Vapi doesn't provide it natively)
         const inferredSentiment = status === 'completed'
@@ -141,6 +183,10 @@ export async function POST(request: NextRequest) {
                     call_score: callScore,
                     started_at: startedAt,
                     ended_at: endedAt,
+                    metadata: call.metadata || null,
+                    experiment_id: experimentId,
+                    variant_id: variantId,
+                    lead_timezone: leadTimezone,
                 },
                 { onConflict: 'external_id' }
             );
@@ -181,6 +227,7 @@ export async function POST(request: NextRequest) {
                                 topics: analysis.topics,
                                 objections: analysis.objections,
                                 metadata: {
+                                    ...(call.metadata || {}),
                                     ai_analysis: {
                                         sentiment_score: analysis.sentiment_score,
                                         action_items: analysis.action_items,
@@ -207,9 +254,13 @@ export async function POST(request: NextRequest) {
 
         // Broadcast real-time update to connected clients
         const costCents = call.cost ? Math.round(call.cost * 100) : 0;
+        const isCallStarted = messageType === 'status-update' && status === 'in_progress';
+        const isCallEnded = status === 'completed' || status === 'failed';
         waitUntil(broadcastCallUpdate({
             agencyId: agent.agency_id,
-            event: 'call:ended',
+            event: isCallStarted ? 'call:started'
+                 : isCallEnded ? 'call:ended'
+                 : 'call:updated',
             call: {
                 call_id: call.id,
                 external_id: call.id,
@@ -225,11 +276,35 @@ export async function POST(request: NextRequest) {
                 transcript: call.transcript,
                 cost_cents: costCents,
                 summary: call.summary,
+                sentiment: inferredSentiment,
             },
         }).catch(err => console.error('Failed to broadcast Vapi call update:', err)));
 
+        // Forward to agent's webhook if configured and call ended
+        if (agent.webhook_url && isCallEnded) {
+            const webhookPayload = {
+                event: 'call_ended',
+                call_id: call.id,
+                agent_id: agent.id,
+                status,
+                direction,
+                duration_seconds: durationSeconds,
+                cost_cents: costCents,
+                from_number: call.customer?.number,
+                to_number: call.phoneNumber?.number,
+                transcript: call.transcript,
+                recording_url: call.recordingUrl,
+                summary: call.summary,
+                started_at: startedAt,
+                ended_at: endedAt,
+                metadata: call.metadata,
+            };
+
+            waitUntil(forwardToWebhook(agent.webhook_url, webhookPayload));
+        }
+
         // Accumulate usage for per-minute billing
-        if (status === 'completed' && agent.client_id && durationSeconds > 0) {
+        if (isCallEnded && status === 'completed' && agent.client_id && durationSeconds > 0) {
             waitUntil((async () => {
                 try {
                     const { data: client } = await supabase
@@ -254,8 +329,157 @@ export async function POST(request: NextRequest) {
         }
 
         // ======================================
+        // Inbound Receptionist: call_started (status-update with in-progress)
+        // ======================================
+        if (isCallStarted && direction === 'inbound') {
+            waitUntil((async () => {
+                try {
+                    const { data: agency } = await supabase
+                        .from('agencies')
+                        .select('integrations')
+                        .eq('id', agent.agency_id)
+                        .single();
+
+                    if (!agency) {
+                        console.error('Agency not found for Vapi inbound processing:', agent.agency_id);
+                        return;
+                    }
+
+                    const ghlInteg = agency.integrations?.ghl;
+                    const ghlEnabled = ghlInteg?.enabled && (ghlInteg.api_key || ghlInteg.access_token);
+                    const hubspotEnabled = agency.integrations?.hubspot?.enabled && agency.integrations.hubspot.access_token;
+
+                    // Resolve GHL config
+                    let resolvedGhlConfig: { apiKey: string; locationId: string } | undefined;
+                    if (ghlEnabled) {
+                        if (ghlInteg!.auth_method === 'oauth' && ghlInteg!.access_token) {
+                            const { getValidAccessToken: getGHLToken } = await import('@/lib/integrations/ghl');
+                            const validToken = await getGHLToken(ghlInteg!, async (newTokens) => {
+                                await supabase.from('agencies').update({
+                                    integrations: {
+                                        ...agency.integrations,
+                                        ghl: { ...ghlInteg, access_token: newTokens.accessToken, refresh_token: newTokens.refreshToken, expires_at: newTokens.expiresAt },
+                                    },
+                                    updated_at: new Date().toISOString(),
+                                }).eq('id', agent.agency_id);
+                            });
+                            if (validToken) resolvedGhlConfig = { apiKey: validToken, locationId: ghlInteg!.location_id || '' };
+                        } else if (ghlInteg!.api_key) {
+                            resolvedGhlConfig = { apiKey: ghlInteg!.api_key, locationId: ghlInteg!.location_id || '' };
+                        }
+                    }
+
+                    // Resolve HubSpot config
+                    let resolvedHubspotConfig: { accessToken: string } | undefined;
+                    if (hubspotEnabled) {
+                        const { getValidAccessToken: getHubSpotToken } = await import('@/lib/integrations/hubspot');
+                        const validToken = await getHubSpotToken(agency.integrations!.hubspot!, async (newTokens) => {
+                            await supabase.from('agencies').update({
+                                integrations: {
+                                    ...agency.integrations,
+                                    hubspot: { ...agency.integrations!.hubspot, access_token: newTokens.accessToken, refresh_token: newTokens.refreshToken, expires_at: newTokens.expiresAt },
+                                },
+                                updated_at: new Date().toISOString(),
+                            }).eq('id', agent.agency_id);
+                        });
+                        if (validToken) resolvedHubspotConfig = { accessToken: validToken };
+                    }
+
+                    // Auto-create/lookup CRM contacts for inbound callers
+                    if (resolvedGhlConfig && call.customer?.number) {
+                        const { upsertContact } = await import('@/lib/integrations/ghl');
+                        await upsertContact(resolvedGhlConfig, call.customer.number, {
+                            source: 'Prosody AI Inbound Call',
+                            tags: ['inbound-call', 'ai-receptionist'],
+                        });
+                    }
+
+                    if (resolvedHubspotConfig && call.customer?.number) {
+                        const { upsertContact: hsUpsertContact } = await import('@/lib/integrations/hubspot');
+                        await hsUpsertContact(resolvedHubspotConfig, call.customer.number, {
+                            source: 'Prosody AI Inbound Call',
+                            tags: ['inbound-call', 'ai-receptionist'],
+                        });
+                    }
+
+                    // Execute inbound_call_started workflows
+                    const { data: inboundWorkflows } = await supabase
+                        .from('workflows')
+                        .select('*')
+                        .eq('agency_id', agent.agency_id)
+                        .eq('trigger', 'inbound_call_started')
+                        .eq('is_active', true)
+                        .or(`agent_id.is.null,agent_id.eq.${agent.id}`);
+
+                    if (inboundWorkflows && inboundWorkflows.length > 0) {
+                        const callData = {
+                            call_id: call.id,
+                            agent_id: agent.id,
+                            agent_name: agent.name,
+                            status,
+                            direction,
+                            duration_seconds: 0,
+                            cost_cents: 0,
+                            from_number: call.customer?.number,
+                            to_number: call.phoneNumber?.number,
+                            started_at: startedAt,
+                            metadata: call.metadata as Record<string, unknown> | undefined,
+                        };
+
+                        // Resolve Google Calendar config
+                        let gcalConfig: { accessToken: string; calendarId: string } | undefined;
+                        if (agency.integrations?.google_calendar?.enabled && agency.integrations.google_calendar.access_token) {
+                            const { getValidAccessToken: getGCalToken } = await import('@/lib/integrations/gcal');
+                            const validToken = await getGCalToken(agency.integrations.google_calendar, async (newTokens) => {
+                                await supabase.from('agencies').update({
+                                    integrations: {
+                                        ...agency.integrations,
+                                        google_calendar: { ...agency.integrations!.google_calendar, access_token: newTokens.accessToken, expires_at: newTokens.expiresAt },
+                                    },
+                                    updated_at: new Date().toISOString(),
+                                }).eq('id', agent.agency_id);
+                            });
+                            if (validToken) {
+                                gcalConfig = {
+                                    accessToken: validToken,
+                                    calendarId: agency.integrations.google_calendar.default_calendar_id || 'primary',
+                                };
+                            }
+                        }
+
+                        // Inject Slack webhook URL
+                        if (agency.integrations?.slack?.enabled && agency.integrations.slack.webhook_url) {
+                            callData.metadata = { ...(callData.metadata || {}), slack_webhook_url: agency.integrations.slack.webhook_url };
+                        }
+
+                        // Resolve Calendly config
+                        const inboundCalendlyConfig = agency.integrations?.calendly?.enabled && agency.integrations.calendly.api_token
+                            ? { apiToken: agency.integrations.calendly.api_token, userUri: agency.integrations.calendly.user_uri || '', defaultEventTypeUri: agency.integrations.calendly.default_event_type_uri }
+                            : undefined;
+
+                        const results = await executeWorkflows(inboundWorkflows as Workflow[], callData, resolvedGhlConfig, resolvedHubspotConfig, gcalConfig, inboundCalendlyConfig, {
+                            supabase,
+                            agencyId: agent.agency_id,
+                        });
+                        for (const result of results) {
+                            if (result.actions_failed > 0) {
+                                console.error(`Vapi inbound workflow "${result.workflow_name}" errors:`, result.errors);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error('Vapi inbound call_started processing error:', err);
+                }
+            })());
+        }
+
+        // ======================================
         // Execute workflows for all call_ended events
         // ======================================
+        if (!isCallEnded) {
+            return NextResponse.json({ received: true });
+        }
+
         waitUntil((async () => {
             try {
                 const { data: agency } = await supabase

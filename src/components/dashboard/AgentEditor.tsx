@@ -28,7 +28,7 @@ interface PromptSuggestion {
 
 interface AgentEditorProps {
     agentId: string;
-    provider: 'retell' | 'vapi';
+    provider: 'retell' | 'vapi' | 'bland';
     isActive: boolean;
     clientId: string | null;
     clients: { id: string; name: string }[];
@@ -113,7 +113,7 @@ export function AgentEditor({
 }: AgentEditorProps) {
     const router = useRouter();
     const [saving, setSaving] = useState(false);
-    const [loadingPrompt, setLoadingPrompt] = useState(provider === 'retell');
+    const [loadingPrompt, setLoadingPrompt] = useState(true);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
     // Local state
@@ -172,28 +172,26 @@ export function AgentEditor({
     // Webhook settings
     const [webhookUrl, setWebhookUrl] = useState(initialWebhookUrl || '');
     useEffect(() => {
-        if (provider === 'retell') {
-            const fetchProviderData = async () => {
-                try {
-                    const response = await fetch(`/api/agents/${agentId}/provider`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.data) {
-                            setPrompt(data.data.prompt || '');
-                            if (data.data.agent_name) setAgentName(data.data.agent_name);
-                            if (data.data.voice_id) setVoiceId(data.data.voice_id);
-                            if (data.data.language) setLanguage(data.data.language);
-                            if (data.data.responsiveness) setResponsiveness(data.data.responsiveness);
-                        }
+        const fetchProviderData = async () => {
+            try {
+                const response = await fetch(`/api/agents/${agentId}/provider`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.data) {
+                        setPrompt(data.data.prompt || '');
+                        if (data.data.agent_name) setAgentName(data.data.agent_name);
+                        if (data.data.voice_id) setVoiceId(data.data.voice_id);
+                        if (data.data.language) setLanguage(data.data.language);
+                        if (data.data.responsiveness) setResponsiveness(data.data.responsiveness);
                     }
-                } catch (err) {
-                    console.error('Error fetching provider data:', err);
-                } finally {
-                    setLoadingPrompt(false);
                 }
-            };
-            fetchProviderData();
-        }
+            } catch (err) {
+                console.error('Error fetching provider data:', err);
+            } finally {
+                setLoadingPrompt(false);
+            }
+        };
+        fetchProviderData();
     }, [agentId, provider]);
 
     const handleSave = async () => {
@@ -218,17 +216,23 @@ export function AgentEditor({
                 return;
             }
 
-            // Update provider (Retell) if config changed
+            // Update provider config
+            const providerPayload: Record<string, unknown> = {
+                agent_name: agentName,
+                prompt,
+            };
+
+            // Retell-specific fields
+            if (provider === 'retell') {
+                providerPayload.voice_id = voiceId;
+                providerPayload.language = language;
+                providerPayload.responsiveness = responsiveness;
+            }
+
             const providerResponse = await fetch(`/api/agents/${agentId}/provider`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    agent_name: agentName,
-                    voice_id: voiceId,
-                    language,
-                    prompt,
-                    responsiveness,
-                }),
+                body: JSON.stringify(providerPayload),
             });
 
             if (!providerResponse.ok) {
@@ -257,7 +261,7 @@ export function AgentEditor({
                         Some features are not yet available for VAPI agents:
                         <ul className="list-disc list-inside mt-2 space-y-1">
                             <li>A/B experiment winner promotion</li>
-                            <li>Prompt editing from this dashboard</li>
+                            <li>Voice & language selection from this dashboard</li>
                             <li>Knowledge base management</li>
                         </ul>
                         <p className="mt-2">
@@ -267,10 +271,34 @@ export function AgentEditor({
                 </Alert>
             )}
 
+            {/* Bland Limitations Warning */}
+            {provider === 'bland' && (
+                <Alert variant="default" className="border-amber-500 bg-amber-50 dark:bg-amber-950">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertTitle className="text-amber-800 dark:text-amber-200">Limited Bland.ai Support</AlertTitle>
+                    <AlertDescription className="text-amber-700 dark:text-amber-300">
+                        Bland.ai uses visual Pathways for agent logic. Some features are limited:
+                        <ul className="list-disc list-inside mt-2 space-y-1">
+                            <li>Pathway editing must be done in the Bland.ai dashboard</li>
+                            <li>Voice & language selection from this dashboard</li>
+                            <li>Knowledge base management</li>
+                        </ul>
+                        <p className="mt-2">
+                            You can edit the agent name and description here. For full pathway editing, use the{' '}
+                            <a href="https://app.bland.ai" target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                                Bland.ai dashboard
+                            </a>.
+                        </p>
+                    </AlertDescription>
+                </Alert>
+            )}
+
             <Tabs defaultValue="general" className="w-full">
                 <TabsList className="w-full mb-4">
                     <TabsTrigger value="general" className="flex-1">General</TabsTrigger>
-                    <TabsTrigger value="voice" className="flex-1">Voice & Language</TabsTrigger>
+                    {provider === 'retell' && (
+                        <TabsTrigger value="voice" className="flex-1">Voice & Language</TabsTrigger>
+                    )}
                     <TabsTrigger value="prompt" className="flex-1">Prompt</TabsTrigger>
                     <TabsTrigger value="webhooks" className="flex-1">Webhooks</TabsTrigger>
                 </TabsList>
@@ -396,7 +424,7 @@ export function AgentEditor({
                         <CardHeader>
                             <CardTitle>Agent Prompt</CardTitle>
                             <CardDescription>
-                                {loadingPrompt ? 'Loading from Retell...' : 'Define your agent&apos;s personality and behavior'}
+                                {loadingPrompt ? 'Loading from provider...' : 'Define your agent&apos;s personality and behavior'}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -404,7 +432,7 @@ export function AgentEditor({
                                 <Label htmlFor="prompt">System Prompt</Label>
                                 {loadingPrompt ? (
                                     <div className="flex items-center justify-center h-48 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                                        <span className="text-muted-foreground">Loading prompt from Retell...</span>
+                                        <span className="text-muted-foreground">Loading prompt from provider...</span>
                                     </div>
                                 ) : (
                                     <Textarea

@@ -185,7 +185,7 @@ export const AGENT_STATUS_CONFIG: Record<AgentStatus, StatusConfig> = {
 // PROVIDER CONFIGURATION
 // =====================================================
 
-export type VoiceProvider = 'retell' | 'vapi';
+export type VoiceProvider = 'retell' | 'vapi' | 'bland';
 
 export interface ProviderConfig {
     label: string;
@@ -206,6 +206,12 @@ export const PROVIDER_CONFIG: Record<VoiceProvider, ProviderConfig> = {
         color: 'text-purple-600',
         bgColor: 'bg-purple-50',
         darkBgColor: 'dark:bg-purple-900/20',
+    },
+    bland: {
+        label: 'Bland.ai',
+        color: 'text-amber-600',
+        bgColor: 'bg-amber-50',
+        darkBgColor: 'dark:bg-amber-900/20',
     },
 };
 

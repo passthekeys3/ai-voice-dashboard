@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
         // Find all pending calls that are due
         const { data: dueCalls, error: fetchError } = await supabase
             .from('scheduled_calls')
-            .select('*, agent:agents(external_id, provider, agency_id, agencies(retell_api_key, vapi_api_key, calling_window))')
+            .select('*, agent:agents(external_id, provider, agency_id, agencies(retell_api_key, vapi_api_key, bland_api_key, calling_window))')
             .eq('status', 'pending')
             .lte('scheduled_at', now)
             .order('scheduled_at', { ascending: true })
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
         if (fetchError) {
             console.error('Error fetching due calls:', fetchError);
-            return NextResponse.json({ error: fetchError.message }, { status: 500 });
+            return NextResponse.json({ error: 'Failed to fetch scheduled calls' }, { status: 500 });
         }
 
         if (!dueCalls || dueCalls.length === 0) {
@@ -101,6 +101,8 @@ export async function POST(request: NextRequest) {
                 const externalAgentId = call.agent?.external_id;
                 const providerApiKey = provider === 'vapi'
                     ? call.agent?.agencies?.vapi_api_key
+                    : provider === 'bland'
+                    ? call.agent?.agencies?.bland_api_key
                     : call.agent?.agencies?.retell_api_key;
 
                 if (!providerApiKey || !externalAgentId) {
@@ -117,7 +119,7 @@ export async function POST(request: NextRequest) {
 
                 // Initiate call via provider-agnostic module
                 const callResult = await initiateCall({
-                    provider: provider as 'retell' | 'vapi',
+                    provider: provider as 'retell' | 'vapi' | 'bland',
                     providerApiKey,
                     externalAgentId,
                     toNumber: call.to_number,

@@ -41,18 +41,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         try {
             const { data: agency } = await supabase
                 .from('agencies')
-                .select('retell_api_key, vapi_api_key')
+                .select('retell_api_key, vapi_api_key, bland_api_key')
                 .eq('id', user.agency.id)
                 .single();
 
             const agent = suite.agent;
             const apiKey = agent.provider === 'retell'
                 ? agency?.retell_api_key
+                : agent.provider === 'bland'
+                ? agency?.bland_api_key
                 : agency?.vapi_api_key;
 
             if (apiKey && agent.config?.external_id) {
                 const result = await getAgentPrompt({
-                    provider: agent.provider as 'retell' | 'vapi',
+                    provider: agent.provider as 'retell' | 'vapi' | 'bland',
                     apiKey,
                     externalId: agent.config.external_id,
                     localConfig: agent.config,

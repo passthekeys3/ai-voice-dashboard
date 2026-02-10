@@ -39,9 +39,16 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
         .range(offset, offset + limit - 1);
 
     // Filter by agency through agents table
-    if (agentIds && agentIds.length > 0) {
-        query = query.in('agent_id', agentIds.map(a => a.id));
+    // SECURITY: If no agents exist, return empty result to prevent unscoped query
+    if (!agentIds || agentIds.length === 0) {
+        return apiSuccessPaginated([], {
+            total: 0,
+            page: 1,
+            perPage: limit,
+            totalPages: 0,
+        });
     }
+    query = query.in('agent_id', agentIds.map(a => a.id));
 
     // Client users only see their calls
     if (!isAgencyAdmin(user) && user.client) {

@@ -176,8 +176,14 @@ export async function POST(request: NextRequest) {
                     voice: { voiceId: draft.voiceId },
                     firstMessage: safeFirstMessage || undefined,
                     model: {
-                        provider: 'custom-llm',
-                        systemMessage: safeSystemPrompt,
+                        provider: 'openai',
+                        model: 'gpt-4o-mini',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: safeSystemPrompt,
+                            },
+                        ],
                     },
                 }),
             });
@@ -256,17 +262,31 @@ export async function POST(request: NextRequest) {
                 .is('agent_id', null)
                 .single();
 
-            if (phoneNumber?.external_id && provider === 'retell') {
-                await fetch(`https://api.retellai.com/update-phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        inbound_agent_id: externalId,
-                    }),
-                });
+            if (phoneNumber?.external_id) {
+                if (provider === 'retell') {
+                    await fetch(`https://api.retellai.com/update-phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            inbound_agent_id: externalId,
+                        }),
+                    });
+                } else if (provider === 'vapi') {
+                    await fetch(`https://api.vapi.ai/phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            assistantId: externalId,
+                        }),
+                    });
+                }
+                // Note: Bland phone assignment is done at call time via pathway_id, not per-number
 
                 await supabase
                     .from('phone_numbers')

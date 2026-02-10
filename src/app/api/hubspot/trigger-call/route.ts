@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         // Look up agency by HubSpot portal_id
         const { data: agencies, error: agencyError } = await supabase
             .from('agencies')
-            .select('id, integrations, calling_window, retell_api_key, vapi_api_key')
+            .select('id, integrations, calling_window, retell_api_key, vapi_api_key, bland_api_key')
             .filter('integrations->hubspot->>portal_id', 'eq', data.portal_id);
 
         if (agencyError || !agencies || agencies.length === 0) {
@@ -157,6 +157,8 @@ export async function POST(request: NextRequest) {
         // Get provider API key
         const providerApiKey = agentRecord.provider === 'vapi'
             ? agency.vapi_api_key
+            : agentRecord.provider === 'bland'
+            ? agency.bland_api_key
             : agency.retell_api_key;
 
         if (!providerApiKey) {
@@ -227,7 +229,7 @@ export async function POST(request: NextRequest) {
 
         // Call immediately
         const callResult = await initiateCall({
-            provider: agentRecord.provider as 'retell' | 'vapi',
+            provider: agentRecord.provider as 'retell' | 'vapi' | 'bland',
             providerApiKey,
             externalAgentId: agentRecord.external_id,
             toNumber: data.phone_number,

@@ -109,7 +109,7 @@ export function useRealtimeCalls({
             from_number?: string;
             to_number?: string;
             direction: string;
-            provider: 'retell' | 'vapi';
+            provider: 'retell' | 'vapi' | 'bland';
           };
 
           // Only add if it's an active call

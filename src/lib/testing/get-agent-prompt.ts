@@ -1,10 +1,11 @@
 /**
- * Retrieve an agent's system prompt from the voice provider (Retell or Vapi).
+ * Retrieve an agent's system prompt from the voice provider (Retell, Vapi, or Bland).
  * Falls back to locally stored config if provider API fails.
  */
 
 import { getRetellAgent, getRetellLLM } from '@/lib/providers/retell';
 import { getVapiAssistant } from '@/lib/providers/vapi';
+import { getBlandPathway } from '@/lib/providers/bland';
 import type { AgentConfig } from '@/types';
 
 export interface AgentPromptResult {
@@ -13,7 +14,7 @@ export interface AgentPromptResult {
 }
 
 export async function getAgentPrompt(params: {
-    provider: 'retell' | 'vapi';
+    provider: 'retell' | 'vapi' | 'bland';
     apiKey: string;
     externalId: string;
     localConfig?: AgentConfig;
@@ -41,6 +42,14 @@ export async function getAgentPrompt(params: {
                 return {
                     prompt: assistant.model.systemPrompt,
                     firstMessage: assistant.firstMessage || undefined,
+                };
+            }
+        } else if (provider === 'bland') {
+            // Bland stores the prompt as the pathway description
+            const pathway = await getBlandPathway(apiKey, externalId);
+            if (pathway.description) {
+                return {
+                    prompt: pathway.description,
                 };
             }
         }

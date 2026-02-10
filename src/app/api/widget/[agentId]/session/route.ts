@@ -48,7 +48,7 @@ export async function POST(
         // Get agency API key and branding
         const { data: agency, error: agencyError } = await supabase
             .from('agencies')
-            .select('retell_api_key, vapi_api_key, branding')
+            .select('retell_api_key, vapi_api_key, bland_api_key, branding')
             .eq('id', agent.agency_id)
             .single();
 
@@ -89,6 +89,12 @@ export async function POST(
             // Vapi web call support — future implementation
             return NextResponse.json(
                 { error: 'Web calls for Vapi agents are not yet supported. Please use a Retell agent.' },
+                { status: 400 }
+            );
+        } else if (agent.provider === 'bland') {
+            // Bland web call support — future implementation
+            return NextResponse.json(
+                { error: 'Web calls for Bland.ai agents are not yet supported. Please use a Retell agent.' },
                 { status: 400 }
             );
         } else {

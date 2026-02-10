@@ -151,7 +151,7 @@ export default async function AgentDetailPage({
                     <div className="space-y-6">
                         <AgentEditor
                             agentId={agent.id}
-                            provider={agent.provider as 'retell' | 'vapi'}
+                            provider={agent.provider as 'retell' | 'vapi' | 'bland'}
                             isActive={agent.is_active}
                             clientId={agent.client_id}
                             clients={clients}

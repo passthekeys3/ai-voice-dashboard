@@ -11,7 +11,7 @@ export default async function OnboardingPage() {
     }
 
     // Check if agency is already set up (has API key)
-    const isOnboarded = !!user.agency.retell_api_key || !!user.agency.vapi_api_key;
+    const isOnboarded = !!user.agency.retell_api_key || !!user.agency.vapi_api_key || !!user.agency.bland_api_key;
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">

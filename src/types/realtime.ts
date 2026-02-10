@@ -54,7 +54,7 @@ export interface ActiveCall {
   from_number?: string;
   to_number?: string;
   direction: string;
-  provider: 'retell' | 'vapi';
+  provider: 'retell' | 'vapi' | 'bland';
 }
 
 export interface LiveCallDetails extends ActiveCall {

@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
             .single();
 
         // Determine which provider to use
-        const provider = requestedProvider || (agency?.retell_api_key ? 'retell' : agency?.bland_api_key ? 'bland' : null);
+        const provider = requestedProvider || (agency?.retell_api_key ? 'retell' : agency?.vapi_api_key ? 'vapi' : agency?.bland_api_key ? 'bland' : null);
 
         if (provider === 'retell' && agency?.retell_api_key) {
             // Purchase number from Retell
@@ -102,6 +102,51 @@ export async function POST(request: NextRequest) {
 
             if (error) {
                 console.error('Error saving phone number:', error);
+                return NextResponse.json({ error: 'Failed to import phone number' }, { status: 500 });
+            }
+
+            return NextResponse.json({ data: phoneNumber }, { status: 201 });
+        } else if (provider === 'vapi' && agency?.vapi_api_key) {
+            // Purchase number from Vapi (Vapi uses Twilio under the hood)
+            const vapiResponse = await fetch('https://api.vapi.ai/phone-number', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${agency.vapi_api_key}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    provider: 'vapi',
+                    areaCode: area_code,
+                    ...(agent_id ? {} : {}), // assistantId assigned separately
+                }),
+            });
+
+            if (!vapiResponse.ok) {
+                const errorData = await vapiResponse.json().catch(() => ({}));
+                console.error('Vapi phone number error:', errorData);
+                return NextResponse.json({
+                    error: errorData.message || 'Failed to purchase phone number'
+                }, { status: 500 });
+            }
+
+            const vapiNumber = await vapiResponse.json();
+
+            const { data: phoneNumber, error } = await supabase
+                .from('phone_numbers')
+                .insert({
+                    agency_id: user.agency.id,
+                    external_id: vapiNumber.id,
+                    phone_number: vapiNumber.number,
+                    provider: 'vapi',
+                    agent_id: agent_id || null,
+                    monthly_cost_cents: 200,
+                    purchased_at: new Date().toISOString(),
+                })
+                .select('*, agent:agents(id, name)')
+                .single();
+
+            if (error) {
+                console.error('Error saving Vapi phone number:', error);
                 return NextResponse.json({ error: 'Failed to import phone number' }, { status: 500 });
             }
 

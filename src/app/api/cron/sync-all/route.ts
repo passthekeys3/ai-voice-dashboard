@@ -154,6 +154,54 @@ export async function POST(request: NextRequest) {
                             }
                         }
 
+                        // Sync Phone Numbers (Vapi)
+                        if (provider === 'vapi' && agency.vapi_api_key) {
+                            try {
+                                const { listVapiPhoneNumbers } = await import('@/lib/providers/vapi');
+                                const vapiNumbers = await listVapiPhoneNumbers(agency.vapi_api_key);
+
+                                if (vapiNumbers.length > 0) {
+                                    const { data: agencyAgents } = await supabase
+                                        .from('agents')
+                                        .select('id, external_id')
+                                        .eq('agency_id', agency.id);
+
+                                    const agentLookupMap = new Map(
+                                        agencyAgents?.map(a => [a.external_id, a.id]) || []
+                                    );
+
+                                    const phonesToUpsert = vapiNumbers.map((phone) => ({
+                                        agency_id: agency.id,
+                                        external_id: phone.id,
+                                        phone_number: phone.number,
+                                        provider: 'vapi',
+                                        status: 'active',
+                                        agent_id: phone.assistantId
+                                            ? agentLookupMap.get(phone.assistantId) || null
+                                            : null,
+                                        updated_at: new Date().toISOString(),
+                                    }));
+
+                                    const { error: phoneUpsertError, data: upsertedPhones } = await supabase
+                                        .from('phone_numbers')
+                                        .upsert(phonesToUpsert, {
+                                            onConflict: 'agency_id,external_id',
+                                            ignoreDuplicates: false,
+                                        })
+                                        .select('id');
+
+                                    if (!phoneUpsertError) {
+                                        results.total_phone_numbers += upsertedPhones?.length || phonesToUpsert.length;
+                                        console.log(`[CRON SYNC] Agency ${agency.name}: upserted ${phonesToUpsert.length} Vapi phone numbers`);
+                                    } else {
+                                        console.error(`[CRON SYNC] Vapi phone upsert error for ${agency.name}:`, phoneUpsertError);
+                                    }
+                                }
+                            } catch (phoneErr) {
+                                console.error(`Vapi phone sync error for agency ${agency.id}:`, phoneErr);
+                            }
+                        }
+
                         // Sync Phone Numbers (Bland)
                         if (provider === 'bland' && agency.bland_api_key) {
                             try {

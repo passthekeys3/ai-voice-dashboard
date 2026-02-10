@@ -64,33 +64,76 @@ export const POST = withErrorHandling(async (
         }
     }
 
-    // Get agency's Retell API key
+    // Determine the call's provider
+    const externalCallId = call?.external_id || callId;
+
+    // Get the call's provider from the calls table
+    const { data: callRecord } = await supabase
+        .from('calls')
+        .select('provider')
+        .eq('external_id', externalCallId)
+        .single();
+
+    const provider = callRecord?.provider || 'retell';
+
+    // Get agency API keys for all providers
     const { data: agency } = await supabase
         .from('agencies')
-        .select('retell_api_key')
+        .select('retell_api_key, vapi_api_key, bland_api_key')
         .eq('id', user.agency.id)
         .single();
 
-    if (!agency?.retell_api_key) {
-        return badRequest('Retell API key not configured');
-    }
-
-    // Use the external_id for Retell API
-    const retellCallId = call?.external_id || callId;
-
-    // End the call via Retell API
-    const endResponse = await fetch(`https://api.retellai.com/v2/end-call/${retellCallId}`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${agency.retell_api_key}`,
-            'Content-Type': 'application/json',
-        },
-    });
-
-    if (!endResponse.ok) {
-        const errorData = await endResponse.text();
-        console.error('Failed to end call:', errorData);
-        return externalServiceError('Retell', 'Failed to end call');
+    if (provider === 'retell') {
+        if (!agency?.retell_api_key) {
+            return badRequest('Retell API key not configured');
+        }
+        const endResponse = await fetch(`https://api.retellai.com/v2/end-call/${externalCallId}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${agency.retell_api_key}`,
+                'Content-Type': 'application/json',
+            },
+        });
+        if (!endResponse.ok) {
+            const errorData = await endResponse.text();
+            console.error('Failed to end Retell call:', errorData);
+            return externalServiceError('Retell', 'Failed to end call');
+        }
+    } else if (provider === 'vapi') {
+        if (!agency?.vapi_api_key) {
+            return badRequest('Vapi API key not configured');
+        }
+        // Vapi uses DELETE to hang up a call
+        const endResponse = await fetch(`https://api.vapi.ai/call/${externalCallId}/hang`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${agency.vapi_api_key}`,
+                'Content-Type': 'application/json',
+            },
+        });
+        if (!endResponse.ok) {
+            const errorData = await endResponse.text();
+            console.error('Failed to end Vapi call:', errorData);
+            return externalServiceError('Vapi', 'Failed to end call');
+        }
+    } else if (provider === 'bland') {
+        if (!agency?.bland_api_key) {
+            return badRequest('Bland API key not configured');
+        }
+        const endResponse = await fetch(`https://api.bland.ai/v1/calls/${externalCallId}/stop`, {
+            method: 'POST',
+            headers: {
+                'authorization': agency.bland_api_key,
+                'Content-Type': 'application/json',
+            },
+        });
+        if (!endResponse.ok) {
+            const errorData = await endResponse.text();
+            console.error('Failed to end Bland call:', errorData);
+            return externalServiceError('Bland', 'Failed to end call');
+        }
+    } else {
+        return badRequest('Unsupported provider');
     }
 
     return apiSuccess({ message: 'Call ended successfully' });

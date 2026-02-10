@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { updateRetellAgent, getRetellAgent, getRetellLLM, updateRetellLLM } from '@/lib/providers/retell';
+import { getVapiAssistant, updateVapiAssistant } from '@/lib/providers/vapi';
+import { getBlandPathway, updateBlandPathway } from '@/lib/providers/bland';
 
 export async function GET(
     request: NextRequest,
@@ -31,7 +33,7 @@ export async function GET(
         // Get agency API keys
         const { data: agency } = await supabase
             .from('agencies')
-            .select('retell_api_key, vapi_api_key')
+            .select('retell_api_key, vapi_api_key, bland_api_key')
             .eq('id', user.agency.id)
             .single();
 
@@ -39,7 +41,7 @@ export async function GET(
             return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
         }
 
-        // Fetch from Retell
+        // Fetch from provider
         if (agent.provider === 'retell' && agency.retell_api_key) {
             try {
                 const retellAgent = await getRetellAgent(agency.retell_api_key, agent.external_id);
@@ -70,11 +72,45 @@ export async function GET(
                 });
             } catch (err) {
                 console.error('Error fetching Retell agent:', err);
-                return NextResponse.json({ error: 'Failed to fetch from Retell' }, { status: 500 });
+                return NextResponse.json({ error: 'Failed to fetch from provider' }, { status: 500 });
+            }
+        } else if (agent.provider === 'vapi' && agency.vapi_api_key) {
+            try {
+                const vapiAssistant = await getVapiAssistant(agency.vapi_api_key, agent.external_id);
+
+                return NextResponse.json({
+                    data: {
+                        agent_name: vapiAssistant.name,
+                        voice_id: vapiAssistant.voice?.voiceId || '',
+                        voice_provider: vapiAssistant.voice?.provider || '',
+                        language: vapiAssistant.transcriber?.language || 'en',
+                        prompt: vapiAssistant.model?.systemPrompt || '',
+                        model_provider: vapiAssistant.model?.provider || '',
+                        model: vapiAssistant.model?.model || '',
+                        first_message: vapiAssistant.firstMessage || '',
+                    }
+                });
+            } catch (err) {
+                console.error('Error fetching Vapi assistant:', err);
+                return NextResponse.json({ error: 'Failed to fetch from provider' }, { status: 500 });
+            }
+        } else if (agent.provider === 'bland' && agency.bland_api_key) {
+            try {
+                const pathway = await getBlandPathway(agency.bland_api_key, agent.external_id);
+
+                return NextResponse.json({
+                    data: {
+                        agent_name: pathway.name,
+                        prompt: pathway.description || '',
+                    }
+                });
+            } catch (err) {
+                console.error('Error fetching Bland pathway:', err);
+                return NextResponse.json({ error: 'Failed to fetch from provider' }, { status: 500 });
             }
         }
 
-        return NextResponse.json({ error: 'Provider not supported' }, { status: 400 });
+        return NextResponse.json({ error: 'No API key configured for this provider' }, { status: 400 });
     } catch (error) {
         console.error('Error fetching agent provider data:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -115,7 +151,7 @@ export async function PATCH(
         // Get agency API keys
         const { data: agency, error: agencyError } = await supabase
             .from('agencies')
-            .select('retell_api_key, vapi_api_key')
+            .select('retell_api_key, vapi_api_key, bland_api_key')
             .eq('id', user.agency.id)
             .single();
 
@@ -180,7 +216,92 @@ export async function PATCH(
                 );
             }
         } else if (agent.provider === 'vapi' && agency.vapi_api_key) {
-            return NextResponse.json({ error: 'Vapi updates not yet supported' }, { status: 501 });
+            try {
+                const updateData: Partial<{
+                    name: string;
+                    model: { provider: string; model: string; systemPrompt?: string };
+                    firstMessage: string;
+                }> = {};
+
+                if (body.agent_name) updateData.name = body.agent_name;
+                if (body.prompt) {
+                    // Preserve existing model config, just update the prompt
+                    const vapiAssistant = await getVapiAssistant(agency.vapi_api_key, agent.external_id);
+                    updateData.model = {
+                        provider: vapiAssistant.model?.provider || 'openai',
+                        model: vapiAssistant.model?.model || 'gpt-4o-mini',
+                        systemPrompt: body.prompt,
+                    };
+                }
+                if (body.first_message) updateData.firstMessage = body.first_message;
+
+                if (Object.keys(updateData).length > 0) {
+                    await updateVapiAssistant(
+                        agency.vapi_api_key,
+                        agent.external_id,
+                        updateData
+                    );
+                }
+
+                // Store in local config
+                const newConfig = {
+                    ...agent.config,
+                    agent_name: body.agent_name || agent.config?.agent_name,
+                    prompt: body.prompt || agent.config?.prompt,
+                };
+
+                await supabase
+                    .from('agents')
+                    .update({
+                        config: newConfig,
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', id);
+
+            } catch (err) {
+                console.error('Error updating Vapi assistant:', err);
+                return NextResponse.json(
+                    { error: 'Failed to update agent on provider' },
+                    { status: 500 }
+                );
+            }
+        } else if (agent.provider === 'bland' && agency.bland_api_key) {
+            try {
+                const updateData: Partial<{ name: string; description: string }> = {};
+
+                if (body.agent_name) updateData.name = body.agent_name;
+                if (body.prompt) updateData.description = body.prompt;
+
+                if (Object.keys(updateData).length > 0) {
+                    await updateBlandPathway(
+                        agency.bland_api_key,
+                        agent.external_id,
+                        updateData
+                    );
+                }
+
+                // Store in local config
+                const newConfig = {
+                    ...agent.config,
+                    agent_name: body.agent_name || agent.config?.agent_name,
+                    prompt: body.prompt || agent.config?.prompt,
+                };
+
+                await supabase
+                    .from('agents')
+                    .update({
+                        config: newConfig,
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', id);
+
+            } catch (err) {
+                console.error('Error updating Bland pathway:', err);
+                return NextResponse.json(
+                    { error: 'Failed to update agent on provider' },
+                    { status: 500 }
+                );
+            }
         } else {
             return NextResponse.json({ error: 'No API key configured for this provider' }, { status: 400 });
         }
