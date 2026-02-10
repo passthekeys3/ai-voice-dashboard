@@ -1,7 +1,7 @@
 // Database Types - Auto-generated from Supabase schema
 
 export type UserRole = 'agency_admin' | 'agency_member' | 'client_admin' | 'client_member';
-export type VoiceProvider = 'retell' | 'vapi';
+export type VoiceProvider = 'retell' | 'vapi' | 'bland';
 export type CallStatus = 'completed' | 'failed' | 'in_progress' | 'queued';
 export type BillingType = 'subscription' | 'per_minute' | 'one_time';
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused';
@@ -15,6 +15,7 @@ export interface Agency {
     default_client_permissions?: ClientPermissions;
     retell_api_key?: string;
     vapi_api_key?: string;
+    bland_api_key?: string;
     stripe_customer_id?: string;
     // Custom domain support
     custom_domain?: string;

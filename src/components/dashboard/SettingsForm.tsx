@@ -48,6 +48,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
         supportPhone: agency.branding?.support_phone || '',
         retellApiKey: agency.retell_api_key || '',
         vapiApiKey: agency.vapi_api_key || '',
+        blandApiKey: agency.bland_api_key || '',
         // CRM Integrations
         ghlApiKey: agency.integrations?.ghl?.api_key || '',
         ghlLocationId: agency.integrations?.ghl?.location_id || '',
@@ -92,6 +93,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                 body: JSON.stringify({
                     retell_api_key: formData.retellApiKey || null,
                     vapi_api_key: formData.vapiApiKey || null,
+                    bland_api_key: formData.blandApiKey || null,
                 }),
             });
 
@@ -209,6 +211,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                     },
                     retell_api_key: formData.retellApiKey || null,
                     vapi_api_key: formData.vapiApiKey || null,
+                    bland_api_key: formData.blandApiKey || null,
                     integrations: {
                         ...agency.integrations,
                         ghl: {
@@ -676,7 +679,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                         Voice Provider API Keys
                     </CardTitle>
                     <CardDescription>
-                        Connect your Retell and Vapi accounts to sync agents and calls
+                        Connect your Retell, Vapi, or Bland accounts to sync agents and calls
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -720,6 +723,26 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                             </a>
                         </p>
                     </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="blandApiKey">Bland API Key</Label>
+                        <Input
+                            id="blandApiKey"
+                            type="password"
+                            value={formData.blandApiKey}
+                            onChange={(e) => {
+                                setFormData({ ...formData, blandApiKey: e.target.value });
+                                setKeysSaved(false);
+                                setSyncResult(null);
+                            }}
+                            placeholder="Enter your Bland API key"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Find your API key at{' '}
+                            <a href="https://app.bland.ai/dashboard" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                app.bland.ai/dashboard
+                            </a>
+                        </p>
+                    </div>
 
                     {syncResult && (
                         <div className={`p-3 text-sm rounded-md ${syncResult.startsWith('Error') ? 'text-red-600 bg-red-50 dark:bg-red-950/50' : 'text-green-600 bg-green-50 dark:bg-green-950/50'}`}>
@@ -732,7 +755,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                     <div className="flex gap-3">
                         <Button
                             onClick={handleSaveApiKeys}
-                            disabled={savingKeys || (!formData.retellApiKey && !formData.vapiApiKey)}
+                            disabled={savingKeys || (!formData.retellApiKey && !formData.vapiApiKey && !formData.blandApiKey)}
                             variant={keysSaved ? 'outline' : 'default'}
                         >
                             {savingKeys ? (
@@ -752,7 +775,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                         <Button
                             variant="outline"
                             onClick={handleSyncAgents}
-                            disabled={syncing || (!formData.retellApiKey && !formData.vapiApiKey)}
+                            disabled={syncing || (!formData.retellApiKey && !formData.vapiApiKey && !formData.blandApiKey)}
                         >
                             {syncing ? (
                                 <>

@@ -88,19 +88,19 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Get provider API key (Retell first, then Vapi)
+        // Get provider API key (Retell first, then Vapi, then Bland)
         const { data: agency } = await supabase
             .from('agencies')
-            .select('retell_api_key, vapi_api_key')
+            .select('retell_api_key, vapi_api_key, bland_api_key')
             .eq('id', user.agency.id)
             .single();
 
-        const provider = agency?.retell_api_key ? 'retell' : agency?.vapi_api_key ? 'vapi' : null;
-        const apiKey = agency?.retell_api_key || agency?.vapi_api_key;
+        const provider = agency?.retell_api_key ? 'retell' : agency?.vapi_api_key ? 'vapi' : agency?.bland_api_key ? 'bland' : null;
+        const apiKey = agency?.retell_api_key || agency?.vapi_api_key || agency?.bland_api_key;
 
         if (!provider || !apiKey) {
             return NextResponse.json(
-                { error: 'No voice provider API key configured. Add a Retell or Vapi key in Settings.' },
+                { error: 'No voice provider API key configured. Add a Retell, Vapi, or Bland key in Settings.' },
                 { status: 400 }
             );
         }
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
 
             const retellAgent = await retellResponse.json();
             externalId = retellAgent.agent_id;
-        } else {
+        } else if (provider === 'vapi') {
             // Vapi agent creation
             const vapiResponse = await fetch('https://api.vapi.ai/assistant', {
                 method: 'POST',
@@ -192,6 +192,32 @@ export async function POST(request: NextRequest) {
 
             const vapiAgent = await vapiResponse.json();
             externalId = vapiAgent.id;
+        } else {
+            // Bland pathway creation
+            // Bland uses Pathways (visual flowcharts) as the agent concept.
+            // Programmatic creation creates a minimal pathway — users can refine it in the Bland dashboard.
+            const blandResponse = await fetch('https://api.bland.ai/v1/pathway/create', {
+                method: 'POST',
+                headers: {
+                    'authorization': apiKey,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: safeName,
+                    description: safeSystemPrompt,
+                }),
+            });
+
+            if (!blandResponse.ok) {
+                console.error('Bland create pathway error:', blandResponse.status, await blandResponse.text());
+                return NextResponse.json(
+                    { error: 'Failed to create agent on voice provider' },
+                    { status: 500 }
+                );
+            }
+
+            const blandPathway = await blandResponse.json();
+            externalId = blandPathway.pathway_id;
         }
 
         // Store in database

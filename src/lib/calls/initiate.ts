@@ -1,12 +1,12 @@
 /**
  * Provider-Agnostic Call Initiation
  *
- * Abstracts the actual call placement across voice providers (Retell, Vapi).
+ * Abstracts the actual call placement across voice providers (Retell, Vapi, Bland).
  * Used by both the cron processor and the GHL trigger webhook.
  */
 
 export interface CallInitiationParams {
-    provider: 'retell' | 'vapi';
+    provider: 'retell' | 'vapi' | 'bland';
     providerApiKey: string;
     externalAgentId: string;
     toNumber: string;
@@ -29,6 +29,8 @@ export async function initiateCall(params: CallInitiationParams): Promise<CallIn
             return initiateRetellCall(params);
         case 'vapi':
             return initiateVapiCall(params);
+        case 'bland':
+            return initiateBlandCall(params);
         default:
             return { success: false, error: `Unsupported provider: ${params.provider}` };
     }
@@ -116,6 +118,55 @@ async function initiateVapiCall(params: CallInitiationParams): Promise<CallIniti
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Vapi call initiation failed',
+        };
+    }
+}
+
+/**
+ * Initiate call via Bland.ai API
+ * Bland uses pathway_id (our external_id) to reference the agent.
+ * Webhook URL is set per-call since Bland doesn't have agent-level webhook config.
+ */
+async function initiateBlandCall(params: CallInitiationParams): Promise<CallInitiationResult> {
+    try {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+            ? `https://${process.env.VERCEL_URL}`
+            : 'http://localhost:3000';
+
+        const body: Record<string, unknown> = {
+            phone_number: params.toNumber,
+            pathway_id: params.externalAgentId,
+            webhook: `${appUrl}/api/webhooks/bland`,
+            metadata: params.metadata || {},
+        };
+
+        if (params.fromNumber) {
+            body.from = params.fromNumber;
+        }
+
+        const response = await fetch('https://api.bland.ai/v1/calls', {
+            method: 'POST',
+            headers: {
+                'authorization': params.providerApiKey,  // Raw key, NOT Bearer
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            return {
+                success: false,
+                error: errorData.message || `Bland API error: ${response.status}`,
+            };
+        }
+
+        const data = await response.json();
+        return { success: true, callId: data.call_id };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Bland call initiation failed',
         };
     }
 }

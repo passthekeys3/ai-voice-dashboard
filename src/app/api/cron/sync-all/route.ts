@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
         // Get all agencies with API keys configured
         const { data: agencies, error: agenciesError } = await supabase
             .from('agencies')
-            .select('id, name, retell_api_key, vapi_api_key')
-            .or('retell_api_key.neq.null,vapi_api_key.neq.null');
+            .select('id, name, retell_api_key, vapi_api_key, bland_api_key')
+            .or('retell_api_key.neq.null,vapi_api_key.neq.null,bland_api_key.neq.null');
 
         if (agenciesError) {
             console.error('Error fetching agencies:', agenciesError);
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
                             }
                         }
 
-                        // Sync Phone Numbers (Retell only)
+                        // Sync Phone Numbers (Retell)
                         if (provider === 'retell' && agency.retell_api_key) {
                             try {
                                 const phoneResponse = await fetch('https://api.retellai.com/list-phone-numbers', {
@@ -151,6 +151,54 @@ export async function POST(request: NextRequest) {
                                 }
                             } catch (phoneErr) {
                                 console.error(`Phone sync error for agency ${agency.id}:`, phoneErr);
+                            }
+                        }
+
+                        // Sync Phone Numbers (Bland)
+                        if (provider === 'bland' && agency.bland_api_key) {
+                            try {
+                                const { listBlandPhoneNumbers } = await import('@/lib/providers/bland');
+                                const blandNumbers = await listBlandPhoneNumbers(agency.bland_api_key);
+
+                                if (blandNumbers.length > 0) {
+                                    const { data: agencyAgents } = await supabase
+                                        .from('agents')
+                                        .select('id, external_id')
+                                        .eq('agency_id', agency.id);
+
+                                    const agentLookupMap = new Map(
+                                        agencyAgents?.map(a => [a.external_id, a.id]) || []
+                                    );
+
+                                    const phonesToUpsert = blandNumbers.map((phone) => ({
+                                        agency_id: agency.id,
+                                        external_id: phone.phone_number,
+                                        phone_number: phone.phone_number,
+                                        provider: 'bland',
+                                        status: 'active',
+                                        agent_id: phone.pathway_id
+                                            ? agentLookupMap.get(phone.pathway_id) || null
+                                            : null,
+                                        updated_at: new Date().toISOString(),
+                                    }));
+
+                                    const { error: phoneUpsertError, data: upsertedPhones } = await supabase
+                                        .from('phone_numbers')
+                                        .upsert(phonesToUpsert, {
+                                            onConflict: 'agency_id,external_id',
+                                            ignoreDuplicates: false,
+                                        })
+                                        .select('id');
+
+                                    if (!phoneUpsertError) {
+                                        results.total_phone_numbers += upsertedPhones?.length || phonesToUpsert.length;
+                                        console.log(`[CRON SYNC] Agency ${agency.name}: upserted ${phonesToUpsert.length} Bland phone numbers`);
+                                    } else {
+                                        console.error(`[CRON SYNC] Bland phone upsert error for ${agency.name}:`, phoneUpsertError);
+                                    }
+                                }
+                            } catch (phoneErr) {
+                                console.error(`Bland phone sync error for agency ${agency.id}:`, phoneErr);
                             }
                         }
                     } catch (providerErr) {

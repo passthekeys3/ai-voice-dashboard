@@ -32,7 +32,7 @@ export function FilterableAgentGrid({ agents, agentPhoneMap }: FilterableAgentGr
                 </div>
                 <h3 className="text-lg font-medium">No agents yet</h3>
                 <p className="text-muted-foreground max-w-sm mt-1">
-                    Click &quot;Sync Agents&quot; to import your voice agents from Retell or Vapi.
+                    Click &quot;Sync Agents&quot; to import your voice agents from Retell, Vapi, or Bland.
                 </p>
             </div>
         );

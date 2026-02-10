@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { listVapiPhoneNumbers } from '@/lib/providers/vapi';
+import { listBlandPhoneNumbers } from '@/lib/providers/bland';
 
-// POST /api/phone-numbers/sync - Sync phone numbers from Retell and VAPI
+// POST /api/phone-numbers/sync - Sync phone numbers from Retell, VAPI, and Bland
 export async function POST(_request: NextRequest) {
     try {
         const user = await getCurrentUser();
@@ -17,14 +18,14 @@ export async function POST(_request: NextRequest) {
 
         const supabase = await createClient();
 
-        // Get API keys for both providers
+        // Get API keys for all providers
         const { data: agency } = await supabase
             .from('agencies')
-            .select('retell_api_key, vapi_api_key')
+            .select('retell_api_key, vapi_api_key, bland_api_key')
             .eq('id', user.agency.id)
             .single();
 
-        if (!agency?.retell_api_key && !agency?.vapi_api_key) {
+        if (!agency?.retell_api_key && !agency?.vapi_api_key && !agency?.bland_api_key) {
             return NextResponse.json({ error: 'No API keys configured' }, { status: 400 });
         }
 
@@ -162,6 +163,56 @@ export async function POST(_request: NextRequest) {
                 }
             } catch (error) {
                 console.error('Error syncing VAPI phone numbers:', error);
+            }
+        }
+
+        // Sync Bland phone numbers
+        if (agency.bland_api_key) {
+            try {
+                const blandNumbers = await listBlandPhoneNumbers(agency.bland_api_key);
+                console.log('Bland numbers fetched:', blandNumbers?.length || 0);
+                total += blandNumbers?.length || 0;
+
+                for (const blandNumber of blandNumbers) {
+                    const inboundAgentId = blandNumber.pathway_id
+                        ? agentMap.get(blandNumber.pathway_id)
+                        : null;
+
+                    const phoneNumber = blandNumber.phone_number;
+
+                    const { data: existing } = await supabase
+                        .from('phone_numbers')
+                        .select('id')
+                        .eq('phone_number', phoneNumber)
+                        .eq('agency_id', user.agency.id)
+                        .maybeSingle();
+
+                    if (existing) {
+                        await supabase
+                            .from('phone_numbers')
+                            .update({
+                                agent_id: inboundAgentId,
+                                updated_at: new Date().toISOString(),
+                            })
+                            .eq('id', existing.id);
+                        updated++;
+                    } else {
+                        await supabase
+                            .from('phone_numbers')
+                            .insert({
+                                agency_id: user.agency.id,
+                                external_id: phoneNumber,
+                                phone_number: phoneNumber,
+                                provider: 'bland',
+                                agent_id: inboundAgentId,
+                                monthly_cost_cents: 200,
+                                purchased_at: new Date().toISOString(),
+                            });
+                        synced++;
+                    }
+                }
+            } catch (error) {
+                console.error('Error syncing Bland phone numbers:', error);
             }
         }
 

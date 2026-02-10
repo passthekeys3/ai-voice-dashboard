@@ -6,6 +6,7 @@
 import type { VoiceProvider, AgentConfig } from '@/types';
 import * as retell from './retell';
 import * as vapi from './vapi';
+import * as bland from './bland';
 
 // Normalized agent structure
 export interface NormalizedAgent {
@@ -237,6 +238,89 @@ function createVapiClient(apiKey: string): VoiceProviderClient {
     };
 }
 
+// Bland implementation
+function createBlandClient(apiKey: string): VoiceProviderClient {
+    const normalizeAgent = (pathway: bland.BlandPathway): NormalizedAgent => ({
+        externalId: pathway.id,
+        name: pathway.name,
+        provider: 'bland',
+        config: {
+            description: pathway.description,
+        } as AgentConfig,
+        createdAt: pathway.created_at || new Date().toISOString(),
+    });
+
+    const normalizeCall = (call: bland.BlandCall): NormalizedCall => {
+        // Bland uses minutes for call_length, convert to seconds
+        const durationSeconds = call.call_length
+            ? Math.round(call.call_length * 60)
+            : 0;
+
+        let status: NormalizedCall['status'] = 'queued';
+        if (call.completed || call.status === 'completed' || call.status === 'complete') status = 'completed';
+        else if (call.status === 'in-progress' || call.queue_status === 'in-progress') status = 'in_progress';
+        else if (call.status === 'error') status = 'failed';
+
+        return {
+            externalId: call.call_id,
+            agentExternalId: call.pathway_id || '',
+            provider: 'bland',
+            status,
+            direction: 'outbound', // Bland inbound is configured per-number
+            durationSeconds,
+            // Bland uses dollars for price, convert to cents
+            costCents: call.price ? Math.round(call.price * 100) : 0,
+            fromNumber: call.from,
+            toNumber: call.to,
+            transcript: call.concatenated_transcript,
+            audioUrl: call.recording_url,
+            summary: call.summary,
+            sentiment: undefined,
+            startedAt: call.started_at || call.created_at,
+            endedAt: call.end_at,
+            metadata: call.variables || call.metadata,
+        };
+    };
+
+    return {
+        async listAgents() {
+            const pathways = await bland.listBlandPathways(apiKey);
+            return pathways.map(normalizeAgent);
+        },
+        async getAgent(agentId) {
+            const pathway = await bland.getBlandPathway(apiKey, agentId);
+            return normalizeAgent(pathway);
+        },
+        async createAgent(config) {
+            const pathway = await bland.createBlandPathway(apiKey, {
+                name: config.name,
+                description: config.prompt,
+            });
+            return normalizeAgent(pathway);
+        },
+        async updateAgent(agentId, config) {
+            const pathway = await bland.updateBlandPathway(apiKey, agentId, {
+                name: config.name,
+            });
+            return normalizeAgent(pathway);
+        },
+        async deleteAgent(agentId) {
+            await bland.deleteBlandPathway(apiKey, agentId);
+        },
+        async listCalls(filters) {
+            const calls = await bland.listBlandCalls(apiKey, {
+                pathway_id: filters?.agentId,
+                limit: filters?.limit || 100,
+            });
+            return calls.map(normalizeCall);
+        },
+        async getCall(callId) {
+            const call = await bland.getBlandCall(apiKey, callId);
+            return normalizeCall(call);
+        },
+    };
+}
+
 // Factory function
 export function getProviderClient(
     provider: VoiceProvider,
@@ -247,6 +331,8 @@ export function getProviderClient(
             return createRetellClient(apiKey);
         case 'vapi':
             return createVapiClient(apiKey);
+        case 'bland':
+            return createBlandClient(apiKey);
         default:
             throw new Error(`Unknown provider: ${provider}`);
     }
@@ -256,6 +342,7 @@ export function getProviderClient(
 export function getAgencyProviders(agency: {
     retell_api_key?: string;
     vapi_api_key?: string;
+    bland_api_key?: string;
 }): { provider: VoiceProvider; client: VoiceProviderClient }[] {
     const providers: { provider: VoiceProvider; client: VoiceProviderClient }[] = [];
 
@@ -270,6 +357,13 @@ export function getAgencyProviders(agency: {
         providers.push({
             provider: 'vapi',
             client: createVapiClient(agency.vapi_api_key),
+        });
+    }
+
+    if (agency.bland_api_key) {
+        providers.push({
+            provider: 'bland',
+            client: createBlandClient(agency.bland_api_key),
         });
     }
 

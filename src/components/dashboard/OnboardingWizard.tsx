@@ -30,7 +30,7 @@ type Step = 'welcome' | 'provider' | 'verify' | 'complete';
 export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWizardProps) {
     const router = useRouter();
     const [step, setStep] = useState<Step>(isOnboarded ? 'complete' : 'welcome');
-    const [provider, setProvider] = useState<'retell' | 'vapi'>('retell');
+    const [provider, setProvider] = useState<'retell' | 'vapi' | 'bland'>('retell');
     const [apiKey, setApiKey] = useState('');
     const [saving, setSaving] = useState(false);
     const [verifying, setVerifying] = useState(false);
@@ -48,7 +48,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    [provider === 'retell' ? 'retell_api_key' : 'vapi_api_key']: apiKey,
+                    [provider === 'retell' ? 'retell_api_key' : provider === 'vapi' ? 'vapi_api_key' : 'bland_api_key']: apiKey,
                 }),
             });
 
@@ -121,7 +121,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                 <Key className="h-5 w-5 text-primary mt-0.5" />
                                 <div>
                                     <p className="font-medium text-sm">Connect your provider</p>
-                                    <p className="text-sm text-muted-foreground">Add your Retell or VAPI API key</p>
+                                    <p className="text-sm text-muted-foreground">Add your Retell, VAPI, or Bland API key</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900">
@@ -162,10 +162,11 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <Tabs value={provider} onValueChange={(v) => setProvider(v as 'retell' | 'vapi')}>
-                            <TabsList className="grid w-full grid-cols-2">
+                        <Tabs value={provider} onValueChange={(v) => setProvider(v as 'retell' | 'vapi' | 'bland')}>
+                            <TabsList className="grid w-full grid-cols-3">
                                 <TabsTrigger value="retell">Retell AI</TabsTrigger>
                                 <TabsTrigger value="vapi">VAPI</TabsTrigger>
+                                <TabsTrigger value="bland">Bland.ai</TabsTrigger>
                             </TabsList>
                             <TabsContent value="retell" className="space-y-4 mt-4">
                                 <div className="space-y-2">
@@ -209,6 +210,29 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                             className="text-primary hover:underline"
                                         >
                                             dashboard.vapi.ai
+                                        </a>
+                                    </p>
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="bland" className="space-y-4 mt-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="bland-key">Bland API Key</Label>
+                                    <Input
+                                        id="bland-key"
+                                        type="password"
+                                        placeholder="sk-..."
+                                        value={apiKey}
+                                        onChange={(e) => setApiKey(e.target.value)}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Find your API key at{' '}
+                                        <a
+                                            href="https://app.bland.ai/dashboard"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-primary hover:underline"
+                                        >
+                                            app.bland.ai/dashboard
                                         </a>
                                     </p>
                                 </div>
@@ -264,7 +288,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                     <p className="text-sm text-muted-foreground">
                                         {verified
                                             ? 'Your agents have been synced'
-                                            : `We'll sync your ${provider === 'retell' ? 'Retell' : 'VAPI'} agents`}
+                                            : `We'll sync your ${provider === 'retell' ? 'Retell' : provider === 'vapi' ? 'VAPI' : 'Bland'} agents`}
                                     </p>
                                 </div>
                             </div>

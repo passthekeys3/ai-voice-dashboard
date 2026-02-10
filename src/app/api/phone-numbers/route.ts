@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { purchaseBlandInboundNumber } from '@/lib/providers/bland';
 
 // GET /api/phone-numbers - List owned phone numbers
 export async function GET(_request: NextRequest) {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { area_code, agent_id } = body;
+        const { area_code, agent_id, provider: requestedProvider } = body;
 
         if (!area_code) {
             return NextResponse.json({ error: 'Area code is required' }, { status: 400 });
@@ -52,60 +53,86 @@ export async function POST(request: NextRequest) {
 
         const supabase = await createClient();
 
-        // Get Retell API key
+        // Get API keys for all providers
         const { data: agency } = await supabase
             .from('agencies')
-            .select('retell_api_key')
+            .select('retell_api_key, vapi_api_key, bland_api_key')
             .eq('id', user.agency.id)
             .single();
 
-        if (!agency?.retell_api_key) {
-            return NextResponse.json({ error: 'Retell API key not configured' }, { status: 400 });
+        // Determine which provider to use
+        const provider = requestedProvider || (agency?.retell_api_key ? 'retell' : agency?.bland_api_key ? 'bland' : null);
+
+        if (provider === 'retell' && agency?.retell_api_key) {
+            // Purchase number from Retell
+            const retellResponse = await fetch('https://api.retellai.com/v2/create-phone-number', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${agency.retell_api_key}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    area_code: parseInt(area_code),
+                }),
+            });
+
+            if (!retellResponse.ok) {
+                const errorData = await retellResponse.json().catch(() => ({}));
+                console.error('Retell phone number error:', errorData);
+                return NextResponse.json({
+                    error: errorData.message || 'Failed to purchase phone number'
+                }, { status: 500 });
+            }
+
+            const retellNumber = await retellResponse.json();
+
+            const { data: phoneNumber, error } = await supabase
+                .from('phone_numbers')
+                .insert({
+                    agency_id: user.agency.id,
+                    external_id: retellNumber.phone_number_id,
+                    phone_number: retellNumber.phone_number,
+                    provider: 'retell',
+                    agent_id: agent_id || null,
+                    monthly_cost_cents: 200,
+                    purchased_at: new Date().toISOString(),
+                })
+                .select('*, agent:agents(id, name)')
+                .single();
+
+            if (error) {
+                console.error('Error saving phone number:', error);
+                return NextResponse.json({ error: 'Failed to import phone number' }, { status: 500 });
+            }
+
+            return NextResponse.json({ data: phoneNumber }, { status: 201 });
+        } else if (provider === 'bland' && agency?.bland_api_key) {
+            // Purchase inbound number from Bland
+            const blandResult = await purchaseBlandInboundNumber(agency.bland_api_key, area_code);
+
+            const { data: phoneNumber, error } = await supabase
+                .from('phone_numbers')
+                .insert({
+                    agency_id: user.agency.id,
+                    external_id: blandResult.phone_number,
+                    phone_number: blandResult.phone_number,
+                    provider: 'bland',
+                    agent_id: agent_id || null,
+                    monthly_cost_cents: 200,
+                    purchased_at: new Date().toISOString(),
+                })
+                .select('*, agent:agents(id, name)')
+                .single();
+
+            if (error) {
+                console.error('Error saving Bland phone number:', error);
+                return NextResponse.json({ error: 'Failed to import phone number' }, { status: 500 });
+            }
+
+            return NextResponse.json({ data: phoneNumber }, { status: 201 });
+        } else {
+            return NextResponse.json({ error: 'No voice provider API key configured for phone number purchase' }, { status: 400 });
         }
-
-        // Purchase number from Retell
-        const retellResponse = await fetch('https://api.retellai.com/v2/create-phone-number', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${agency.retell_api_key}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                area_code: parseInt(area_code),
-            }),
-        });
-
-        if (!retellResponse.ok) {
-            const errorData = await retellResponse.json().catch(() => ({}));
-            console.error('Retell phone number error:', errorData);
-            return NextResponse.json({
-                error: errorData.message || 'Failed to purchase phone number'
-            }, { status: 500 });
-        }
-
-        const retellNumber = await retellResponse.json();
-
-        // Store in our database
-        const { data: phoneNumber, error } = await supabase
-            .from('phone_numbers')
-            .insert({
-                agency_id: user.agency.id,
-                external_id: retellNumber.phone_number_id,
-                phone_number: retellNumber.phone_number,
-                provider: 'retell',
-                agent_id: agent_id || null,
-                monthly_cost_cents: 200, // $2/month typical
-                purchased_at: new Date().toISOString(),
-            })
-            .select('*, agent:agents(id, name)')
-            .single();
-
-        if (error) {
-            console.error('Error saving phone number:', error);
-            return NextResponse.json({ error: 'Failed to import phone number' }, { status: 500 });
-        }
-
-        return NextResponse.json({ data: phoneNumber }, { status: 201 });
     } catch (error) {
         console.error('Error purchasing phone number:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

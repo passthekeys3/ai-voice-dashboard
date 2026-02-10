@@ -28,9 +28,10 @@ interface AgentCardProps {
     showDelete?: boolean;
 }
 
-const providerIconStyles = {
+const providerIconStyles: Record<string, string> = {
     retell: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
     vapi: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
+    bland: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
 };
 
 function formatPhoneNumber(number: string) {
@@ -45,9 +46,10 @@ export function AgentCard({ agent, phoneNumber, showDelete = true }: AgentCardPr
     const router = useRouter();
     const [deleting, setDeleting] = useState(false);
 
-    const providerStyles = {
+    const providerStyles: Record<string, string> = {
         retell: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
         vapi: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+        bland: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300',
     };
 
     const handleDelete = async () => {
@@ -85,7 +87,9 @@ export function AgentCard({ agent, phoneNumber, showDelete = true }: AgentCardPr
             'hover:before:opacity-100 before:pointer-events-none',
             agent.provider === 'retell'
                 ? 'before:bg-gradient-to-br before:from-blue-500/5 before:to-transparent'
-                : 'before:bg-gradient-to-br before:from-purple-500/5 before:to-transparent'
+                : agent.provider === 'bland'
+                    ? 'before:bg-gradient-to-br before:from-amber-500/5 before:to-transparent'
+                    : 'before:bg-gradient-to-br before:from-purple-500/5 before:to-transparent'
         )}>
             <CardHeader className="flex flex-row items-start justify-between pb-2">
                 <div className="flex items-center gap-3">
@@ -102,8 +106,8 @@ export function AgentCard({ agent, phoneNumber, showDelete = true }: AgentCardPr
                         </p>
                     </div>
                 </div>
-                <Badge className={providerStyles[agent.provider]}>
-                    {agent.provider}
+                <Badge className={providerStyles[agent.provider] || providerStyles.retell}>
+                    {agent.provider === 'bland' ? 'Bland.ai' : agent.provider}
                 </Badge>
             </CardHeader>
             <CardContent>
@@ -159,7 +163,7 @@ export function AgentCard({ agent, phoneNumber, showDelete = true }: AgentCardPr
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Delete Agent</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            Are you sure you want to delete &quot;{agent.name}&quot;? This will remove the agent from your dashboard but will NOT delete it from Retell/VAPI. You can re-sync it later.
+                                            Are you sure you want to delete &quot;{agent.name}&quot;? This will remove the agent from your dashboard but will NOT delete it from your voice provider. You can re-sync it later.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -182,7 +186,9 @@ export function AgentCard({ agent, phoneNumber, showDelete = true }: AgentCardPr
                                 'transition-colors',
                                 agent.provider === 'retell'
                                     ? 'hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20'
-                                    : 'hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-900/20'
+                                    : agent.provider === 'bland'
+                                        ? 'hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-900/20'
+                                        : 'hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-900/20'
                             )}
                         >
                             <Link href={`/agents/${agent.id}`}>

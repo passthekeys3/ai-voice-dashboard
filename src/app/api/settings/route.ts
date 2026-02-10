@@ -10,7 +10,7 @@ export async function PATCH(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { name, branding, retell_api_key, vapi_api_key, integrations } = body;
+        const { name, branding, retell_api_key, vapi_api_key, bland_api_key, integrations } = body;
 
         // Validate API key format and length
         const API_KEY_MAX_LENGTH = 256;
@@ -32,6 +32,15 @@ export async function PATCH(request: NextRequest) {
             }
             if (!API_KEY_PATTERN.test(vapi_api_key)) {
                 return NextResponse.json({ error: 'Invalid Vapi API key format' }, { status: 400 });
+            }
+        }
+
+        if (bland_api_key) {
+            if (typeof bland_api_key !== 'string' || bland_api_key.length > API_KEY_MAX_LENGTH) {
+                return NextResponse.json({ error: 'Invalid Bland API key: too long' }, { status: 400 });
+            }
+            if (!API_KEY_PATTERN.test(bland_api_key)) {
+                return NextResponse.json({ error: 'Invalid Bland API key format' }, { status: 400 });
             }
         }
 
@@ -208,6 +217,7 @@ export async function PATCH(request: NextRequest) {
         if (branding !== undefined) updatePayload.branding = branding;
         if (retell_api_key !== undefined) updatePayload.retell_api_key = retell_api_key || null;
         if (vapi_api_key !== undefined) updatePayload.vapi_api_key = vapi_api_key || null;
+        if (bland_api_key !== undefined) updatePayload.bland_api_key = bland_api_key || null;
 
         // Deep merge integrations to prevent overwriting sibling keys (e.g., GHL when updating HubSpot)
         if (integrations !== undefined) {
