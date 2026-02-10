@@ -389,7 +389,7 @@ export async function refreshAccessToken(
 ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number } | null> {
     try {
         const response = await fetch(
-            'https://api.hubapi.com/oauth/v1/token',
+            'https://api.hubapi.com/oauth/v3/token',
             {
                 method: 'POST',
                 headers: {

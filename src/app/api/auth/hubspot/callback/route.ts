@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Exchange code for tokens
-        const tokenResponse = await fetch('https://api.hubapi.com/oauth/v1/token', {
+        const tokenResponse = await fetch('https://api.hubapi.com/oauth/v3/token', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
