@@ -33,9 +33,11 @@ export function TestCall({ agentId, agentName }: TestCallProps) {
                 const { RetellWebClient } = await import('retell-client-js-sdk');
                 retellClientRef.current = new RetellWebClient();
                 setSdkLoaded(true);
+                console.log('[TestCall] Retell SDK loaded successfully');
             } catch (err) {
-                console.log('Retell SDK loading issue:', err);
+                console.error('[TestCall] Failed to load Retell SDK:', err);
                 setSdkLoaded(false);
+                setError('Failed to load call SDK. Please refresh the page.');
             }
         };
         loadSDK();
@@ -62,11 +64,19 @@ export function TestCall({ agentId, agentName }: TestCallProps) {
             });
 
             if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to create call');
+                const errData = await response.json();
+                throw new Error(errData.error || 'Failed to create call');
             }
 
-            const { data } = await response.json();
+            const result = await response.json();
+            const accessToken = result.data?.access_token || result.access_token;
+            const callId = result.data?.call_id || result.call_id;
+
+            if (!accessToken) {
+                throw new Error('No access token received from server');
+            }
+
+            console.log('[TestCall] Got access token, call_id:', callId);
 
             const client = retellClientRef.current;
             if (!client) {
@@ -75,19 +85,25 @@ export function TestCall({ agentId, agentName }: TestCallProps) {
                 return;
             }
 
+            // Remove any previous listeners to avoid duplicates
+            client.removeAllListeners();
+
             // Set up event listeners
             client.on('call_started', () => {
+                console.log('[TestCall] Call started');
                 setIsCallActive(true);
                 setIsConnecting(false);
             });
 
             client.on('call_ended', () => {
+                console.log('[TestCall] Call ended');
                 setIsCallActive(false);
                 setIsConnecting(false);
             });
 
             client.on('error', (err: Error) => {
-                setError(err.message);
+                console.error('[TestCall] SDK error:', err);
+                setError(err.message || 'Call failed');
                 setIsCallActive(false);
                 setIsConnecting(false);
             });
@@ -98,12 +114,27 @@ export function TestCall({ agentId, agentName }: TestCallProps) {
                 }
             });
 
-            // Start the call
-            await client.startCall({
-                accessToken: data.access_token,
+            // Start the call with a timeout — if call_started doesn't fire within 15s, something is wrong
+            const timeoutId = setTimeout(() => {
+                if (!retellClientRef.current) return;
+                console.error('[TestCall] Connection timed out after 15 seconds');
+                setError('Connection timed out. Check your microphone permissions and try again.');
+                setIsConnecting(false);
+                try { retellClientRef.current.stopCall(); } catch { /* ignore */ }
+            }, 15000);
+
+            client.on('call_started', () => {
+                clearTimeout(timeoutId);
             });
 
+            console.log('[TestCall] Starting call with Retell SDK...');
+            await client.startCall({
+                accessToken,
+            });
+            console.log('[TestCall] startCall() resolved');
+
         } catch (err) {
+            console.error('[TestCall] Error:', err);
             setError(err instanceof Error ? err.message : 'Failed to start call');
             setIsConnecting(false);
         }
