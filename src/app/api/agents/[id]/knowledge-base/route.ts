@@ -111,9 +111,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'No Retell API key configured' }, { status: 400 });
         }
 
-        // Create KB in Retell
+        // Create KB in Retell (name must be ≤40 chars)
+        const kbName = `${agent.name} KB`.slice(0, 40);
         const kb = await retell.createRetellKnowledgeBase(agency.retell_api_key, {
-            knowledge_base_name: `${agent.name} Knowledge Base`,
+            knowledge_base_name: kbName,
         });
 
         // Update agent config with KB ID
@@ -133,7 +134,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         });
     } catch (error) {
         console.error('Error creating KB:', error);
-        return NextResponse.json({ error: 'Failed to create knowledge base' }, { status: 500 });
+        const message = error instanceof Error ? error.message : 'Failed to create knowledge base';
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }
 
