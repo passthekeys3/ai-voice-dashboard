@@ -64,9 +64,13 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
         setCreating(true);
         setError(null);
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
             const response = await fetch(`/api/agents/${agentId}/knowledge-base`, {
                 method: 'POST',
+                signal: controller.signal,
             });
+            clearTimeout(timeoutId);
             const data = await response.json();
             if (response.ok) {
                 setKb(data.data);
@@ -75,7 +79,11 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
             }
         } catch (err) {
             console.error('Error creating KB:', err);
-            setError(err instanceof Error ? err.message : 'Failed to create knowledge base');
+            if (err instanceof DOMException && err.name === 'AbortError') {
+                setError('Request timed out. The server may be busy — please try again.');
+            } else {
+                setError(err instanceof Error ? err.message : 'Failed to create knowledge base');
+            }
         } finally {
             setCreating(false);
         }
