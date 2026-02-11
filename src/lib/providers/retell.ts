@@ -199,7 +199,10 @@ export async function updateRetellLLM(
 
 // ============================================
 // KNOWLEDGE BASE TYPES & FUNCTIONS
+// Uses official retell-sdk for multipart/form-data endpoints
 // ============================================
+
+import Retell from 'retell-sdk';
 
 export interface RetellKnowledgeBase {
     knowledge_base_id: string;
@@ -230,6 +233,10 @@ export interface AddKBSourcesParams {
     knowledge_base_urls?: Array<{ url: string; enable_auto_refresh?: boolean }>;
 }
 
+function getRetellClient(apiKey: string): Retell {
+    return new Retell({ apiKey });
+}
+
 export async function listRetellKnowledgeBases(
     apiKey: string
 ): Promise<RetellKnowledgeBase[]> {
@@ -247,40 +254,21 @@ export async function createRetellKnowledgeBase(
     apiKey: string,
     params: CreateKnowledgeBaseParams
 ): Promise<RetellKnowledgeBase> {
-    // Retell's create-knowledge-base endpoint requires multipart/form-data
-    const formData = new FormData();
-    formData.append('knowledge_base_name', params.knowledge_base_name);
-    if (params.knowledge_base_texts) {
-        formData.append('knowledge_base_texts', JSON.stringify(params.knowledge_base_texts));
-    }
-    if (params.knowledge_base_urls) {
-        formData.append('knowledge_base_urls', JSON.stringify(params.knowledge_base_urls));
-    }
-
-    const response = await fetch(`${RETELL_BASE_URL}/create-knowledge-base`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            // Do NOT set Content-Type — runtime sets multipart boundary automatically
-        },
-        body: formData,
+    const client = getRetellClient(apiKey);
+    const result = await client.knowledgeBase.create({
+        knowledge_base_name: params.knowledge_base_name,
+        knowledge_base_texts: params.knowledge_base_texts,
+        knowledge_base_urls: params.knowledge_base_urls?.map(u => u.url),
     });
-
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Retell API error: ${response.status} - ${error}`);
-    }
-
-    return response.json();
+    return result as unknown as RetellKnowledgeBase;
 }
 
 export async function deleteRetellKnowledgeBase(
     apiKey: string,
     kbId: string
 ): Promise<void> {
-    await retellFetch(apiKey, `/delete-knowledge-base/${kbId}`, {
-        method: 'DELETE',
-    });
+    const client = getRetellClient(apiKey);
+    await client.knowledgeBase.delete(kbId);
 }
 
 export async function addRetellKBSources(
@@ -288,29 +276,12 @@ export async function addRetellKBSources(
     kbId: string,
     params: AddKBSourcesParams
 ): Promise<RetellKnowledgeBase> {
-    // Retell's add-knowledge-base-sources endpoint requires multipart/form-data
-    const formData = new FormData();
-    if (params.knowledge_base_texts) {
-        formData.append('knowledge_base_texts', JSON.stringify(params.knowledge_base_texts));
-    }
-    if (params.knowledge_base_urls) {
-        formData.append('knowledge_base_urls', JSON.stringify(params.knowledge_base_urls));
-    }
-
-    const response = await fetch(`${RETELL_BASE_URL}/add-knowledge-base-sources/${kbId}`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKey}`,
-        },
-        body: formData,
+    const client = getRetellClient(apiKey);
+    const result = await client.knowledgeBase.addSources(kbId, {
+        knowledge_base_texts: params.knowledge_base_texts,
+        knowledge_base_urls: params.knowledge_base_urls?.map(u => u.url),
     });
-
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Retell API error: ${response.status} - ${error}`);
-    }
-
-    return response.json();
+    return result as unknown as RetellKnowledgeBase;
 }
 
 export async function deleteRetellKBSource(
@@ -318,7 +289,6 @@ export async function deleteRetellKBSource(
     kbId: string,
     sourceId: string
 ): Promise<void> {
-    await retellFetch(apiKey, `/delete-knowledge-base-source/${kbId}/${sourceId}`, {
-        method: 'DELETE',
-    });
+    const client = getRetellClient(apiKey);
+    await client.knowledgeBase.deleteSource(kbId, sourceId);
 }
