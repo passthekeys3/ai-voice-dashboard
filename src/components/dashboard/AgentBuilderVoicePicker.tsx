@@ -28,6 +28,7 @@ export function AgentBuilderVoicePicker({
     const [searchQuery, setSearchQuery] = useState('');
     const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
     const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
+    const [fetchError, setFetchError] = useState<string | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     // Fetch voices when expanded or provider changes
@@ -36,17 +37,22 @@ export function AgentBuilderVoicePicker({
 
         let cancelled = false;
         setLoading(true);
+        setFetchError(null);
 
         const fetchVoices = async () => {
             try {
                 const response = await fetch(`/api/voices?provider=${provider}`);
-                if (!response.ok) return;
+                if (!response.ok) {
+                    if (!cancelled) setFetchError('Failed to load voices. Check your API key in Settings.');
+                    return;
+                }
                 const { data } = await response.json();
                 if (!cancelled && data) {
                     setVoices(data);
                 }
             } catch (err) {
                 console.error('Failed to fetch voices:', err);
+                if (!cancelled) setFetchError('Failed to load voices. Please try again.');
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -211,6 +217,10 @@ export function AgentBuilderVoicePicker({
                     <div className="flex items-center justify-center py-8">
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                         <span className="ml-2 text-xs text-muted-foreground">Loading voices...</span>
+                    </div>
+                ) : fetchError ? (
+                    <div className="text-center py-6 px-3 text-xs text-red-500">
+                        {fetchError}
                     </div>
                 ) : filteredVoices.length === 0 ? (
                     <div className="text-center py-6 text-xs text-muted-foreground">
