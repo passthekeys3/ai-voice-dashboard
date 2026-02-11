@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { getUserPermissions } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
     try {
         const user = await getCurrentUser();
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Check export permission for non-admin users
+        if (!isAgencyAdmin(user)) {
+            const permissions = getUserPermissions(user);
+            if (!permissions.can_export_calls) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+            }
         }
 
         const supabase = await createClient();

@@ -105,6 +105,7 @@ export const POST = withErrorHandling(async (
             user_metadata: {
                 full_name,
                 client_name: client.name,
+                role,
             },
         });
 

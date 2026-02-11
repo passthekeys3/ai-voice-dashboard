@@ -4,23 +4,18 @@ import { DEFAULT_CLIENT_PERMISSIONS } from '@/types/database';
 /**
  * Resolve the effective permissions for a client.
  * Uses client-specific overrides if set, otherwise falls back to agency defaults.
+ * Merges with DEFAULT_CLIENT_PERMISSIONS to ensure new permission keys always exist
+ * (backward compatibility for stored JSON missing newer fields).
  */
 export function getClientPermissions(
     client: Client | undefined,
     agency: Agency
 ): ClientPermissions {
-    // If client has explicit permissions, use them
-    if (client?.permissions) {
-        return client.permissions;
-    }
+    const base = client?.permissions
+        ?? agency.default_client_permissions
+        ?? DEFAULT_CLIENT_PERMISSIONS;
 
-    // Otherwise use agency defaults
-    if (agency.default_client_permissions) {
-        return agency.default_client_permissions;
-    }
-
-    // Fallback to system defaults
-    return DEFAULT_CLIENT_PERMISSIONS;
+    return { ...DEFAULT_CLIENT_PERMISSIONS, ...base };
 }
 
 /**
@@ -35,6 +30,9 @@ export function getUserPermissions(user: AuthUser): ClientPermissions {
             show_transcripts: true,
             show_analytics: true,
             allow_playback: true,
+            can_edit_agents: true,
+            can_create_agents: true,
+            can_export_calls: true,
         };
     }
 
@@ -68,4 +66,25 @@ export function canSeeAnalytics(user: AuthUser): boolean {
  */
 export function canPlayAudio(user: AuthUser): boolean {
     return getUserPermissions(user).allow_playback;
+}
+
+/**
+ * Check if user can edit agent settings
+ */
+export function canEditAgents(user: AuthUser): boolean {
+    return getUserPermissions(user).can_edit_agents;
+}
+
+/**
+ * Check if user can create new agents
+ */
+export function canCreateAgents(user: AuthUser): boolean {
+    return getUserPermissions(user).can_create_agents;
+}
+
+/**
+ * Check if user can export call data
+ */
+export function canExportCalls(user: AuthUser): boolean {
+    return getUserPermissions(user).can_export_calls;
 }

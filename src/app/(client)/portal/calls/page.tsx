@@ -10,13 +10,11 @@ import type { Call } from '@/types';
 
 export const metadata: Metadata = { title: 'Call History' };
 
-export default async function CallsPage() {
+export default async function ClientCallsPage() {
     const user = await requireAuth();
     const supabase = await createClient();
-    const isAdmin = isAgencyAdmin(user);
     const permissions = getUserPermissions(user);
 
-    // Fetch initial page of calls for SSR
     let query = supabase
         .from('calls')
         .select('*, agents!inner(name, provider, agency_id)')
@@ -24,7 +22,7 @@ export default async function CallsPage() {
         .order('started_at', { ascending: false })
         .limit(25);
 
-    if (!isAdmin && user.client) {
+    if (user.client) {
         query = query.eq('client_id', user.client.id);
     }
 
@@ -47,7 +45,7 @@ export default async function CallsPage() {
                             View and analyze all voice calls
                         </p>
                     </div>
-                    {(isAdmin || permissions.can_export_calls) && <ExportCallsButton />}
+                    {permissions.can_export_calls && <ExportCallsButton />}
                 </div>
 
                 <CallsPageClient

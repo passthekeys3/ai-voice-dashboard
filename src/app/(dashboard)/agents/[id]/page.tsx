@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { requireAuth, isAgencyAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
+import { getUserPermissions } from '@/lib/permissions';
 import { Header } from '@/components/dashboard/Header';
 import { AgentEditor } from '@/components/dashboard/AgentEditor';
 import { KnowledgeBaseEditor } from '@/components/dashboard/KnowledgeBaseEditor';
@@ -25,6 +26,8 @@ export default async function AgentDetailPage({
     const user = await requireAuth();
     const supabase = await createClient();
     const isAdmin = isAgencyAdmin(user);
+    const permissions = getUserPermissions(user);
+    const canEdit = isAdmin || permissions.can_edit_agents;
 
     const { data: agent, error } = await supabase
         .from('agents')
@@ -147,7 +150,7 @@ export default async function AgentDetailPage({
                     </Card>
                 )}
 
-                {isAdmin ? (
+                {canEdit ? (
                     <div className="space-y-6">
                         <AgentEditor
                             agentId={agent.id}
@@ -159,7 +162,7 @@ export default async function AgentDetailPage({
                             webhookUrl={agent.webhook_url}
                         />
 
-                        {agent.provider === 'retell' && (
+                        {isAdmin && agent.provider === 'retell' && (
                             <>
                                 <TestCall
                                     agentId={agent.id}

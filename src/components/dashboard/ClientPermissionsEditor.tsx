@@ -35,6 +35,18 @@ const PERMISSION_LABELS: Record<keyof ClientPermissions, { label: string; descri
         label: 'Allow Audio Playback',
         description: 'Allow clients to listen to call recordings',
     },
+    can_edit_agents: {
+        label: 'Edit Agents',
+        description: 'Allow clients to modify agent settings (prompts, voice, knowledge base)',
+    },
+    can_create_agents: {
+        label: 'Create Agents',
+        description: 'Allow clients to create new agents via the Agent Builder',
+    },
+    can_export_calls: {
+        label: 'Export Calls',
+        description: 'Allow clients to download call data as CSV exports',
+    },
 };
 
 export function ClientPermissionsEditor({

@@ -150,8 +150,41 @@ export async function middleware(request: NextRequest) {
     // Redirect authenticated users away from auth pages
     if (user && (pathname === '/login' || pathname === '/signup')) {
         const url = request.nextUrl.clone();
-        url.pathname = '/';
+        const userRole = user.user_metadata?.role as string | undefined;
+        url.pathname = ['client_admin', 'client_member'].includes(userRole || '') ? '/portal' : '/';
         return NextResponse.redirect(url);
+    }
+
+    // Role-based route protection (defense-in-depth — layout also enforces this)
+    if (user) {
+        const userRole = user.user_metadata?.role as string | undefined;
+        const isClientRole = userRole && ['client_admin', 'client_member'].includes(userRole);
+
+        if (isClientRole) {
+            // Client users trying to access admin-only paths → redirect to portal
+            const ADMIN_ONLY_PATHS = [
+                '/clients', '/phone-numbers', '/live', '/scheduled-calls',
+                '/insights', '/experiments', '/testing', '/settings',
+                '/workflows', '/agent-builder',
+            ];
+
+            const isAdminPath = ADMIN_ONLY_PATHS.some(
+                p => pathname === p || pathname.startsWith(`${p}/`)
+            );
+
+            if (isAdminPath) {
+                const url = request.nextUrl.clone();
+                url.pathname = '/portal';
+                return NextResponse.redirect(url);
+            }
+
+            // Client users on non-portal, non-API paths → redirect to portal
+            if (!pathname.startsWith('/portal') && !pathname.startsWith('/api/') && pathname !== '/onboarding') {
+                const url = request.nextUrl.clone();
+                url.pathname = '/portal';
+                return NextResponse.redirect(url);
+            }
+        }
     }
 
     // Create response with custom headers for white-label context

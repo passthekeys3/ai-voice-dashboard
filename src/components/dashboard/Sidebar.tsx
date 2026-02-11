@@ -54,6 +54,7 @@ interface SidebarProps {
     agencyName: string;
     branding?: Branding;
     permissions?: ClientPermissions;
+    basePath?: string; // '/portal' for client users, undefined for agency
 }
 
 const navigation = [
@@ -83,6 +84,7 @@ interface SidebarContentProps {
     sidebarColor: string;
     onNavigate?: () => void;
     permissions?: ClientPermissions;
+    basePath?: string;
 }
 
 function SidebarContent({
@@ -92,6 +94,7 @@ function SidebarContent({
     sidebarColor,
     onNavigate,
     permissions,
+    basePath,
 }: SidebarContentProps) {
     const pathname = usePathname();
     const router = useRouter();
@@ -118,9 +121,17 @@ function SidebarContent({
             return true;
         });
 
-    const allNavigation = isAgencyAdmin
+    const combinedNavigation = isAgencyAdmin
         ? [...filteredNavigation, ...adminNavigation]
         : filteredNavigation;
+
+    // Apply basePath prefix for client portal navigation
+    const allNavigation = basePath
+        ? combinedNavigation.map(item => ({
+            ...item,
+            href: item.href === '/' ? basePath : `${basePath}${item.href}`,
+        }))
+        : combinedNavigation;
 
     return (
         <div
@@ -200,7 +211,7 @@ function SidebarContent({
     );
 }
 
-export function Sidebar({ isAgencyAdmin, agencyName, branding, permissions }: SidebarProps) {
+export function Sidebar({ isAgencyAdmin, agencyName, branding, permissions, basePath }: SidebarProps) {
     const [mobileOpen, setMobileOpen] = useState(false);
 
     const displayName = branding?.company_name || agencyName;
@@ -262,6 +273,7 @@ export function Sidebar({ isAgencyAdmin, agencyName, branding, permissions }: Si
                         sidebarColor={sidebarColor}
                         onNavigate={() => setMobileOpen(false)}
                         permissions={permissions}
+                        basePath={basePath}
                     />
                 </SheetContent>
             </Sheet>
@@ -274,6 +286,7 @@ export function Sidebar({ isAgencyAdmin, agencyName, branding, permissions }: Si
                     branding={branding}
                     sidebarColor={sidebarColor}
                     permissions={permissions}
+                    basePath={basePath}
                 />
             </div>
         </>

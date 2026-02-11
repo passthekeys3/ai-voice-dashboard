@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { requireAuth, isAgencyAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { getUserPermissions } from '@/lib/permissions';
 import { Header } from '@/components/dashboard/Header';
 import { AgentBuilder } from '@/components/dashboard/AgentBuilder';
 
@@ -10,9 +11,10 @@ export const metadata: Metadata = { title: 'Agent Builder' };
 
 export default async function AgentBuilderPage() {
     const user = await requireAuth();
+    const permissions = getUserPermissions(user);
 
-    // Only agency admins can access the builder
-    if (!isAgencyAdmin(user)) {
+    // Agency admins and clients with can_create_agents permission can access
+    if (!isAgencyAdmin(user) && !permissions.can_create_agents) {
         redirect('/agents');
     }
 

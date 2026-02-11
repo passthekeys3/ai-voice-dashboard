@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
             user_metadata: {
                 full_name: fullName,
                 agency_name: agencyName,
+                role: 'agency_admin',
             },
         });
 

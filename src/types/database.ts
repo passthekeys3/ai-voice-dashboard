@@ -41,12 +41,15 @@ export interface Agency {
     updated_at: string;
 }
 
-// Permissions that control what clients can see
+// Permissions that control what clients can see and do
 export interface ClientPermissions {
     show_costs: boolean;
     show_transcripts: boolean;
     show_analytics: boolean;
     allow_playback: boolean;
+    can_edit_agents: boolean;
+    can_create_agents: boolean;
+    can_export_calls: boolean;
 }
 
 // Default permissions for new clients
@@ -55,6 +58,9 @@ export const DEFAULT_CLIENT_PERMISSIONS: ClientPermissions = {
     show_transcripts: true,
     show_analytics: true,
     allow_playback: true,
+    can_edit_agents: false,
+    can_create_agents: false,
+    can_export_calls: false,
 };
 
 export interface AgencyBranding {
