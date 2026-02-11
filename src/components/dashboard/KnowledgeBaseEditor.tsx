@@ -36,6 +36,7 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
     const [creating, setCreating] = useState(false);
     const [addingSource, setAddingSource] = useState(false);
     const [deletingSource, setDeletingSource] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     // Form state for adding sources
     const [textTitle, setTextTitle] = useState('');
@@ -61,6 +62,7 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
 
     const createKB = async () => {
         setCreating(true);
+        setError(null);
         try {
             const response = await fetch(`/api/agents/${agentId}/knowledge-base`, {
                 method: 'POST',
@@ -68,9 +70,12 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
             const data = await response.json();
             if (response.ok) {
                 setKb(data.data);
+            } else {
+                setError(data.error || 'Failed to create knowledge base');
             }
-        } catch (error) {
-            console.error('Error creating KB:', error);
+        } catch (err) {
+            console.error('Error creating KB:', err);
+            setError(err instanceof Error ? err.message : 'Failed to create knowledge base');
         } finally {
             setCreating(false);
         }
@@ -80,6 +85,7 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
         if (!textTitle.trim() || !textContent.trim()) return;
 
         setAddingSource(true);
+        setError(null);
         try {
             const response = await fetch(`/api/agents/${agentId}/knowledge-base/sources`, {
                 method: 'POST',
@@ -94,9 +100,13 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
                 setTextTitle('');
                 setTextContent('');
                 fetchKB();
+            } else {
+                const data = await response.json();
+                setError(data.error || 'Failed to add text source');
             }
-        } catch (error) {
-            console.error('Error adding text source:', error);
+        } catch (err) {
+            console.error('Error adding text source:', err);
+            setError(err instanceof Error ? err.message : 'Failed to add text source');
         } finally {
             setAddingSource(false);
         }
@@ -106,6 +116,7 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
         if (!url.trim()) return;
 
         setAddingSource(true);
+        setError(null);
         try {
             const response = await fetch(`/api/agents/${agentId}/knowledge-base/sources`, {
                 method: 'POST',
@@ -120,9 +131,13 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
                 setUrl('');
                 setAutoRefresh(false);
                 fetchKB();
+            } else {
+                const data = await response.json();
+                setError(data.error || 'Failed to add URL source');
             }
-        } catch (error) {
-            console.error('Error adding URL source:', error);
+        } catch (err) {
+            console.error('Error adding URL source:', err);
+            setError(err instanceof Error ? err.message : 'Failed to add URL source');
         } finally {
             setAddingSource(false);
         }
@@ -166,7 +181,7 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
                         Add documents, URLs, or text to enhance your agent&apos;s responses
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3">
                     <Button onClick={createKB} disabled={creating}>
                         {creating ? (
                             <>
@@ -180,6 +195,11 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
                             </>
                         )}
                     </Button>
+                    {error && (
+                        <div className="text-sm text-red-500 bg-red-50 dark:bg-red-950 p-3 rounded-lg">
+                            {error}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         );
@@ -197,7 +217,12 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
                     {kb.knowledge_base_sources?.length || 0} sources
                 </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+                {error && (
+                    <div className="text-sm text-red-500 bg-red-50 dark:bg-red-950 p-3 rounded-lg">
+                        {error}
+                    </div>
+                )}
                 <Tabs defaultValue="sources" className="w-full">
                     <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="sources">Sources</TabsTrigger>
