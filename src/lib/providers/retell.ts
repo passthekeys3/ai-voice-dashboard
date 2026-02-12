@@ -199,22 +199,12 @@ export async function updateRetellLLM(
 
 // ============================================
 // KNOWLEDGE BASE TYPES & FUNCTIONS
-// Uses form-data package for multipart/form-data endpoints
-// (retell-sdk is too slow to init under Vercel Hobby 10s limit)
+// Uses form-data + native https to bypass Next.js fetch polyfill
+// (Next.js's undici-based fetch mangles multipart/form-data)
 // ============================================
 
-// Build multipart/form-data body manually (compatible with fetch() + Vercel)
-function buildMultipartBody(fields: Record<string, string>): { body: string; contentType: string } {
-    const boundary = '----RetellFormBoundary' + Math.random().toString(36).slice(2);
-    let body = '';
-    for (const [key, value] of Object.entries(fields)) {
-        body += `--${boundary}\r\n`;
-        body += `Content-Disposition: form-data; name="${key}"\r\n\r\n`;
-        body += `${value}\r\n`;
-    }
-    body += `--${boundary}--\r\n`;
-    return { body, contentType: `multipart/form-data; boundary=${boundary}` };
-}
+import FormData from 'form-data';
+import https from 'https';
 
 export interface RetellKnowledgeBase {
     knowledge_base_id: string;
@@ -245,26 +235,40 @@ export interface AddKBSourcesParams {
     knowledge_base_urls?: Array<{ url: string; enable_auto_refresh?: boolean }>;
 }
 
-async function retellMultipartPost<T>(
+function retellMultipartPost<T>(
     apiKey: string,
     path: string,
-    fields: Record<string, string>
+    form: FormData
 ): Promise<T> {
-    const { body, contentType } = buildMultipartBody(fields);
-    const response = await fetch(`${RETELL_BASE_URL}${path}`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': contentType,
-        },
-        body,
+    return new Promise((resolve, reject) => {
+        const req = https.request(
+            `https://api.retellai.com${path}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    ...form.getHeaders(),
+                },
+            },
+            (res) => {
+                let data = '';
+                res.on('data', (chunk: Buffer) => { data += chunk.toString(); });
+                res.on('end', () => {
+                    if (res.statusCode && res.statusCode >= 400) {
+                        reject(new Error(`Retell API error: ${res.statusCode} - ${data}`));
+                        return;
+                    }
+                    try {
+                        resolve(JSON.parse(data) as T);
+                    } catch {
+                        reject(new Error(`Invalid JSON response: ${data}`));
+                    }
+                });
+            }
+        );
+        req.on('error', reject);
+        form.pipe(req);
     });
-
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Retell API error: ${response.status} - ${error}`);
-    }
-    return response.json();
 }
 
 export async function listRetellKnowledgeBases(
@@ -284,16 +288,15 @@ export async function createRetellKnowledgeBase(
     apiKey: string,
     params: CreateKnowledgeBaseParams
 ): Promise<RetellKnowledgeBase> {
-    const fields: Record<string, string> = {
-        knowledge_base_name: params.knowledge_base_name,
-    };
+    const form = new FormData();
+    form.append('knowledge_base_name', params.knowledge_base_name);
     if (params.knowledge_base_texts) {
-        fields.knowledge_base_texts = JSON.stringify(params.knowledge_base_texts);
+        form.append('knowledge_base_texts', JSON.stringify(params.knowledge_base_texts));
     }
     if (params.knowledge_base_urls) {
-        fields.knowledge_base_urls = JSON.stringify(params.knowledge_base_urls.map(u => u.url));
+        form.append('knowledge_base_urls', JSON.stringify(params.knowledge_base_urls.map(u => u.url)));
     }
-    return retellMultipartPost<RetellKnowledgeBase>(apiKey, '/create-knowledge-base', fields);
+    return retellMultipartPost<RetellKnowledgeBase>(apiKey, '/create-knowledge-base', form);
 }
 
 export async function deleteRetellKnowledgeBase(
@@ -310,14 +313,14 @@ export async function addRetellKBSources(
     kbId: string,
     params: AddKBSourcesParams
 ): Promise<RetellKnowledgeBase> {
-    const fields: Record<string, string> = {};
+    const form = new FormData();
     if (params.knowledge_base_texts) {
-        fields.knowledge_base_texts = JSON.stringify(params.knowledge_base_texts);
+        form.append('knowledge_base_texts', JSON.stringify(params.knowledge_base_texts));
     }
     if (params.knowledge_base_urls) {
-        fields.knowledge_base_urls = JSON.stringify(params.knowledge_base_urls.map(u => u.url));
+        form.append('knowledge_base_urls', JSON.stringify(params.knowledge_base_urls.map(u => u.url)));
     }
-    return retellMultipartPost<RetellKnowledgeBase>(apiKey, `/add-knowledge-base-sources/${kbId}`, fields);
+    return retellMultipartPost<RetellKnowledgeBase>(apiKey, `/add-knowledge-base-sources/${kbId}`, form);
 }
 
 export async function deleteRetellKBSource(
