@@ -8,7 +8,7 @@ const resolveTxt = promisify(dns.resolveTxt);
 const resolveCname = promisify(dns.resolveCname);
 
 // The hostname that custom domains should point to
-const PLATFORM_HOSTNAME = process.env.PLATFORM_HOSTNAME || 'prosodydashboard.com';
+const PLATFORM_HOSTNAME = process.env.PLATFORM_HOSTNAME || 'buildvoiceai.com';
 
 interface VerificationResult {
     dns_configured: boolean;
@@ -26,7 +26,7 @@ async function verifyDomain(domain: string, verificationToken: string): Promise<
     };
 
     // Check for TXT record verification
-    const txtRecordName = `_prosody-verify.${domain}`;
+    const txtRecordName = `_buildvoiceai-verify.${domain}`;
     try {
         const txtRecords = await resolveTxt(txtRecordName);
         const flatRecords = txtRecords.flat();
@@ -162,7 +162,7 @@ export async function POST() {
                 verification_result: verificationResult,
                 instructions: {
                     txt_record: {
-                        name: `_prosody-verify.${agency.custom_domain}`,
+                        name: `_buildvoiceai-verify.${agency.custom_domain}`,
                         type: 'TXT',
                         value: agency.domain_verification_token,
                     },
@@ -223,7 +223,7 @@ export async function GET() {
                 verified_at: agency.domain_verified_at,
                 instructions: !agency.domain_verified ? {
                     txt_record: {
-                        name: `_prosody-verify.${agency.custom_domain}`,
+                        name: `_buildvoiceai-verify.${agency.custom_domain}`,
                         type: 'TXT',
                         value: agency.domain_verification_token,
                         description: 'Add this TXT record to verify domain ownership',

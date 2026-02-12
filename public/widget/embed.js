@@ -1,8 +1,8 @@
 /**
- * Prosody Voice Widget — Embed Script
+ * BuildVoiceAI Voice Widget — Embed Script
  *
  * Usage:
- * <script src="https://app.prosody.ai/widget/embed.js"
+ * <script src="https://buildvoiceai.com/widget/embed.js"
  *   data-agent-id="agent-uuid-here"
  *   data-color="#0f172a"
  *   data-position="right">
@@ -12,8 +12,8 @@
     'use strict';
 
     // Prevent double-init
-    if (window.__prosodyWidget) return;
-    window.__prosodyWidget = true;
+    if (window.__buildvoiceaiWidget) return;
+    window.__buildvoiceaiWidget = true;
 
     // Read config from script tag attributes
     // Fallback for defer/async contexts where document.currentScript is null
@@ -22,7 +22,7 @@
 
     var agentId = script.getAttribute('data-agent-id');
     if (!agentId) {
-        console.error('[Prosody] Missing data-agent-id attribute on embed script.');
+        console.error('[BuildVoiceAI] Missing data-agent-id attribute on embed script.');
         return;
     }
 
@@ -48,7 +48,7 @@
 
     // ── Create floating button ──
     var btn = document.createElement('button');
-    btn.id = 'prosody-widget-btn';
+    btn.id = 'buildvoiceai-widget-btn';
     btn.setAttribute('aria-label', 'Open voice assistant');
     Object.assign(btn.style, {
         position: 'fixed',
@@ -102,7 +102,7 @@
 
         // Create iframe
         iframe = document.createElement('iframe');
-        iframe.id = 'prosody-widget-frame';
+        iframe.id = 'buildvoiceai-widget-frame';
         iframe.src = baseUrl + '/widget/' + agentId;
         iframe.setAttribute('allow', 'microphone');
         Object.assign(iframe.style, {
@@ -173,7 +173,7 @@
 
     // Listen for messages from the widget iframe
     window.addEventListener('message', function (event) {
-        if (!event.data || event.data.type !== 'prosody-widget') return;
+        if (!event.data || event.data.type !== 'buildvoiceai-widget') return;
 
         switch (event.data.action) {
             case 'close':

@@ -302,7 +302,7 @@ export function CustomDomainSettings() {
                                 className="flex-1"
                             />
                             <span className="text-sm text-muted-foreground whitespace-nowrap">
-                                .prosodydashboard.com
+                                .buildvoiceai.com
                             </span>
                         </div>
                         <Button

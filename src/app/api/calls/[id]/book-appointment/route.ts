@@ -96,7 +96,7 @@ export async function POST(
                 contact = await createContact(ghlConfig, {
                     phone: phoneNumber,
                     firstName: contact_name || 'Unknown',
-                    source: 'Prosody AI Voice Call',
+                    source: 'BuildVoiceAI Call',
                     tags: ['ai-voice-call', 'appointment-booked'],
                 });
             }

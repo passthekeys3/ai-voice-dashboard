@@ -179,11 +179,11 @@ export async function testSlackWebhook(
     webhookUrl: string,
 ): Promise<{ success: boolean; error?: string }> {
     const payload: SlackPayload = {
-        text: 'Prosody Dashboard — Test notification',
+        text: 'BuildVoiceAI — Test notification',
         blocks: [
             {
                 type: 'header',
-                text: { type: 'plain_text', text: ':white_check_mark: Prosody Connected!', emoji: true },
+                text: { type: 'plain_text', text: ':white_check_mark: BuildVoiceAI Connected!', emoji: true },
             },
             {
                 type: 'section',

@@ -327,7 +327,7 @@ async function executeAction(
 
                 const contact = await createContact(ghlConfig, {
                     phone: phoneNumber,
-                    source: 'Prosody AI Voice Call',
+                    source: 'BuildVoiceAI Call',
                     tags,
                 });
 
@@ -593,7 +593,7 @@ async function executeAction(
                 }
 
                 const result = await upsertContact(ghlConfig, phoneNumber, {
-                    source: rawConfig.source || 'Prosody AI Voice Call',
+                    source: rawConfig.source || 'BuildVoiceAI Call',
                     tags: tags.length > 0 ? tags : ['ai-voice-call'],
                     customFields: rawConfig.custom_field_key ? [{
                         key: rawConfig.custom_field_key,
@@ -1094,7 +1094,7 @@ async function executeAction(
 
                 const result = await upsertContact(hubspotConfig, phoneNumber, {
                     firstName: rawConfig.first_name,
-                    source: rawConfig.source || 'Prosody AI Voice Call',
+                    source: rawConfig.source || 'BuildVoiceAI Call',
                     tags: tags.length > 0 ? tags : ['ai-voice-call'],
                 });
 
@@ -1393,7 +1393,7 @@ async function executeAction(
                 }
 
                 const resendApiKey = process.env.RESEND_API_KEY;
-                const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@prosody.ai';
+                const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@buildvoiceai.com';
 
                 if (!resendApiKey) {
                     return { success: false, error: 'Resend not configured. Set RESEND_API_KEY.' };

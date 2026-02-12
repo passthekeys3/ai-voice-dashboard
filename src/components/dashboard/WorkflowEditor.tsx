@@ -741,7 +741,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                                                 id={`action-${index}-default-tags`}
                                                 value={(action.config.default_tags as string) || ''}
                                                 onChange={(e) => updateActionConfig(index, 'default_tags', e.target.value)}
-                                                placeholder="ai-voice-call, prosody"
+                                                placeholder="ai-voice-call, buildvoiceai"
                                             />
                                         </div>
                                         <div className="space-y-2">
@@ -750,7 +750,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                                                 id={`action-${index}-source`}
                                                 value={(action.config.source as string) || ''}
                                                 onChange={(e) => updateActionConfig(index, 'source', e.target.value)}
-                                                placeholder="Prosody AI Voice Call"
+                                                placeholder="BuildVoiceAI Call"
                                             />
                                         </div>
                                     </div>
@@ -796,7 +796,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                                                 id={`action-${index}-always-add`}
                                                 value={(action.config.always_add as string) || ''}
                                                 onChange={(e) => updateActionConfig(index, 'always_add', e.target.value)}
-                                                placeholder="ai-called, prosody"
+                                                placeholder="ai-called, buildvoiceai"
                                             />
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
@@ -1232,7 +1232,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                                                 id={`action-${index}-source`}
                                                 value={(action.config.source as string) || ''}
                                                 onChange={(e) => updateActionConfig(index, 'source', e.target.value)}
-                                                placeholder="Prosody AI Voice Call"
+                                                placeholder="BuildVoiceAI Call"
                                             />
                                         </div>
                                         <div className="space-y-2">

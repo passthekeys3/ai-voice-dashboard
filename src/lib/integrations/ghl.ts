@@ -213,7 +213,7 @@ export async function createContact(
                     lastName: contact.lastName,
                     phone: contact.phone,
                     email: contact.email,
-                    source: contact.source || 'Prosody AI Voice Call',
+                    source: contact.source || 'BuildVoiceAI Call',
                     tags: contact.tags || ['ai-voice-call'],
                 }),
             }
@@ -297,7 +297,7 @@ export async function logCallToGHL(
         if (!contact) {
             contact = await createContact(config, {
                 phone: callData.phoneNumber,
-                source: 'Prosody AI Voice Call',
+                source: 'BuildVoiceAI Call',
                 tags: ['ai-voice-call'],
             });
         }
@@ -903,7 +903,7 @@ export async function bookNextAvailableAppointment(
         if (!contact) {
             contact = await createContact(config, {
                 phone: params.phoneNumber,
-                source: 'Prosody AI Voice Call',
+                source: 'BuildVoiceAI Call',
                 tags: ['ai-voice-call', 'appointment-booked'],
             });
         }
@@ -990,7 +990,7 @@ export async function upsertContact(
                 firstName: data.firstName,
                 lastName: data.lastName,
                 email: data.email,
-                source: data.source || 'Prosody AI Voice Call',
+                source: data.source || 'BuildVoiceAI Call',
                 tags: data.tags || ['ai-voice-call'],
             });
             isNew = true;

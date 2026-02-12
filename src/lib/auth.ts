@@ -20,10 +20,10 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         if (agency) {
             return {
                 id: 'demo-user-id',
-                email: 'demo@prosody.ai',
+                email: 'demo@buildvoiceai.com',
                 profile: {
                     id: 'demo-user-id',
-                    email: 'demo@prosody.ai',
+                    email: 'demo@buildvoiceai.com',
                     full_name: 'Demo User',
                     role: 'agency_admin',
                     agency_id: agency.id,
@@ -160,10 +160,10 @@ export async function requireAuth(): Promise<AuthUser> {
         if (agency) {
             return {
                 id: 'demo-user-id',
-                email: 'demo@prosody.ai',
+                email: 'demo@buildvoiceai.com',
                 profile: {
                     id: 'demo-user-id',
-                    email: 'demo@prosody.ai',
+                    email: 'demo@buildvoiceai.com',
                     full_name: 'Demo User',
                     role: 'agency_admin',
                     agency_id: agency.id,
@@ -177,10 +177,10 @@ export async function requireAuth(): Promise<AuthUser> {
 
         return {
             id: 'demo-user-id',
-            email: 'demo@prosody.ai',
+            email: 'demo@buildvoiceai.com',
             profile: {
                 id: 'demo-user-id',
-                email: 'demo@prosody.ai',
+                email: 'demo@buildvoiceai.com',
                 full_name: 'Demo User',
                 role: 'agency_admin',
                 agency_id: 'demo-agency-id',

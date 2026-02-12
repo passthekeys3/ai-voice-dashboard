@@ -49,7 +49,7 @@ export function WidgetCallUI({ agentId, agentName, provider, widgetConfig }: Wid
     const postToParent = useCallback((action: string, data?: Record<string, unknown>) => {
         try {
             window.parent.postMessage(
-                { type: 'prosody-widget', action, ...data },
+                { type: 'buildvoiceai-widget', action, ...data },
                 '*'
             );
         } catch {
@@ -708,7 +708,7 @@ export function WidgetCallUI({ agentId, agentName, provider, widgetConfig }: Wid
                 borderTop: '1px solid #f1f5f9',
                 flexShrink: 0,
             }}>
-                Powered by Prosody
+                Powered by BuildVoiceAI
             </div>
         </div>
     );

@@ -87,7 +87,7 @@ export default async function AuthLayout({
             <footer className="py-4 px-4 text-center text-sm text-muted-foreground">
                 {branding?.footer_text || (
                     <>
-                        {companyName ? `© ${new Date().getFullYear()} ${companyName}` : 'Powered by Prosody'}
+                        {companyName ? `© ${new Date().getFullYear()} ${companyName}` : 'Powered by BuildVoiceAI'}
                     </>
                 )}
             </footer>

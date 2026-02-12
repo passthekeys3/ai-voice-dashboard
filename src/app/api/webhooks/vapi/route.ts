@@ -389,7 +389,7 @@ export async function POST(request: NextRequest) {
                     if (resolvedGhlConfig && call.customer?.number) {
                         const { upsertContact } = await import('@/lib/integrations/ghl');
                         await upsertContact(resolvedGhlConfig, call.customer.number, {
-                            source: 'Prosody AI Inbound Call',
+                            source: 'BuildVoiceAI Inbound Call',
                             tags: ['inbound-call', 'ai-receptionist'],
                         });
                     }
@@ -397,7 +397,7 @@ export async function POST(request: NextRequest) {
                     if (resolvedHubspotConfig && call.customer?.number) {
                         const { upsertContact: hsUpsertContact } = await import('@/lib/integrations/hubspot');
                         await hsUpsertContact(resolvedHubspotConfig, call.customer.number, {
-                            source: 'Prosody AI Inbound Call',
+                            source: 'BuildVoiceAI Inbound Call',
                             tags: ['inbound-call', 'ai-receptionist'],
                         });
                     }
@@ -538,7 +538,7 @@ export async function POST(request: NextRequest) {
                     if (resolvedGhlConfig && call.customer?.number) {
                         const { upsertContact } = await import('@/lib/integrations/ghl');
                         await upsertContact(resolvedGhlConfig, call.customer.number, {
-                            source: 'Prosody AI Inbound Call',
+                            source: 'BuildVoiceAI Inbound Call',
                             tags: ['inbound-call', 'ai-receptionist'],
                         });
                     }
@@ -546,7 +546,7 @@ export async function POST(request: NextRequest) {
                     if (resolvedHubspotConfig && call.customer?.number) {
                         const { upsertContact: hsUpsertContact } = await import('@/lib/integrations/hubspot');
                         await hsUpsertContact(resolvedHubspotConfig, call.customer.number, {
-                            source: 'Prosody AI Inbound Call',
+                            source: 'BuildVoiceAI Inbound Call',
                             tags: ['inbound-call', 'ai-receptionist'],
                         });
                     }

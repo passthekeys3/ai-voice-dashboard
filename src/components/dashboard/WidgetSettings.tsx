@@ -43,7 +43,7 @@ export function WidgetSettings({
 
     const baseUrl = typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://app.prosody.ai';
+        : 'https://buildvoiceai.com';
 
     const embedCode = `<script src="${baseUrl}/widget/embed.js"
   data-agent-id="${agentId}"

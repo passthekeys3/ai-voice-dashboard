@@ -17,8 +17,7 @@ const publicRoutes = [
 const PLATFORM_DOMAINS = [
     'localhost',
     '127.0.0.1',
-    'prosody.ai',
-    'prosodydashboard.com',
+    'buildvoiceai.com',
     'vercel.app',
 ];
 

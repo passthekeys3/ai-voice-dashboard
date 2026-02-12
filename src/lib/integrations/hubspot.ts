@@ -358,7 +358,7 @@ export async function logCallToHubSpot(
 
         // Create call engagement
         const callResult = await createCallEngagement(config, contact.id, {
-            title: `AI Voice Call - ${callData.agentName || 'Prosody'}`,
+            title: `AI Voice Call - ${callData.agentName || 'BuildVoiceAI'}`,
             body: callBody,
             direction: callData.direction === 'inbound' ? 'INBOUND' : 'OUTBOUND',
             status: callStatus,

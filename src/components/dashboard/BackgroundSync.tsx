@@ -13,7 +13,7 @@ export function useBackgroundSync() {
         // Only sync once per component mount and once per session
         if (syncAttempted.current) return;
 
-        const lastSync = sessionStorage.getItem('prosody_last_sync');
+        const lastSync = sessionStorage.getItem('buildvoiceai_last_sync');
         const now = Date.now();
 
         // Don't sync if we synced in the last 5 minutes
@@ -32,7 +32,7 @@ export function useBackgroundSync() {
             .then((res) => {
                 if (controller.signal.aborted) return;
                 if (res.ok) {
-                    sessionStorage.setItem('prosody_last_sync', now.toString());
+                    sessionStorage.setItem('buildvoiceai_last_sync', now.toString());
                     if (process.env.NODE_ENV !== 'production') {
                         console.log('[BackgroundSync] Sync completed successfully');
                     }
