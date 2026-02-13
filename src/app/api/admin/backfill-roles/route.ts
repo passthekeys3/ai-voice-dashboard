@@ -11,10 +11,16 @@ import { createClient } from '@supabase/supabase-js';
  * Delete this route after running it once in production.
  */
 
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let supabaseAdmin: any;
+function getSupabaseAdmin() {
+    if (!supabaseAdmin) {
+        supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+    }
+    return supabaseAdmin;
+}
 
 export async function POST(request: NextRequest) {
     // Require service role key as auth
@@ -25,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     try {
         // Fetch all profiles
-        const { data: profiles, error } = await supabaseAdmin
+        const { data: profiles, error } = await getSupabaseAdmin()
             .from('profiles')
             .select('id, role');
 
@@ -40,7 +46,7 @@ export async function POST(request: NextRequest) {
         for (const profile of profiles) {
             try {
                 // Get existing user metadata
-                const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+                const { data: authUser } = await getSupabaseAdmin().auth.admin.getUserById(profile.id);
                 if (!authUser?.user) {
                     skipped++;
                     continue;
@@ -53,7 +59,7 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Update user_metadata with role
-                const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+                const { error: updateError } = await getSupabaseAdmin().auth.admin.updateUserById(
                     profile.id,
                     {
                         user_metadata: {

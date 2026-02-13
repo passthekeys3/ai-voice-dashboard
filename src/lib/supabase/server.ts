@@ -2,12 +2,17 @@ import { createServerClient } from '@supabase/ssr';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
+// Fallback values for build time when env vars may not be available
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key';
+
 export async function createClient() {
     // DEMO MODE: Use service role key to bypass RLS (no real auth session exists)
     if (process.env.DEMO_MODE === 'true') {
         return createSupabaseClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            SUPABASE_URL,
+            SUPABASE_SERVICE_ROLE_KEY,
             {
                 auth: {
                     autoRefreshToken: false,
@@ -20,8 +25,8 @@ export async function createClient() {
     const cookieStore = await cookies();
 
     return createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY,
         {
             cookies: {
                 getAll() {
@@ -47,8 +52,8 @@ export async function createAdminClient() {
     const cookieStore = await cookies();
 
     return createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY,
         {
             cookies: {
                 getAll() {
@@ -71,8 +76,8 @@ export async function createAdminClient() {
 // Service client that fully bypasses RLS - use for sync operations
 export function createServiceClient() {
     return createSupabaseClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY,
         {
             auth: {
                 autoRefreshToken: false,

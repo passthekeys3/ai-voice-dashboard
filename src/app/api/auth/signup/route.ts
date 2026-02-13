@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Use admin client to bypass RLS for signup
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-init: only create when first request hits, not at module load / build time
+let supabaseAdmin: any;
+function getAdmin() {
+    if (!supabaseAdmin) {
+        supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+    }
+    return supabaseAdmin;
+}
 
 export async function POST(request: NextRequest) {
     try {
@@ -19,7 +25,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Create user with admin client
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        const { data: authData, error: authError } = await getAdmin().auth.admin.createUser({
             email,
             password,
             email_confirm: true, // Auto-confirm for dev
@@ -42,7 +48,7 @@ export async function POST(request: NextRequest) {
         // Create agency
         const baseSlug = agencyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
         const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 8)}`;
-        const { data: agency, error: agencyError } = await supabaseAdmin
+        const { data: agency, error: agencyError } = await getAdmin()
             .from('agencies')
             .insert({
                 name: agencyName,
@@ -59,7 +65,7 @@ export async function POST(request: NextRequest) {
 
         if (agencyError) {
             // Cleanup: delete the user if agency creation fails
-            await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+            await getAdmin().auth.admin.deleteUser(authData.user.id);
             return NextResponse.json(
                 { error: 'Failed to create agency' },
                 { status: 500 }
@@ -67,7 +73,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Create profile
-        const { error: profileError } = await supabaseAdmin.from('profiles').insert({
+        const { error: profileError } = await getAdmin().from('profiles').insert({
             id: authData.user.id,
             email,
             full_name: fullName,
@@ -77,8 +83,8 @@ export async function POST(request: NextRequest) {
 
         if (profileError) {
             // Cleanup
-            await supabaseAdmin.from('agencies').delete().eq('id', agency.id);
-            await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+            await getAdmin().from('agencies').delete().eq('id', agency.id);
+            await getAdmin().auth.admin.deleteUser(authData.user.id);
             return NextResponse.json(
                 { error: 'Failed to create profile' },
                 { status: 500 }

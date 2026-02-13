@@ -12,11 +12,17 @@ import {
     withErrorHandling,
 } from '@/lib/api/response';
 
-// Use admin client to create users
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-init admin client to avoid build-time errors when env vars aren't available
+let supabaseAdmin: any;
+function getSupabaseAdmin() {
+    if (!supabaseAdmin) {
+        supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+    }
+    return supabaseAdmin;
+}
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -56,7 +62,7 @@ export const POST = withErrorHandling(async (
     }
 
     // Verify the client exists and belongs to this agency
-    const { data: client, error: clientError } = await supabaseAdmin
+    const { data: client, error: clientError } = await getSupabaseAdmin()
         .from('clients')
         .select('id, name, agency_id')
         .eq('id', clientId)
@@ -68,7 +74,7 @@ export const POST = withErrorHandling(async (
     }
 
     // Check if user already exists by looking up their profile first (efficient indexed query)
-    const { data: existingProfile } = await supabaseAdmin
+    const { data: existingProfile } = await getSupabaseAdmin()
         .from('profiles')
         .select('id, agency_id')
         .eq('email', email)
@@ -83,7 +89,7 @@ export const POST = withErrorHandling(async (
     let existingUser: { id: string; email?: string } | null = null;
     if (existingProfile) {
         // User exists in our system, get their auth record
-        const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(existingProfile.id);
+        const { data: authUser } = await getSupabaseAdmin().auth.admin.getUserById(existingProfile.id);
         existingUser = authUser?.user || null;
     }
 
@@ -98,7 +104,7 @@ export const POST = withErrorHandling(async (
         authUserId = existingUser.id;
     } else {
         // Create new auth user
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        const { data: authData, error: authError } = await getSupabaseAdmin().auth.admin.createUser({
             email,
             password: tempPassword,
             email_confirm: false, // They need to confirm via email
@@ -117,7 +123,7 @@ export const POST = withErrorHandling(async (
         authUserId = authData.user!.id;
 
         // Send password reset email so they can set their own password
-        const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+        const { error: resetError } = await getSupabaseAdmin().auth.admin.generateLink({
             type: 'invite',
             email,
             options: {
@@ -132,7 +138,7 @@ export const POST = withErrorHandling(async (
     }
 
     // Create profile linking user to client
-    const { data: profile, error: profileError } = await supabaseAdmin
+    const { data: profile, error: profileError } = await getSupabaseAdmin()
         .from('profiles')
         .insert({
             id: authUserId,
@@ -149,7 +155,7 @@ export const POST = withErrorHandling(async (
         console.error('Profile error:', profileError);
         // If profile creation fails and we created a new user, clean up
         if (!existingUser) {
-            await supabaseAdmin.auth.admin.deleteUser(authUserId);
+            await getSupabaseAdmin().auth.admin.deleteUser(authUserId);
         }
         return badRequest('Failed to create user profile');
     }
