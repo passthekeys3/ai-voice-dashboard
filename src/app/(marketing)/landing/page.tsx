@@ -5,6 +5,8 @@ import Link from 'next/link';
 import {
     Sparkles, Phone, ArrowRight, Check, ChevronDown, Mic, Bot,
     Wrench, Stethoscope, Building2, Scale, Car, Home, Play,
+    BarChart3, FlaskConical, Shield, Zap, Users, Layers,
+    Globe, MessageSquare, TrendingUp, PhoneCall, Settings,
 } from 'lucide-react';
 
 // ─── Types & Data ────────────────────────────────────────────────────────────
@@ -44,6 +46,28 @@ function buildAgent(desc: string): DemoAgent {
     };
 }
 
+// ─── Animated Number ─────────────────────────────────────────────────────────
+
+function AnimatedStat({ value, suffix = '', label }: { value: string; suffix?: string; label: string }) {
+    const [visible, setVisible] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } }, { threshold: 0.3 });
+        obs.observe(el);
+        return () => obs.disconnect();
+    }, []);
+    return (
+        <div ref={ref} className="text-center">
+            <div className={`text-4xl sm:text-5xl font-semibold text-gray-900 tabular-nums transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                {value}{suffix}
+            </div>
+            <p className={`text-sm text-gray-500 mt-2 transition-all duration-700 delay-200 ${visible ? 'opacity-100' : 'opacity-0'}`}>{label}</p>
+        </div>
+    );
+}
+
 // ─── Interactive Demo ────────────────────────────────────────────────────────
 
 function AgentDemo() {
@@ -60,7 +84,7 @@ function AgentDemo() {
         setInput('');
         setMessages(p => [...p, { role: 'user', content: text.trim() }]);
         setTyping(true);
-        await new Promise(r => setTimeout(r, 900));
+        await new Promise(r => setTimeout(r, 1200));
         const a = buildAgent(text);
         setAgent(a);
         setMessages(p => [...p, {
@@ -71,27 +95,26 @@ function AgentDemo() {
     };
 
     return (
-        <div className="relative rounded-2xl border border-white/[0.08] bg-[#0a0a0c] overflow-hidden">
-            <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[500px] h-[250px] bg-violet-600/8 blur-[100px] pointer-events-none" />
-            <div className="grid grid-cols-1 lg:grid-cols-5 h-[540px] relative">
+        <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-xl shadow-gray-200/50">
+            <div className="grid grid-cols-1 lg:grid-cols-5 h-[520px]">
                 {/* Chat */}
-                <div className="lg:col-span-3 flex flex-col border-r border-white/[0.06]">
-                    <div className="px-5 py-3.5 border-b border-white/[0.06] flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-lg bg-violet-600 flex items-center justify-center">
+                <div className="lg:col-span-3 flex flex-col border-r border-gray-100">
+                    <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-gray-900 flex items-center justify-center">
                             <Sparkles className="w-3.5 h-3.5 text-white" />
                         </div>
-                        <span className="text-[13px] font-semibold text-white/90">Agent Builder</span>
+                        <span className="text-sm font-semibold text-gray-900">Agent Builder</span>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-5 space-y-3">
+                    <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-gray-50/50">
                         {messages.length === 0 && (
                             <div className="pt-6 pb-2">
-                                <p className="text-center text-[13px] text-white/40 mb-6">Pick a template or describe what you need.</p>
+                                <p className="text-center text-sm text-gray-400 mb-6">Pick a template or describe what you need</p>
                                 <div className="grid grid-cols-2 gap-2 max-w-sm mx-auto">
                                     {TEMPLATES.map(t => (
                                         <button key={t.label} onClick={() => send(t.prompt)}
-                                            className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-white/[0.06] hover:border-violet-500/30 hover:bg-white/[0.03] transition-all text-left">
-                                            <t.icon className="w-3.5 h-3.5 text-white/25 shrink-0" />
-                                            <span className="text-[12px] text-white/50">{t.label}</span>
+                                            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-white bg-white/80 transition-all text-left group">
+                                            <t.icon className="w-4 h-4 text-gray-400 group-hover:text-gray-600 shrink-0 transition-colors" />
+                                            <span className="text-xs text-gray-500 group-hover:text-gray-700 transition-colors">{t.label}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -99,77 +122,79 @@ function AgentDemo() {
                         )}
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed ${
-                                    m.role === 'user' ? 'bg-violet-600 text-white' : 'bg-white/[0.04] border border-white/[0.06] text-white/60'
+                                <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                                    m.role === 'user'
+                                        ? 'bg-gray-900 text-white'
+                                        : 'bg-white border border-gray-200 text-gray-600 shadow-sm'
                                 }`}>
                                     {m.content.split('\n').map((line, j) => (
                                         <p key={j} className={j > 0 ? 'mt-1' : ''} dangerouslySetInnerHTML={{
-                                            __html: line.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
+                                            __html: line.replace(/\*\*(.*?)\*\*/g, `<strong class="${m.role === 'user' ? 'text-white' : 'text-gray-900'}">$1</strong>`)
                                         }} />
                                     ))}
                                 </div>
                             </div>
                         ))}
                         {typing && (
-                            <div className="flex gap-1.5 px-4 py-3 bg-white/[0.04] border border-white/[0.06] rounded-2xl w-fit">
-                                {[0,150,300].map(d => <span key={d} className="w-1.5 h-1.5 bg-violet-400/50 rounded-full animate-bounce" style={{animationDelay:`${d}ms`}} />)}
+                            <div className="flex gap-1.5 px-4 py-3 bg-white border border-gray-200 rounded-2xl w-fit shadow-sm">
+                                {[0,150,300].map(d => <span key={d} className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{animationDelay:`${d}ms`}} />)}
                             </div>
                         )}
                         <div ref={endRef} />
                     </div>
-                    <div className="p-4 border-t border-white/[0.06]">
+                    <div className="p-4 border-t border-gray-100 bg-white">
                         <form onSubmit={e => { e.preventDefault(); send(input); }} className="flex gap-2">
                             <input value={input} onChange={e => setInput(e.target.value)} placeholder='Describe your agent...'
-                                className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-violet-500/40" />
+                                className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 transition-all" />
                             <button type="submit" disabled={!input.trim() || typing}
-                                className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl disabled:opacity-30 transition-colors">
+                                className="px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl disabled:opacity-30 transition-colors">
                                 <ArrowRight className="w-4 h-4" />
                             </button>
                         </form>
                     </div>
                 </div>
                 {/* Preview */}
-                <div className="lg:col-span-2 bg-white/[0.01] flex flex-col">
-                    <div className="px-5 py-3.5 border-b border-white/[0.06]">
-                        <span className="text-[13px] font-semibold text-white/40">Preview</span>
+                <div className="lg:col-span-2 bg-gray-50/50 flex flex-col">
+                    <div className="px-5 py-3.5 border-b border-gray-100">
+                        <span className="text-sm font-semibold text-gray-400">Preview</span>
                     </div>
                     {!agent ? (
                         <div className="flex-1 flex items-center justify-center">
-                            <p className="text-[12px] text-white/15">Your agent appears here</p>
+                            <p className="text-xs text-gray-300">Your agent appears here</p>
                         </div>
                     ) : (
                         <div className="flex-1 overflow-y-auto p-5 space-y-3">
-                            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+                            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                                 <div className="flex items-center gap-3 mb-3">
                                     <div className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center">
                                         <Mic className="w-4 h-4 text-white" />
                                     </div>
                                     <div>
-                                        <p className="text-[13px] font-semibold text-white">{agent.name}</p>
-                                        <p className="text-[11px] text-emerald-400 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />Ready</p>
+                                        <p className="text-sm font-semibold text-gray-900">{agent.name}</p>
+                                        <p className="text-xs text-emerald-600 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Ready</p>
                                     </div>
                                 </div>
-                                <div className="space-y-2 pt-3 border-t border-white/[0.04] text-[11px]">
+                                <div className="space-y-2 pt-3 border-t border-gray-100 text-xs">
                                     {[['Voice', agent.voice.split(' — ')[0]], ['Provider', agent.provider], ['Language', 'English']].map(([l,v]) => (
-                                        <div key={l} className="flex justify-between"><span className="text-white/25">{l}</span><span className="text-white/50">{v}</span></div>
+                                        <div key={l} className="flex justify-between"><span className="text-gray-400">{l}</span><span className="text-gray-600">{v}</span></div>
                                     ))}
                                 </div>
                             </div>
-                            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                                <p className="text-[11px] text-white/25 mb-1.5">Opening Line</p>
-                                <p className="text-[12px] text-white/45 italic">&ldquo;{agent.firstMessage}&rdquo;</p>
+                            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                                <p className="text-xs text-gray-400 mb-1.5">Opening Line</p>
+                                <p className="text-xs text-gray-600 italic">&ldquo;{agent.firstMessage}&rdquo;</p>
                             </div>
                             <button onClick={() => setShowPrompt(!showPrompt)}
-                                className="w-full flex justify-between items-center rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-colors">
-                                <span className="text-[11px] text-white/25">System Prompt</span>
-                                <ChevronDown className={`w-3.5 h-3.5 text-white/15 transition-transform ${showPrompt ? 'rotate-180' : ''}`} />
+                                className="w-full flex justify-between items-center rounded-xl border border-gray-200 bg-white p-4 hover:bg-gray-50 transition-colors shadow-sm">
+                                <span className="text-xs text-gray-400">System Prompt</span>
+                                <ChevronDown className={`w-3.5 h-3.5 text-gray-300 transition-transform ${showPrompt ? 'rotate-180' : ''}`} />
                             </button>
                             {showPrompt && (
-                                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 -mt-1">
-                                    <pre className="text-[10px] text-white/30 whitespace-pre-wrap font-mono leading-relaxed">{agent.prompt}</pre>
+                                <div className="rounded-xl border border-gray-200 bg-white p-4 -mt-1 shadow-sm">
+                                    <pre className="text-[10px] text-gray-500 whitespace-pre-wrap font-mono leading-relaxed">{agent.prompt}</pre>
                                 </div>
                             )}
-                            <Link href="/signup" className="flex items-center justify-center gap-2 w-full py-3 bg-white text-[#09090b] rounded-xl text-[13px] font-semibold hover:bg-white/90 transition-colors">
+                            <Link href="/signup" className="flex items-center justify-center gap-2 w-full py-3 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors">
                                 <Play className="w-3.5 h-3.5" /> Deploy This Agent
                             </Link>
                         </div>
@@ -180,162 +205,157 @@ function AgentDemo() {
     );
 }
 
-// ─── Product Feature Section ─────────────────────────────────────────────────
+// ─── Feature Card ────────────────────────────────────────────────────────────
 
-function ProductSection({
-    label, heading, description, features, reverse, children,
-}: {
-    label: string; heading: string; description: string; features: string[]; reverse?: boolean; children: React.ReactNode;
-}) {
+function FeatureCard({ icon: Icon, title, description }: { icon: typeof Zap; title: string; description: string }) {
     return (
-        <div className={`grid lg:grid-cols-2 gap-12 lg:gap-20 items-center ${reverse ? 'direction-rtl' : ''}`}>
-            <div className={reverse ? 'direction-ltr' : ''}>
-                <p className="text-[12px] font-medium text-violet-400 uppercase tracking-[0.15em] mb-3">{label}</p>
-                <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight">{heading}</h3>
-                <p className="text-[15px] text-white/40 mt-4 leading-relaxed">{description}</p>
-                <ul className="mt-6 space-y-3">
-                    {features.map((f, i) => (
-                        <li key={i} className="flex items-start gap-3 text-[14px] text-white/50">
-                            <Check className="w-4 h-4 text-violet-400 mt-0.5 shrink-0" />
-                            {f}
-                        </li>
-                    ))}
-                </ul>
+        <div className="group p-6 rounded-2xl border border-gray-100 bg-white hover:border-gray-200 hover:shadow-lg hover:shadow-gray-100/80 transition-all duration-300">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-gray-900 flex items-center justify-center mb-4 transition-colors duration-300">
+                <Icon className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors duration-300" />
             </div>
-            <div className={reverse ? 'direction-ltr' : ''}>
-                {children}
-            </div>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">{title}</h3>
+            <p className="text-sm text-gray-500 leading-relaxed">{description}</p>
         </div>
     );
 }
 
-// ─── Fake Product Screenshot ─────────────────────────────────────────────────
+// ─── Product Mock: Dashboard ─────────────────────────────────────────────────
 
 function MockDashboard() {
     return (
-        <div className="rounded-xl border border-white/[0.08] bg-[#0c0c0f] overflow-hidden shadow-2xl">
+        <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-2xl shadow-gray-200/60">
             {/* Top bar */}
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/[0.06]">
-                <div className="flex gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-white/10" /><span className="w-2.5 h-2.5 rounded-full bg-white/10" /><span className="w-2.5 h-2.5 rounded-full bg-white/10" /></div>
-                <div className="flex-1 mx-8"><div className="h-5 w-48 mx-auto rounded bg-white/[0.04]" /></div>
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 bg-gray-50/80">
+                <div className="flex gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-gray-200" />
+                    <span className="w-3 h-3 rounded-full bg-gray-200" />
+                    <span className="w-3 h-3 rounded-full bg-gray-200" />
+                </div>
+                <div className="flex-1 mx-8"><div className="h-5 w-52 mx-auto rounded-md bg-gray-100" /></div>
             </div>
             <div className="flex">
                 {/* Sidebar */}
-                <div className="w-44 border-r border-white/[0.06] p-3 space-y-1 hidden sm:block">
+                <div className="w-48 border-r border-gray-100 p-3 space-y-0.5 hidden sm:block bg-gray-50/40">
                     {['Dashboard', 'Agents', 'Calls', 'Analytics', 'Insights', 'Testing'].map((item, i) => (
-                        <div key={item} className={`px-3 py-1.5 rounded-md text-[11px] ${i === 1 ? 'bg-violet-600/20 text-violet-300' : 'text-white/25'}`}>{item}</div>
+                        <div key={item} className={`px-3 py-2 rounded-lg text-xs font-medium ${i === 0 ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-600'}`}>{item}</div>
                     ))}
                 </div>
                 {/* Main */}
-                <div className="flex-1 p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                        <div className="text-[13px] font-semibold text-white/70">Agents</div>
-                        <div className="px-3 py-1 rounded-md bg-violet-600 text-[10px] text-white font-medium">+ New Agent</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
+                <div className="flex-1 p-5 space-y-4">
+                    {/* Stats */}
+                    <div className="grid grid-cols-4 gap-3">
                         {[
-                            { name: 'HVAC Dispatcher', calls: '142', status: 'active' },
-                            { name: 'Dental Receptionist', calls: '89', status: 'active' },
-                            { name: 'Legal Intake', calls: '56', status: 'active' },
-                            { name: 'Sales Qualifier', calls: '23', status: 'paused' },
-                        ].map(a => (
-                            <div key={a.name} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-[11px] font-medium text-white/60">{a.name}</span>
-                                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300">retell</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] text-white/25">{a.calls} calls</span>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${a.status === 'active' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                            { label: 'Total Calls', value: '2,847', change: '+12%' },
+                            { label: 'Avg Duration', value: '3:24', change: '+5%' },
+                            { label: 'Booking Rate', value: '68%', change: '+8%' },
+                            { label: 'Active Agents', value: '12', change: '' },
+                        ].map(s => (
+                            <div key={s.label} className="rounded-xl border border-gray-100 p-3">
+                                <p className="text-[10px] text-gray-400 font-medium">{s.label}</p>
+                                <div className="flex items-baseline gap-1.5 mt-1">
+                                    <span className="text-lg font-semibold text-gray-900">{s.value}</span>
+                                    {s.change && <span className="text-[10px] text-emerald-600 font-medium">{s.change}</span>}
                                 </div>
                             </div>
                         ))}
                     </div>
+                    {/* Agent list */}
+                    <div>
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm font-semibold text-gray-900">Your Agents</span>
+                            <div className="px-3 py-1.5 rounded-lg bg-gray-900 text-[10px] text-white font-medium">+ New Agent</div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2.5">
+                            {[
+                                { name: 'HVAC Dispatcher', calls: '142', status: 'active', provider: 'retell' },
+                                { name: 'Dental Receptionist', calls: '89', status: 'active', provider: 'vapi' },
+                                { name: 'Legal Intake', calls: '56', status: 'active', provider: 'retell' },
+                                { name: 'Sales Qualifier', calls: '23', status: 'paused', provider: 'bland' },
+                            ].map(a => (
+                                <div key={a.name} className="rounded-xl border border-gray-100 bg-white p-3 hover:border-gray-200 transition-colors">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-medium text-gray-700">{a.name}</span>
+                                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">{a.provider}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] text-gray-400">{a.calls} calls</span>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${a.status === 'active' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     );
 }
 
-function MockInsights() {
-    return (
-        <div className="rounded-xl border border-white/[0.08] bg-[#0c0c0f] overflow-hidden shadow-2xl p-5 space-y-4">
-            <div className="text-[13px] font-semibold text-white/70">Call Insights</div>
-            <div className="grid grid-cols-3 gap-3">
-                {[['Positive', '87%', 'text-emerald-400'], ['Neutral', '11%', 'text-white/40'], ['Negative', '2%', 'text-rose-400']].map(([l,v,c]) => (
-                    <div key={l} className="rounded-lg bg-white/[0.03] border border-white/[0.05] p-3 text-center">
-                        <p className={`text-lg font-bold ${c}`}>{v}</p>
-                        <p className="text-[10px] text-white/25 mt-1">{l}</p>
-                    </div>
-                ))}
-            </div>
-            <div className="space-y-2">
-                <div className="text-[11px] text-white/30 font-medium">Top Topics</div>
-                {['Appointment scheduling', 'Pricing questions', 'Emergency requests', 'Insurance verification'].map((t, i) => (
-                    <div key={t} className="flex items-center gap-3">
-                        <div className="flex-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                            <div className="h-full rounded-full bg-violet-500/50" style={{ width: `${90 - i * 18}%` }} />
-                        </div>
-                        <span className="text-[10px] text-white/30 w-32 text-right">{t}</span>
-                    </div>
-                ))}
-            </div>
-            <div className="space-y-2">
-                <div className="text-[11px] text-white/30 font-medium">Common Objections</div>
-                {['Want to speak to a real person', 'Price too high', 'Need to check schedule'].map(o => (
-                    <div key={o} className="text-[11px] text-white/20 px-3 py-2 rounded-md bg-white/[0.02] border border-white/[0.04]">{o}</div>
-                ))}
-            </div>
-        </div>
-    );
-}
+// ─── Provider Logos ──────────────────────────────────────────────────────────
 
-function MockTesting() {
+function ProviderBar() {
     return (
-        <div className="rounded-xl border border-white/[0.08] bg-[#0c0c0f] overflow-hidden shadow-2xl p-5 space-y-4">
-            <div className="flex items-center justify-between">
-                <div className="text-[13px] font-semibold text-white/70">Test Suite: HVAC Dispatcher</div>
-                <div className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">8/8 Passed</div>
-            </div>
-            {[
-                { scenario: 'Emergency call — burst pipe', result: 'pass', time: '1.2s' },
-                { scenario: 'Schedule routine maintenance', result: 'pass', time: '0.9s' },
-                { scenario: 'Ask about pricing', result: 'pass', time: '0.8s' },
-                { scenario: 'Request to speak with manager', result: 'pass', time: '1.1s' },
-                { scenario: 'After-hours call handling', result: 'pass', time: '0.7s' },
-            ].map(t => (
-                <div key={t.scenario} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                    <span className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center"><Check className="w-2.5 h-2.5 text-emerald-400" /></span>
-                    <span className="text-[11px] text-white/50 flex-1">{t.scenario}</span>
-                    <span className="text-[10px] text-white/20">{t.time}</span>
+        <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-14">
+            {['Retell', 'Vapi', 'Bland AI', 'ElevenLabs'].map(name => (
+                <div key={name} className="flex items-center gap-2 text-gray-300 hover:text-gray-500 transition-colors">
+                    <Phone className="w-4 h-4" />
+                    <span className="text-sm font-medium tracking-tight">{name}</span>
                 </div>
             ))}
         </div>
     );
 }
 
-function MockExperiment() {
+// ─── How It Works ────────────────────────────────────────────────────────────
+
+function HowItWorks() {
+    const steps = [
+        { num: '01', title: 'Connect Your Provider', desc: 'Add your Retell, Vapi, Bland, or ElevenLabs API key. Takes 30 seconds.' },
+        { num: '02', title: 'Build Your Agent', desc: 'Describe what you need in plain English. The AI builder creates a production-ready agent.' },
+        { num: '03', title: 'Test and Deploy', desc: 'Run AI-generated test scenarios. When it passes, deploy to a phone number with one click.' },
+    ];
     return (
-        <div className="rounded-xl border border-white/[0.08] bg-[#0c0c0f] overflow-hidden shadow-2xl p-5 space-y-4">
-            <div className="text-[13px] font-semibold text-white/70">A/B Experiment: Greeting Style</div>
-            <div className="grid grid-cols-2 gap-3">
-                {[
-                    { variant: 'A: Formal', conversion: '34%', calls: 120, winner: false },
-                    { variant: 'B: Casual', conversion: '41%', calls: 118, winner: true },
-                ].map(v => (
-                    <div key={v.variant} className={`rounded-lg p-4 border ${v.winner ? 'border-violet-500/30 bg-violet-500/[0.04]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-[11px] text-white/50">{v.variant}</span>
-                            {v.winner && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300">Winner</span>}
-                        </div>
-                        <p className="text-2xl font-bold text-white">{v.conversion}</p>
-                        <p className="text-[10px] text-white/25 mt-1">{v.calls} calls</p>
-                    </div>
-                ))}
+        <div className="grid md:grid-cols-3 gap-8">
+            {steps.map((s, i) => (
+                <div key={s.num} className="relative">
+                    {i < 2 && <div className="hidden md:block absolute top-8 left-full w-full h-px bg-gradient-to-r from-gray-200 to-transparent -translate-x-8" />}
+                    <div className="text-5xl font-bold text-gray-100 mb-4">{s.num}</div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{s.title}</h3>
+                    <p className="text-sm text-gray-500 leading-relaxed">{s.desc}</p>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// ─── Comparison Table ────────────────────────────────────────────────────────
+
+function ComparisonTable() {
+    const rows = [
+        ['Multi-provider support', true, false, false],
+        ['Natural language agent builder', true, false, false],
+        ['AI-powered call testing', true, false, false],
+        ['A/B experiments', true, false, false],
+        ['White-label client portals', true, true, false],
+        ['CRM integrations', true, true, true],
+        ['Call analytics', true, true, true],
+    ];
+    return (
+        <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
+            <div className="grid grid-cols-4 text-sm border-b border-gray-100 bg-gray-50">
+                <div className="p-4 font-medium text-gray-500">Feature</div>
+                <div className="p-4 font-semibold text-gray-900 text-center">BuildVoiceAI</div>
+                <div className="p-4 font-medium text-gray-400 text-center">White-label resellers</div>
+                <div className="p-4 font-medium text-gray-400 text-center">Direct providers</div>
             </div>
-            <div className="text-[11px] text-white/25 leading-relaxed">
-                Variant B&apos;s casual greeting (&ldquo;Hey! This is Mike from Comfort Air. What&apos;s going on?&rdquo;) outperformed the formal version by 21% in appointment bookings.
-            </div>
+            {rows.map(([feature, us, resellers, direct], i) => (
+                <div key={i} className={`grid grid-cols-4 text-sm ${i < rows.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                    <div className="p-4 text-gray-600">{feature as string}</div>
+                    <div className="p-4 text-center">{us ? <Check className="w-4 h-4 text-gray-900 mx-auto" /> : <span className="text-gray-300">—</span>}</div>
+                    <div className="p-4 text-center">{resellers ? <Check className="w-4 h-4 text-gray-300 mx-auto" /> : <span className="text-gray-300">—</span>}</div>
+                    <div className="p-4 text-center">{direct ? <Check className="w-4 h-4 text-gray-300 mx-auto" /> : <span className="text-gray-300">—</span>}</div>
+                </div>
+            ))}
         </div>
     );
 }
@@ -345,12 +365,16 @@ function MockExperiment() {
 function FAQ({ q, a }: { q: string; a: string }) {
     const [open, setOpen] = useState(false);
     return (
-        <div className="border-b border-white/[0.06]">
-            <button onClick={() => setOpen(!open)} className="w-full flex justify-between items-center py-5 text-left">
-                <span className="text-[14px] font-medium text-white/70 pr-4">{q}</span>
-                <ChevronDown className={`w-4 h-4 text-white/15 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <div className="border-b border-gray-100">
+            <button onClick={() => setOpen(!open)} className="w-full flex justify-between items-center py-5 text-left group">
+                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 pr-4 transition-colors">{q}</span>
+                <ChevronDown className={`w-4 h-4 text-gray-300 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
             </button>
-            {open && <p className="text-[13px] text-white/30 pb-5 leading-relaxed">{a}</p>}
+            <div className={`grid transition-all duration-200 ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                <div className="overflow-hidden">
+                    <p className="text-sm text-gray-500 pb-5 leading-relaxed">{a}</p>
+                </div>
+            </div>
         </div>
     );
 }
@@ -366,145 +390,189 @@ export default function LandingPage() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-[#09090b] text-white antialiased selection:bg-violet-500/30">
-            {/* Nav */}
-            <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-[#09090b]/80 backdrop-blur-xl border-b border-white/[0.06]' : ''}`}>
-                <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-md bg-violet-600 flex items-center justify-center"><Mic className="w-3.5 h-3.5 text-white" /></div>
-                        <span className="text-[15px] font-bold tracking-tight">BuildVoiceAI</span>
+        <div className="min-h-screen bg-white text-gray-900 antialiased selection:bg-gray-900/10">
+
+            {/* ── Nav ── */}
+            <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+                scrolled ? 'bg-white/80 backdrop-blur-xl border-b border-gray-100 shadow-sm' : 'bg-transparent'
+            }`}>
+                <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center">
+                            <Mic className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="text-base font-bold tracking-tight">BuildVoiceAI</span>
                     </div>
-                    <div className="hidden md:flex items-center gap-8 text-[13px] text-white/35">
-                        <a href="#features" className="hover:text-white/70 transition-colors">Features</a>
-                        <a href="#pricing" className="hover:text-white/70 transition-colors">Pricing</a>
-                        <a href="#faq" className="hover:text-white/70 transition-colors">FAQ</a>
+                    <div className="hidden md:flex items-center gap-8 text-sm text-gray-500">
+                        <a href="#features" className="hover:text-gray-900 transition-colors">Features</a>
+                        <a href="#how-it-works" className="hover:text-gray-900 transition-colors">How It Works</a>
+                        <a href="#pricing" className="hover:text-gray-900 transition-colors">Pricing</a>
+                        <a href="#faq" className="hover:text-gray-900 transition-colors">FAQ</a>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Link href="/login" className="text-[13px] text-white/35 hover:text-white/70 transition-colors hidden sm:block">Log In</Link>
-                        <Link href="/signup" className="px-4 py-1.5 bg-white text-[#09090b] text-[13px] font-semibold rounded-lg hover:bg-white/90 transition-colors">Get Started</Link>
+                        <Link href="/login" className="text-sm text-gray-500 hover:text-gray-900 transition-colors hidden sm:block">Log In</Link>
+                        <Link href="/signup" className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                            Get Started
+                        </Link>
                     </div>
                 </div>
             </nav>
 
-            {/* Hero — Product First */}
-            <section className="relative pt-28 pb-4 px-6 overflow-hidden">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[400px] bg-violet-600/6 blur-[150px] pointer-events-none" />
+            {/* ── Hero ── */}
+            <section className="relative pt-32 sm:pt-40 pb-8 px-6 overflow-hidden">
+                {/* Subtle gradient */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-gradient-to-b from-gray-50 to-transparent rounded-full blur-3xl pointer-events-none" />
+
                 <div className="max-w-6xl mx-auto relative">
-                    <div className="max-w-2xl">
-                        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1]">
-                            The platform for<br />voice AI agencies
+                    <div className="max-w-3xl mx-auto text-center">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs text-gray-500 font-medium mb-8">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Now supporting Retell, Vapi, Bland, and ElevenLabs
+                        </div>
+                        <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05]">
+                            The platform for{' '}
+                            <span className="bg-gradient-to-r from-gray-900 via-gray-600 to-gray-900 bg-clip-text text-transparent">
+                                voice AI agencies
+                            </span>
                         </h1>
-                        <p className="mt-5 text-[16px] text-white/35 leading-relaxed max-w-lg">
-                            Build, test, and deploy voice agents across Retell, Vapi, and Bland from a single dashboard. White-label it for your clients.
+                        <p className="mt-6 text-lg sm:text-xl text-gray-500 leading-relaxed max-w-2xl mx-auto">
+                            Build, test, and deploy voice agents across four providers from one dashboard. White-label it for your clients.
                         </p>
-                        <div className="mt-8 flex items-center gap-4">
-                            <Link href="/signup" className="group px-5 py-2.5 bg-white text-[#09090b] text-[13px] font-semibold rounded-lg hover:bg-white/90 transition-all flex items-center gap-2">
-                                Start Building <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+                            <Link href="/signup" className="group w-full sm:w-auto px-8 py-3.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-gray-900/10">
+                                Start Building Free <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                             </Link>
-                            <a href="#demo" className="px-5 py-2.5 text-[13px] text-white/40 hover:text-white/70 transition-colors">Try the demo &darr;</a>
+                            <a href="#demo" className="w-full sm:w-auto px-8 py-3.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center justify-center gap-2">
+                                <Play className="w-3.5 h-3.5" /> Try the demo
+                            </a>
                         </div>
                     </div>
-                    {/* Product Screenshot */}
-                    <div className="mt-14">
+
+                    {/* Product screenshot */}
+                    <div className="mt-16 sm:mt-20">
                         <MockDashboard />
                     </div>
                 </div>
             </section>
 
-            {/* Social proof line */}
-            <section className="py-10 px-6 border-b border-white/[0.04]">
-                <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-[13px] text-white/15">
-                    <span>Retell</span><span className="text-white/[0.06]">|</span>
-                    <span>Vapi</span><span className="text-white/[0.06]">|</span>
-                    <span>Bland AI</span><span className="text-white/[0.06]">|</span>
-                    <span>ElevenLabs</span>
+            {/* ── Providers ── */}
+            <section className="py-16 px-6 border-b border-gray-100">
+                <p className="text-center text-xs text-gray-400 font-medium uppercase tracking-widest mb-8">One dashboard. Four providers.</p>
+                <ProviderBar />
+            </section>
+
+            {/* ── Stats ── */}
+            <section className="py-20 px-6">
+                <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-8">
+                    <AnimatedStat value="4" label="Voice providers" />
+                    <AnimatedStat value="30" suffix="s" label="First agent deploy" />
+                    <AnimatedStat value="99.9" suffix="%" label="Uptime SLA" />
+                    <AnimatedStat value="0" suffix="¢" label="Platform markup on calls" />
                 </div>
             </section>
 
-            {/* Demo */}
-            <section id="demo" className="py-24 px-6">
+            {/* ── Demo ── */}
+            <section id="demo" className="py-24 px-6 bg-gray-50 border-y border-gray-100">
                 <div className="max-w-5xl mx-auto">
-                    <div className="max-w-lg mb-10">
-                        <p className="text-[12px] font-medium text-violet-400 uppercase tracking-[0.15em] mb-3">Agent Builder</p>
-                        <h2 className="text-3xl font-bold tracking-tight">Describe it. Deploy it.</h2>
-                        <p className="text-[15px] text-white/30 mt-3">Tell the builder what your agent should do in plain English. It generates the prompt, picks a voice, and wires up your CRM.</p>
+                    <div className="max-w-xl mb-12">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Agent Builder</p>
+                        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Describe it. Deploy it.</h2>
+                        <p className="text-base text-gray-500 mt-4 leading-relaxed">
+                            Tell the builder what your agent should do in plain English. It generates the prompt, picks a voice, and wires up your CRM.
+                        </p>
                     </div>
                     <AgentDemo />
                 </div>
             </section>
 
-            {/* Feature Sections — Alternating, with product visuals */}
-            <section id="features" className="py-24 px-6 space-y-32">
-                <div className="max-w-6xl mx-auto space-y-32">
-                    <ProductSection
-                        label="Insights"
-                        heading="Know what callers are actually saying"
-                        description="AI analyzes every call for sentiment, topics, and objections. Stop guessing why calls aren't converting."
-                        features={[
-                            'Sentiment breakdown across all calls',
-                            'Auto-detected topics and patterns',
-                            'Common objections surfaced automatically',
-                            'Per-agent and per-client filtering',
-                        ]}
-                    >
-                        <MockInsights />
-                    </ProductSection>
-
-                    <ProductSection
-                        label="Testing"
-                        heading="Ship agents that work on day one"
-                        description="AI generates realistic test scenarios for your agent. Run them before a single real call hits the line."
-                        features={[
-                            'Auto-generated test scenarios per industry',
-                            'Pass/fail scoring on every response',
-                            'Test edge cases: after-hours, transfers, angry callers',
-                            'Run full suites before every prompt change',
-                        ]}
-                        reverse
-                    >
-                        <MockTesting />
-                    </ProductSection>
-
-                    <ProductSection
-                        label="Experiments"
-                        heading="A/B test everything"
-                        description="Run two prompt variants side by side. See which one books more appointments, with real data."
-                        features={[
-                            'Split traffic between prompt variants',
-                            'Track conversion, duration, and sentiment per variant',
-                            'Statistical significance indicators',
-                            'One-click promote winner to production',
-                        ]}
-                    >
-                        <MockExperiment />
-                    </ProductSection>
+            {/* ── Features Grid ── */}
+            <section id="features" className="py-24 px-6">
+                <div className="max-w-6xl mx-auto">
+                    <div className="max-w-xl mb-16">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Features</p>
+                        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Everything you need to run a voice AI agency</h2>
+                    </div>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <FeatureCard icon={Sparkles} title="Natural Language Builder" description="Describe your agent in plain English. AI generates the prompt, picks a voice, and configures the workflow." />
+                        <FeatureCard icon={Layers} title="Multi-Provider" description="Run agents across Retell, Vapi, Bland, and ElevenLabs. Switch providers without rebuilding." />
+                        <FeatureCard icon={FlaskConical} title="AI Test Suites" description="Simulate real calls with AI personas. Catch issues before they reach a single customer." />
+                        <FeatureCard icon={BarChart3} title="Call Analytics" description="Track duration, sentiment, booking rates, and conversion. Filter by agent, client, or time period." />
+                        <FeatureCard icon={TrendingUp} title="A/B Experiments" description="Test prompt variants side by side. See which one books more appointments with real data." />
+                        <FeatureCard icon={MessageSquare} title="Call Insights" description="AI analyzes every call for topics, objections, and sentiment. Know exactly why calls convert or don't." />
+                        <FeatureCard icon={Users} title="Client Portals" description="Each client gets their own white-labeled dashboard. Your branding, their agents and data." />
+                        <FeatureCard icon={Globe} title="White-Label" description="Custom domains, your logo, your colors. Clients never see BuildVoiceAI. It's your platform." />
+                        <FeatureCard icon={Settings} title="CRM Integrations" description="Native GoHighLevel, HubSpot, Google Calendar, Calendly, and Slack. No Zapier needed." />
+                    </div>
                 </div>
             </section>
 
-            {/* Pricing */}
-            <section id="pricing" className="py-24 px-6 border-t border-white/[0.04]">
+            {/* ── How It Works ── */}
+            <section id="how-it-works" className="py-24 px-6 bg-gray-50 border-y border-gray-100">
                 <div className="max-w-5xl mx-auto">
-                    <div className="max-w-lg mb-14">
-                        <p className="text-[12px] font-medium text-violet-400 uppercase tracking-[0.15em] mb-3">Pricing</p>
-                        <h2 className="text-3xl font-bold tracking-tight">Pay for the platform.<br />Provider costs are yours.</h2>
+                    <div className="max-w-xl mb-16">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">How It Works</p>
+                        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Three steps to your first agent</h2>
                     </div>
-                    <div className="grid md:grid-cols-3 gap-5">
+                    <HowItWorks />
+                </div>
+            </section>
+
+            {/* ── Comparison ── */}
+            <section className="py-24 px-6">
+                <div className="max-w-5xl mx-auto">
+                    <div className="max-w-xl mb-12">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Why BuildVoiceAI</p>
+                        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Built for agencies, not just agents</h2>
+                        <p className="text-base text-gray-500 mt-4 leading-relaxed">
+                            Provider dashboards give you agents. Resellers give you one provider. We give you the full platform.
+                        </p>
+                    </div>
+                    <ComparisonTable />
+                </div>
+            </section>
+
+            {/* ── Pricing ── */}
+            <section id="pricing" className="py-24 px-6 bg-gray-50 border-y border-gray-100">
+                <div className="max-w-5xl mx-auto">
+                    <div className="max-w-xl mb-14">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Pricing</p>
+                        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+                            Pay for the platform. Provider costs are yours.
+                        </h2>
+                        <p className="text-base text-gray-500 mt-4 leading-relaxed">No per-minute markups. You bring your own API keys and keep full control of provider costs.</p>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-6">
                         {[
-                            { name: 'Starter', price: '$97', desc: 'per month', features: ['5 agents', '1 provider', 'Agent builder', 'Call analytics', 'Email support'], cta: 'Start Free Trial' },
-                            { name: 'Growth', price: '$197', desc: 'per month', features: ['25 agents', 'All providers', 'A/B experiments', 'Testing suites', 'AI insights', '5 client portals', 'CRM integrations'], cta: 'Start Free Trial', highlight: true },
-                            { name: 'Scale', price: '$397', desc: 'per month', features: ['Unlimited agents', 'Unlimited clients', 'Custom domains', 'Stripe Connect', 'White-label', 'Priority support'], cta: 'Contact Sales' },
+                            { name: 'Starter', price: '$97', features: ['5 agents', '1 provider', 'Agent builder', 'Call analytics', 'Email support'], cta: 'Start Free Trial' },
+                            { name: 'Growth', price: '$197', features: ['25 agents', 'All 4 providers', 'A/B experiments', 'Testing suites', 'AI call insights', '5 client portals', 'CRM integrations', 'Priority support'], cta: 'Start Free Trial', highlight: true },
+                            { name: 'Scale', price: '$397', features: ['Unlimited agents', 'Unlimited clients', 'Custom domains', 'Stripe Connect billing', 'Full white-label', 'Dedicated support'], cta: 'Contact Sales' },
                         ].map(plan => (
-                            <div key={plan.name} className={`p-7 rounded-xl border ${plan.highlight ? 'border-violet-500/30 bg-violet-500/[0.03]' : 'border-white/[0.06] bg-white/[0.015]'} relative`}>
-                                {plan.highlight && <div className="absolute -top-2.5 left-5 px-2.5 py-0.5 bg-violet-600 text-[10px] text-white font-semibold rounded-full">Popular</div>}
-                                <p className="text-[11px] text-white/30 uppercase tracking-wider font-medium">{plan.name}</p>
-                                <p className="text-3xl font-bold text-white mt-2">{plan.price}<span className="text-[14px] text-white/25 font-normal"> /mo</span></p>
-                                <Link href="/signup" className={`block w-full text-center py-2.5 rounded-lg text-[13px] font-semibold mt-5 mb-5 transition-colors ${
-                                    plan.highlight ? 'bg-white text-[#09090b] hover:bg-white/90' : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.1]'
-                                }`}>{plan.cta}</Link>
-                                <div className="space-y-2.5">
+                            <div key={plan.name} className={`p-8 rounded-2xl border relative ${
+                                plan.highlight
+                                    ? 'border-gray-900 bg-white shadow-xl shadow-gray-200/60'
+                                    : 'border-gray-200 bg-white'
+                            }`}>
+                                {plan.highlight && (
+                                    <div className="absolute -top-3 left-6 px-3 py-1 bg-gray-900 text-[11px] text-white font-semibold rounded-full">
+                                        Most Popular
+                                    </div>
+                                )}
+                                <p className="text-sm text-gray-500 font-medium">{plan.name}</p>
+                                <div className="mt-3 mb-6">
+                                    <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
+                                    <span className="text-sm text-gray-400 ml-1">/month</span>
+                                </div>
+                                <Link href="/signup" className={`block w-full text-center py-3 rounded-xl text-sm font-semibold transition-colors ${
+                                    plan.highlight
+                                        ? 'bg-gray-900 text-white hover:bg-gray-800'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}>
+                                    {plan.cta}
+                                </Link>
+                                <div className="mt-6 pt-6 border-t border-gray-100 space-y-3">
                                     {plan.features.map(f => (
-                                        <div key={f} className="flex items-center gap-2.5 text-[12px] text-white/35">
-                                            <Check className="w-3 h-3 text-violet-400 shrink-0" />{f}
+                                        <div key={f} className="flex items-center gap-3 text-sm text-gray-600">
+                                            <Check className="w-4 h-4 text-gray-400 shrink-0" />{f}
                                         </div>
                                     ))}
                                 </div>
@@ -514,41 +582,77 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* FAQ */}
-            <section id="faq" className="py-24 px-6 border-t border-white/[0.04]">
+            {/* ── FAQ ── */}
+            <section id="faq" className="py-24 px-6">
                 <div className="max-w-2xl mx-auto">
-                    <h2 className="text-2xl font-bold tracking-tight mb-10">FAQ</h2>
-                    <FAQ q="Do I need my own voice provider account?" a="Yes. You bring your own Retell, Vapi, or Bland API keys. You control costs and provider relationships directly." />
-                    <FAQ q="How does the agent builder work?" a="Describe your agent in plain English. AI generates a production-ready system prompt, picks a voice, and recommends CRM integrations. Refine through conversation, deploy with one click." />
-                    <FAQ q="Can I use different providers per agent?" a="Yes. Run one agent on Retell and another on Vapi. Switch providers without rebuilding anything." />
-                    <FAQ q="What about my clients?" a="Each client gets their own white-labeled portal. They see only their agents, calls, and analytics. Your branding, their experience." />
-                    <FAQ q="What CRM integrations are available?" a="GoHighLevel, HubSpot, Google Calendar, Calendly, and Slack. All native, no Zapier needed." />
-                    <FAQ q="Is there a free trial?" a="14 days, no credit card. You just need a voice provider API key to make test calls." />
+                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-12">Frequently Asked Questions</h2>
+                    <FAQ q="Do I need my own voice provider account?" a="Yes. You bring your own Retell, Vapi, Bland, or ElevenLabs API key. You control costs and provider relationships directly. We never mark up your call minutes." />
+                    <FAQ q="How does the agent builder work?" a="Describe your agent in plain English. AI generates a production-ready system prompt, picks a matching voice, and recommends CRM integrations. Refine through conversation, then deploy with one click." />
+                    <FAQ q="Can I use different providers for different agents?" a="Absolutely. Run one agent on Retell and another on Vapi. Switch providers without rebuilding. Each agent is independent." />
+                    <FAQ q="How do client portals work?" a="Each client gets their own white-labeled dashboard. They see only their agents, calls, and analytics. You control the branding. They never see BuildVoiceAI." />
+                    <FAQ q="What CRM integrations are available?" a="GoHighLevel, HubSpot, Google Calendar, Calendly, and Slack. All native integrations, no Zapier or Make.com required." />
+                    <FAQ q="Is there a free trial?" a="14 days, no credit card required. You just need a voice provider API key to make test calls." />
+                    <FAQ q="What makes this different from Vapify or SynthFlow?" a="Multi-provider support (4 providers vs their 1), natural language agent builder, AI-powered testing suites, and A/B experiments. Those are either single-provider resellers or built-for-you services." />
                 </div>
             </section>
 
-            {/* CTA */}
-            <section className="py-24 px-6 border-t border-white/[0.04]">
-                <div className="max-w-xl mx-auto text-center">
-                    <h2 className="text-3xl font-bold tracking-tight">Start building today</h2>
-                    <p className="text-[14px] text-white/30 mt-3">First agent in 30 seconds. No credit card required.</p>
-                    <Link href="/signup" className="group inline-flex items-center gap-2 mt-8 px-6 py-3 bg-white text-[#09090b] text-[14px] font-semibold rounded-xl hover:bg-white/90 transition-all">
-                        Get Started Free <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                    </Link>
-                </div>
-            </section>
-
-            {/* Footer */}
-            <footer className="border-t border-white/[0.04] py-8 px-6">
-                <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded bg-violet-600 flex items-center justify-center"><Mic className="w-2.5 h-2.5 text-white" /></div>
-                        <span className="text-[12px] font-semibold text-white/40">BuildVoiceAI</span>
+            {/* ── CTA ── */}
+            <section className="py-24 px-6 border-t border-gray-100">
+                <div className="max-w-2xl mx-auto text-center">
+                    <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Start building today</h2>
+                    <p className="text-base text-gray-500 mt-4 leading-relaxed">First agent in 30 seconds. 14-day free trial. No credit card required.</p>
+                    <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <Link href="/signup" className="group w-full sm:w-auto px-8 py-3.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-gray-900/10">
+                            Get Started Free <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                        </Link>
+                        <a href="#demo" className="w-full sm:w-auto px-8 py-3.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center gap-2">
+                            Try the Demo
+                        </a>
                     </div>
-                    <div className="flex items-center gap-5 text-[11px] text-white/20">
-                        <Link href="/privacy" className="hover:text-white/40">Privacy</Link>
-                        <Link href="/terms" className="hover:text-white/40">Terms</Link>
-                        <a href="mailto:support@buildvoiceai.com" className="hover:text-white/40">Contact</a>
+                </div>
+            </section>
+
+            {/* ── Footer ── */}
+            <footer className="border-t border-gray-100 py-12 px-6 bg-gray-50">
+                <div className="max-w-6xl mx-auto">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-12">
+                        <div>
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="w-7 h-7 rounded-lg bg-gray-900 flex items-center justify-center">
+                                    <Mic className="w-3.5 h-3.5 text-white" />
+                                </div>
+                                <span className="text-sm font-bold">BuildVoiceAI</span>
+                            </div>
+                            <p className="text-xs text-gray-400 leading-relaxed">The platform for voice AI agencies. Build, test, and deploy across providers.</p>
+                        </div>
+                        <div>
+                            <p className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-4">Product</p>
+                            <div className="space-y-2.5">
+                                <a href="#features" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Features</a>
+                                <a href="#pricing" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Pricing</a>
+                                <a href="#demo" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Demo</a>
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-4">Providers</p>
+                            <div className="space-y-2.5">
+                                <p className="text-sm text-gray-500">Retell</p>
+                                <p className="text-sm text-gray-500">Vapi</p>
+                                <p className="text-sm text-gray-500">Bland AI</p>
+                                <p className="text-sm text-gray-500">ElevenLabs</p>
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-4">Company</p>
+                            <div className="space-y-2.5">
+                                <Link href="/privacy" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Privacy</Link>
+                                <Link href="/terms" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Terms</Link>
+                                <a href="mailto:support@buildvoiceai.com" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Contact</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="pt-8 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <p className="text-xs text-gray-400">&copy; {new Date().getFullYear()} BuildVoiceAI. All rights reserved.</p>
                     </div>
                 </div>
             </footer>
