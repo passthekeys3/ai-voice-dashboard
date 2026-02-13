@@ -11,6 +11,7 @@ const publicRoutes = [
     '/api/trigger-call',
     '/widget',        // Widget page (iframe content)
     '/api/widget',    // Widget session API
+    '/landing',       // Marketing landing page
 ];
 
 // Platform domains that should NOT be treated as custom domains
