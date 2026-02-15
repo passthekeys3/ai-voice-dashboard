@@ -207,7 +207,7 @@ export function WorkflowsList({ workflows }: WorkflowsListProps) {
                                     <Switch
                                         checked={workflow.is_active}
                                         disabled={updatingId === workflow.id}
-                                        onCheckedChange={(checked) => handleToggleActive(workflow.id, checked)}
+                                        onCheckedChange={(checked: boolean) => handleToggleActive(workflow.id, checked)}
                                     />
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -330,7 +330,7 @@ export function WorkflowsList({ workflows }: WorkflowsListProps) {
                                         <Switch
                                             checked={workflow.is_active}
                                             disabled={updatingId === workflow.id}
-                                            onCheckedChange={(checked) => handleToggleActive(workflow.id, checked)}
+                                            onCheckedChange={(checked: boolean) => handleToggleActive(workflow.id, checked)}
                                         />
                                     </TableCell>
                                     <TableCell className="text-right">

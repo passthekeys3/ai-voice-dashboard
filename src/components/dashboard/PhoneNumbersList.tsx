@@ -164,7 +164,7 @@ export function PhoneNumbersList({ phoneNumbers, agents }: PhoneNumbersListProps
                                     </label>
                                     <Select
                                         value={phone.inbound_agent_id || 'unassigned'}
-                                        onValueChange={(value) =>
+                                        onValueChange={(value: string) =>
                                             handleAssign(phone.id, value === 'unassigned' ? null : value, 'inbound')
                                         }
                                         disabled={assigning?.phoneId === phone.id && assigning?.type === 'inbound'}
@@ -198,7 +198,7 @@ export function PhoneNumbersList({ phoneNumbers, agents }: PhoneNumbersListProps
                                     </label>
                                     <Select
                                         value={phone.outbound_agent_id || 'unassigned'}
-                                        onValueChange={(value) =>
+                                        onValueChange={(value: string) =>
                                             handleAssign(phone.id, value === 'unassigned' ? null : value, 'outbound')
                                         }
                                         disabled={assigning?.phoneId === phone.id && assigning?.type === 'outbound'}
@@ -270,7 +270,7 @@ export function PhoneNumbersList({ phoneNumbers, agents }: PhoneNumbersListProps
                                             <PhoneIncoming className="h-3.5 w-3.5 text-blue-500" />
                                             <Select
                                                 value={phone.inbound_agent_id || 'unassigned'}
-                                                onValueChange={(value) =>
+                                                onValueChange={(value: string) =>
                                                     handleAssign(phone.id, value === 'unassigned' ? null : value, 'inbound')
                                                 }
                                                 disabled={assigning?.phoneId === phone.id && assigning?.type === 'inbound'}
@@ -303,7 +303,7 @@ export function PhoneNumbersList({ phoneNumbers, agents }: PhoneNumbersListProps
                                             <PhoneOutgoing className="h-3.5 w-3.5 text-violet-500" />
                                             <Select
                                                 value={phone.outbound_agent_id || 'unassigned'}
-                                                onValueChange={(value) =>
+                                                onValueChange={(value: string) =>
                                                     handleAssign(phone.id, value === 'unassigned' ? null : value, 'outbound')
                                                 }
                                                 disabled={assigning?.phoneId === phone.id && assigning?.type === 'outbound'}

@@ -112,7 +112,7 @@ export function ScheduleCallButton({ agents }: ScheduleCallButtonProps) {
     };
 
     return (
-        <Dialog open={open} onOpenChange={(isOpen) => {
+        <Dialog open={open} onOpenChange={(isOpen: boolean) => {
             setOpen(isOpen);
             if (isOpen) setDefaultDateTime();
             else resetForm();

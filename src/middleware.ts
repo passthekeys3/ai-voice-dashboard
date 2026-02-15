@@ -11,6 +11,8 @@ const publicRoutes = [
     '/api/trigger-call',
     '/widget',        // Widget page (iframe content)
     '/api/widget',    // Widget session API
+    '/landing',       // Public marketing landing page
+    '/api/landing',   // Public agent preview API
 ];
 
 // Platform domains that should NOT be treated as custom domains
@@ -49,18 +51,6 @@ function getSubdomain(hostname: string): string | null {
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const hostname = request.headers.get('host') || 'localhost';
-
-    // DEV ONLY: Bypass authentication for local development
-    // Only works in non-production environments
-    if (process.env.NODE_ENV !== 'production' && process.env.DEV_BYPASS_AUTH === 'true') {
-        return NextResponse.next();
-    }
-
-    // DEMO MODE: Bypass authentication for demo/sharing purposes
-    // Set DEMO_MODE=true in environment variables to enable
-    if (process.env.DEMO_MODE === 'true') {
-        return NextResponse.next();
-    }
 
     // Get client IP for rate limiting
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
@@ -106,6 +96,43 @@ export async function middleware(request: NextRequest) {
         if (subdomain) {
             requestHeaders.set('x-agency-slug', subdomain.toLowerCase());
         }
+    }
+
+    // Rewrite root path to landing page for unauthenticated visitors on platform domains
+    if (pathname === '/') {
+        const { supabaseResponse, user } = await updateSession(request);
+
+        if (!user && isPlatformDomain(hostname)) {
+            // Rewrite to landing page (URL stays as /)
+            const url = request.nextUrl.clone();
+            url.pathname = '/landing';
+
+            const response = NextResponse.rewrite(url, {
+                request: { headers: requestHeaders },
+            });
+
+            supabaseResponse.cookies.getAll().forEach(cookie => {
+                response.cookies.set(cookie.name, cookie.value, cookie);
+            });
+
+            return response;
+        }
+
+        // Authenticated user on / — fall through to dashboard handling below
+        // Pass along the already-fetched session to avoid double updateSession call
+        if (user) {
+            const response = NextResponse.next({
+                request: { headers: requestHeaders },
+            });
+
+            supabaseResponse.cookies.getAll().forEach(cookie => {
+                response.cookies.set(cookie.name, cookie.value, cookie);
+            });
+
+            return response;
+        }
+
+        // Unauthenticated on custom domain — fall through to redirect to /login below
     }
 
     // Allow public routes

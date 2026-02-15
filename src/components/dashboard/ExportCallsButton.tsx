@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ExportCallsButtonProps {
     startDate?: string;
@@ -39,6 +40,7 @@ export function ExportCallsButton({ startDate, endDate, agentId }: ExportCallsBu
             document.body.removeChild(a);
         } catch (error) {
             console.error('Export error:', error);
+            toast.error('Failed to export calls. Please try again.');
         } finally {
             setExporting(false);
         }

@@ -100,11 +100,6 @@ export function isValidBillingType(value: unknown): value is BillingType {
 // ENVIRONMENT HELPERS
 // =====================================================
 
-/** Check if running in development mode with auth bypass */
-export function isDevBypassEnabled(): boolean {
-    return process.env.DEV_BYPASS_AUTH === 'true';
-}
-
 /** Check if running in production */
 export function isProduction(): boolean {
     return process.env.NODE_ENV === 'production';

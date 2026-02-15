@@ -20,7 +20,7 @@ export default async function DashboardPage() {
     const permissions = getUserPermissions(user);
 
     // Redirect new agency admins to onboarding if no API keys configured
-    if (isAdmin && process.env.DEMO_MODE !== 'true') {
+    if (isAdmin) {
         const hasApiKey = user.agency.retell_api_key || user.agency.vapi_api_key || user.agency.bland_api_key;
         if (!hasApiKey) {
             redirect('/onboarding');

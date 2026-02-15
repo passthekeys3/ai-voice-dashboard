@@ -339,7 +339,7 @@ export function AgentEditor({
                                 <Label>Assign to Client</Label>
                                 <Select
                                     value={selectedClient || 'unassigned'}
-                                    onValueChange={(val) => setSelectedClient(val === 'unassigned' ? '' : val)}
+                                    onValueChange={(val: string) => setSelectedClient(val === 'unassigned' ? '' : val)}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a client" />
@@ -368,7 +368,7 @@ export function AgentEditor({
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label>Voice</Label>
-                                <Select value={voiceId || 'select-voice'} onValueChange={(v) => setVoiceId(v === 'select-voice' ? '' : v)}>
+                                <Select value={voiceId || 'select-voice'} onValueChange={(v: string) => setVoiceId(v === 'select-voice' ? '' : v)}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a voice" />
                                     </SelectTrigger>

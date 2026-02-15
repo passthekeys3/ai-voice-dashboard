@@ -256,7 +256,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                     <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
                             <Label htmlFor="trigger-event">Trigger Event</Label>
-                            <Select value={trigger} onValueChange={(v) => setTrigger(v as WorkflowTrigger)}>
+                            <Select value={trigger} onValueChange={(v: string) => setTrigger(v as WorkflowTrigger)}>
                                 <SelectTrigger id="trigger-event">
                                     <SelectValue />
                                 </SelectTrigger>
@@ -299,7 +299,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                         <div key={index} className="flex items-center gap-2">
                             <Select
                                 value={condition.field}
-                                onValueChange={(v) => updateCondition(index, { field: v })}
+                                onValueChange={(v: string) => updateCondition(index, { field: v })}
                             >
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue />
@@ -314,7 +314,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                             </Select>
                             <Select
                                 value={condition.operator}
-                                onValueChange={(v) => updateCondition(index, { operator: v as WorkflowCondition['operator'] })}
+                                onValueChange={(v: string) => updateCondition(index, { operator: v as WorkflowCondition['operator'] })}
                             >
                                 <SelectTrigger className="w-[140px]">
                                     <SelectValue />
@@ -366,7 +366,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                                 <div className="flex items-center justify-between">
                                     <Select
                                         value={action.type}
-                                        onValueChange={(v) => updateAction(index, {
+                                        onValueChange={(v: string) => updateAction(index, {
                                             type: v as WorkflowAction['type'],
                                             config: v === 'webhook' ? { url: '' } : {}
                                         })}
@@ -766,7 +766,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                                             <Switch
                                                 id={`action-${index}-include-transcript`}
                                                 checked={action.config.include_transcript !== 'false'}
-                                                onCheckedChange={(checked) => updateActionConfig(index, 'include_transcript', checked ? 'true' : 'false')}
+                                                onCheckedChange={(checked: boolean) => updateActionConfig(index, 'include_transcript', checked ? 'true' : 'false')}
                                             />
                                             <Label htmlFor={`action-${index}-include-transcript`}>Include transcript in note</Label>
                                         </div>
@@ -1259,7 +1259,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                                             <Switch
                                                 id={`action-${index}-add-sentiment-tags`}
                                                 checked={action.config.add_sentiment_tags !== 'false'}
-                                                onCheckedChange={(v) => updateActionConfig(index, 'add_sentiment_tags', String(v))}
+                                                onCheckedChange={(v: boolean) => updateActionConfig(index, 'add_sentiment_tags', String(v))}
                                             />
                                             <Label htmlFor={`action-${index}-add-sentiment-tags`}>Auto-add sentiment tags (e.g., positive-sentiment, negative-sentiment)</Label>
                                         </div>
@@ -1276,7 +1276,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                                             <Switch
                                                 id={`action-${index}-include-transcript`}
                                                 checked={action.config.include_transcript !== 'false'}
-                                                onCheckedChange={(v) => updateActionConfig(index, 'include_transcript', String(v))}
+                                                onCheckedChange={(v: boolean) => updateActionConfig(index, 'include_transcript', String(v))}
                                             />
                                             <Label htmlFor={`action-${index}-include-transcript`}>Include call transcript in note</Label>
                                         </div>

@@ -96,7 +96,7 @@ export function BuyPhoneNumberButton({ agents }: BuyPhoneNumberButtonProps) {
     };
 
     return (
-        <Dialog open={open} onOpenChange={(isOpen) => {
+        <Dialog open={open} onOpenChange={(isOpen: boolean) => {
             setOpen(isOpen);
             if (!isOpen) resetForm();
         }}>
@@ -155,7 +155,7 @@ export function BuyPhoneNumberButton({ agents }: BuyPhoneNumberButtonProps) {
 
                     <div className="space-y-2">
                         <Label>Assign to Agent (Optional)</Label>
-                        <Select value={agentId || 'none'} onValueChange={(v) => setAgentId(v === 'none' ? '' : v)}>
+                        <Select value={agentId || 'none'} onValueChange={(v: string) => setAgentId(v === 'none' ? '' : v)}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select agent (optional)" />
                             </SelectTrigger>

@@ -18,11 +18,18 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Create user with admin client
+        if (password.length < 8) {
+            return NextResponse.json(
+                { error: 'Password must be at least 8 characters' },
+                { status: 400 }
+            );
+        }
+
+        // Create user with admin client — email_confirm: false sends verification email
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email,
             password,
-            email_confirm: true, // Auto-confirm for dev
+            email_confirm: false,
             user_metadata: {
                 full_name: fullName,
                 agency_name: agencyName,
@@ -32,6 +39,10 @@ export async function POST(request: NextRequest) {
 
         if (authError) {
             console.error('Signup auth error:', authError);
+            // Surface duplicate email errors clearly
+            if (authError.message?.includes('already been registered') || authError.message?.includes('already exists')) {
+                return NextResponse.json({ error: 'An account with this email already exists' }, { status: 400 });
+            }
             return NextResponse.json({ error: 'Failed to create account' }, { status: 400 });
         }
 
@@ -87,7 +98,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            message: 'Account created successfully'
+            message: 'Please check your email to verify your account',
         });
     } catch (error) {
         console.error('Signup error:', error);

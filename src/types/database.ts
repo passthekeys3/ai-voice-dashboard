@@ -85,7 +85,6 @@ export interface AgencyBranding {
     // Customization
     footer_text?: string;        // Custom footer text
     login_message?: string;      // Custom message on login page
-    custom_css?: string;         // Advanced: custom CSS overrides
 }
 
 // Default branding values

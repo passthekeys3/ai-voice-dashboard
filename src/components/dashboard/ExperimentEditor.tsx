@@ -198,7 +198,7 @@ export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) 
                     </div>
                     <div className="space-y-2">
                         <Label>Optimization Goal</Label>
-                        <Select value={goal} onValueChange={(v) => setGoal(v as ExperimentGoal)}>
+                        <Select value={goal} onValueChange={(v: string) => setGoal(v as ExperimentGoal)}>
                             <SelectTrigger className="w-[200px]">
                                 <SelectValue />
                             </SelectTrigger>
@@ -282,7 +282,7 @@ export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) 
                                     </div>
                                     <Slider
                                         value={[variant.traffic_weight]}
-                                        onValueChange={([value]) => updateVariant(index, { traffic_weight: value })}
+                                        onValueChange={([value]: number[]) => updateVariant(index, { traffic_weight: value })}
                                         max={100}
                                         step={5}
                                     />

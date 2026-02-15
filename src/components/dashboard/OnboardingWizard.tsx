@@ -162,7 +162,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <Tabs value={provider} onValueChange={(v) => setProvider(v as 'retell' | 'vapi' | 'bland')}>
+                        <Tabs value={provider} onValueChange={(v: string) => setProvider(v as 'retell' | 'vapi' | 'bland')}>
                             <TabsList className="grid w-full grid-cols-3">
                                 <TabsTrigger value="retell">Retell AI</TabsTrigger>
                                 <TabsTrigger value="vapi">VAPI</TabsTrigger>

@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Eye, Palette, Mail, Phone, Globe, Clock, Webhook, Copy, RefreshCw, Key, Hash, CalendarCheck, Loader2, CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Agency } from '@/types';
 
 interface SettingsFormProps {
@@ -891,7 +892,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                     </div>
                                     <Switch
                                         checked={formData.ghlTriggerEnabled}
-                                        onCheckedChange={(checked) => {
+                                        onCheckedChange={(checked: boolean) => {
                                             const updates: Partial<typeof formData> = { ghlTriggerEnabled: checked };
                                             // Generate webhook secret if enabling for the first time
                                             if (checked && !formData.ghlTriggerSecret) {
@@ -1002,7 +1003,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                     </div>
                                     <Switch
                                         checked={formData.callingWindowEnabled}
-                                        onCheckedChange={(checked) => setFormData({ ...formData, callingWindowEnabled: checked })}
+                                        onCheckedChange={(checked: boolean) => setFormData({ ...formData, callingWindowEnabled: checked })}
                                     />
                                 </div>
 
@@ -1121,7 +1122,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                     </div>
                                     <Switch
                                         checked={formData.hubspotTriggerEnabled}
-                                        onCheckedChange={(checked) => {
+                                        onCheckedChange={(checked: boolean) => {
                                             const updates: Partial<typeof formData> = { hubspotTriggerEnabled: checked };
                                             if (checked && !formData.hubspotTriggerSecret) {
                                                 const array = new Uint8Array(32);
@@ -1288,7 +1289,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                 </div>
                                 <Switch
                                     checked={formData.slackEnabled}
-                                    onCheckedChange={(checked) => setFormData({ ...formData, slackEnabled: checked })}
+                                    onCheckedChange={(checked: boolean) => setFormData({ ...formData, slackEnabled: checked })}
                                 />
                             </div>
 
@@ -1387,7 +1388,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                 </div>
                                 <Switch
                                     checked={formData.calendlyEnabled}
-                                    onCheckedChange={(checked) => setFormData({ ...formData, calendlyEnabled: checked })}
+                                    onCheckedChange={(checked: boolean) => setFormData({ ...formData, calendlyEnabled: checked })}
                                 />
                             </div>
 
@@ -1424,10 +1425,10 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                             }));
                                                             setCalendlyEventTypes(json.event_types || []);
                                                         } else {
-                                                            alert(json.error || 'Invalid token');
+                                                            toast.error(json.error || 'Invalid token');
                                                         }
                                                     } catch {
-                                                        alert('Failed to validate token');
+                                                        toast.error('Failed to validate token');
                                                     } finally {
                                                         setCalendlyValidating(false);
                                                     }
@@ -1495,7 +1496,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                 </div>
                                 <Switch
                                     checked={formData.apiTriggerEnabled}
-                                    onCheckedChange={(checked) => {
+                                    onCheckedChange={(checked: boolean) => {
                                         const updates: Partial<typeof formData> = { apiTriggerEnabled: checked };
                                         // Generate API key if enabling for the first time
                                         if (checked && !formData.apiTriggerKey) {

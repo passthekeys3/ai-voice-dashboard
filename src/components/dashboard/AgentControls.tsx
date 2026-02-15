@@ -43,8 +43,7 @@ export function AgentControls({ agentId, isActive, clientId, clients }: AgentCon
             });
 
             if (!response.ok) {
-                const data = await response.json();
-                setMessage(`Error: ${data.error}`);
+                setMessage('Failed to update agent. Please try again.');
                 return;
             }
 
@@ -81,7 +80,7 @@ export function AgentControls({ agentId, isActive, clientId, clients }: AgentCon
                 {/* Client Assignment */}
                 <div className="space-y-2">
                     <Label>Assign to Client</Label>
-                    <Select value={selectedClient || 'unassigned'} onValueChange={(val) => setSelectedClient(val === 'unassigned' ? '' : val)}>
+                    <Select value={selectedClient || 'unassigned'} onValueChange={(val: string) => setSelectedClient(val === 'unassigned' ? '' : val)}>
                         <SelectTrigger>
                             <SelectValue placeholder="Select a client" />
                         </SelectTrigger>

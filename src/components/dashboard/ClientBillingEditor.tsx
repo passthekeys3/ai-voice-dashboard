@@ -192,7 +192,7 @@ export function ClientBillingEditor({
                     <Label htmlFor="billing-type">Billing Model</Label>
                     <Select
                         value={billingType || 'none'}
-                        onValueChange={(value) => handleBillingTypeChange(value as BillingType | 'none')}
+                        onValueChange={(value: string) => handleBillingTypeChange(value as BillingType | 'none')}
                     >
                         <SelectTrigger id="billing-type" className="w-full">
                             <SelectValue placeholder="Select billing model" />
@@ -369,7 +369,7 @@ export function ClientBillingEditor({
                         </div>
                         <Switch
                             checked={aiCallAnalysis}
-                            onCheckedChange={(checked) => {
+                            onCheckedChange={(checked: boolean) => {
                                 setAiCallAnalysis(checked);
                                 setHasChanges(true);
                             }}

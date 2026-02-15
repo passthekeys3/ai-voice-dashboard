@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CreditCard, ExternalLink, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function BillingUsage() {
     const [loading, setLoading] = useState(false);
@@ -19,11 +20,11 @@ export function BillingUsage() {
             if (data.url) {
                 window.open(data.url, '_blank');
             } else {
-                // Placeholder message when Stripe isn't configured
-                alert(data.message || 'Billing portal not yet configured. Contact your agency administrator.');
+                toast.error(data.message || 'Billing portal not yet configured. Contact your agency administrator.');
             }
         } catch (error) {
             console.error('Error opening billing portal:', error);
+            toast.error('Failed to open billing portal.');
         } finally {
             setLoading(false);
         }

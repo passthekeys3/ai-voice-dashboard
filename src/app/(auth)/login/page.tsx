@@ -8,17 +8,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, Eye, EyeOff, CheckCircle } from 'lucide-react';
 
 function LoginForm() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
     const rawRedirect = searchParams.get('redirect') || '/';
     // Prevent open redirect: only allow relative paths
     const redirect = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : '/';
+    const message = searchParams.get('message');
+    const urlError = searchParams.get('error');
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,7 +37,14 @@ function LoginForm() {
             });
 
             if (authError) {
-                setError(authError.message);
+                // Friendly error messages
+                if (authError.message?.includes('Email not confirmed')) {
+                    setError('Please verify your email before signing in. Check your inbox for a verification link.');
+                } else if (authError.message?.includes('Invalid login credentials')) {
+                    setError('Invalid email or password. Please try again.');
+                } else {
+                    setError(authError.message);
+                }
                 return;
             }
 
@@ -53,10 +64,16 @@ function LoginForm() {
                 <CardDescription>Sign in to your account to continue</CardDescription>
             </CardHeader>
             <CardContent>
+                {message && (
+                    <div className="mb-4 p-3 text-sm text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/50 rounded-md flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                        {message}
+                    </div>
+                )}
                 <form onSubmit={handleLogin} className="space-y-4">
-                    {error && (
+                    {(error || urlError) && (
                         <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-md">
-                            {error}
+                            {error || urlError}
                         </div>
                     )}
                     <div className="space-y-2">
@@ -77,17 +94,35 @@ function LoginForm() {
                                 Forgot password?
                             </Link>
                         </div>
-                        <Input
-                            id="password"
-                            type="password"
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                        />
+                        <div className="relative">
+                            <Input
+                                id="password"
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                className="pr-10"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                tabIndex={-1}
+                            >
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                        </div>
                     </div>
                     <Button type="submit" className="w-full" disabled={loading}>
-                        {loading ? 'Signing in...' : 'Sign in'}
+                        {loading ? (
+                            <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Signing in...
+                            </>
+                        ) : (
+                            'Sign in'
+                        )}
                     </Button>
                 </form>
                 <p className="mt-4 text-center text-sm text-muted-foreground">

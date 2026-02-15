@@ -588,7 +588,7 @@ export function TestSuiteEditor({ suite, personas }: TestSuiteEditorProps) {
                                                 <Label>Max Turns: {tc.max_turns}</Label>
                                                 <Slider
                                                     value={[tc.max_turns]}
-                                                    onValueChange={([v]) => updateCase(index, { max_turns: v })}
+                                                    onValueChange={([v]: number[]) => updateCase(index, { max_turns: v })}
                                                     min={4}
                                                     max={40}
                                                     step={2}

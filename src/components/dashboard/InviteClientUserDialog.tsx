@@ -89,7 +89,7 @@ export function InviteClientUserDialog({ clientId, clientName }: InviteClientUse
     };
 
     return (
-        <Dialog open={open} onOpenChange={(isOpen) => {
+        <Dialog open={open} onOpenChange={(isOpen: boolean) => {
             setOpen(isOpen);
             if (!isOpen) {
                 resetForm();
@@ -139,7 +139,7 @@ export function InviteClientUserDialog({ clientId, clientName }: InviteClientUse
                     {/* Role */}
                     <div className="space-y-2">
                         <Label htmlFor="invite-role">Role</Label>
-                        <Select value={role} onValueChange={(v) => setRole(v as 'client_admin' | 'client_member')}>
+                        <Select value={role} onValueChange={(v: string) => setRole(v as 'client_admin' | 'client_member')}>
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>

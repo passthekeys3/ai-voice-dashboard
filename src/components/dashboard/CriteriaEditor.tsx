@@ -100,7 +100,7 @@ export function CriteriaEditor({ criteria, onChange, disabled }: CriteriaEditorP
                 <div className="flex gap-2">
                     <Select
                         value={newType}
-                        onValueChange={(v) => setNewType(v as CriterionType)}
+                        onValueChange={(v: string) => setNewType(v as CriterionType)}
                     >
                         <SelectTrigger className="w-[140px] shrink-0">
                             <SelectValue />

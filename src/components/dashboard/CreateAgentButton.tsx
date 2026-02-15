@@ -23,6 +23,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Plus, Loader2, Bot, Volume2, Play, Pause } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Voice {
     id: string;
@@ -82,6 +83,7 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
             }
         } catch (err) {
             console.error('Failed to fetch voices:', err);
+            toast.error('Failed to load voice options.');
         } finally {
             setLoadingVoices(false);
         }
@@ -166,7 +168,7 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
     const availablePhoneNumbers = phoneNumbers.filter(pn => !pn.agent_id);
 
     return (
-        <Dialog open={open} onOpenChange={(isOpen) => {
+        <Dialog open={open} onOpenChange={(isOpen: boolean) => {
             setOpen(isOpen);
             if (!isOpen) {
                 audio?.pause();
@@ -290,7 +292,7 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
                     {clients.length > 0 && (
                         <div className="space-y-2">
                             <Label>Assign to Client (Optional)</Label>
-                            <Select value={clientId || 'none'} onValueChange={(v) => setClientId(v === 'none' ? '' : v)}>
+                            <Select value={clientId || 'none'} onValueChange={(v: string) => setClientId(v === 'none' ? '' : v)}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select client" />
                                 </SelectTrigger>
@@ -310,7 +312,7 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
                     {availablePhoneNumbers.length > 0 && (
                         <div className="space-y-2">
                             <Label>Assign Phone Number (Optional)</Label>
-                            <Select value={phoneNumberId || 'none'} onValueChange={(v) => setPhoneNumberId(v === 'none' ? '' : v)}>
+                            <Select value={phoneNumberId || 'none'} onValueChange={(v: string) => setPhoneNumberId(v === 'none' ? '' : v)}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select phone number" />
                                 </SelectTrigger>

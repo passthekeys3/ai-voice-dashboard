@@ -117,7 +117,7 @@ export function CreateClientDialog() {
     };
 
     return (
-        <Dialog open={open} onOpenChange={(isOpen) => {
+        <Dialog open={open} onOpenChange={(isOpen: boolean) => {
             setOpen(isOpen);
             if (!isOpen) {
                 resetForm();
@@ -172,7 +172,7 @@ export function CreateClientDialog() {
                         <Label htmlFor="billing-type">Billing Model (Optional)</Label>
                         <Select
                             value={billingType || 'none'}
-                            onValueChange={(value) => setBillingType(value === 'none' ? '' : value as BillingType)}
+                            onValueChange={(value: string) => setBillingType(value === 'none' ? '' : value as BillingType)}
                         >
                             <SelectTrigger id="billing-type" className="w-full">
                                 <SelectValue placeholder="Select billing model" />

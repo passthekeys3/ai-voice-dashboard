@@ -1,42 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
-import { createServiceClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import type { AuthUser, Profile, Agency, AgencyBranding, Client } from '@/types';
+import type { AuthUser, Profile, Agency, Client } from '@/types';
 
 /**
  * Get the current authenticated user with their profile, agency, and client data
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
-    // DEMO MODE: Return demo user when enabled
-    // Uses service client to bypass RLS (demo user has no real Supabase auth session)
-    if (process.env.DEMO_MODE === 'true') {
-        const supabase = createServiceClient();
-        const { data: agency } = await supabase
-            .from('agencies')
-            .select('*')
-            .limit(1)
-            .single();
-
-        if (agency) {
-            return {
-                id: 'demo-user-id',
-                email: 'demo@buildvoiceai.com',
-                profile: {
-                    id: 'demo-user-id',
-                    email: 'demo@buildvoiceai.com',
-                    full_name: 'Demo User',
-                    role: 'agency_admin',
-                    agency_id: agency.id,
-                    client_id: undefined,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                } as Profile,
-                agency: agency as Agency,
-            };
-        }
-        return null;
-    }
-
     const supabase = await createClient();
 
     const {
@@ -93,112 +62,6 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
  * Require authentication - redirects to login if not authenticated
  */
 export async function requireAuth(): Promise<AuthUser> {
-    // DEV ONLY: Bypass authentication for local development
-    // Only works in non-production environments
-    if (process.env.NODE_ENV !== 'production' && process.env.DEV_BYPASS_AUTH === 'true') {
-        // Fetch a real agency from the database for dev mode
-        const supabase = await createClient();
-        const { data: agency } = await supabase
-            .from('agencies')
-            .select('*')
-            .limit(1)
-            .single();
-
-        if (agency) {
-            return {
-                id: 'dev-user-id',
-                email: 'dev@localhost',
-                profile: {
-                    id: 'dev-user-id',
-                    email: 'dev@localhost',
-                    full_name: 'Dev User',
-                    role: 'agency_admin',
-                    agency_id: agency.id,
-                    client_id: undefined,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                } as Profile,
-                agency: agency as Agency,
-            };
-        }
-
-        // Fallback if no agency exists
-        return {
-            id: 'dev-user-id',
-            email: 'dev@localhost',
-            profile: {
-                id: 'dev-user-id',
-                email: 'dev@localhost',
-                full_name: 'Dev User',
-                role: 'agency_admin',
-                agency_id: 'dev-agency-id',
-                client_id: undefined,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            } as Profile,
-            agency: {
-                id: 'dev-agency-id',
-                name: 'Dev Agency',
-                slug: 'dev-agency',
-                branding: {} as AgencyBranding,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            } as Agency,
-        };
-    }
-
-    // DEMO MODE: Bypass authentication for demo/sharing purposes
-    // Uses service client to bypass RLS (demo user has no real Supabase auth session)
-    if (process.env.DEMO_MODE === 'true') {
-        const supabase = createServiceClient();
-        const { data: agency } = await supabase
-            .from('agencies')
-            .select('*')
-            .limit(1)
-            .single();
-
-        if (agency) {
-            return {
-                id: 'demo-user-id',
-                email: 'demo@buildvoiceai.com',
-                profile: {
-                    id: 'demo-user-id',
-                    email: 'demo@buildvoiceai.com',
-                    full_name: 'Demo User',
-                    role: 'agency_admin',
-                    agency_id: agency.id,
-                    client_id: undefined,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                } as Profile,
-                agency: agency as Agency,
-            };
-        }
-
-        return {
-            id: 'demo-user-id',
-            email: 'demo@buildvoiceai.com',
-            profile: {
-                id: 'demo-user-id',
-                email: 'demo@buildvoiceai.com',
-                full_name: 'Demo User',
-                role: 'agency_admin',
-                agency_id: 'demo-agency-id',
-                client_id: undefined,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            } as Profile,
-            agency: {
-                id: 'demo-agency-id',
-                name: 'Demo Agency',
-                slug: 'demo-agency',
-                branding: {} as AgencyBranding,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            } as Agency,
-        };
-    }
-
     const user = await getCurrentUser();
 
     if (!user) {

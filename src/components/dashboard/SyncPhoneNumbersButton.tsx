@@ -3,38 +3,28 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { RefreshCw, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function SyncPhoneNumbersButton() {
     const router = useRouter();
     const [syncing, setSyncing] = useState(false);
-    const [result, setResult] = useState<{ synced: number; updated: number } | null>(null);
-    const [error, setError] = useState<string | null>(null);
-
     const handleSync = async () => {
         setSyncing(true);
-        setResult(null);
-        setError(null);
 
         try {
-            console.log('Starting sync...');
             const response = await fetch('/api/phone-numbers/sync', { method: 'POST' });
-            console.log('Sync response status:', response.status);
             const data = await response.json();
-            console.log('Sync response data:', data);
 
             if (response.ok) {
-                setResult({ synced: data.synced, updated: data.updated });
+                toast.success(`Synced: ${data.synced} added, ${data.updated} updated`);
                 router.refresh();
-                setTimeout(() => setResult(null), 5000);
             } else {
-                setError(data.error || 'Sync failed');
-                setTimeout(() => setError(null), 5000);
+                toast.error(data.error || 'Sync failed');
             }
         } catch (err) {
             console.error('Failed to sync:', err);
-            setError('Network error');
-            setTimeout(() => setError(null), 5000);
+            toast.error('Network error — please try again.');
         } finally {
             setSyncing(false);
         }
@@ -42,7 +32,7 @@ export function SyncPhoneNumbersButton() {
 
     return (
         <Button
-            variant={error ? 'destructive' : 'outline'}
+            variant="outline"
             onClick={handleSync}
             disabled={syncing}
         >
@@ -50,16 +40,6 @@ export function SyncPhoneNumbersButton() {
                 <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Syncing...
-                </>
-            ) : error ? (
-                <>
-                    <AlertCircle className="h-4 w-4 mr-2" />
-                    {error}
-                </>
-            ) : result ? (
-                <>
-                    <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                    {result.synced} added, {result.updated} updated
                 </>
             ) : (
                 <>

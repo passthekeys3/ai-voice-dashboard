@@ -219,3 +219,31 @@
 .animate-bounce-subtle {
   animation: bounce-subtle 1s ease-in-out infinite;
 }
+
+/* Landing page animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.15); }
+  50% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.3); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s var(--ease-out-expo) forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.6s var(--ease-out-expo) forwards;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}

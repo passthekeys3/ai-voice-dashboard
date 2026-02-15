@@ -75,7 +75,7 @@ export function PersonaSelector({ value, onChange, personas: externalPersonas }:
     return (
         <Select
             value={value || 'none'}
-            onValueChange={(v) => onChange(v === 'none' ? null : v)}
+            onValueChange={(v: string) => onChange(v === 'none' ? null : v)}
             disabled={loading}
         >
             <SelectTrigger className="w-full">

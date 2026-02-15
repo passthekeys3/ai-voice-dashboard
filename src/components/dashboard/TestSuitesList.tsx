@@ -167,7 +167,7 @@ export function TestSuitesList({ suites }: TestSuitesListProps) {
                                     </TableCell>
                                     <TableCell>
                                         <DropdownMenu>
-                                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                            <DropdownMenuTrigger asChild onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Suite actions">
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </Button>
@@ -175,7 +175,7 @@ export function TestSuitesList({ suites }: TestSuitesListProps) {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem
                                                     className="text-red-600 focus:text-red-600"
-                                                    onClick={(e) => {
+                                                    onClick={(e: React.MouseEvent) => {
                                                         e.stopPropagation();
                                                         handleDelete(suite.id);
                                                     }}
