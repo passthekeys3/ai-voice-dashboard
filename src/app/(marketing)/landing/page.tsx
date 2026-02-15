@@ -1,5 +1,6 @@
 import { Navbar } from '@/components/landing/Navbar';
 import { HeroSection } from '@/components/landing/HeroSection';
+import { DashboardDemo } from '@/components/landing/DashboardDemo';
 import { ProductSection } from '@/components/landing/ProductSection';
 import { PricingSection } from '@/components/landing/PricingSection';
 import { FinalCTA } from '@/components/landing/FinalCTA';
@@ -11,6 +12,8 @@ export default function LandingPage() {
             <Navbar />
             <main className="overflow-hidden">
                 <HeroSection />
+
+                <DashboardDemo />
 
                 <div id="features">
                     <ProductSection

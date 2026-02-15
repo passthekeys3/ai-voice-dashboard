@@ -320,6 +320,41 @@
   background-image: radial-gradient(circle, oklch(0.25 0 0) 1px, transparent 1px);
 }
 
+/* ─── Dashboard demo animations ─── */
+
+@keyframes demo-sidebar-in {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.demo-sidebar-animate {
+  opacity: 0;
+  will-change: opacity, transform;
+}
+.demo-sidebar-animate.is-visible {
+  animation: demo-sidebar-in 0.4s var(--ease-out-expo) forwards;
+}
+
+@keyframes demo-glow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}
+
+.demo-frame-glow {
+  animation: demo-glow 4s ease-in-out infinite;
+}
+
+/* Extended stagger delays for dashboard demo */
+.stagger-6 { animation-delay: 400ms; }
+.stagger-7 { animation-delay: 480ms; }
+.stagger-8 { animation-delay: 560ms; }
+
 /* Reduced motion: show everything immediately */
 @media (prefers-reduced-motion: reduce) {
   .animate-on-scroll,
@@ -331,7 +366,13 @@
     transform: none !important;
     filter: none !important;
   }
-  .hero-glow {
+  .demo-sidebar-animate {
+    opacity: 1 !important;
+    animation: none !important;
+    transform: none !important;
+  }
+  .hero-glow,
+  .demo-frame-glow {
     animation: none !important;
   }
 }
