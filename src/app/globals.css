@@ -192,3 +192,13 @@
   animation: bounce-subtle 1s ease-in-out infinite;
 }
 
+/* Auth + onboarding dot grid background */
+.auth-grid-bg {
+  background-image: radial-gradient(circle, oklch(0.8 0 0) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.dark .auth-grid-bg {
+  background-image: radial-gradient(circle, oklch(0.3 0 0) 1px, transparent 1px);
+}
+

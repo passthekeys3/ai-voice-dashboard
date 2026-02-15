@@ -6,7 +6,6 @@ import { createBrowserClient } from '@supabase/ssr';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Lock, CheckCircle } from 'lucide-react';
 
 function ResetPasswordContent() {
@@ -73,92 +72,87 @@ function ResetPasswordContent() {
 
     if (success) {
         return (
-            <Card className="w-full">
-                <CardHeader className="text-center">
-                    <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
-                        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-                    </div>
-                    <CardTitle>Password Updated!</CardTitle>
-                    <CardDescription>
-                        Your password has been successfully reset. Redirecting to login...
-                    </CardDescription>
-                </CardHeader>
-            </Card>
+            <div className="w-full max-w-md text-center">
+                <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-6">
+                    <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight">Password Updated!</h1>
+                <p className="text-muted-foreground mt-2">
+                    Your password has been successfully reset. Redirecting to login...
+                </p>
+            </div>
         );
     }
 
     return (
-        <Card className="w-full">
-            <CardHeader className="text-center">
-                <div className="mx-auto w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                    <Lock className="h-6 w-6 text-slate-600 dark:text-slate-400" />
+        <div className="w-full max-w-md">
+            <div className="text-center mb-8">
+                <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-6">
+                    <Lock className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <CardTitle>Set New Password</CardTitle>
-                <CardDescription>
+                <h1 className="text-2xl font-bold tracking-tight">Set New Password</h1>
+                <p className="text-muted-foreground mt-1">
                     Enter your new password below
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {error && (
-                        <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950 rounded-lg">
-                            {error}
-                        </div>
+                </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+                {error && (
+                    <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950 rounded-md">
+                        {error}
+                    </div>
+                )}
+
+                <div className="space-y-2">
+                    <Label htmlFor="password">New Password</Label>
+                    <Input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        minLength={8}
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        minLength={8}
+                    />
+                </div>
+
+                <Button type="submit" className="w-full rounded-full" disabled={loading}>
+                    {loading ? (
+                        <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Updating...
+                        </>
+                    ) : (
+                        'Update Password'
                     )}
-
-                    <div className="space-y-2">
-                        <Label htmlFor="password">New Password</Label>
-                        <Input
-                            id="password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
-                            required
-                            minLength={8}
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="confirmPassword">Confirm Password</Label>
-                        <Input
-                            id="confirmPassword"
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="••••••••"
-                            required
-                            minLength={8}
-                        />
-                    </div>
-
-                    <Button type="submit" className="w-full" disabled={loading}>
-                        {loading ? (
-                            <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Updating...
-                            </>
-                        ) : (
-                            'Update Password'
-                        )}
-                    </Button>
-                </form>
-            </CardContent>
-        </Card>
+                </Button>
+            </form>
+        </div>
     );
 }
 
 export default function ResetPasswordPage() {
     return (
         <Suspense fallback={
-            <Card className="w-full">
-                <CardHeader className="text-center">
-                    <div className="mx-auto w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                        <Loader2 className="h-6 w-6 text-slate-600 dark:text-slate-400 animate-spin" />
-                    </div>
-                    <CardTitle>Loading...</CardTitle>
-                </CardHeader>
-            </Card>
+            <div className="w-full max-w-md text-center">
+                <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-6">
+                    <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight">Loading...</h1>
+            </div>
         }>
             <ResetPasswordContent />
         </Suspense>

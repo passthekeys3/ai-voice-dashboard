@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Eye, EyeOff, CheckCircle } from 'lucide-react';
 
 function LoginForm() {
@@ -58,81 +57,82 @@ function LoginForm() {
     };
 
     return (
-        <Card className="w-full max-w-md">
-            <CardHeader className="text-center">
-                <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-                <CardDescription>Sign in to your account to continue</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {message && (
-                    <div className="mb-4 p-3 text-sm text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/50 rounded-md flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 flex-shrink-0" />
-                        {message}
+        <div className="w-full max-w-md">
+            <div className="text-center mb-8">
+                <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+                <p className="text-muted-foreground mt-1">Sign in to your account to continue</p>
+            </div>
+
+            {message && (
+                <div className="mb-6 p-3 text-sm text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/50 rounded-md flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                    {message}
+                </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-5">
+                {(error || urlError) && (
+                    <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-md">
+                        {error || urlError}
                     </div>
                 )}
-                <form onSubmit={handleLogin} className="space-y-4">
-                    {(error || urlError) && (
-                        <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-md">
-                            {error || urlError}
-                        </div>
-                    )}
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
+                <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                    />
+                </div>
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="password">Password</Label>
+                        <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                            Forgot password?
+                        </Link>
+                    </div>
+                    <div className="relative">
                         <Input
-                            id="email"
-                            type="email"
-                            placeholder="you@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            id="password"
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
                             required
+                            className="pr-10"
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            tabIndex={-1}
+                        >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
                     </div>
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="password">Password</Label>
-                            <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                                Forgot password?
-                            </Link>
-                        </div>
-                        <div className="relative">
-                            <Input
-                                id="password"
-                                type={showPassword ? 'text' : 'password'}
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                className="pr-10"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                tabIndex={-1}
-                            >
-                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
-                        </div>
-                    </div>
-                    <Button type="submit" className="w-full" disabled={loading}>
-                        {loading ? (
-                            <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Signing in...
-                            </>
-                        ) : (
-                            'Sign in'
-                        )}
-                    </Button>
-                </form>
-                <p className="mt-4 text-center text-sm text-muted-foreground">
-                    Don&apos;t have an account?{' '}
-                    <Link href="/signup" className="text-primary hover:underline">
-                        Sign up
-                    </Link>
-                </p>
-            </CardContent>
-        </Card>
+                </div>
+                <Button type="submit" className="w-full rounded-full" disabled={loading}>
+                    {loading ? (
+                        <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Signing in...
+                        </>
+                    ) : (
+                        'Sign in'
+                    )}
+                </Button>
+            </form>
+
+            <div className="mt-8 border-t border-border pt-6 text-center text-sm text-muted-foreground">
+                Don&apos;t have an account?{' '}
+                <Link href="/signup" className="text-primary hover:underline">
+                    Sign up
+                </Link>
+            </div>
+        </div>
     );
 }
 

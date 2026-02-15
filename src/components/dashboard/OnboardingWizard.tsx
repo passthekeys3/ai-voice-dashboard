@@ -27,6 +27,8 @@ interface OnboardingWizardProps {
 
 type Step = 'welcome' | 'provider' | 'verify' | 'complete';
 
+const STEPS: Step[] = ['welcome', 'provider', 'verify', 'complete'];
+
 export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWizardProps) {
     const router = useRouter();
     const [step, setStep] = useState<Step>(isOnboarded ? 'complete' : 'welcome');
@@ -35,6 +37,8 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
     const [saving, setSaving] = useState(false);
     const [verifying, setVerifying] = useState(false);
     const [verified, setVerified] = useState(false);
+
+    const currentIndex = STEPS.indexOf(step);
 
     const handleSaveApiKey = async () => {
         if (!apiKey.trim()) {
@@ -103,244 +107,270 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
     };
 
     return (
-        <Card className="w-full max-w-lg">
-            {step === 'welcome' && (
-                <>
-                    <CardHeader className="text-center pb-2">
-                        <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                            <Sparkles className="h-8 w-8 text-primary" />
-                        </div>
-                        <CardTitle className="text-2xl">Welcome, {userName.split(' ')[0]}!</CardTitle>
-                        <CardDescription className="text-base">
-                            Let&apos;s get {agency.name} set up with your voice AI provider.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="space-y-3">
-                            <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900">
-                                <Key className="h-5 w-5 text-primary mt-0.5" />
-                                <div>
-                                    <p className="font-medium text-sm">Connect your provider</p>
-                                    <p className="text-sm text-muted-foreground">Add your Retell, VAPI, or Bland API key</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900">
-                                <Bot className="h-5 w-5 text-primary mt-0.5" />
-                                <div>
-                                    <p className="font-medium text-sm">Sync your agents</p>
-                                    <p className="text-sm text-muted-foreground">Import existing AI agents automatically</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900">
-                                <Phone className="h-5 w-5 text-primary mt-0.5" />
-                                <div>
-                                    <p className="font-medium text-sm">Manage everything</p>
-                                    <p className="text-sm text-muted-foreground">Calls, analytics, clients - all in one place</p>
-                                </div>
-                            </div>
-                        </div>
+        <div className="w-full max-w-lg">
+            {/* Step indicator */}
+            <div className="flex items-center justify-center gap-0 mb-8">
+                {STEPS.map((s, i) => (
+                    <div key={s} className="flex items-center">
+                        <div
+                            className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                                i <= currentIndex
+                                    ? 'bg-foreground'
+                                    : 'bg-muted-foreground/20'
+                            }`}
+                        />
+                        {i < STEPS.length - 1 && (
+                            <div
+                                className={`w-10 h-px transition-colors ${
+                                    i < currentIndex
+                                        ? 'bg-foreground'
+                                        : 'bg-muted-foreground/20'
+                                }`}
+                            />
+                        )}
+                    </div>
+                ))}
+            </div>
 
-                        <div className="flex gap-3">
-                            <Button variant="outline" className="flex-1" onClick={handleSkip}>
-                                Skip for now
-                            </Button>
-                            <Button className="flex-1" onClick={() => setStep('provider')}>
-                                Get started
+            <Card className="w-full">
+                {step === 'welcome' && (
+                    <>
+                        <CardHeader className="text-center pb-2">
+                            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                                <Sparkles className="h-8 w-8 text-primary" />
+                            </div>
+                            <CardTitle className="text-3xl">Welcome, {userName.split(' ')[0]}!</CardTitle>
+                            <CardDescription className="text-base">
+                                Let&apos;s get {agency.name} set up with your voice AI provider.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="space-y-3">
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted">
+                                    <Key className="h-5 w-5 text-primary mt-0.5" />
+                                    <div>
+                                        <p className="font-medium text-sm">Connect your provider</p>
+                                        <p className="text-sm text-muted-foreground">Add your Retell, VAPI, or Bland API key</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted">
+                                    <Bot className="h-5 w-5 text-primary mt-0.5" />
+                                    <div>
+                                        <p className="font-medium text-sm">Sync your agents</p>
+                                        <p className="text-sm text-muted-foreground">Import existing AI agents automatically</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted">
+                                    <Phone className="h-5 w-5 text-primary mt-0.5" />
+                                    <div>
+                                        <p className="font-medium text-sm">Manage everything</p>
+                                        <p className="text-sm text-muted-foreground">Calls, analytics, clients - all in one place</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <Button variant="outline" className="flex-1 rounded-full" onClick={handleSkip}>
+                                    Skip for now
+                                </Button>
+                                <Button className="flex-1 rounded-full" onClick={() => setStep('provider')}>
+                                    Get started
+                                    <ArrowRight className="h-4 w-4 ml-2" />
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </>
+                )}
+
+                {step === 'provider' && (
+                    <>
+                        <CardHeader>
+                            <CardTitle>Connect your provider</CardTitle>
+                            <CardDescription>
+                                Enter your API key to connect your voice AI provider
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <Tabs value={provider} onValueChange={(v: string) => setProvider(v as 'retell' | 'vapi' | 'bland')}>
+                                <TabsList className="grid w-full grid-cols-3">
+                                    <TabsTrigger value="retell">Retell AI</TabsTrigger>
+                                    <TabsTrigger value="vapi">VAPI</TabsTrigger>
+                                    <TabsTrigger value="bland">Bland.ai</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="retell" className="space-y-4 mt-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="retell-key">Retell API Key</Label>
+                                        <Input
+                                            id="retell-key"
+                                            type="password"
+                                            placeholder="key_..."
+                                            value={apiKey}
+                                            onChange={(e) => setApiKey(e.target.value)}
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Find your API key at{' '}
+                                            <a
+                                                href="https://beta.retellai.com/dashboard"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-primary hover:underline"
+                                            >
+                                                beta.retellai.com/dashboard
+                                            </a>
+                                        </p>
+                                    </div>
+                                </TabsContent>
+                                <TabsContent value="vapi" className="space-y-4 mt-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="vapi-key">VAPI API Key</Label>
+                                        <Input
+                                            id="vapi-key"
+                                            type="password"
+                                            placeholder="vapi_..."
+                                            value={apiKey}
+                                            onChange={(e) => setApiKey(e.target.value)}
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Find your API key at{' '}
+                                            <a
+                                                href="https://dashboard.vapi.ai"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-primary hover:underline"
+                                            >
+                                                dashboard.vapi.ai
+                                            </a>
+                                        </p>
+                                    </div>
+                                </TabsContent>
+                                <TabsContent value="bland" className="space-y-4 mt-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="bland-key">Bland API Key</Label>
+                                        <Input
+                                            id="bland-key"
+                                            type="password"
+                                            placeholder="sk-..."
+                                            value={apiKey}
+                                            onChange={(e) => setApiKey(e.target.value)}
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Find your API key at{' '}
+                                            <a
+                                                href="https://app.bland.ai/dashboard"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-primary hover:underline"
+                                            >
+                                                app.bland.ai/dashboard
+                                            </a>
+                                        </p>
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
+
+                            <div className="flex gap-3">
+                                <Button variant="outline" className="rounded-full" onClick={() => setStep('welcome')}>
+                                    Back
+                                </Button>
+                                <Button
+                                    className="flex-1 rounded-full"
+                                    onClick={handleSaveApiKey}
+                                    disabled={saving || !apiKey.trim()}
+                                >
+                                    {saving ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            Save & Continue
+                                            <ArrowRight className="h-4 w-4 ml-2" />
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </>
+                )}
+
+                {step === 'verify' && (
+                    <>
+                        <CardHeader>
+                            <CardTitle>Verify connection</CardTitle>
+                            <CardDescription>
+                                Let&apos;s make sure everything is connected properly
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="p-4 rounded-lg border bg-muted">
+                                <div className="flex items-center gap-3">
+                                    {verified ? (
+                                        <CheckCircle2 className="h-8 w-8 text-green-500" />
+                                    ) : (
+                                        <div className="h-8 w-8 rounded-full border-2 border-dashed border-muted-foreground/30" />
+                                    )}
+                                    <div>
+                                        <p className="font-medium">
+                                            {verified ? 'Connection verified!' : 'Ready to verify'}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {verified
+                                                ? 'Your agents have been synced'
+                                                : `We'll sync your ${provider === 'retell' ? 'Retell' : provider === 'vapi' ? 'VAPI' : 'Bland'} agents`}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <Button variant="outline" className="rounded-full" onClick={() => setStep('provider')}>
+                                    Back
+                                </Button>
+                                <Button
+                                    className="flex-1 rounded-full"
+                                    onClick={handleVerify}
+                                    disabled={verifying || verified}
+                                >
+                                    {verifying ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                            Verifying...
+                                        </>
+                                    ) : verified ? (
+                                        <>
+                                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                                            Verified
+                                        </>
+                                    ) : (
+                                        'Verify connection'
+                                    )}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </>
+                )}
+
+                {step === 'complete' && (
+                    <>
+                        <CardHeader className="text-center pb-2">
+                            <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
+                                <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+                            </div>
+                            <CardTitle className="text-2xl">You&apos;re all set!</CardTitle>
+                            <CardDescription className="text-base">
+                                {agency.name} is ready to go. Start managing your voice AI agents.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <Button className="w-full rounded-full" size="lg" onClick={handleComplete}>
+                                Go to Dashboard
                                 <ArrowRight className="h-4 w-4 ml-2" />
                             </Button>
-                        </div>
-                    </CardContent>
-                </>
-            )}
-
-            {step === 'provider' && (
-                <>
-                    <CardHeader>
-                        <CardTitle>Connect your provider</CardTitle>
-                        <CardDescription>
-                            Enter your API key to connect your voice AI provider
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <Tabs value={provider} onValueChange={(v: string) => setProvider(v as 'retell' | 'vapi' | 'bland')}>
-                            <TabsList className="grid w-full grid-cols-3">
-                                <TabsTrigger value="retell">Retell AI</TabsTrigger>
-                                <TabsTrigger value="vapi">VAPI</TabsTrigger>
-                                <TabsTrigger value="bland">Bland.ai</TabsTrigger>
-                            </TabsList>
-                            <TabsContent value="retell" className="space-y-4 mt-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="retell-key">Retell API Key</Label>
-                                    <Input
-                                        id="retell-key"
-                                        type="password"
-                                        placeholder="key_..."
-                                        value={apiKey}
-                                        onChange={(e) => setApiKey(e.target.value)}
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Find your API key at{' '}
-                                        <a
-                                            href="https://beta.retellai.com/dashboard"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-primary hover:underline"
-                                        >
-                                            beta.retellai.com/dashboard
-                                        </a>
-                                    </p>
-                                </div>
-                            </TabsContent>
-                            <TabsContent value="vapi" className="space-y-4 mt-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="vapi-key">VAPI API Key</Label>
-                                    <Input
-                                        id="vapi-key"
-                                        type="password"
-                                        placeholder="vapi_..."
-                                        value={apiKey}
-                                        onChange={(e) => setApiKey(e.target.value)}
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Find your API key at{' '}
-                                        <a
-                                            href="https://dashboard.vapi.ai"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-primary hover:underline"
-                                        >
-                                            dashboard.vapi.ai
-                                        </a>
-                                    </p>
-                                </div>
-                            </TabsContent>
-                            <TabsContent value="bland" className="space-y-4 mt-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="bland-key">Bland API Key</Label>
-                                    <Input
-                                        id="bland-key"
-                                        type="password"
-                                        placeholder="sk-..."
-                                        value={apiKey}
-                                        onChange={(e) => setApiKey(e.target.value)}
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Find your API key at{' '}
-                                        <a
-                                            href="https://app.bland.ai/dashboard"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-primary hover:underline"
-                                        >
-                                            app.bland.ai/dashboard
-                                        </a>
-                                    </p>
-                                </div>
-                            </TabsContent>
-                        </Tabs>
-
-                        <div className="flex gap-3">
-                            <Button variant="outline" onClick={() => setStep('welcome')}>
-                                Back
-                            </Button>
-                            <Button
-                                className="flex-1"
-                                onClick={handleSaveApiKey}
-                                disabled={saving || !apiKey.trim()}
-                            >
-                                {saving ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Saving...
-                                    </>
-                                ) : (
-                                    <>
-                                        Save & Continue
-                                        <ArrowRight className="h-4 w-4 ml-2" />
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </>
-            )}
-
-            {step === 'verify' && (
-                <>
-                    <CardHeader>
-                        <CardTitle>Verify connection</CardTitle>
-                        <CardDescription>
-                            Let&apos;s make sure everything is connected properly
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="p-4 rounded-lg border bg-slate-50 dark:bg-slate-900">
-                            <div className="flex items-center gap-3">
-                                {verified ? (
-                                    <CheckCircle2 className="h-8 w-8 text-green-500" />
-                                ) : (
-                                    <div className="h-8 w-8 rounded-full border-2 border-dashed border-muted-foreground/30" />
-                                )}
-                                <div>
-                                    <p className="font-medium">
-                                        {verified ? 'Connection verified!' : 'Ready to verify'}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {verified
-                                            ? 'Your agents have been synced'
-                                            : `We'll sync your ${provider === 'retell' ? 'Retell' : provider === 'vapi' ? 'VAPI' : 'Bland'} agents`}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <Button variant="outline" onClick={() => setStep('provider')}>
-                                Back
-                            </Button>
-                            <Button
-                                className="flex-1"
-                                onClick={handleVerify}
-                                disabled={verifying || verified}
-                            >
-                                {verifying ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Verifying...
-                                    </>
-                                ) : verified ? (
-                                    <>
-                                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                                        Verified
-                                    </>
-                                ) : (
-                                    'Verify connection'
-                                )}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </>
-            )}
-
-            {step === 'complete' && (
-                <>
-                    <CardHeader className="text-center pb-2">
-                        <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
-                            <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
-                        </div>
-                        <CardTitle className="text-2xl">You&apos;re all set!</CardTitle>
-                        <CardDescription className="text-base">
-                            {agency.name} is ready to go. Start managing your voice AI agents.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <Button className="w-full" size="lg" onClick={handleComplete}>
-                            Go to Dashboard
-                            <ArrowRight className="h-4 w-4 ml-2" />
-                        </Button>
-                    </CardContent>
-                </>
-            )}
-        </Card>
+                        </CardContent>
+                    </>
+                )}
+            </Card>
+        </div>
     );
 }

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const plans = [
@@ -48,9 +49,12 @@ const plans = [
 
 export function PricingSection() {
     return (
-        <section id="pricing" className="py-20 sm:py-28 px-4 sm:px-6">
+        <section id="pricing" className="py-24 sm:py-32 px-4 sm:px-6">
             <div className="max-w-5xl mx-auto">
-                <div className="text-center mb-14">
+                <div className="text-center mb-16">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-3">
+                        Pricing
+                    </p>
                     <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
                         Simple pricing
                     </h2>
@@ -63,13 +67,19 @@ export function PricingSection() {
                     {plans.map((plan) => (
                         <div
                             key={plan.name}
-                            className={`rounded-xl border p-6 flex flex-col ${
+                            className={`relative rounded-xl border p-8 flex flex-col ${
                                 plan.recommended
-                                    ? 'border-foreground/20 border-t-2 border-t-foreground'
+                                    ? 'border-foreground/20'
                                     : 'border-border'
                             }`}
                         >
-                            <div className="mb-6">
+                            {plan.recommended && (
+                                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-foreground text-background text-xs font-medium px-3 py-0.5 rounded-full">
+                                    Recommended
+                                </span>
+                            )}
+
+                            <div className="mb-8">
                                 <h3 className="text-lg font-semibold">{plan.name}</h3>
                                 <p className="text-sm text-muted-foreground mt-1">
                                     {plan.description}
@@ -80,9 +90,10 @@ export function PricingSection() {
                                 </div>
                             </div>
 
-                            <ul className="space-y-2 mb-6 flex-1">
+                            <ul className="space-y-2.5 mb-8 flex-1">
                                 {plan.features.map((feature) => (
-                                    <li key={feature} className="text-sm text-muted-foreground">
+                                    <li key={feature} className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <Check className="h-4 w-4 shrink-0" />
                                         {feature}
                                     </li>
                                 ))}
@@ -90,7 +101,7 @@ export function PricingSection() {
 
                             <Button
                                 variant={plan.recommended ? 'default' : 'outline'}
-                                className="w-full"
+                                className="w-full rounded-full"
                                 asChild
                             >
                                 <Link href="/signup">{plan.cta}</Link>
@@ -99,7 +110,7 @@ export function PricingSection() {
                     ))}
                 </div>
 
-                <p className="text-center text-sm text-muted-foreground mt-6">
+                <p className="text-center text-sm text-muted-foreground/60 mt-10">
                     14-day trial on all plans.
                 </p>
             </div>

@@ -5,12 +5,17 @@ const productLinks = [
     { label: 'Agent Builder', href: '/signup' },
 ];
 
+const companyLinks = [
+    { label: 'Log in', href: '/login' },
+    { label: 'Sign up', href: '/signup' },
+];
+
 export function Footer() {
     return (
         <footer className="border-t border-border">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                    <div className="space-y-1">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+                    <div className="space-y-2">
                         <Link href="/" className="text-base font-semibold tracking-tight">
                             BuildVoiceAI
                         </Link>
@@ -19,20 +24,44 @@ export function Footer() {
                         </p>
                     </div>
 
-                    <div className="flex gap-6">
-                        {productLinks.map((link) => (
-                            <Link
-                                key={link.label}
-                                href={link.href}
-                                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                {link.label}
-                            </Link>
-                        ))}
+                    <div>
+                        <p className="text-xs font-medium text-foreground uppercase tracking-widest mb-3">
+                            Product
+                        </p>
+                        <ul className="space-y-2">
+                            {productLinks.map((link) => (
+                                <li key={link.label}>
+                                    <Link
+                                        href={link.href}
+                                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        {link.label}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div>
+                        <p className="text-xs font-medium text-foreground uppercase tracking-widest mb-3">
+                            Company
+                        </p>
+                        <ul className="space-y-2">
+                            {companyLinks.map((link) => (
+                                <li key={link.label}>
+                                    <Link
+                                        href={link.href}
+                                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        {link.label}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-border text-sm text-muted-foreground">
+                <div className="mt-12 pt-8 border-t border-border text-sm text-muted-foreground">
                     &copy; {new Date().getFullYear()} BuildVoiceAI
                 </div>
             </div>

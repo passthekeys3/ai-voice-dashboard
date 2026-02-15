@@ -23,7 +23,10 @@ export default async function AuthLayout({
     const loginMessage = branding?.login_message;
 
     return (
-        <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-screen flex flex-col bg-background">
+            {/* Dot-grid background */}
+            <div className="auth-grid-bg fixed inset-0 pointer-events-none" />
+
             {/* Inject brand colors as CSS variables */}
             <style
                 dangerouslySetInnerHTML={{
@@ -36,7 +39,7 @@ export default async function AuthLayout({
             />
 
             {/* Header with logo */}
-            <header className="w-full py-6 px-4">
+            <header className="relative z-10 w-full py-8 px-4">
                 <div className="max-w-md mx-auto flex flex-col items-center">
                     {logoUrl ? (
                         <Image
@@ -49,7 +52,7 @@ export default async function AuthLayout({
                         />
                     ) : companyName ? (
                         <h1
-                            className="text-2xl font-bold"
+                            className="text-xl font-semibold tracking-tight"
                             style={{ color: primaryColor }}
                         >
                             {companyName}
@@ -65,7 +68,7 @@ export default async function AuthLayout({
             </header>
 
             {/* Main content */}
-            <main className="flex-1 flex items-center justify-center px-4 pb-12">
+            <main className="relative z-10 flex-1 flex items-center justify-center px-4 pb-12">
                 <div className="w-full max-w-md">
                     {loginMessage && (
                         <div
@@ -84,7 +87,7 @@ export default async function AuthLayout({
             </main>
 
             {/* Footer */}
-            <footer className="py-4 px-4 text-center text-sm text-muted-foreground">
+            <footer className="relative z-10 py-6 px-4 text-center text-sm text-muted-foreground/60">
                 {branding?.footer_text || (
                     <>
                         {companyName ? `© ${new Date().getFullYear()} ${companyName}` : 'Powered by BuildVoiceAI'}

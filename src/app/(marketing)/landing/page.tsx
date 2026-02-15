@@ -9,7 +9,7 @@ export default function LandingPage() {
     return (
         <>
             <Navbar />
-            <main>
+            <main className="overflow-hidden">
                 <HeroSection />
 
                 <ProductSection
@@ -41,6 +41,8 @@ export default function LandingPage() {
                     visual="portal"
                     reverse
                 />
+
+                <div className="border-t border-border max-w-5xl mx-auto" />
 
                 <PricingSection />
                 <FinalCTA />

@@ -14,12 +14,15 @@ export default async function OnboardingPage() {
     const isOnboarded = !!user.agency.retell_api_key || !!user.agency.vapi_api_key || !!user.agency.bland_api_key;
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
-            <OnboardingWizard
-                agency={user.agency}
-                userName={user.profile.full_name}
-                isOnboarded={isOnboarded}
-            />
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+            <div className="auth-grid-bg fixed inset-0 pointer-events-none" />
+            <div className="relative z-10">
+                <OnboardingWizard
+                    agency={user.agency}
+                    userName={user.profile.full_name}
+                    isOnboarded={isOnboarded}
+                />
+            </div>
         </div>
     );
 }

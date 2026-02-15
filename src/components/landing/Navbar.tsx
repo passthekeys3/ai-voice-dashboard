@@ -35,13 +35,13 @@ export function Navbar() {
         <nav
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
                 scrolled
-                    ? 'bg-background/80 backdrop-blur-md border-b border-border'
+                    ? 'bg-background/80 backdrop-blur-md border-b border-border/50'
                     : 'bg-transparent'
             }`}
         >
-            <div className="mx-auto max-w-5xl px-4 sm:px-6">
-                <div className="flex h-14 items-center justify-between">
-                    <Link href="/" className="text-base font-semibold tracking-tight">
+            <div className="mx-auto max-w-6xl px-4 sm:px-6">
+                <div className="flex h-16 items-center justify-between">
+                    <Link href="/" className="text-[15px] font-bold tracking-tight">
                         BuildVoiceAI
                     </Link>
 
@@ -56,13 +56,13 @@ export function Navbar() {
                                 {link.label}
                             </a>
                         ))}
-                    </div>
 
-                    <div className="hidden md:flex items-center gap-2">
+                        <div className="w-px h-4 bg-border" />
+
                         <Button variant="ghost" size="sm" asChild>
                             <Link href="/login">Log in</Link>
                         </Button>
-                        <Button size="sm" asChild>
+                        <Button size="sm" className="rounded-full" asChild>
                             <Link href="/signup">Get Started</Link>
                         </Button>
                     </div>
@@ -77,7 +77,7 @@ export function Navbar() {
                 </div>
 
                 {mobileOpen && (
-                    <div className="md:hidden pb-4 border-t border-border mt-2 pt-4">
+                    <div className="md:hidden pb-6 border-t border-border/50 mt-3 pt-6">
                         <div className="flex flex-col gap-3">
                             {navLinks.map((link) => (
                                 <a
@@ -93,7 +93,7 @@ export function Navbar() {
                                 <Button variant="ghost" size="sm" asChild className="flex-1">
                                     <Link href="/login">Log in</Link>
                                 </Button>
-                                <Button size="sm" asChild className="flex-1">
+                                <Button size="sm" className="flex-1 rounded-full" asChild>
                                     <Link href="/signup">Get Started</Link>
                                 </Button>
                             </div>
