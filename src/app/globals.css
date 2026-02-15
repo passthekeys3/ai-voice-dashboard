@@ -202,3 +202,137 @@
   background-image: radial-gradient(circle, oklch(0.3 0 0) 1px, transparent 1px);
 }
 
+/* ─── Landing page entrance animations ─── */
+
+@keyframes fade-in-blur {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+/* Scroll-triggered animation base */
+.animate-on-scroll {
+  opacity: 0;
+  will-change: opacity, transform, filter;
+}
+.animate-on-scroll.is-visible {
+  animation: fade-in-blur 0.5s var(--ease-out-expo) forwards;
+}
+
+.animate-on-scroll-scale {
+  opacity: 0;
+  will-change: opacity, transform;
+}
+.animate-on-scroll-scale.is-visible {
+  animation: fade-in-scale 0.45s var(--ease-out-expo) forwards;
+}
+
+.animate-on-scroll-left {
+  opacity: 0;
+  will-change: opacity, transform;
+}
+.animate-on-scroll-left.is-visible {
+  animation: slide-in-left 0.5s var(--ease-out-expo) forwards;
+}
+
+.animate-on-scroll-right {
+  opacity: 0;
+  will-change: opacity, transform;
+}
+.animate-on-scroll-right.is-visible {
+  animation: slide-in-right 0.5s var(--ease-out-expo) forwards;
+}
+
+/* Stagger delays */
+.stagger-1 { animation-delay: 0ms; }
+.stagger-2 { animation-delay: 80ms; }
+.stagger-3 { animation-delay: 160ms; }
+.stagger-4 { animation-delay: 240ms; }
+.stagger-5 { animation-delay: 320ms; }
+
+/* Hero gradient glow */
+.hero-glow {
+  background: radial-gradient(
+    ellipse 60% 50% at 50% 40%,
+    oklch(0.55 0.15 264 / 12%) 0%,
+    transparent 70%
+  );
+}
+.dark .hero-glow {
+  background: radial-gradient(
+    ellipse 60% 50% at 50% 40%,
+    oklch(0.45 0.18 264 / 15%) 0%,
+    transparent 70%
+  );
+}
+
+/* Landing page dot grid (lighter + larger than auth) */
+.landing-grid-bg {
+  background-image: radial-gradient(circle, oklch(0.85 0 0) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+.dark .landing-grid-bg {
+  background-image: radial-gradient(circle, oklch(0.25 0 0) 1px, transparent 1px);
+}
+
+/* Reduced motion: show everything immediately */
+@media (prefers-reduced-motion: reduce) {
+  .animate-on-scroll,
+  .animate-on-scroll-scale,
+  .animate-on-scroll-left,
+  .animate-on-scroll-right {
+    opacity: 1 !important;
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .hero-glow {
+    animation: none !important;
+  }
+}
+

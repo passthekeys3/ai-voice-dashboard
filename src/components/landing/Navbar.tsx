@@ -33,10 +33,10 @@ export function Navbar() {
 
     return (
         <nav
-            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
+            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
                 scrolled
-                    ? 'bg-background/80 backdrop-blur-md border-b border-border/50'
-                    : 'bg-transparent'
+                    ? 'bg-background/80 backdrop-blur-lg backdrop-saturate-150 border-b border-border/50 shadow-sm shadow-black/[0.03]'
+                    : 'bg-transparent border-b border-transparent'
             }`}
         >
             <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -62,7 +62,7 @@ export function Navbar() {
                         <Button variant="ghost" size="sm" asChild>
                             <Link href="/login">Log in</Link>
                         </Button>
-                        <Button size="sm" className="rounded-full" asChild>
+                        <Button size="sm" className="rounded-full active:scale-[0.98] transition-[transform,background-color,box-shadow] duration-200" asChild>
                             <Link href="/signup">Get Started</Link>
                         </Button>
                     </div>
@@ -93,7 +93,7 @@ export function Navbar() {
                                 <Button variant="ghost" size="sm" asChild className="flex-1">
                                     <Link href="/login">Log in</Link>
                                 </Button>
-                                <Button size="sm" className="flex-1 rounded-full" asChild>
+                                <Button size="sm" className="flex-1 rounded-full active:scale-[0.98]" asChild>
                                     <Link href="/signup">Get Started</Link>
                                 </Button>
                             </div>

@@ -158,7 +158,7 @@ export function AgentPreviewDemo() {
         <div className="space-y-3">
             {/* Prompt input */}
             <form onSubmit={handleSubmit}>
-                <div className="relative rounded-lg border border-border bg-card">
+                <div className="relative rounded-xl border border-border bg-card shadow-sm">
                     <textarea
                         ref={textareaRef}
                         value={prompt}
