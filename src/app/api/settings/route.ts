@@ -135,7 +135,7 @@ export async function PATCH(request: NextRequest) {
         // Validate Slack integration settings
         if (integrations?.slack) {
             const slack = integrations.slack as Record<string, unknown>;
-            if (slack.webhook_url !== undefined && slack.webhook_url !== '') {
+            if (slack.webhook_url !== undefined && slack.webhook_url !== null && slack.webhook_url !== '') {
                 if (typeof slack.webhook_url !== 'string') {
                     return NextResponse.json({ error: 'Slack webhook URL must be a string' }, { status: 400 });
                 }
@@ -150,7 +150,7 @@ export async function PATCH(request: NextRequest) {
             if (slack.enabled !== undefined && typeof slack.enabled !== 'boolean') {
                 return NextResponse.json({ error: 'Slack enabled must be a boolean' }, { status: 400 });
             }
-            if (slack.channel_name !== undefined) {
+            if (slack.channel_name !== undefined && slack.channel_name !== null) {
                 if (typeof slack.channel_name !== 'string' || (slack.channel_name as string).length > 100) {
                     return NextResponse.json({ error: 'Invalid Slack channel name' }, { status: 400 });
                 }
@@ -160,7 +160,7 @@ export async function PATCH(request: NextRequest) {
         // Validate Calendly integration settings
         if (integrations?.calendly) {
             const calendly = integrations.calendly as Record<string, unknown>;
-            if (calendly.api_token !== undefined && calendly.api_token !== '') {
+            if (calendly.api_token !== undefined && calendly.api_token !== null && calendly.api_token !== '') {
                 if (typeof calendly.api_token !== 'string' || (calendly.api_token as string).length > 500) {
                     return NextResponse.json({ error: 'Invalid Calendly API token' }, { status: 400 });
                 }
@@ -168,12 +168,12 @@ export async function PATCH(request: NextRequest) {
             if (calendly.enabled !== undefined && typeof calendly.enabled !== 'boolean') {
                 return NextResponse.json({ error: 'Calendly enabled must be a boolean' }, { status: 400 });
             }
-            if (calendly.user_uri !== undefined) {
+            if (calendly.user_uri !== undefined && calendly.user_uri !== null) {
                 if (typeof calendly.user_uri !== 'string' || (calendly.user_uri as string).length > 500) {
                     return NextResponse.json({ error: 'Invalid Calendly user URI' }, { status: 400 });
                 }
             }
-            if (calendly.default_event_type_uri !== undefined) {
+            if (calendly.default_event_type_uri !== undefined && calendly.default_event_type_uri !== null) {
                 if (typeof calendly.default_event_type_uri !== 'string' || (calendly.default_event_type_uri as string).length > 500) {
                     return NextResponse.json({ error: 'Invalid Calendly event type URI' }, { status: 400 });
                 }
@@ -183,7 +183,7 @@ export async function PATCH(request: NextRequest) {
         // Validate API trigger settings
         if (integrations?.api) {
             const api = integrations.api as Record<string, unknown>;
-            if (api.api_key !== undefined) {
+            if (api.api_key !== undefined && api.api_key !== null) {
                 if (typeof api.api_key !== 'string' || !/^pdy_sk_[a-f0-9]{64}$/.test(api.api_key as string)) {
                     return NextResponse.json({ error: 'Invalid API trigger key format' }, { status: 400 });
                 }
