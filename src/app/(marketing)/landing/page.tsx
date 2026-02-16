@@ -2,7 +2,9 @@ import { Navbar } from '@/components/landing/Navbar';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { DashboardDemo } from '@/components/landing/DashboardDemo';
 import { ProductSection } from '@/components/landing/ProductSection';
+import { SocialProofSection } from '@/components/landing/SocialProofSection';
 import { PricingSection } from '@/components/landing/PricingSection';
+import { FAQSection } from '@/components/landing/FAQSection';
 import { FinalCTA } from '@/components/landing/FinalCTA';
 import { Footer } from '@/components/landing/Footer';
 
@@ -49,7 +51,9 @@ export default function LandingPage() {
 
                 <div className="border-t border-border max-w-5xl mx-auto" />
 
+                <SocialProofSection />
                 <PricingSection />
+                <FAQSection />
                 <FinalCTA />
             </main>
             <Footer />
