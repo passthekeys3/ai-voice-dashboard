@@ -392,5 +392,8 @@
   .demo-frame-glow {
     animation: none !important;
   }
+  .remotion-hero-player {
+    display: none !important;
+  }
 }
 

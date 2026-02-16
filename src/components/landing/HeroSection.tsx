@@ -1,7 +1,13 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useInView } from '@/hooks/useInView';
 import { AgentPreviewDemo } from './AgentPreviewDemo';
+
+const HeroAnimation = dynamic(
+    () => import('./remotion/HeroAnimation').then((mod) => ({ default: mod.HeroAnimation })),
+    { ssr: false }
+);
 
 export function HeroSection() {
     const { ref, isInView } = useInView({ threshold: 0.1 });
@@ -11,11 +17,16 @@ export function HeroSection() {
             ref={ref}
             className="relative flex flex-col items-center justify-center px-4 pt-32 pb-20 sm:pt-40 sm:pb-28 overflow-hidden"
         >
-            {/* Gradient mesh glow */}
+            {/* Gradient mesh glow — base layer + fallback for reduced motion / before Player loads */}
             <div className="hero-glow absolute inset-0 pointer-events-none" aria-hidden="true" />
 
+            {/* Ambient Remotion animation — lazy-loaded, pauses off-screen */}
+            <div className="absolute inset-0 pointer-events-none z-[1]" aria-hidden="true">
+                <HeroAnimation isInView={isInView} />
+            </div>
+
             {/* Subtle dot grid */}
-            <div className="landing-grid-bg absolute inset-0 pointer-events-none opacity-40" aria-hidden="true" />
+            <div className="landing-grid-bg absolute inset-0 pointer-events-none opacity-40 z-[2]" aria-hidden="true" />
 
             <div className="relative z-10 max-w-2xl mx-auto text-center space-y-4 mb-12">
                 <h1
