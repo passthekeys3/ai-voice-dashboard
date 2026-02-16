@@ -90,7 +90,7 @@ function createRetellClient(apiKey: string): VoiceProviderClient {
             status,
             direction: call.direction || 'outbound',
             durationSeconds,
-            costCents: Math.round(call.call_cost?.combined_cost || 0),
+            costCents: Math.round((call.call_cost?.combined_cost || 0) * 100),
             fromNumber: call.from_number,
             toNumber: call.to_number,
             transcript: call.transcript,

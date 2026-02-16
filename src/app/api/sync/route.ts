@@ -18,7 +18,7 @@ export async function POST() {
 
         const { data: agency, error: agencyError } = await supabase
             .from('agencies')
-            .select('retell_api_key, vapi_api_key')
+            .select('retell_api_key, vapi_api_key, bland_api_key')
             .eq('id', user.agency.id)
             .single();
 
@@ -38,7 +38,7 @@ export async function POST() {
 
         const results = {
             agents: { synced: 0, errors: 0 },
-            calls: { synced: 0, errors: 0 },
+            calls: { synced: 0, errors: 0, errorDetails: '' },
         };
 
         // Sync agents from each provider
@@ -171,6 +171,7 @@ export async function POST() {
                 if (callsFetchError) {
                     console.error('[SYNC] Error fetching existing calls:', callsFetchError);
                     results.calls.errors += callsWithAgents.length;
+                    results.calls.errorDetails = `Fetch error: ${callsFetchError.message}`;
                     continue;
                 }
 
@@ -214,6 +215,7 @@ export async function POST() {
                     if (callUpsertError) {
                         console.error('[SYNC] Batch call upsert error:', callUpsertError);
                         results.calls.errors += callsToUpsert.length;
+                        results.calls.errorDetails = `Upsert error: ${callUpsertError.message}`;
                     } else {
                         results.calls.synced += callsToUpsert.length;
                         console.log(`[SYNC] Successfully upserted ${callsToUpsert.length} calls`);

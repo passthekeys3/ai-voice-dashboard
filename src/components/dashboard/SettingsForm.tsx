@@ -21,12 +21,17 @@ interface SettingsFormProps {
 
 export function SettingsForm({ agency, agents }: SettingsFormProps) {
     const router = useRouter();
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [showPreview, setShowPreview] = useState(false);
+    const [savingBranding, setSavingBranding] = useState(false);
+    const [brandingSaved, setBrandingSaved] = useState(false);
+    const [brandingError, setBrandingError] = useState<string | null>(null);
+    const [savingIntegrations, setSavingIntegrations] = useState(false);
+    const [integrationsSaved, setIntegrationsSaved] = useState(false);
+    const [integrationsError, setIntegrationsError] = useState<string | null>(null);
     const [apiGuideTab, setApiGuideTab] = useState<'zapier' | 'generic'>('zapier');
     const [savingKeys, setSavingKeys] = useState(false);
     const [keysSaved, setKeysSaved] = useState(false);
+    const [keysError, setKeysError] = useState<string | null>(null);
     const [syncing, setSyncing] = useState(false);
     const [syncResult, setSyncResult] = useState<string | null>(null);
     const [slackTesting, setSlackTesting] = useState(false);
@@ -86,6 +91,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
     const handleSaveApiKeys = async () => {
         setSavingKeys(true);
         setKeysSaved(false);
+        setKeysError(null);
         setSyncResult(null);
         try {
             const response = await fetch('/api/settings', {
@@ -100,15 +106,14 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
 
             if (!response.ok) {
                 const data = await response.json();
-                setError(data.error || 'Failed to save API keys');
+                setKeysError(data.error || 'Failed to save API keys');
                 return;
             }
 
             setKeysSaved(true);
-            setError(null);
             router.refresh();
         } catch {
-            setError('Failed to save API keys');
+            setKeysError('Failed to save API keys');
         } finally {
             setSavingKeys(false);
         }
@@ -132,7 +137,15 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
 
             const data = await response.json();
             const agentCount = data.results?.agents?.synced || data.synced || 0;
-            setSyncResult(`Synced ${agentCount} agent${agentCount !== 1 ? 's' : ''} successfully`);
+            const callCount = data.results?.calls?.synced || 0;
+            const callErrors = data.results?.calls?.errors || 0;
+            const errorDetails = data.results?.calls?.errorDetails || '';
+
+            let message = `Synced ${agentCount} agent${agentCount !== 1 ? 's' : ''} and ${callCount} call${callCount !== 1 ? 's' : ''}`;
+            if (callErrors > 0) {
+                message += ` (${callErrors} call error${callErrors !== 1 ? 's' : ''}${errorDetails ? ': ' + errorDetails : ''})`;
+            }
+            setSyncResult(message);
             router.refresh();
         } catch {
             setSyncResult('Error: Sync failed unexpectedly');
@@ -141,51 +154,15 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
         }
     };
 
-    const validateForm = (): string | null => {
-        const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
-        if (formData.primaryColor && !hexColorRegex.test(formData.primaryColor)) {
-            return 'Primary color must be a valid hex color (e.g. #0f172a)';
-        }
-        if (formData.secondaryColor && !hexColorRegex.test(formData.secondaryColor)) {
-            return 'Secondary color must be a valid hex color (e.g. #1e293b)';
-        }
-        if (formData.accentColor && !hexColorRegex.test(formData.accentColor)) {
-            return 'Accent color must be a valid hex color (e.g. #3b82f6)';
-        }
+    const handleSaveBranding = async () => {
+        setSavingBranding(true);
+        setBrandingSaved(false);
+        setBrandingError(null);
 
-        const urlFields = [
-            { value: formData.logoUrl, label: 'Logo URL' },
-            { value: formData.faviconUrl, label: 'Favicon URL' },
-            { value: formData.websiteUrl, label: 'Website URL' },
-        ];
-        for (const field of urlFields) {
-            if (field.value) {
-                try {
-                    new URL(field.value);
-                } catch {
-                    return `${field.label} must be a valid URL (e.g. https://example.com)`;
-                }
-            }
-        }
-
-        if (formData.supportEmail) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(formData.supportEmail)) {
-                return 'Support email must be a valid email address';
-            }
-        }
-
-        return null;
-    };
-
-    const handleSave = async () => {
-        setSaving(true);
-        setError(null);
-
-        const validationError = validateForm();
+        const validationError = validateBranding();
         if (validationError) {
-            setError(validationError);
-            setSaving(false);
+            setBrandingError(validationError);
+            setSavingBranding(false);
             return;
         }
 
@@ -210,9 +187,34 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                         support_email: formData.supportEmail,
                         support_phone: formData.supportPhone,
                     },
-                    retell_api_key: formData.retellApiKey || null,
-                    vapi_api_key: formData.vapiApiKey || null,
-                    bland_api_key: formData.blandApiKey || null,
+                }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                setBrandingError(data.error || 'Failed to save branding');
+                return;
+            }
+
+            setBrandingSaved(true);
+            router.refresh();
+        } catch {
+            setBrandingError('An unexpected error occurred');
+        } finally {
+            setSavingBranding(false);
+        }
+    };
+
+    const handleSaveIntegrations = async () => {
+        setSavingIntegrations(true);
+        setIntegrationsSaved(false);
+        setIntegrationsError(null);
+
+        try {
+            const response = await fetch('/api/settings', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     integrations: {
                         ...agency.integrations,
                         ghl: {
@@ -277,18 +279,55 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
 
             if (!response.ok) {
                 const data = await response.json();
-                setError(data.error || 'Failed to save settings');
+                setIntegrationsError(data.error || 'Failed to save integrations');
                 return;
             }
 
+            setIntegrationsSaved(true);
             router.refresh();
-        } catch (_err) {
-            setError('An unexpected error occurred');
+        } catch {
+            setIntegrationsError('An unexpected error occurred');
         } finally {
-            setSaving(false);
+            setSavingIntegrations(false);
         }
     };
 
+    const validateBranding = (): string | null => {
+        const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+        if (formData.primaryColor && !hexColorRegex.test(formData.primaryColor)) {
+            return 'Primary color must be a valid hex color (e.g. #0f172a)';
+        }
+        if (formData.secondaryColor && !hexColorRegex.test(formData.secondaryColor)) {
+            return 'Secondary color must be a valid hex color (e.g. #1e293b)';
+        }
+        if (formData.accentColor && !hexColorRegex.test(formData.accentColor)) {
+            return 'Accent color must be a valid hex color (e.g. #3b82f6)';
+        }
+
+        const urlFields = [
+            { value: formData.logoUrl, label: 'Logo URL' },
+            { value: formData.faviconUrl, label: 'Favicon URL' },
+            { value: formData.websiteUrl, label: 'Website URL' },
+        ];
+        for (const field of urlFields) {
+            if (field.value) {
+                try {
+                    new URL(field.value);
+                } catch {
+                    return `${field.label} must be a valid URL (e.g. https://example.com)`;
+                }
+            }
+        }
+
+        if (formData.supportEmail) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(formData.supportEmail)) {
+                return 'Support email must be a valid email address';
+            }
+        }
+
+        return null;
+    };
 
     return (
         <div className="space-y-6">
@@ -669,6 +708,36 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                             </div>
                         </div>
                     </div>
+
+                    <Separator />
+
+                    {brandingError && (
+                        <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/50 rounded-md">
+                            {brandingError}
+                        </div>
+                    )}
+
+                    <div className="flex justify-end">
+                        <Button
+                            onClick={handleSaveBranding}
+                            disabled={savingBranding}
+                            variant={brandingSaved ? 'outline' : 'default'}
+                        >
+                            {savingBranding ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : brandingSaved ? (
+                                <>
+                                    <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />
+                                    Saved
+                                </>
+                            ) : (
+                                'Save branding'
+                            )}
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -744,6 +813,12 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                             </a>
                         </p>
                     </div>
+
+                    {keysError && (
+                        <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/50 rounded-md">
+                            {keysError}
+                        </div>
+                    )}
 
                     {syncResult && (
                         <div className={`p-3 text-sm rounded-md ${syncResult.startsWith('Error') ? 'text-red-600 bg-red-50 dark:bg-red-950/50' : 'text-green-600 bg-green-50 dark:bg-green-950/50'}`}>
@@ -1635,22 +1710,38 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                             )}
                         </div>
                     </div>
+
+                    <Separator />
+
+                    {integrationsError && (
+                        <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/50 rounded-md">
+                            {integrationsError}
+                        </div>
+                    )}
+
+                    <div className="flex justify-end">
+                        <Button
+                            onClick={handleSaveIntegrations}
+                            disabled={savingIntegrations}
+                            variant={integrationsSaved ? 'outline' : 'default'}
+                        >
+                            {savingIntegrations ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : integrationsSaved ? (
+                                <>
+                                    <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />
+                                    Saved
+                                </>
+                            ) : (
+                                'Save integrations'
+                            )}
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
-
-            <Separator />
-
-            {error && (
-                <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
-                    {error}
-                </div>
-            )}
-
-            <div className="flex justify-end">
-                <Button onClick={handleSave} disabled={saving}>
-                    {saving ? 'Saving...' : 'Save Settings'}
-                </Button>
-            </div>
         </div>
     );
 }
