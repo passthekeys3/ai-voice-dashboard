@@ -21,9 +21,13 @@ export interface RetellAgent {
         version?: number;
     };
     llm_id?: string;
+    webhook_events?: string[];
     created_at: string;
     last_modification_timestamp: number;
 }
+
+/** Required webhook events for live transcript support */
+export const REQUIRED_WEBHOOK_EVENTS = ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'];
 
 export interface RetellLLM {
     llm_id: string;
@@ -122,6 +126,7 @@ export async function createRetellAgent(
         llm_websocket_url?: string;
         webhook_url?: string;
         language?: string;
+        webhook_events?: string[];
     }
 ): Promise<RetellAgent> {
     return retellFetch<RetellAgent>(apiKey, '/create-agent', {
@@ -139,12 +144,32 @@ export async function updateRetellAgent(
         llm_websocket_url: string;
         webhook_url: string;
         language: string;
+        webhook_events: string[];
     }>
 ): Promise<RetellAgent> {
     return retellFetch<RetellAgent>(apiKey, `/update-agent/${agentId}`, {
         method: 'PATCH',
         body: JSON.stringify(config),
     });
+}
+
+/**
+ * Ensure an agent has the required webhook_events configured for live transcript.
+ * Returns true if the agent was patched, false if already up to date.
+ */
+export async function ensureAgentWebhookEvents(
+    apiKey: string,
+    agent: RetellAgent
+): Promise<boolean> {
+    const current = agent.webhook_events || [];
+    const missing = REQUIRED_WEBHOOK_EVENTS.filter(e => !current.includes(e));
+
+    if (missing.length === 0) return false;
+
+    // Merge existing events with required ones (don't remove any custom events)
+    const merged = [...new Set([...current, ...REQUIRED_WEBHOOK_EVENTS])];
+    await updateRetellAgent(apiKey, agent.agent_id, { webhook_events: merged });
+    return true;
 }
 
 export async function deleteRetellAgent(

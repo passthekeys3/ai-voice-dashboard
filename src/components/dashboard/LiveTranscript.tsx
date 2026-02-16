@@ -35,10 +35,12 @@ interface LiveCall {
     direction: string;
     transcript: TranscriptLine[];
     is_active: boolean;
+    provider?: string;
 }
 
 interface LiveTranscriptProps {
     callId: string;
+    provider?: string;
 }
 
 // Parse Retell transcript format into structured lines
@@ -61,7 +63,7 @@ function parseTranscript(transcript: string): TranscriptLine[] {
     return lines;
 }
 
-export function LiveTranscript({ callId }: LiveTranscriptProps) {
+export function LiveTranscript({ callId, provider: providerProp = 'retell' }: LiveTranscriptProps) {
     const router = useRouter();
     const [call, setCall] = useState<LiveCall | null>(null);
     const [loading, setLoading] = useState(true);
@@ -81,7 +83,7 @@ export function LiveTranscript({ callId }: LiveTranscriptProps) {
 
     const fetchCall = useCallback(async () => {
         try {
-            const response = await fetch(`/api/calls/${callId}/live`);
+            const response = await fetch(`/api/calls/${callId}/live?provider=${providerProp}`);
             if (!response.ok) {
                 if (response.status === 404) {
                     setError('Call not found or has ended');
@@ -182,7 +184,8 @@ export function LiveTranscript({ callId }: LiveTranscriptProps) {
 
         setEnding(true);
         try {
-            await fetch(`/api/calls/${callId}/end`, { method: 'POST' });
+            const endProvider = call?.provider || providerProp;
+            await fetch(`/api/calls/${callId}/end?provider=${endProvider}`, { method: 'POST' });
             router.push('/live');
         } catch (err) {
             console.error('Failed to end call:', err);

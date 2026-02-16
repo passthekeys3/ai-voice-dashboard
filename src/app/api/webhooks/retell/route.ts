@@ -12,7 +12,7 @@ import crypto from 'crypto';
 
 // Retell webhook payload types
 interface RetellWebhookPayload {
-    event: 'call_started' | 'call_ended' | 'call_analyzed';
+    event: 'call_started' | 'call_ended' | 'call_analyzed' | 'transcript_updated';
     call: {
         call_id: string;
         agent_id: string;
@@ -105,6 +105,34 @@ export async function POST(request: NextRequest) {
         if (!verifyRetellSignature(rawBody, signature, retellApiKey)) {
             console.error('Invalid Retell webhook signature');
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+        }
+
+        // Handle transcript_updated event — lightweight: just update DB transcript and return
+        if (payload.event === 'transcript_updated') {
+            const { error: updateError } = await supabase
+                .from('calls')
+                .update({ transcript: payload.call.transcript })
+                .eq('external_id', payload.call.call_id);
+
+            if (updateError) {
+                // Call record may not exist yet (race with call_started) — upsert minimal record
+                await supabase
+                    .from('calls')
+                    .upsert({
+                        agent_id: agent.id,
+                        client_id: agent.client_id,
+                        external_id: payload.call.call_id,
+                        provider: 'retell',
+                        status: 'in_progress',
+                        direction: payload.call.direction || 'outbound',
+                        transcript: payload.call.transcript,
+                        from_number: payload.call.from_number,
+                        to_number: payload.call.to_number,
+                        started_at: new Date(payload.call.start_timestamp).toISOString(),
+                    }, { onConflict: 'external_id' });
+            }
+
+            return NextResponse.json({ received: true });
         }
 
         const durationSeconds = payload.call.end_timestamp && payload.call.start_timestamp

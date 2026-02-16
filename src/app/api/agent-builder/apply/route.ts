@@ -168,6 +168,7 @@ export async function POST(request: NextRequest) {
                     },
                     enable_backchannel: true,
                     language: safeLanguage === 'en' ? 'en-US' : safeLanguage,
+                    webhook_events: ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'],
                 }),
             });
 

@@ -6,7 +6,7 @@ interface RouteParams {
     params: Promise<{ id: string }>;
 }
 
-// GET /api/calls/[id]/live - Get live call details and transcript
+// GET /api/calls/[id]/live?provider=retell - Get live call details and transcript
 export async function GET(request: NextRequest, { params }: RouteParams) {
     try {
         const user = await getCurrentUser();
@@ -15,74 +15,113 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id: callId } = await params;
+        const providerHint = request.nextUrl.searchParams.get('provider') || 'retell';
         const supabase = await createClient();
 
-        // Get agency's Retell API key
-        const { data: agency } = await supabase
-            .from('agencies')
-            .select('retell_api_key')
-            .eq('id', user.agency.id)
+        // Try DB lookup first (covers all providers, has live transcript from webhook)
+        const { data: callRecord } = await supabase
+            .from('calls')
+            .select('*, agents!inner(name, agency_id, external_id)')
+            .eq('external_id', callId)
             .single();
 
-        if (!agency?.retell_api_key) {
-            return NextResponse.json({ error: 'Retell API key not configured' }, { status: 400 });
-        }
-
-        // Fetch call details from Retell
-        const retellResponse = await fetch(`https://api.retellai.com/v2/get-call/${callId}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${agency.retell_api_key}`,
-            },
-        });
-
-        if (!retellResponse.ok) {
-            const errorText = await retellResponse.text();
-            console.error(`Retell API error (${retellResponse.status}):`, errorText);
-            if (retellResponse.status === 404) {
-                return NextResponse.json({ error: 'Call not found or has ended' }, { status: 404 });
+        if (callRecord) {
+            // Verify ownership
+            const agentData = callRecord.agents as unknown as { name: string; agency_id: string };
+            if (agentData.agency_id !== user.agency.id) {
+                return NextResponse.json({ error: 'Call not found' }, { status: 404 });
             }
-            return NextResponse.json({ error: 'Failed to fetch call data' }, { status: 500 });
+
+            const transcriptLines = parseTranscript(callRecord.transcript || '');
+            const isActive = callRecord.status === 'in_progress';
+
+            return NextResponse.json({
+                data: {
+                    id: callRecord.external_id,
+                    agent_id: callRecord.agent_id,
+                    agent_name: agentData.name,
+                    status: isActive ? 'ongoing' : callRecord.status,
+                    started_at: callRecord.started_at,
+                    duration_seconds: isActive
+                        ? Math.floor((Date.now() - new Date(callRecord.started_at).getTime()) / 1000)
+                        : callRecord.duration_seconds,
+                    from_number: callRecord.from_number,
+                    to_number: callRecord.to_number,
+                    direction: callRecord.direction,
+                    transcript: transcriptLines,
+                    raw_transcript: callRecord.transcript,
+                    is_active: isActive,
+                    provider: callRecord.provider,
+                },
+            });
         }
 
-        const call = await retellResponse.json();
+        // Fallback: call not in DB yet — try provider API directly for metadata
+        if (providerHint === 'retell') {
+            const { data: agency } = await supabase
+                .from('agencies')
+                .select('retell_api_key')
+                .eq('id', user.agency.id)
+                .single();
 
-        // SECURITY: Verify this call belongs to an agent in the user's agency
-        const { data: agent } = await supabase
-            .from('agents')
-            .select('name')
-            .eq('external_id', call.agent_id)
-            .eq('agency_id', user.agency.id)
-            .single();
+            if (!agency?.retell_api_key) {
+                return NextResponse.json({ error: 'Retell API key not configured' }, { status: 400 });
+            }
 
-        // If no agent found, this call doesn't belong to this user's agency
-        if (!agent) {
-            return NextResponse.json({ error: 'Call not found' }, { status: 404 });
+            const retellResponse = await fetch(`https://api.retellai.com/v2/get-call/${callId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${agency.retell_api_key}`,
+                },
+            });
+
+            if (!retellResponse.ok) {
+                if (retellResponse.status === 404) {
+                    return NextResponse.json({ error: 'Call not found or has ended' }, { status: 404 });
+                }
+                return NextResponse.json({ error: 'Failed to fetch call data' }, { status: 500 });
+            }
+
+            const call = await retellResponse.json();
+
+            // Verify ownership via agent
+            const { data: agent } = await supabase
+                .from('agents')
+                .select('name')
+                .eq('external_id', call.agent_id)
+                .eq('agency_id', user.agency.id)
+                .single();
+
+            if (!agent) {
+                return NextResponse.json({ error: 'Call not found' }, { status: 404 });
+            }
+
+            // Retell API does NOT return transcript during ongoing calls
+            // Transcript will be populated via transcript_updated webhook → DB
+            const transcriptLines = parseTranscript(call.transcript || '');
+
+            return NextResponse.json({
+                data: {
+                    id: call.call_id,
+                    agent_id: call.agent_id,
+                    agent_name: agent.name,
+                    status: call.call_status,
+                    started_at: new Date(call.start_timestamp).toISOString(),
+                    duration_seconds: call.end_timestamp
+                        ? Math.floor((call.end_timestamp - call.start_timestamp) / 1000)
+                        : Math.floor((Date.now() - call.start_timestamp) / 1000),
+                    from_number: call.from_number,
+                    to_number: call.to_number,
+                    direction: call.direction || 'outbound',
+                    transcript: transcriptLines,
+                    raw_transcript: call.transcript,
+                    is_active: call.call_status === 'ongoing',
+                    provider: 'retell',
+                },
+            });
         }
 
-        const agentName = agent.name;
-
-        // Parse transcript into structured format
-        const transcriptLines = parseTranscript(call.transcript || '');
-
-        const liveCall = {
-            id: call.call_id,
-            agent_id: call.agent_id,
-            agent_name: agentName,
-            status: call.call_status,
-            started_at: new Date(call.start_timestamp).toISOString(),
-            duration_seconds: call.end_timestamp
-                ? Math.floor((call.end_timestamp - call.start_timestamp) / 1000)
-                : Math.floor((Date.now() - call.start_timestamp) / 1000),
-            from_number: call.from_number,
-            to_number: call.to_number,
-            direction: call.direction || 'outbound',
-            transcript: transcriptLines,
-            raw_transcript: call.transcript,
-            is_active: call.call_status === 'ongoing',
-        };
-
-        return NextResponse.json({ data: liveCall });
+        return NextResponse.json({ error: 'Call not found' }, { status: 404 });
     } catch (error) {
         console.error('Error fetching live call:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

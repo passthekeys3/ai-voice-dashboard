@@ -84,7 +84,8 @@ export function ActiveCallsList() {
         const call = calls.find((c) => c.id === callId);
         setEnding(callId);
         try {
-            const response = await fetch(`/api/calls/${callId}/end`, { method: 'POST' });
+            const provider = call?.provider || 'retell';
+            const response = await fetch(`/api/calls/${callId}/end?provider=${provider}`, { method: 'POST' });
             if (!response.ok) {
                 throw new Error('Failed to end call');
             }
@@ -185,7 +186,7 @@ export function ActiveCallsList() {
                                     <div className="flex gap-2">
                                         <Button
                                             variant="outline"
-                                            onClick={() => router.push(`/live/${call.id}`)}
+                                            onClick={() => router.push(`/live/${call.id}?provider=${call.provider}`)}
                                         >
                                             <Eye className="h-4 w-4 mr-2" />
                                             View Live

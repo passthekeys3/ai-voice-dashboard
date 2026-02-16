@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
                     llm_id: retellLlm.llm_id,
                 },
                 enable_backchannel: true,
+                webhook_events: ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'],
             }),
         });
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getAgencyProviders, type NormalizedAgent, type NormalizedCall } from '@/lib/providers';
+import { listRetellAgents, ensureAgentWebhookEvents } from '@/lib/providers/retell';
 
 export async function POST() {
     try {
@@ -119,6 +120,24 @@ export async function POST() {
                 }
             } catch (err) {
                 console.error(`Error syncing agents from ${provider}:`, err);
+            }
+
+            // Auto-patch Retell agents to enable transcript_updated webhook
+            if (provider === 'retell' && agency.retell_api_key) {
+                try {
+                    const rawAgents = await listRetellAgents(agency.retell_api_key);
+                    let patched = 0;
+                    for (const agent of rawAgents) {
+                        if (await ensureAgentWebhookEvents(agency.retell_api_key, agent)) {
+                            patched++;
+                        }
+                    }
+                    if (patched > 0) {
+                        console.log(`[SYNC] Patched webhook_events on ${patched} Retell agents for live transcript support`);
+                    }
+                } catch (err) {
+                    console.error('[SYNC] Failed to patch webhook_events:', err);
+                }
             }
 
             // Sync Calls (separate try/catch so failures don't affect agent sync)

@@ -4,7 +4,6 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import {
     unauthorized,
     forbidden,
-    notFound,
     badRequest,
     externalServiceError,
     apiSuccess,
@@ -15,7 +14,7 @@ interface RouteParams {
     params: Promise<{ id: string }>;
 }
 
-// POST /api/calls/[id]/end - End an active call
+// POST /api/calls/[id]/end?provider=retell - End an active call
 export const POST = withErrorHandling(async (
     request: NextRequest,
     context?: RouteParams
@@ -30,53 +29,39 @@ export const POST = withErrorHandling(async (
     }
 
     const { id: callId } = await context!.params;
+    const providerParam = request.nextUrl.searchParams.get('provider') || 'retell';
     const supabase = await createClient();
 
-    // SECURITY: Verify the call belongs to this agency before allowing end
-    const { data: call, error: callError } = await supabase
+    // Validate provider param
+    const validProviders = ['retell', 'vapi', 'bland'];
+    if (!validProviders.includes(providerParam)) {
+        return badRequest('Unsupported provider');
+    }
+
+    // Try DB lookup for ownership verification (optional — call may not be in DB yet for inbound calls)
+    let externalCallId = callId;
+    let provider = providerParam;
+
+    const { data: callRecord } = await supabase
         .from('calls')
-        .select('id, external_id, agents!inner(agency_id)')
+        .select('id, external_id, provider, agents!inner(agency_id)')
         .eq('external_id', callId)
         .single();
 
-    if (callError || !call) {
-        // Also try by internal ID
-        const { data: callById } = await supabase
-            .from('calls')
-            .select('id, external_id, agents!inner(agency_id)')
-            .eq('id', callId)
-            .single();
-
-        if (!callById) {
-            return notFound('Call');
-        }
-
-        // Verify ownership
-        const agentData = callById.agents as unknown as { agency_id: string };
+    if (callRecord) {
+        // Verify ownership via agent's agency
+        const agentData = callRecord.agents as unknown as { agency_id: string };
         if (agentData.agency_id !== user.agency.id) {
             return forbidden('You do not have permission to end this call');
         }
-    } else {
-        // Verify ownership
-        const agentData = call.agents as unknown as { agency_id: string };
-        if (agentData.agency_id !== user.agency.id) {
-            return forbidden('You do not have permission to end this call');
-        }
+        externalCallId = callRecord.external_id;
+        provider = callRecord.provider;
     }
+    // If not found in DB: proceed anyway — user is authenticated as agency_admin,
+    // and the provider API key scoping ensures they can only end calls under their own account.
+    // This handles inbound calls where the webhook hasn't been processed yet.
 
-    // Determine the call's provider
-    const externalCallId = call?.external_id || callId;
-
-    // Get the call's provider from the calls table
-    const { data: callRecord } = await supabase
-        .from('calls')
-        .select('provider')
-        .eq('external_id', externalCallId)
-        .single();
-
-    const provider = callRecord?.provider || 'retell';
-
-    // Get agency API keys for all providers
+    // Get agency API keys
     const { data: agency } = await supabase
         .from('agencies')
         .select('retell_api_key, vapi_api_key, bland_api_key')
@@ -103,7 +88,6 @@ export const POST = withErrorHandling(async (
         if (!agency?.vapi_api_key) {
             return badRequest('Vapi API key not configured');
         }
-        // Vapi uses DELETE to hang up a call
         const endResponse = await fetch(`https://api.vapi.ai/call/${externalCallId}/hang`, {
             method: 'POST',
             headers: {

@@ -11,10 +11,13 @@ export const metadata: Metadata = { title: 'Live Call' };
 
 export default async function LiveCallPage({
     params,
+    searchParams,
 }: {
     params: Promise<{ callId: string }>;
+    searchParams: Promise<{ provider?: string }>;
 }) {
     const { callId } = await params;
+    const { provider } = await searchParams;
     const user = await requireAgencyAdmin();
 
     return (
@@ -41,7 +44,7 @@ export default async function LiveCallPage({
                     </div>
                 </div>
 
-                <LiveTranscript callId={callId} />
+                <LiveTranscript callId={callId} provider={provider || 'retell'} />
             </div>
         </div>
     );

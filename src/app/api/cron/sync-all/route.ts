@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getAgencyProviders, type NormalizedAgent } from '@/lib/providers';
+import { listRetellAgents, ensureAgentWebhookEvents } from '@/lib/providers/retell';
 
 /**
  * Cron endpoint to sync all agencies' agents and phone numbers
@@ -86,6 +87,24 @@ export async function POST(request: NextRequest) {
                                 console.log(`[CRON SYNC] Agency ${agency.name}: upserted ${agentsToUpsert.length} agents from ${provider}`);
                             } else {
                                 console.error(`[CRON SYNC] Agent upsert error for ${agency.name}:`, agentUpsertError);
+                            }
+                        }
+
+                        // Auto-patch Retell agents to enable transcript_updated webhook
+                        if (provider === 'retell' && agency.retell_api_key) {
+                            try {
+                                const rawAgents = await listRetellAgents(agency.retell_api_key);
+                                let patched = 0;
+                                for (const agent of rawAgents) {
+                                    if (await ensureAgentWebhookEvents(agency.retell_api_key, agent)) {
+                                        patched++;
+                                    }
+                                }
+                                if (patched > 0) {
+                                    console.log(`[CRON SYNC] Agency ${agency.name}: patched webhook_events on ${patched} Retell agents`);
+                                }
+                            } catch (err) {
+                                console.error(`[CRON SYNC] Failed to patch webhook_events for ${agency.name}:`, err);
                             }
                         }
 
