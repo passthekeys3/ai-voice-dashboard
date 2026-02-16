@@ -17,7 +17,7 @@ const plans = [
             'Call analytics dashboard',
             'Email support',
         ],
-        cta: 'Get Started',
+        cta: 'Get started',
         recommended: false,
     },
     {
@@ -31,7 +31,7 @@ const plans = [
             'CRM integrations (GHL, HubSpot)',
             'White-label client portal',
         ],
-        cta: 'Get Started',
+        cta: 'Get started',
         recommended: true,
     },
     {
@@ -45,7 +45,7 @@ const plans = [
             'Full white-label platform',
             'API access & dedicated support',
         ],
-        cta: 'Contact Sales',
+        cta: 'Contact sales',
         recommended: false,
     },
 ];

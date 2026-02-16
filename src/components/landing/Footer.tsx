@@ -5,7 +5,7 @@ import { useInView } from '@/hooks/useInView';
 
 const productLinks = [
     { label: 'Pricing', href: '#pricing' },
-    { label: 'Agent Builder', href: '/signup' },
+    { label: 'Agent builder', href: '/signup' },
 ];
 
 const companyLinks = [

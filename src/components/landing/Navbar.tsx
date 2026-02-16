@@ -63,7 +63,7 @@ export function Navbar() {
                             <Link href="/login">Log in</Link>
                         </Button>
                         <Button size="sm" className="rounded-full active:scale-[0.98] transition-[transform,background-color,box-shadow] duration-200" asChild>
-                            <Link href="/signup">Get Started</Link>
+                            <Link href="/signup">Get started</Link>
                         </Button>
                     </div>
 
@@ -94,7 +94,7 @@ export function Navbar() {
                                     <Link href="/login">Log in</Link>
                                 </Button>
                                 <Button size="sm" className="flex-1 rounded-full active:scale-[0.98]" asChild>
-                                    <Link href="/signup">Get Started</Link>
+                                    <Link href="/signup">Get started</Link>
                                 </Button>
                             </div>
                         </div>
