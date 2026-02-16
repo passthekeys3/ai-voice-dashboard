@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import Image from 'next/image';
 import { useInView } from '@/hooks/useInView';
+import { BuilderMockup } from './mockups/BuilderMockup';
+import { AnalyticsMockup } from './mockups/AnalyticsMockup';
+import { WorkflowsMockup } from './mockups/WorkflowsMockup';
+import { PortalMockup } from './mockups/PortalMockup';
 
 interface ProductSectionProps {
     label: string;
@@ -12,29 +14,6 @@ interface ProductSectionProps {
     reverse?: boolean;
 }
 
-const screenshotMeta: Record<string, { src: string; alt: string; label: string }> = {
-    builder: {
-        src: '/screenshots/builder.png',
-        alt: 'Agent builder interface showing conversational AI configuration',
-        label: 'Agent Builder',
-    },
-    analytics: {
-        src: '/screenshots/analytics.png',
-        alt: 'Analytics dashboard with call volume charts and KPI cards',
-        label: 'Analytics',
-    },
-    workflows: {
-        src: '/screenshots/workflows.png',
-        alt: 'Workflow automation editor with CRM integration actions',
-        label: 'Workflows',
-    },
-    portal: {
-        src: '/screenshots/portal.png',
-        alt: 'White-labeled client portal with custom branding',
-        label: 'Client Portal',
-    },
-};
-
 const visualAccent: Record<string, string> = {
     builder: 'from-blue-500/20 to-blue-500/0',
     analytics: 'from-green-500/20 to-green-500/0',
@@ -42,9 +21,7 @@ const visualAccent: Record<string, string> = {
     portal: 'from-purple-500/20 to-purple-500/0',
 };
 
-function ScreenshotFrame({ visual }: { visual: string }) {
-    const meta = screenshotMeta[visual];
-    const [hasError, setHasError] = useState(false);
+function ProductVisual({ visual, isInView }: { visual: string; isInView: boolean }) {
     const accent = visualAccent[visual] || 'from-blue-500/20 to-blue-500/0';
 
     return (
@@ -54,23 +31,11 @@ function ScreenshotFrame({ visual }: { visual: string }) {
                 className={`absolute -inset-px rounded-xl bg-gradient-to-br ${accent} opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm`}
                 aria-hidden="true"
             />
-            <div className="relative rounded-xl border border-border overflow-hidden aspect-[16/10] bg-muted/30">
-                {!hasError ? (
-                    <Image
-                        src={meta.src}
-                        alt={meta.alt}
-                        fill
-                        className="object-cover"
-                        onError={() => setHasError(true)}
-                        sizes="(max-width: 1024px) 100vw, 50vw"
-                    />
-                ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-xs uppercase tracking-widest text-muted-foreground/40">
-                            {meta.label}
-                        </span>
-                    </div>
-                )}
+            <div className="relative rounded-xl border border-border overflow-hidden bg-muted/30">
+                {visual === 'builder' && <BuilderMockup isInView={isInView} />}
+                {visual === 'analytics' && <AnalyticsMockup isInView={isInView} />}
+                {visual === 'workflows' && <WorkflowsMockup isInView={isInView} />}
+                {visual === 'portal' && <PortalMockup isInView={isInView} />}
             </div>
         </div>
     );
@@ -108,7 +73,7 @@ export function ProductSection({ label, headline, description, visual, reverse }
                 <div
                     className={`${reverse ? 'lg:order-1' : ''} ${visualAnim} stagger-2 ${isInView ? 'is-visible' : ''}`}
                 >
-                    <ScreenshotFrame visual={visual} />
+                    <ProductVisual visual={visual} isInView={isInView} />
                 </div>
             </div>
         </section>
