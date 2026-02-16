@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,6 @@ interface SettingsFormProps {
 }
 
 export function SettingsForm({ agency, agents }: SettingsFormProps) {
-    const router = useRouter();
     const [showPreview, setShowPreview] = useState(false);
     const [savingBranding, setSavingBranding] = useState(false);
     const [brandingSaved, setBrandingSaved] = useState(false);
@@ -111,7 +109,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
             }
 
             setKeysSaved(true);
-            router.refresh();
+            toast.success('API keys saved');
         } catch {
             setKeysError('Failed to save API keys');
         } finally {
@@ -146,7 +144,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                 message += ` (${callErrors} call error${callErrors !== 1 ? 's' : ''}${errorDetails ? ': ' + errorDetails : ''})`;
             }
             setSyncResult(message);
-            router.refresh();
+            toast.success(message);
         } catch {
             setSyncResult('Error: Sync failed unexpectedly');
         } finally {
@@ -197,7 +195,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
             }
 
             setBrandingSaved(true);
-            router.refresh();
+            toast.success('Branding saved');
         } catch {
             setBrandingError('An unexpected error occurred');
         } finally {
@@ -284,7 +282,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
             }
 
             setIntegrationsSaved(true);
-            router.refresh();
+            toast.success('Integrations saved');
         } catch {
             setIntegrationsError('An unexpected error occurred');
         } finally {
