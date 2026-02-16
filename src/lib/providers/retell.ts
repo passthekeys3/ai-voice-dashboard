@@ -154,21 +154,32 @@ export async function updateRetellAgent(
 }
 
 /**
- * Ensure an agent has the required webhook_events configured for live transcript.
+ * Ensure an agent has the required webhook_url and webhook_events configured.
  * Returns true if the agent was patched, false if already up to date.
  */
-export async function ensureAgentWebhookEvents(
+export async function ensureAgentWebhookConfig(
     apiKey: string,
-    agent: RetellAgent
+    agent: RetellAgent,
+    webhookUrl: string
 ): Promise<boolean> {
-    const current = agent.webhook_events || [];
-    const missing = REQUIRED_WEBHOOK_EVENTS.filter(e => !current.includes(e));
+    const currentEvents = agent.webhook_events || [];
+    const missingEvents = REQUIRED_WEBHOOK_EVENTS.filter(e => !currentEvents.includes(e));
+    const needsUrlUpdate = !agent.webhook_url || agent.webhook_url !== webhookUrl;
+    const needsEventsUpdate = missingEvents.length > 0;
 
-    if (missing.length === 0) return false;
+    if (!needsUrlUpdate && !needsEventsUpdate) return false;
 
-    // Merge existing events with required ones (don't remove any custom events)
-    const merged = [...new Set([...current, ...REQUIRED_WEBHOOK_EVENTS])];
-    await updateRetellAgent(apiKey, agent.agent_id, { webhook_events: merged });
+    const update: Partial<{ webhook_url: string; webhook_events: string[] }> = {};
+
+    if (needsUrlUpdate) {
+        update.webhook_url = webhookUrl;
+    }
+
+    if (needsEventsUpdate) {
+        update.webhook_events = [...new Set([...currentEvents, ...REQUIRED_WEBHOOK_EVENTS])];
+    }
+
+    await updateRetellAgent(apiKey, agent.agent_id, update);
     return true;
 }
 
