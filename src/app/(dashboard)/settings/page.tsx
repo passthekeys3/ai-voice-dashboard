@@ -6,8 +6,6 @@ import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
 import { SettingsForm } from '@/components/dashboard/SettingsForm';
 import { ClientPermissionsEditor } from '@/components/dashboard/ClientPermissionsEditor';
-import { BillingSection } from '@/components/dashboard/BillingSection';
-import { StripeConnectSection } from '@/components/dashboard/StripeConnectSection';
 import { CustomDomainSettings } from '@/components/dashboard/CustomDomainSettings';
 import { DEFAULT_CLIENT_PERMISSIONS } from '@/types/database';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -90,23 +88,9 @@ export default async function SettingsPage() {
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
                     <p className="text-muted-foreground">
-                        Configure your agency branding, integrations, and billing
+                        Configure your agency branding, integrations, and permissions
                     </p>
                 </div>
-
-                {/* Billing Section - Only for agency admins */}
-                {user.profile.role === 'agency_admin' && (
-                    <Suspense fallback={<BillingSkeleton />}>
-                        <BillingSection />
-                    </Suspense>
-                )}
-
-                {/* Stripe Connect — Agency bills their clients */}
-                {user.profile.role === 'agency_admin' && (
-                    <Suspense fallback={<BillingSkeleton />}>
-                        <StripeConnectSection />
-                    </Suspense>
-                )}
 
                 {/* AI Call Analysis Usage */}
                 {user.profile.role === 'agency_admin' && (
