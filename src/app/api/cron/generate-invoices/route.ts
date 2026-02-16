@@ -69,113 +69,170 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 });
         }
 
-        if (!clients || clients.length === 0) {
-            return NextResponse.json({
-                success: true,
-                message: 'No per-minute clients to invoice',
-                invoicesCreated: 0,
-            });
+        const stripe = getStripe();
+        const results: { clientId: string; clientName: string; billingType: string; status: string; amount?: number }[] = [];
+
+        // ---- Per-Minute Clients ----
+        if (clients && clients.length > 0) {
+            for (const client of clients) {
+                try {
+                    const agency = client.agencies as unknown as {
+                        id: string;
+                        stripe_connect_account_id: string | null;
+                        stripe_connect_charges_enabled: boolean;
+                        platform_fee_percent: number | null;
+                    };
+
+                    if (!agency?.stripe_connect_account_id || !agency.stripe_connect_charges_enabled) {
+                        results.push({ clientId: client.id, clientName: client.name, billingType: 'per_minute', status: 'skipped_no_connect' });
+                        continue;
+                    }
+
+                    const stripeAccountOptions = { stripeAccount: agency.stripe_connect_account_id };
+
+                    const { data: usage } = await supabase
+                        .from('usage')
+                        .select('total_calls, total_minutes, total_cost_cents')
+                        .eq('client_id', client.id)
+                        .eq('period_start', periodStart)
+                        .eq('period_end', periodEnd)
+                        .single();
+
+                    if (!usage || usage.total_cost_cents <= 0) {
+                        results.push({ clientId: client.id, clientName: client.name, billingType: 'per_minute', status: 'skipped_no_usage' });
+                        continue;
+                    }
+
+                    await stripe.invoiceItems.create(
+                        {
+                            customer: client.stripe_customer_id!,
+                            amount: usage.total_cost_cents,
+                            currency: 'usd',
+                            description: `Voice AI Usage: ${Number(usage.total_minutes).toFixed(1)} minutes (${usage.total_calls} calls) - ${monthLabel}`,
+                        },
+                        stripeAccountOptions
+                    );
+
+                    const feePercent = agency.platform_fee_percent || 0;
+                    const applicationFeeAmount = feePercent > 0
+                        ? Math.round(usage.total_cost_cents * (feePercent / 100))
+                        : undefined;
+
+                    const invoice = await stripe.invoices.create(
+                        {
+                            customer: client.stripe_customer_id!,
+                            auto_advance: true,
+                            collection_method: 'charge_automatically',
+                            ...(applicationFeeAmount && { application_fee_amount: applicationFeeAmount }),
+                        },
+                        stripeAccountOptions
+                    );
+
+                    const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+                    await supabase
+                        .from('clients')
+                        .update({ next_billing_date: nextMonth.toISOString() })
+                        .eq('id', client.id);
+
+                    results.push({ clientId: client.id, clientName: client.name, billingType: 'per_minute', status: 'invoiced', amount: usage.total_cost_cents });
+
+                    const feeNote = applicationFeeAmount ? ` (platform fee: $${(applicationFeeAmount / 100).toFixed(2)})` : '';
+                    console.log(`[per_minute] Invoice created for ${client.name}: $${(usage.total_cost_cents / 100).toFixed(2)}${feeNote} (${invoice.id})`);
+                } catch (err) {
+                    console.error(`Failed to create per_minute invoice for client ${client.name}:`, err);
+                    results.push({ clientId: client.id, clientName: client.name, billingType: 'per_minute', status: 'error' });
+                }
+            }
         }
 
-        const stripe = getStripe();
-        const results: { clientId: string; clientName: string; status: string; amount?: number }[] = [];
+        // ---- Subscription (Fixed Monthly) Clients ----
+        const { data: subClients, error: subClientsError } = await supabase
+            .from('clients')
+            .select(`
+                id, name, stripe_customer_id, billing_amount_cents, agency_id,
+                agencies!inner (
+                    id,
+                    stripe_connect_account_id,
+                    stripe_connect_charges_enabled,
+                    platform_fee_percent
+                )
+            `)
+            .eq('billing_type', 'subscription')
+            .eq('is_active', true)
+            .not('stripe_customer_id', 'is', null);
 
-        for (const client of clients) {
-            try {
-                // Extract agency data from join
-                const agency = client.agencies as unknown as {
-                    id: string;
-                    stripe_connect_account_id: string | null;
-                    stripe_connect_charges_enabled: boolean;
-                    platform_fee_percent: number | null;
-                };
+        if (subClientsError) {
+            console.error('Failed to fetch subscription clients for invoicing:', subClientsError);
+        }
 
-                // Skip clients whose agency has no active Connect account
-                if (!agency?.stripe_connect_account_id || !agency.stripe_connect_charges_enabled) {
-                    results.push({
-                        clientId: client.id,
-                        clientName: client.name,
-                        status: 'skipped_no_connect',
-                    });
-                    continue;
+        if (subClients && subClients.length > 0) {
+            for (const client of subClients) {
+                try {
+                    const agency = client.agencies as unknown as {
+                        id: string;
+                        stripe_connect_account_id: string | null;
+                        stripe_connect_charges_enabled: boolean;
+                        platform_fee_percent: number | null;
+                    };
+
+                    if (!agency?.stripe_connect_account_id || !agency.stripe_connect_charges_enabled) {
+                        results.push({ clientId: client.id, clientName: client.name, billingType: 'subscription', status: 'skipped_no_connect' });
+                        continue;
+                    }
+
+                    const amountCents = client.billing_amount_cents;
+                    if (!amountCents || amountCents <= 0) {
+                        results.push({ clientId: client.id, clientName: client.name, billingType: 'subscription', status: 'skipped_no_amount' });
+                        continue;
+                    }
+
+                    const stripeAccountOptions = { stripeAccount: agency.stripe_connect_account_id };
+
+                    await stripe.invoiceItems.create(
+                        {
+                            customer: client.stripe_customer_id!,
+                            amount: amountCents,
+                            currency: 'usd',
+                            description: `Monthly AI Voice Agent Service - ${monthLabel}`,
+                        },
+                        stripeAccountOptions
+                    );
+
+                    const feePercent = agency.platform_fee_percent || 0;
+                    const applicationFeeAmount = feePercent > 0
+                        ? Math.round(amountCents * (feePercent / 100))
+                        : undefined;
+
+                    const invoice = await stripe.invoices.create(
+                        {
+                            customer: client.stripe_customer_id!,
+                            auto_advance: true,
+                            collection_method: 'charge_automatically',
+                            ...(applicationFeeAmount && { application_fee_amount: applicationFeeAmount }),
+                        },
+                        stripeAccountOptions
+                    );
+
+                    const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+                    await supabase
+                        .from('clients')
+                        .update({ next_billing_date: nextMonth.toISOString() })
+                        .eq('id', client.id);
+
+                    results.push({ clientId: client.id, clientName: client.name, billingType: 'subscription', status: 'invoiced', amount: amountCents });
+
+                    const feeNote = applicationFeeAmount ? ` (platform fee: $${(applicationFeeAmount / 100).toFixed(2)})` : '';
+                    console.log(`[subscription] Invoice created for ${client.name}: $${(amountCents / 100).toFixed(2)}${feeNote} (${invoice.id})`);
+                } catch (err) {
+                    console.error(`Failed to create subscription invoice for client ${client.name}:`, err);
+                    results.push({ clientId: client.id, clientName: client.name, billingType: 'subscription', status: 'error' });
                 }
-
-                const stripeAccountOptions = { stripeAccount: agency.stripe_connect_account_id };
-
-                // Get usage for the previous month
-                const { data: usage } = await supabase
-                    .from('usage')
-                    .select('total_calls, total_minutes, total_cost_cents')
-                    .eq('client_id', client.id)
-                    .eq('period_start', periodStart)
-                    .eq('period_end', periodEnd)
-                    .single();
-
-                if (!usage || usage.total_cost_cents <= 0) {
-                    results.push({
-                        clientId: client.id,
-                        clientName: client.name,
-                        status: 'skipped_no_usage',
-                    });
-                    continue;
-                }
-
-                // Create invoice item on the connected account
-                await stripe.invoiceItems.create(
-                    {
-                        customer: client.stripe_customer_id!,
-                        amount: usage.total_cost_cents,
-                        currency: 'usd',
-                        description: `Voice AI Usage: ${Number(usage.total_minutes).toFixed(1)} minutes (${usage.total_calls} calls) - ${monthLabel}`,
-                    },
-                    stripeAccountOptions
-                );
-
-                // Calculate platform application fee
-                const feePercent = agency.platform_fee_percent || 0;
-                const applicationFeeAmount = feePercent > 0
-                    ? Math.round(usage.total_cost_cents * (feePercent / 100))
-                    : undefined;
-
-                // Create and finalize invoice on the connected account
-                const invoice = await stripe.invoices.create(
-                    {
-                        customer: client.stripe_customer_id!,
-                        auto_advance: true, // Auto-finalize and attempt payment
-                        collection_method: 'charge_automatically',
-                        ...(applicationFeeAmount && { application_fee_amount: applicationFeeAmount }),
-                    },
-                    stripeAccountOptions
-                );
-
-                // Update next billing date
-                const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
-                await supabase
-                    .from('clients')
-                    .update({ next_billing_date: nextMonth.toISOString() })
-                    .eq('id', client.id);
-
-                results.push({
-                    clientId: client.id,
-                    clientName: client.name,
-                    status: 'invoiced',
-                    amount: usage.total_cost_cents,
-                });
-
-                const feeNote = applicationFeeAmount ? ` (platform fee: $${(applicationFeeAmount / 100).toFixed(2)})` : '';
-                console.log(`Invoice created for ${client.name}: $${(usage.total_cost_cents / 100).toFixed(2)}${feeNote} (${invoice.id})`);
-            } catch (err) {
-                console.error(`Failed to create invoice for client ${client.name}:`, err);
-                results.push({
-                    clientId: client.id,
-                    clientName: client.name,
-                    status: 'error',
-                });
             }
         }
 
         const invoicesCreated = results.filter(r => r.status === 'invoiced').length;
-        console.log(`Invoice generation complete: ${invoicesCreated}/${clients.length} clients invoiced for ${monthLabel}`);
+        const totalClients = (clients?.length || 0) + (subClients?.length || 0);
+        console.log(`Invoice generation complete: ${invoicesCreated}/${totalClients} clients invoiced for ${monthLabel}`);
 
         return NextResponse.json({
             success: true,

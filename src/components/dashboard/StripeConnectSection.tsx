@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ExternalLink, Link2, Link2Off, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ExternalLink, Link2, Link2Off, AlertCircle, CheckCircle2, Loader2, Save } from 'lucide-react';
 
 interface ConnectStatus {
     connected: boolean;
@@ -28,6 +30,8 @@ export function StripeConnectSection() {
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [platformFee, setPlatformFee] = useState<string>('0');
+    const [feeLoading, setFeeLoading] = useState(false);
 
     // Check for onboarding return in URL params
     useEffect(() => {
@@ -51,6 +55,9 @@ export function StripeConnectSection() {
                 }
                 const result = await response.json();
                 setStatus(result.data);
+                if (result.data?.platform_fee_percent !== undefined) {
+                    setPlatformFee(String(result.data.platform_fee_percent));
+                }
             } catch {
                 setError('Failed to load Stripe Connect status');
             } finally {
@@ -60,6 +67,38 @@ export function StripeConnectSection() {
 
         fetchStatus();
     }, []);
+
+    const handleSavePlatformFee = async () => {
+        const feeValue = parseFloat(platformFee);
+        if (isNaN(feeValue) || feeValue < 0 || feeValue > 50) {
+            setError('Platform fee must be between 0% and 50%');
+            return;
+        }
+
+        setFeeLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetch('/api/billing/connect', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ platform_fee_percent: feeValue }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to update platform fee');
+            }
+
+            setSuccessMessage('Platform fee updated successfully');
+            setTimeout(() => setSuccessMessage(null), 3000);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update platform fee');
+        } finally {
+            setFeeLoading(false);
+        }
+    };
 
     const handleConnect = async () => {
         setActionLoading('connect');
@@ -296,6 +335,48 @@ export function StripeConnectSection() {
                                         </>
                                     )}
                                 </p>
+                            </div>
+                        </div>
+
+                        {/* Platform Fee */}
+                        <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                            <div>
+                                <Label htmlFor="platform-fee" className="text-sm font-medium">
+                                    Platform Fee
+                                </Label>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    Percentage deducted from client invoices as your platform fee (0-50%)
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="relative w-32">
+                                    <Input
+                                        id="platform-fee"
+                                        type="number"
+                                        min={0}
+                                        max={50}
+                                        step={0.5}
+                                        value={platformFee}
+                                        onChange={(e) => setPlatformFee(e.target.value)}
+                                        className="pr-8"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleSavePlatformFee}
+                                    disabled={feeLoading || parseFloat(platformFee) === (status?.platform_fee_percent ?? 0)}
+                                >
+                                    {feeLoading ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Save className="h-4 w-4 mr-1" />
+                                            Save
+                                        </>
+                                    )}
+                                </Button>
                             </div>
                         </div>
 

@@ -213,6 +213,9 @@ export async function middleware(request: NextRequest) {
         }
     }
 
+    // Set pathname header for downstream use (e.g., subscription gating in layout)
+    requestHeaders.set('x-pathname', pathname);
+
     // Create response with custom headers for white-label context
     const response = NextResponse.next({
         request: {

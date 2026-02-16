@@ -5,6 +5,7 @@ export type VoiceProvider = 'retell' | 'vapi' | 'bland';
 export type CallStatus = 'completed' | 'failed' | 'in_progress' | 'queued';
 export type BillingType = 'subscription' | 'per_minute' | 'one_time';
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused';
+export type PlanTier = 'starter' | 'growth' | 'scale';
 
 export interface Agency {
     id: string;

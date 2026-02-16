@@ -1,9 +1,13 @@
 import { requireAuth, isAgencyAdmin, isClientUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { BackgroundSync } from '@/components/dashboard/BackgroundSync';
 import { getUserPermissions } from '@/lib/permissions';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+// Paths that are accessible without an active subscription
+const UNGATED_PATHS = ['/billing', '/settings'];
 
 export default async function DashboardLayout({
     children,
@@ -15,6 +19,20 @@ export default async function DashboardLayout({
     // Client users should use the client portal
     if (isClientUser(user)) {
         redirect('/portal');
+    }
+
+    // Subscription gating — agency must have an active subscription
+    const activeStatuses = ['active', 'trialing'];
+    const hasActiveSub = activeStatuses.includes(user.agency.subscription_status || '');
+
+    if (!hasActiveSub) {
+        const headersList = await headers();
+        const pathname = headersList.get('x-pathname') || '/';
+        const isUngatedPath = UNGATED_PATHS.some(p => pathname.startsWith(p));
+
+        if (!isUngatedPath) {
+            redirect('/billing/upgrade');
+        }
     }
 
     const isAdmin = isAgencyAdmin(user);

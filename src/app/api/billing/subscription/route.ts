@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
+import { getTierFromPriceId, getTierDefinition, type PlanTier } from '@/lib/billing/tiers';
 
 function getStripe() {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -46,6 +47,9 @@ export async function GET(_request: NextRequest) {
                 const subscription = await stripe.subscriptions.retrieve(agency.subscription_id);
                 const firstItem = subscription.items.data[0];
 
+                const tier = getTierFromPriceId(firstItem?.price?.id || '');
+                const tierDef = tier ? getTierDefinition(tier) : null;
+
                 return NextResponse.json({
                     data: {
                         id: subscription.id,
@@ -61,6 +65,9 @@ export async function GET(_request: NextRequest) {
                         canceled_at: subscription.canceled_at
                             ? new Date(subscription.canceled_at * 1000).toISOString()
                             : null,
+                        plan_tier: tier,
+                        plan_name: tierDef?.name || null,
+                        limits: tierDef?.limits || null,
                     },
                 });
             } catch (stripeError) {
@@ -68,6 +75,9 @@ export async function GET(_request: NextRequest) {
                 console.warn('Could not fetch subscription from Stripe:', stripeError);
             }
         }
+
+        const dbTier = getTierFromPriceId(agency.subscription_price_id || '');
+        const dbTierDef = dbTier ? getTierDefinition(dbTier) : null;
 
         return NextResponse.json({
             data: {
@@ -78,6 +88,9 @@ export async function GET(_request: NextRequest) {
                 current_period_end: agency.subscription_current_period_end,
                 cancel_at_period_end: agency.subscription_cancel_at_period_end,
                 canceled_at: null,
+                plan_tier: dbTier,
+                plan_name: dbTierDef?.name || null,
+                limits: dbTierDef?.limits || null,
             },
         });
     } catch (error) {
@@ -148,8 +161,10 @@ export async function DELETE(request: NextRequest) {
     }
 }
 
-// PATCH /api/billing/subscription - Resume canceled subscription
-export async function PATCH(_request: NextRequest) {
+const VALID_TIERS: PlanTier[] = ['starter', 'growth', 'scale'];
+
+// PATCH /api/billing/subscription - Resume canceled subscription or change plan tier
+export async function PATCH(request: NextRequest) {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -174,8 +189,43 @@ export async function PATCH(_request: NextRequest) {
         }
 
         const stripe = getStripe();
+        const body = await request.json().catch(() => ({}));
 
-        // Resume subscription by removing cancel_at_period_end
+        // If a tier is provided, change the plan
+        if (body.tier && VALID_TIERS.includes(body.tier)) {
+            const tierDef = getTierDefinition(body.tier);
+            if (!tierDef) {
+                return NextResponse.json({ error: `Tier "${body.tier}" is not configured` }, { status: 400 });
+            }
+
+            // Get current subscription to find the item to update
+            const currentSub = await stripe.subscriptions.retrieve(agency.subscription_id);
+            const currentItem = currentSub.items.data[0];
+
+            if (!currentItem) {
+                return NextResponse.json({ error: 'Subscription has no items' }, { status: 400 });
+            }
+
+            // Update the subscription item to the new price (Stripe handles proration)
+            const subscription = await stripe.subscriptions.update(agency.subscription_id, {
+                items: [{ id: currentItem.id, price: tierDef.priceId }],
+                metadata: { plan_tier: body.tier },
+                proration_behavior: 'create_prorations',
+            });
+
+            const updatedItem = subscription.items.data[0];
+            const newTier = getTierFromPriceId(updatedItem?.price?.id || '');
+            const newTierDef = newTier ? getTierDefinition(newTier) : null;
+
+            return NextResponse.json({
+                message: `Plan changed to ${newTierDef?.name || body.tier}`,
+                status: subscription.status,
+                plan_tier: newTier,
+                plan_name: newTierDef?.name || null,
+            });
+        }
+
+        // Default: Resume subscription by removing cancel_at_period_end
         const subscription = await stripe.subscriptions.update(agency.subscription_id, {
             cancel_at_period_end: false,
         });
@@ -185,7 +235,7 @@ export async function PATCH(_request: NextRequest) {
             status: subscription.status,
         });
     } catch (error) {
-        console.error('Error resuming subscription:', error);
+        console.error('Error updating subscription:', error);
         if (error instanceof Stripe.errors.StripeError) {
             return NextResponse.json({ error: 'Payment processing error' }, { status: 400 });
         }

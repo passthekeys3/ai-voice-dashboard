@@ -1,14 +1,33 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 
 import { requireAuth, isAgencyAdmin } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
-import { BillingUsage } from '@/components/dashboard/BillingUsage';
+import { BillingSection } from '@/components/dashboard/BillingSection';
+import { StripeConnectSection } from '@/components/dashboard/StripeConnectSection';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { getUserPermissions } from '@/lib/permissions';
 import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = { title: 'Billing' };
+
+function SectionSkeleton() {
+    return (
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-72" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-4 w-64" />
+                <Skeleton className="h-10 w-40" />
+            </CardContent>
+        </Card>
+    );
+}
 
 export default async function BillingPage() {
     const user = await requireAuth();
@@ -72,9 +91,16 @@ export default async function BillingPage() {
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight">Billing</h2>
                     <p className="text-muted-foreground">
-                        Manage your subscription and view usage
+                        Manage your subscription, view usage, and configure client billing
                     </p>
                 </div>
+
+                {/* Subscription Management */}
+                {isAdmin && (
+                    <Suspense fallback={<SectionSkeleton />}>
+                        <BillingSection />
+                    </Suspense>
+                )}
 
                 {/* Current Period Usage */}
                 <Card>
@@ -100,8 +126,12 @@ export default async function BillingPage() {
                     </CardContent>
                 </Card>
 
-                {/* Payment Method Management */}
-                <BillingUsage />
+                {/* Stripe Connect — Client Billing */}
+                {isAdmin && (
+                    <Suspense fallback={<SectionSkeleton />}>
+                        <StripeConnectSection />
+                    </Suspense>
+                )}
             </div>
         </div>
     );

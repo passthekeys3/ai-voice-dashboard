@@ -163,6 +163,49 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * PATCH /api/billing/connect — Update Connect settings (e.g. platform fee)
+ */
+export async function PATCH(request: NextRequest) {
+    try {
+        const user = await getCurrentUser();
+        if (!user || !isAgencyAdmin(user)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const body = await request.json().catch(() => ({}));
+        const { platform_fee_percent } = body;
+
+        if (platform_fee_percent === undefined || platform_fee_percent === null) {
+            return NextResponse.json({ error: 'platform_fee_percent is required' }, { status: 400 });
+        }
+
+        if (typeof platform_fee_percent !== 'number' || platform_fee_percent < 0 || platform_fee_percent > 50) {
+            return NextResponse.json({ error: 'platform_fee_percent must be a number between 0 and 50' }, { status: 400 });
+        }
+
+        const supabase = createServiceClient();
+
+        const { error } = await supabase
+            .from('agencies')
+            .update({
+                platform_fee_percent,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', user.agency.id);
+
+        if (error) {
+            console.error('Failed to update platform fee:', error);
+            return NextResponse.json({ error: 'Failed to update platform fee' }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true, platform_fee_percent });
+    } catch (error) {
+        console.error('Stripe Connect PATCH error:', error);
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+}
+
+/**
  * DELETE /api/billing/connect — Disconnect Stripe Connect account
  */
 export async function DELETE() {

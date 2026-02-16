@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
+import { getTierDefinition, type PlanTier } from '@/lib/billing/tiers';
 
 function getStripe() {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -11,6 +12,8 @@ function getStripe() {
         apiVersion: '2026-01-28.clover',
     });
 }
+
+const VALID_TIERS: PlanTier[] = ['starter', 'growth', 'scale'];
 
 // POST /api/billing/checkout - Create Stripe checkout session for subscription
 export async function POST(request: NextRequest) {
@@ -25,9 +28,27 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Only agency admins can manage billing' }, { status: 403 });
         }
 
-        const priceId = process.env.STRIPE_PRICE_ID;
+        const body = await request.json().catch(() => ({}));
+        const { tier, return_url } = body;
+
+        // Resolve price ID from tier or fall back to legacy single-price env var
+        let priceId: string | undefined;
+        let planTier: string = 'unknown';
+
+        if (tier && VALID_TIERS.includes(tier)) {
+            const tierDef = getTierDefinition(tier);
+            if (!tierDef) {
+                return NextResponse.json({ error: `Tier "${tier}" is not configured` }, { status: 400 });
+            }
+            priceId = tierDef.priceId;
+            planTier = tier;
+        } else {
+            // Backward compat: fall back to legacy STRIPE_PRICE_ID
+            priceId = process.env.STRIPE_PRICE_ID;
+        }
+
         if (!priceId) {
-            return NextResponse.json({ error: 'STRIPE_PRICE_ID not configured' }, { status: 500 });
+            return NextResponse.json({ error: 'No pricing configured. Please select a plan.' }, { status: 400 });
         }
 
         const stripe = getStripe();
@@ -72,15 +93,14 @@ export async function POST(request: NextRequest) {
                 .eq('id', agency.id);
         }
 
-        // Get the return URL from the request body or use default
-        const body = await request.json().catch(() => ({}));
-        let returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings`;
+        // Resolve return URL
+        let returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/billing`;
 
         // Validate return_url is a relative path or same-origin URL to prevent open redirect
-        if (body.return_url) {
+        if (return_url) {
             try {
                 const appUrl = new URL(process.env.NEXT_PUBLIC_APP_URL || '');
-                const candidate = new URL(body.return_url, appUrl.origin);
+                const candidate = new URL(return_url, appUrl.origin);
                 if (candidate.origin === appUrl.origin) {
                     returnUrl = candidate.toString();
                 }
@@ -105,10 +125,12 @@ export async function POST(request: NextRequest) {
             subscription_data: {
                 metadata: {
                     agency_id: agency.id,
+                    plan_tier: planTier,
                 },
             },
             metadata: {
                 agency_id: agency.id,
+                plan_tier: planTier,
             },
             allow_promotion_codes: true,
             billing_address_collection: 'required',

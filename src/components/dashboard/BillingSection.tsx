@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { PlanTier } from '@/types/database';
 
 type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused' | null;
 
@@ -18,6 +19,13 @@ interface BillingData {
         current_period_start: string | null;
         current_period_end: string | null;
         cancel_at_period_end: boolean;
+        plan_tier: PlanTier | null;
+        plan_name: string | null;
+        limits: {
+            maxAgents: number;
+            maxCallMinutesPerMonth: number;
+            maxClients: number;
+        } | null;
     };
     has_payment_method: boolean;
     usage: {
@@ -60,6 +68,7 @@ function formatDate(dateString: string | null): string {
 
 export function BillingSection() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const [billingData, setBillingData] = useState<BillingData | null>(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
@@ -71,7 +80,6 @@ export function BillingSection() {
         const checkout = searchParams.get('checkout');
         if (checkout === 'success') {
             setSuccessMessage('Subscription activated successfully! Your billing details have been updated.');
-            // Clear the URL params
             window.history.replaceState({}, '', window.location.pathname);
         } else if (checkout === 'canceled') {
             setError('Checkout was canceled. You can try again when ready.');
@@ -98,34 +106,6 @@ export function BillingSection() {
 
         fetchBillingData();
     }, []);
-
-    const handleSubscribe = async () => {
-        setActionLoading(true);
-        setError(null);
-
-        try {
-            const response = await fetch('/api/billing/checkout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    return_url: window.location.href,
-                }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to create checkout session');
-            }
-
-            if (data.url) {
-                window.location.href = data.url;
-            }
-        } catch (_err) {
-            setError('Failed to start checkout');
-            setActionLoading(false);
-        }
-    };
 
     const handleManageBilling = async () => {
         setActionLoading(true);
@@ -174,6 +154,9 @@ export function BillingSection() {
     const hasActiveSubscription = billingData?.subscription.status === 'active' ||
         billingData?.subscription.status === 'trialing';
 
+    const planName = billingData?.subscription.plan_name;
+    const limits = billingData?.subscription.limits;
+
     return (
         <Card>
             <CardHeader>
@@ -182,7 +165,10 @@ export function BillingSection() {
                         <CardTitle>Billing & Subscription</CardTitle>
                         <CardDescription>Manage your subscription and billing details</CardDescription>
                     </div>
-                    {billingData && getStatusBadge(billingData.subscription.status)}
+                    <div className="flex items-center gap-2">
+                        {planName && <Badge variant="secondary">{planName}</Badge>}
+                        {billingData && getStatusBadge(billingData.subscription.status)}
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -221,6 +207,30 @@ export function BillingSection() {
                                     )}
                                 </div>
 
+                                {/* Plan Limits */}
+                                {limits && (
+                                    <>
+                                        <Separator />
+                                        <div>
+                                            <h4 className="text-sm font-medium mb-3">Plan Limits</h4>
+                                            <div className="grid gap-4 md:grid-cols-3">
+                                                <div className="p-4 bg-muted/50 rounded-lg">
+                                                    <p className="text-2xl font-bold">{limits.maxAgents}</p>
+                                                    <p className="text-sm text-muted-foreground">Max Agents</p>
+                                                </div>
+                                                <div className="p-4 bg-muted/50 rounded-lg">
+                                                    <p className="text-2xl font-bold">{limits.maxCallMinutesPerMonth.toLocaleString()}</p>
+                                                    <p className="text-sm text-muted-foreground">Minutes/Month</p>
+                                                </div>
+                                                <div className="p-4 bg-muted/50 rounded-lg">
+                                                    <p className="text-2xl font-bold">{limits.maxClients}</p>
+                                                    <p className="text-sm text-muted-foreground">Max Clients</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
                                 <Separator />
 
                                 {/* Current Period Usage */}
@@ -244,16 +254,22 @@ export function BillingSection() {
 
                                 <Separator />
 
-                                {/* Manage Subscription Button */}
-                                <div className="flex gap-3">
+                                {/* Actions */}
+                                <div className="flex flex-wrap gap-3">
                                     <Button
                                         onClick={handleManageBilling}
                                         disabled={actionLoading}
                                     >
                                         {actionLoading ? 'Loading...' : 'Manage Subscription'}
                                     </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => router.push('/billing/upgrade')}
+                                    >
+                                        Change Plan
+                                    </Button>
                                     <p className="text-sm text-muted-foreground self-center">
-                                        Update payment method, view invoices, or cancel subscription
+                                        Update payment method, view invoices, or change your plan
                                     </p>
                                 </div>
                             </div>
@@ -265,11 +281,10 @@ export function BillingSection() {
                                         Subscribe to unlock all features and start making AI-powered calls.
                                     </p>
                                     <Button
-                                        onClick={handleSubscribe}
-                                        disabled={actionLoading}
+                                        onClick={() => router.push('/billing/upgrade')}
                                         size="lg"
                                     >
-                                        {actionLoading ? 'Loading...' : 'Subscribe Now'}
+                                        Choose a Plan
                                     </Button>
                                 </div>
 

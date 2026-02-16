@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
+import { getTierFromPriceId, getTierDefinition } from '@/lib/billing/tiers';
 
 function getStripe() {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
         // Get return URL from request body or use default
         const body = await request.json().catch(() => ({}));
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
-        let returnUrl = `${appUrl}/settings`;
+        let returnUrl = `${appUrl}/billing`;
         if (body.return_url && typeof body.return_url === 'string') {
             try {
                 const parsed = new URL(body.return_url);
@@ -153,6 +154,9 @@ export async function GET(_request: NextRequest) {
             };
         }
 
+        const tier = getTierFromPriceId(agency.subscription_price_id || '');
+        const tierDef = tier ? getTierDefinition(tier) : null;
+
         return NextResponse.json({
             data: {
                 subscription: {
@@ -162,6 +166,9 @@ export async function GET(_request: NextRequest) {
                     current_period_start: agency.subscription_current_period_start,
                     current_period_end: agency.subscription_current_period_end,
                     cancel_at_period_end: agency.subscription_cancel_at_period_end,
+                    plan_tier: tier,
+                    plan_name: tierDef?.name || null,
+                    limits: tierDef?.limits || null,
                 },
                 has_payment_method: !!agency.stripe_customer_id,
                 usage: usageData,
