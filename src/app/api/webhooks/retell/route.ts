@@ -37,16 +37,41 @@ interface RetellWebhookPayload {
 }
 
 // Verify Retell webhook signature
+// Retell signature format: "v=<timestamp>,d=<digest>"
+// where digest = HMAC-SHA256(apiKey, body + timestamp)
+// Timestamp must be within 5 minutes
 function verifyRetellSignature(body: string, signature: string | null, apiKey: string): boolean {
     if (!signature) return false;
 
     try {
-        const hash = crypto
+        // Parse "v=<timestamp>,d=<digest>" format
+        const match = signature.match(/v=(\d+),d=(.+)/);
+        if (!match) {
+            console.error('[RETELL WEBHOOK] Signature format invalid, expected v=<ts>,d=<digest>');
+            return false;
+        }
+
+        const timestamp = match[1];
+        const digest = match[2];
+
+        // Check timestamp is within 5 minutes
+        const timestampMs = parseInt(timestamp, 10);
+        const now = Date.now();
+        const fiveMinutes = 5 * 60 * 1000;
+        if (Math.abs(now - timestampMs) > fiveMinutes) {
+            console.error(`[RETELL WEBHOOK] Signature timestamp expired: ${timestampMs} vs now ${now}`);
+            return false;
+        }
+
+        // Compute expected digest: HMAC-SHA256(apiKey, body + timestamp)
+        const expectedDigest = crypto
             .createHmac('sha256', apiKey)
-            .update(body)
+            .update(body + timestamp)
             .digest('hex');
-        return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(hash));
-    } catch {
+
+        return expectedDigest === digest;
+    } catch (err) {
+        console.error('[RETELL WEBHOOK] Signature verification error:', err);
         return false;
     }
 }
@@ -72,6 +97,8 @@ export async function POST(request: NextRequest) {
         const signature = request.headers.get('x-retell-signature');
 
         const payload: RetellWebhookPayload = JSON.parse(rawBody);
+
+        console.log(`[RETELL WEBHOOK] Event: ${payload.event}, Call: ${payload.call.call_id}, Agent: ${payload.call.agent_id}`);
 
         // Use service client for webhook operations (bypasses RLS)
         const supabase = createServiceClient();
@@ -109,9 +136,27 @@ export async function POST(request: NextRequest) {
 
         // Handle transcript_updated event — lightweight: just update DB transcript and return
         if (payload.event === 'transcript_updated') {
+            // Retell may send transcript as string or transcript_object as array
+            // Use the string transcript, or convert transcript_object to string format
+            const rawCall = payload.call as Record<string, unknown>;
+            let transcript = payload.call.transcript;
+
+            if (!transcript && Array.isArray(rawCall.transcript_object)) {
+                // Convert transcript_object array to "Agent: ...\nUser: ..." format
+                transcript = (rawCall.transcript_object as Array<{ role: string; content: string }>)
+                    .map(item => `${item.role === 'agent' ? 'Agent' : 'User'}: ${item.content}`)
+                    .join('\n');
+            }
+
+            console.log(`[RETELL WEBHOOK] transcript_updated: call=${payload.call.call_id}, transcript_length=${transcript?.length || 0}, has_transcript_object=${Array.isArray(rawCall.transcript_object)}`);
+
+            if (!transcript) {
+                return NextResponse.json({ received: true });
+            }
+
             const { error: updateError } = await supabase
                 .from('calls')
-                .update({ transcript: payload.call.transcript })
+                .update({ transcript })
                 .eq('external_id', payload.call.call_id);
 
             if (updateError) {
@@ -125,7 +170,7 @@ export async function POST(request: NextRequest) {
                         provider: 'retell',
                         status: 'in_progress',
                         direction: payload.call.direction || 'outbound',
-                        transcript: payload.call.transcript,
+                        transcript,
                         from_number: payload.call.from_number,
                         to_number: payload.call.to_number,
                         started_at: new Date(payload.call.start_timestamp).toISOString(),
