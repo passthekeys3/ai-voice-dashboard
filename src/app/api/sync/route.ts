@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getAgencyProviders, type NormalizedAgent, type NormalizedCall } from '@/lib/providers';
+import { updateRetellAgent, REQUIRED_WEBHOOK_EVENTS } from '@/lib/providers/retell';
 
 export async function POST() {
     try {
@@ -117,12 +118,43 @@ export async function POST() {
                         console.log(`[SYNC] Successfully upserted ${upsertedData?.length || toUpsert.length} agents`);
                     }
                 }
+
+                // Auto-patch Retell agents' webhook_url + webhook_events (reuses already-fetched data)
+                if (provider === 'retell' && agency.retell_api_key) {
+                    try {
+                        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
+                        const webhookUrl = `${appUrl}/api/webhooks/retell`;
+
+                        const toPatch = externalAgents.filter(a => {
+                            const cfg = a.config;
+                            const currentEvents = (cfg.webhook_events as string[] | undefined) || [];
+                            const needsUrl = !cfg.webhook_url || cfg.webhook_url !== webhookUrl;
+                            const needsEvents = REQUIRED_WEBHOOK_EVENTS.some(e => !currentEvents.includes(e));
+                            return needsUrl || needsEvents;
+                        });
+
+                        if (toPatch.length > 0) {
+                            await Promise.all(toPatch.map(a => {
+                                const cfg = a.config;
+                                const currentEvents = (cfg.webhook_events as string[] | undefined) || [];
+                                const update: Record<string, unknown> = {};
+                                if (!cfg.webhook_url || cfg.webhook_url !== webhookUrl) {
+                                    update.webhook_url = webhookUrl;
+                                }
+                                if (REQUIRED_WEBHOOK_EVENTS.some(e => !currentEvents.includes(e))) {
+                                    update.webhook_events = [...new Set([...currentEvents, ...REQUIRED_WEBHOOK_EVENTS])];
+                                }
+                                return updateRetellAgent(agency.retell_api_key!, a.externalId, update);
+                            }));
+                            console.log(`[SYNC] Patched webhook config on ${toPatch.length} Retell agents`);
+                        }
+                    } catch (err) {
+                        console.error('[SYNC] Failed to patch webhook config:', err);
+                    }
+                }
             } catch (err) {
                 console.error(`Error syncing agents from ${provider}:`, err);
             }
-
-            // Note: Auto-patching Retell webhook_events is handled by the cron sync
-            // to avoid timeout on Vercel Hobby plan (10s limit)
 
             // Sync Calls (separate try/catch so failures don't affect agent sync)
             try {

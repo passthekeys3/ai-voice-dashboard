@@ -63,6 +63,7 @@ function createRetellClient(apiKey: string): VoiceProviderClient {
             voice_id: agent.voice_id,
             language: agent.language,
             webhook_url: agent.webhook_url,
+            webhook_events: agent.webhook_events,
             llm_websocket_url: agent.llm_websocket_url,
             responsiveness: agent.responsiveness,
             interruption_sensitivity: agent.interruption_sensitivity,
