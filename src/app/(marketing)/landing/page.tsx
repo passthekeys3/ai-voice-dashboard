@@ -5,6 +5,7 @@ import { ProductSection } from '@/components/landing/ProductSection';
 import { SocialProofSection } from '@/components/landing/SocialProofSection';
 import { PricingSection } from '@/components/landing/PricingSection';
 import { FAQSection } from '@/components/landing/FAQSection';
+import { AISummarySection } from '@/components/landing/AISummarySection';
 import { FinalCTA } from '@/components/landing/FinalCTA';
 import { Footer } from '@/components/landing/Footer';
 
@@ -54,6 +55,7 @@ export default function LandingPage() {
                 <SocialProofSection />
                 <PricingSection />
                 <FAQSection />
+                <AISummarySection />
                 <FinalCTA />
             </main>
             <Footer />
