@@ -25,11 +25,14 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Create user with admin client — email_confirm: false sends verification email
+        // Create user with admin client
+        // email_confirm: true = auto-confirmed (no verification email needed)
+        // email_confirm: false = unconfirmed (must verify via email before login)
+        const skipVerification = process.env.SKIP_EMAIL_VERIFICATION === 'true';
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email,
             password,
-            email_confirm: false,
+            email_confirm: skipVerification,
             user_metadata: {
                 full_name: fullName,
                 agency_name: agencyName,
@@ -98,7 +101,10 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            message: 'Please check your email to verify your account',
+            message: skipVerification
+                ? 'Account created successfully'
+                : 'Please check your email to verify your account',
+            skipVerification,
         });
     } catch (error) {
         console.error('Signup error:', error);

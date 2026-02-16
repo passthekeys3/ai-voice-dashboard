@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,7 @@ export default function SignupPage() {
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const router = useRouter();
 
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -48,6 +50,13 @@ export default function SignupPage() {
                 return;
             }
 
+            // If email verification was skipped, redirect to login immediately
+            if (data.skipVerification) {
+                router.push('/login?message=' + encodeURIComponent('Account created. Please sign in.'));
+                return;
+            }
+
+            // Otherwise show "check your email" screen
             setSuccess(true);
         } catch {
             setError('An unexpected error occurred');
