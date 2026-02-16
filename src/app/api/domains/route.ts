@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { isValidCustomDomain } from '@/lib/getAgencyFromDomain';
+import { addDomainToVercel, removeDomainFromVercel, getDomainFromVercel, isVercelConfigured } from '@/lib/vercel-domains';
 import crypto from 'crypto';
 
 // GET /api/domains - Get current domain configuration
@@ -30,6 +31,18 @@ export async function GET() {
             return NextResponse.json({ error: 'Failed to fetch domain configuration' }, { status: 500 });
         }
 
+        // Optionally check Vercel status for the domain
+        let vercel_domain_status: { configured: boolean; verified: boolean } | null = null;
+        if (agency.custom_domain && isVercelConfigured()) {
+            const vercelResult = await getDomainFromVercel(agency.custom_domain);
+            if (vercelResult.success) {
+                vercel_domain_status = {
+                    configured: vercelResult.domain.configured ?? false,
+                    verified: vercelResult.domain.verified,
+                };
+            }
+        }
+
         return NextResponse.json({
             data: {
                 custom_domain: agency.custom_domain,
@@ -37,6 +50,7 @@ export async function GET() {
                 domain_verified_at: agency.domain_verified_at,
                 verification_token: agency.domain_verification_token,
                 slug: agency.slug,
+                vercel_domain_status,
             },
         });
     } catch (error) {
@@ -107,11 +121,25 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: 'Failed to update domain' }, { status: 500 });
             }
 
+            // Automatically add the domain to Vercel project (non-blocking — DB is source of truth)
+            let vercelStatus: string | undefined;
+            if (custom_domain && isVercelConfigured()) {
+                const vercelResult = await addDomainToVercel(custom_domain.toLowerCase());
+                if (vercelResult.success) {
+                    console.log(`[domains] Added ${custom_domain} to Vercel project`);
+                    vercelStatus = 'added';
+                } else {
+                    console.warn(`[domains] Vercel add failed for ${custom_domain}: ${vercelResult.error}`);
+                    vercelStatus = `warning: ${vercelResult.error}`;
+                }
+            }
+
             return NextResponse.json({
                 data: {
                     custom_domain: custom_domain ? custom_domain.toLowerCase() : null,
                     domain_verified: false,
                     verification_token: custom_domain ? verificationToken : null,
+                    vercel_status: vercelStatus,
                 },
                 message: custom_domain
                     ? 'Domain added. Please verify ownership by adding DNS records.'
@@ -185,6 +213,13 @@ export async function DELETE() {
 
         const supabase = await createClient();
 
+        // Fetch current domain before clearing it (needed for Vercel cleanup)
+        const { data: currentAgency } = await supabase
+            .from('agencies')
+            .select('custom_domain')
+            .eq('id', user.agency.id)
+            .single();
+
         const { error } = await supabase
             .from('agencies')
             .update({
@@ -198,6 +233,16 @@ export async function DELETE() {
         if (error) {
             console.error('Error removing custom domain:', error);
             return NextResponse.json({ error: 'Failed to remove domain' }, { status: 500 });
+        }
+
+        // Remove domain from Vercel project
+        if (currentAgency?.custom_domain && isVercelConfigured()) {
+            const vercelResult = await removeDomainFromVercel(currentAgency.custom_domain);
+            if (vercelResult.success) {
+                console.log(`[domains] Removed ${currentAgency.custom_domain} from Vercel project`);
+            } else {
+                console.warn(`[domains] Vercel remove failed for ${currentAgency.custom_domain}: ${vercelResult.error}`);
+            }
         }
 
         return NextResponse.json({

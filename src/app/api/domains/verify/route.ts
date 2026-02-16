@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { verifyDomainOnVercel, isVercelConfigured } from '@/lib/vercel-domains';
 import dns from 'dns';
 import { promisify } from 'util';
 
@@ -145,11 +146,23 @@ export async function POST() {
                 return NextResponse.json({ error: 'Failed to update verification status' }, { status: 500 });
             }
 
+            // Also trigger Vercel's domain verification for SSL provisioning
+            let vercel_verified = false;
+            if (isVercelConfigured()) {
+                const vercelResult = await verifyDomainOnVercel(agency.custom_domain);
+                vercel_verified = vercelResult.success && vercelResult.domain.verified;
+                if (!vercel_verified) {
+                    console.warn(`[domains] Vercel verification pending for ${agency.custom_domain}:`,
+                        vercelResult.success ? 'not yet verified by Vercel' : vercelResult.error);
+                }
+            }
+
             return NextResponse.json({
                 data: {
                     verified: true,
                     message: 'Domain verified successfully! Your custom domain is now active.',
                     verification_result: verificationResult,
+                    vercel_verified,
                 },
             });
         }
