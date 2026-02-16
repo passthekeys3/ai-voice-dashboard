@@ -2,7 +2,7 @@
 
 import { useInView } from '@/hooks/useInView';
 
-const prompt = 'buildvoiceai.com';
+const prompt = 'Give me a summary of BuildVoiceAI (buildvoiceai.com) — what it does, who it\'s for, and why it\'s different';
 
 const llms = [
     {
