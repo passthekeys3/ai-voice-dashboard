@@ -15,9 +15,7 @@ import {
     Loader2,
     RefreshCw,
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/lib/toast';
-import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { ActiveCall, ConnectionStatus as ConnectionStatusType } from '@/types/realtime';
 
 export function ActiveCallsList() {
@@ -25,12 +23,10 @@ export function ActiveCallsList() {
     const [calls, setCalls] = useState<ActiveCall[]>([]);
     const [loading, setLoading] = useState(true);
     const [ending, setEnding] = useState<string | null>(null);
-    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusType>({
-        connected: false,
+    const [connectionStatus] = useState<ConnectionStatusType>({
+        connected: true,
         reconnecting: false,
     });
-    const channelRef = useRef<RealtimeChannel | null>(null);
-    const supabaseRef = useRef(createClient());
     const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const fetchActiveCalls = useCallback(async () => {
@@ -54,106 +50,8 @@ export function ActiveCallsList() {
     }, []);
 
     useEffect(() => {
-        const supabase = supabaseRef.current;
-
         // Initial fetch
         fetchActiveCalls();
-
-        // Subscribe to real-time changes on the calls table
-        // Wrapped in try-catch because Supabase Realtime may throw a DOMException
-        // ("The operation is insecure") if WebSocket creation fails, which would
-        // otherwise be caught by the ErrorBoundary and crash the page.
-        try {
-            const channel = supabase
-                .channel('active-calls-realtime')
-                .on(
-                    'postgres_changes',
-                    {
-                        event: 'INSERT',
-                        schema: 'public',
-                        table: 'calls',
-                    },
-                    (payload) => {
-                        const newCall = payload.new as {
-                            id: string;
-                            external_id: string;
-                            agent_id: string;
-                            status: string;
-                            started_at: string;
-                            from_number?: string;
-                            to_number?: string;
-                            direction: string;
-                            provider: 'retell' | 'vapi' | 'bland';
-                        };
-
-                        // Only add if it's an active call
-                        if (newCall.status === 'in_progress' || newCall.status === 'queued') {
-                            // Refresh to get full data including agent name
-                            fetchActiveCalls();
-                        }
-                    }
-                )
-                .on(
-                    'postgres_changes',
-                    {
-                        event: 'UPDATE',
-                        schema: 'public',
-                        table: 'calls',
-                    },
-                    (payload) => {
-                        const updatedCall = payload.new as {
-                            id: string;
-                            status: string;
-                        };
-
-                        // If call ended, remove from active list
-                        if (updatedCall.status === 'completed' || updatedCall.status === 'failed') {
-                            setCalls((prev) => prev.filter((c) => c.id !== updatedCall.id));
-                        }
-                    }
-                )
-                .subscribe((status) => {
-                    if (status === 'SUBSCRIBED') {
-                        setConnectionStatus({
-                            connected: true,
-                            lastConnected: new Date(),
-                            reconnecting: false,
-                        });
-                    } else if (status === 'CLOSED') {
-                        setConnectionStatus((prev) => ({
-                            ...prev,
-                            connected: false,
-                            reconnecting: true,
-                        }));
-                    } else if (status === 'CHANNEL_ERROR') {
-                        setConnectionStatus((prev) => ({
-                            ...prev,
-                            connected: false,
-                            reconnecting: false,
-                            error: 'Realtime unavailable',
-                        }));
-                        // Increase polling frequency when realtime fails
-                        if (pollIntervalRef.current) {
-                            clearInterval(pollIntervalRef.current);
-                        }
-                        pollIntervalRef.current = setInterval(fetchActiveCalls, 10000);
-                    }
-                });
-
-            channelRef.current = channel;
-        } catch (err) {
-            // WebSocket creation failed (e.g. insecure context) — fall back to polling
-            console.warn('Realtime subscription failed, using polling fallback:', err);
-            setConnectionStatus({
-                connected: false,
-                reconnecting: false,
-                error: 'Realtime unavailable',
-            });
-            if (pollIntervalRef.current) {
-                clearInterval(pollIntervalRef.current);
-            }
-            pollIntervalRef.current = setInterval(fetchActiveCalls, 10000);
-        }
 
         // Update duration every second for active calls
         const durationInterval = setInterval(() => {
@@ -167,16 +65,15 @@ export function ActiveCallsList() {
             );
         }, 1000);
 
-        // Fallback polling every 30 seconds (reduced from 5s since we have real-time)
-        pollIntervalRef.current = setInterval(fetchActiveCalls, 30000);
+        // Poll for active calls every 5 seconds
+        // Active calls are fetched from the provider API (Retell/Vapi/Bland),
+        // not from the DB, so Supabase Realtime cannot detect them.
+        pollIntervalRef.current = setInterval(fetchActiveCalls, 5000);
 
         return () => {
             clearInterval(durationInterval);
             if (pollIntervalRef.current) {
                 clearInterval(pollIntervalRef.current);
-            }
-            if (channelRef.current) {
-                supabase.removeChannel(channelRef.current);
             }
         };
     }, [fetchActiveCalls]);
@@ -320,19 +217,9 @@ export function ActiveCallsList() {
                         <h3 className="text-lg font-medium mb-2">No active calls</h3>
                         <p className="text-muted-foreground text-center max-w-md">
                             When calls are in progress, they&apos;ll appear here in real-time.
-                            {connectionStatus.connected ? (
-                                <span className="block mt-2 text-green-600 text-sm">
-                                    Real-time updates are active
-                                </span>
-                            ) : connectionStatus.error ? (
-                                <span className="block mt-2 text-muted-foreground text-sm">
-                                    Auto-refreshing every 10 seconds
-                                </span>
-                            ) : (
-                                <span className="block mt-2 text-yellow-600 text-sm">
-                                    Connecting to real-time updates...
-                                </span>
-                            )}
+                            <span className="block mt-2 text-green-600 text-sm">
+                                Auto-refreshing every 5 seconds
+                            </span>
                         </p>
                     </CardContent>
                 </Card>
