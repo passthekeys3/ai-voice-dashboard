@@ -1,14 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function SyncButton() {
     const [syncing, setSyncing] = useState(false);
     const [result, setResult] = useState<string | null>(null);
-    const router = useRouter();
 
     const handleSync = async () => {
         setSyncing(true);
@@ -26,8 +25,9 @@ export function SyncButton() {
                 return;
             }
 
-            setResult(`Synced ${data.results.agents.synced} agents, ${data.results.calls.synced} calls`);
-            router.refresh();
+            const message = `Synced ${data.results.agents.synced} agents, ${data.results.calls.synced} calls`;
+            setResult(message);
+            toast.success(message);
         } catch (_err) {
             setResult('Failed to sync');
         } finally {
