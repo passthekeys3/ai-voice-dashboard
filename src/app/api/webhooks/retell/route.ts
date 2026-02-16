@@ -116,7 +116,8 @@ export async function POST(request: NextRequest) {
         else if (payload.call.call_status === 'error') status = 'failed';
         else if (payload.call.call_status === 'ongoing') status = 'in_progress';
 
-        const costCents = Math.round((payload.call.call_cost?.combined_cost || 0) * 100);
+        // Retell combined_cost is already in cents
+        const costCents = Math.round(payload.call.call_cost?.combined_cost || 0);
 
         // Check for active A/B experiment and get variant info from call metadata
         let experimentId: string | null = null;

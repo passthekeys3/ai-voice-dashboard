@@ -61,8 +61,8 @@ export interface RetellCall {
         custom_analysis_data?: Record<string, unknown>;
     };
     call_cost?: {
-        combined_cost?: number;
-        product_costs?: Array<{ product: string; cost: number }>;
+        combined_cost?: number; // in cents
+        product_costs?: Array<{ product: string; cost: number; unit_price?: number }>;
         total_duration_seconds?: number;
     };
     disconnection_reason?: string;
