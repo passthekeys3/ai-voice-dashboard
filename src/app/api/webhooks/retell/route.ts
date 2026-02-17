@@ -20,7 +20,6 @@ interface RetellWebhookPayload {
         end_timestamp?: number;
         transcript?: string;
         transcript_object?: Array<{ role: string; content: string }>;
-        transcript_with_tool_calls?: Array<{ role: string; content?: string; words?: unknown[] }>;
         recording_url?: string;
         from_number?: string;
         to_number?: string;
@@ -34,6 +33,8 @@ interface RetellWebhookPayload {
         };
         metadata?: Record<string, unknown>;
     };
+    // transcript_with_tool_calls is at ROOT level (not inside call) for transcript_updated events
+    transcript_with_tool_calls?: Array<{ role: string; content?: string; words?: unknown[] }>;
 }
 
 // Signature verification uses the official Retell SDK's Retell.verify()
@@ -99,48 +100,31 @@ export async function POST(request: NextRequest) {
 
         // Handle transcript_updated event — lightweight: just update DB transcript and return
         if (payload.event === 'transcript_updated') {
-            // Diagnostic: dump the ENTIRE raw payload (not just payload.call)
-            const fullPayload = JSON.parse(rawBody) as Record<string, unknown>;
-            const topKeys = Object.keys(fullPayload);
-            console.log(`[RETELL WEBHOOK] transcript_updated TOP-LEVEL KEYS: [${topKeys.join(',')}]`);
-            // Log any key that's not 'event' or 'call' — transcript might be at root level
-            for (const k of topKeys) {
-                if (k === 'event') continue;
-                if (k === 'call') {
-                    const callKeys = Object.keys(fullPayload.call as Record<string, unknown>);
-                    console.log(`[RETELL WEBHOOK] transcript_updated call keys: [${callKeys.join(',')}]`);
-                    continue;
-                }
-                const val = fullPayload[k];
-                const preview = typeof val === 'string' ? val.slice(0, 300) : JSON.stringify(val)?.slice(0, 300);
-                console.log(`[RETELL WEBHOOK] transcript_updated ROOT.${k}: type=${typeof val}, isArray=${Array.isArray(val)}, preview=${preview}`);
-            }
-
             let transcript: string | undefined;
 
-            // Primary: transcript_with_tool_calls — the field Retell populates during LIVE calls.
-            // Retell's docs say transcript/transcript_object are only "available after call ends",
-            // but transcript_with_tool_calls is specifically included in transcript_updated events.
-            if (Array.isArray(payload.call.transcript_with_tool_calls) && payload.call.transcript_with_tool_calls.length > 0) {
-                transcript = payload.call.transcript_with_tool_calls
+            // Primary: transcript_with_tool_calls at ROOT level of payload (NOT inside call).
+            // Retell sends this at payload.transcript_with_tool_calls for transcript_updated events.
+            // Contains array of utterances: {role: "agent"|"user", content: "...", words: [...]}
+            if (Array.isArray(payload.transcript_with_tool_calls) && payload.transcript_with_tool_calls.length > 0) {
+                transcript = payload.transcript_with_tool_calls
                     .filter(item => (item.role === 'agent' || item.role === 'user') && item.content)
                     .map(item => `${item.role === 'agent' ? 'Agent' : 'User'}: ${item.content}`)
                     .join('\n');
             }
 
-            // Fallback 1: transcript string (populated after call ends / final update)
+            // Fallback 1: transcript string in call (populated after call ends / final update)
             if (!transcript) {
                 transcript = payload.call.transcript;
             }
 
-            // Fallback 2: transcript_object array (populated after call ends)
+            // Fallback 2: transcript_object array in call (populated after call ends)
             if (!transcript && Array.isArray(payload.call.transcript_object)) {
                 transcript = payload.call.transcript_object
                     .map(item => `${item.role === 'agent' ? 'Agent' : 'User'}: ${item.content}`)
                     .join('\n');
             }
 
-            const twtcLen = Array.isArray(payload.call.transcript_with_tool_calls) ? payload.call.transcript_with_tool_calls.length : 0;
+            const twtcLen = Array.isArray(payload.transcript_with_tool_calls) ? payload.transcript_with_tool_calls.length : 0;
             console.log(`[RETELL WEBHOOK] transcript_updated: call=${payload.call.call_id}, twtc_items=${twtcLen}, len=${transcript?.length || 0}`);
 
             if (!transcript) {
