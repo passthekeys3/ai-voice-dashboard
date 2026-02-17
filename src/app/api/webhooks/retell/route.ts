@@ -96,8 +96,7 @@ export async function POST(request: NextRequest) {
 
         const payload: RetellWebhookPayload = JSON.parse(rawBody);
 
-        // Log BEFORE any signature verification so we can see if webhooks arrive at all
-        console.log(`[RETELL WEBHOOK] Received: event=${payload.event}, call=${payload.call.call_id}, agent=${payload.call.agent_id}, sig_prefix=${signature?.substring(0, 40)}`);
+        console.log(`[RETELL WEBHOOK] Received: event=${payload.event}, call=${payload.call.call_id}, agent=${payload.call.agent_id}`);
 
         // Use service client for webhook operations (bypasses RLS)
         const supabase = createServiceClient();
@@ -129,18 +128,14 @@ export async function POST(request: NextRequest) {
         }
 
         if (!verifyRetellSignature(rawBody, signature, retellApiKey)) {
-            // TEMPORARY: Allow through for debugging — we need to verify the exact signature format
-            // Once confirmed working, re-enable the 401 return below
-            console.error(`[RETELL WEBHOOK] ⚠️ SIGNATURE FAILED - allowing through for debugging. Call: ${payload.call.call_id}, Sig: ${signature}`);
-            // return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+            console.error(`[RETELL WEBHOOK] Invalid signature for call: ${payload.call.call_id}`);
+            return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
         // Handle transcript_updated event — lightweight: just update DB transcript and return
         if (payload.event === 'transcript_updated') {
             // Retell may send transcript as string or transcript_object as array
-            // Use the string transcript, or convert transcript_object to string format
             const rawCall = payload.call as Record<string, unknown>;
-            console.log(`[RETELL WEBHOOK] transcript_updated payload keys: ${Object.keys(rawCall).join(', ')}`);
             let transcript = payload.call.transcript;
 
             if (!transcript && Array.isArray(rawCall.transcript_object)) {
@@ -149,8 +144,6 @@ export async function POST(request: NextRequest) {
                     .map(item => `${item.role === 'agent' ? 'Agent' : 'User'}: ${item.content}`)
                     .join('\n');
             }
-
-            console.log(`[RETELL WEBHOOK] transcript_updated: call=${payload.call.call_id}, transcript_length=${transcript?.length || 0}, has_transcript_object=${Array.isArray(rawCall.transcript_object)}`);
 
             if (!transcript) {
                 return NextResponse.json({ received: true });
