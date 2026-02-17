@@ -15,6 +15,8 @@ import {
     Loader2,
     Clock,
     CheckCircle,
+    Zap,
+    RotateCw,
 } from 'lucide-react';
 import type { ConnectionStatus as ConnectionStatusType } from '@/types/realtime';
 import { createClient } from '@/lib/supabase/client';
@@ -82,6 +84,8 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
     const isActiveRef = useRef(false);
     const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const supabaseRef = useRef(createClient());
+    const lastUpdateSourceRef = useRef<'realtime' | 'poll' | 'initial'>('initial');
+    const [lastUpdateInfo, setLastUpdateInfo] = useState<{ source: 'realtime' | 'poll'; time: Date } | null>(null);
 
     // Apply transcript update to state — used by both fetch and realtime
     const applyTranscriptUpdate = useCallback((newCall: LiveCall) => {
@@ -93,6 +97,11 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
             }));
             prevLineCountRef.current = newCall.transcript.length;
             lastActivityRef.current = Date.now();
+
+            // Record the source of this update (realtime vs poll)
+            if (lastUpdateSourceRef.current !== 'initial') {
+                setLastUpdateInfo({ source: lastUpdateSourceRef.current, time: new Date() });
+            }
 
             // Clear "new" flag after animation
             setTimeout(() => {
@@ -157,6 +166,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                 },
                 () => {
                     // Transcript updated in DB — re-fetch to get parsed data
+                    lastUpdateSourceRef.current = 'realtime';
                     fetchCall();
                 }
             )
@@ -194,6 +204,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
         // Fallback polling every 5 seconds (in case Realtime misses an update)
         pollIntervalRef.current = setInterval(() => {
             if (isActiveRef.current) {
+                lastUpdateSourceRef.current = 'poll';
                 fetchCall();
             }
         }, 5000);
@@ -301,6 +312,16 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                                         <Badge variant="secondary">Ended</Badge>
                                     )}
                                     <ConnectionStatus status={connectionStatus} />
+                                    {lastUpdateInfo && call.is_active && (
+                                        <span className={`flex items-center gap-1 text-xs ${lastUpdateInfo.source === 'realtime' ? 'text-green-600' : 'text-yellow-600'}`}>
+                                            {lastUpdateInfo.source === 'realtime' ? (
+                                                <Zap className="h-3 w-3" />
+                                            ) : (
+                                                <RotateCw className="h-3 w-3" />
+                                            )}
+                                            via {lastUpdateInfo.source}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
