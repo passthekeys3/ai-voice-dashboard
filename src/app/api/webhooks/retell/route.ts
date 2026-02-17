@@ -19,6 +19,8 @@ interface RetellWebhookPayload {
         start_timestamp: number;
         end_timestamp?: number;
         transcript?: string;
+        transcript_object?: Array<{ role: string; content: string }>;
+        transcript_with_tool_calls?: Array<{ role: string; content?: string; words?: unknown[] }>;
         recording_url?: string;
         from_number?: string;
         to_number?: string;
@@ -97,18 +99,32 @@ export async function POST(request: NextRequest) {
 
         // Handle transcript_updated event — lightweight: just update DB transcript and return
         if (payload.event === 'transcript_updated') {
-            // Retell may send transcript as string or transcript_object as array
-            const rawCall = payload.call as Record<string, unknown>;
-            let transcript = payload.call.transcript;
+            let transcript: string | undefined;
 
-            if (!transcript && Array.isArray(rawCall.transcript_object)) {
-                // Convert transcript_object array to "Agent: ...\nUser: ..." format
-                transcript = (rawCall.transcript_object as Array<{ role: string; content: string }>)
+            // Primary: transcript_with_tool_calls — the field Retell populates during LIVE calls.
+            // Retell's docs say transcript/transcript_object are only "available after call ends",
+            // but transcript_with_tool_calls is specifically included in transcript_updated events.
+            if (Array.isArray(payload.call.transcript_with_tool_calls) && payload.call.transcript_with_tool_calls.length > 0) {
+                transcript = payload.call.transcript_with_tool_calls
+                    .filter(item => (item.role === 'agent' || item.role === 'user') && item.content)
                     .map(item => `${item.role === 'agent' ? 'Agent' : 'User'}: ${item.content}`)
                     .join('\n');
             }
 
-            console.log(`[RETELL WEBHOOK] transcript_updated received: call=${payload.call.call_id}, len=${transcript?.length || 0}`);
+            // Fallback 1: transcript string (populated after call ends / final update)
+            if (!transcript) {
+                transcript = payload.call.transcript;
+            }
+
+            // Fallback 2: transcript_object array (populated after call ends)
+            if (!transcript && Array.isArray(payload.call.transcript_object)) {
+                transcript = payload.call.transcript_object
+                    .map(item => `${item.role === 'agent' ? 'Agent' : 'User'}: ${item.content}`)
+                    .join('\n');
+            }
+
+            const twtcLen = Array.isArray(payload.call.transcript_with_tool_calls) ? payload.call.transcript_with_tool_calls.length : 0;
+            console.log(`[RETELL WEBHOOK] transcript_updated: call=${payload.call.call_id}, twtc_items=${twtcLen}, len=${transcript?.length || 0}`);
 
             if (!transcript) {
                 return NextResponse.json({ received: true });
