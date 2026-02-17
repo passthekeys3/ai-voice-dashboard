@@ -6,7 +6,7 @@ import { accumulateUsage } from '@/lib/billing/usage';
 import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-analyzer';
 import { waitUntil } from '@vercel/functions';
 import type { Workflow } from '@/types';
-import crypto from 'crypto';
+import Retell from 'retell-sdk';
 
 // Retell webhook payload types
 interface RetellWebhookPayload {
@@ -34,45 +34,8 @@ interface RetellWebhookPayload {
     };
 }
 
-// Verify Retell webhook signature
-// Retell signature format: "v=<timestamp>,d=<digest>"
-// where digest = HMAC-SHA256(apiKey, body + timestamp)
-// Timestamp must be within 5 minutes
-function verifyRetellSignature(body: string, signature: string | null, apiKey: string): boolean {
-    if (!signature) return false;
-
-    try {
-        // Parse "v=<timestamp>,d=<digest>" format
-        const match = signature.match(/v=(\d+),d=(.+)/);
-        if (!match) {
-            console.error('[RETELL WEBHOOK] Signature format invalid, expected v=<ts>,d=<digest>');
-            return false;
-        }
-
-        const timestamp = match[1];
-        const digest = match[2];
-
-        // Check timestamp is within 5 minutes
-        const timestampMs = parseInt(timestamp, 10);
-        const now = Date.now();
-        const fiveMinutes = 5 * 60 * 1000;
-        if (Math.abs(now - timestampMs) > fiveMinutes) {
-            console.error(`[RETELL WEBHOOK] Signature timestamp expired: ${timestampMs} vs now ${now}`);
-            return false;
-        }
-
-        // Compute expected digest: HMAC-SHA256(apiKey, body + timestamp)
-        const expectedDigest = crypto
-            .createHmac('sha256', apiKey)
-            .update(body + timestamp)
-            .digest('hex');
-
-        return expectedDigest === digest;
-    } catch (err) {
-        console.error('[RETELL WEBHOOK] Signature verification error:', err);
-        return false;
-    }
-}
+// Signature verification uses the official Retell SDK's Retell.verify()
+// to ensure compatibility with Retell's signature format.
 
 // Forward call data to agent's webhook URL
 async function forwardToWebhook(webhookUrl: string, callData: Record<string, unknown>) {
@@ -127,8 +90,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'API key not configured' }, { status: 401 });
         }
 
-        if (!verifyRetellSignature(rawBody, signature, retellApiKey)) {
-            console.error(`[RETELL WEBHOOK] Invalid signature for call: ${payload.call.call_id}`);
+        if (!Retell.verify(rawBody, retellApiKey, signature || '')) {
+            console.error(`[RETELL WEBHOOK] SIGNATURE REJECTED: event=${payload.event}, call=${payload.call.call_id}`);
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
@@ -144,6 +107,8 @@ export async function POST(request: NextRequest) {
                     .map(item => `${item.role === 'agent' ? 'Agent' : 'User'}: ${item.content}`)
                     .join('\n');
             }
+
+            console.log(`[RETELL WEBHOOK] transcript_updated received: call=${payload.call.call_id}, len=${transcript?.length || 0}`);
 
             if (!transcript) {
                 return NextResponse.json({ received: true });

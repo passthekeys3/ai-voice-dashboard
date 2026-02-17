@@ -22,6 +22,8 @@ export interface RetellAgent {
     };
     llm_id?: string;
     webhook_events?: string[];
+    is_published?: boolean;
+    version?: number;
     created_at: string;
     last_modification_timestamp: number;
 }
@@ -168,35 +170,31 @@ export async function publishRetellAgent(
 
 /**
  * Ensure an agent has the required webhook_url and webhook_events configured.
- * Updates the draft AND publishes to make changes effective on live calls.
- * Returns true if the agent was patched, false if already up to date.
+ * Always updates the draft AND publishes to guarantee the PUBLISHED version
+ * has the right config — list-agents returns drafts, so we can't trust that
+ * a matching draft means the published version is also correct.
  */
 export async function ensureAgentWebhookConfig(
     apiKey: string,
     agent: RetellAgent,
     webhookUrl: string
 ): Promise<boolean> {
-    const currentEvents = agent.webhook_events || [];
-    const missingEvents = REQUIRED_WEBHOOK_EVENTS.filter(e => !currentEvents.includes(e));
-    const needsUrlUpdate = !agent.webhook_url || agent.webhook_url !== webhookUrl;
-    const needsEventsUpdate = missingEvents.length > 0;
-
-    if (!needsUrlUpdate && !needsEventsUpdate) return false;
-
-    const update: Partial<{ webhook_url: string; webhook_events: string[] }> = {};
-
-    if (needsUrlUpdate) {
-        update.webhook_url = webhookUrl;
-    }
-
-    if (needsEventsUpdate) {
-        update.webhook_events = [...new Set([...currentEvents, ...REQUIRED_WEBHOOK_EVENTS])];
-    }
-
-    // Update the draft, then publish to make it live
-    await updateRetellAgent(apiKey, agent.agent_id, update);
+    // Always force update + publish. The update-agent call is idempotent and
+    // publish-agent is cheap. This guarantees the PUBLISHED version (used by
+    // live phone calls) has webhook_url + transcript_updated events.
+    await updateRetellAgent(apiKey, agent.agent_id, {
+        webhook_url: webhookUrl,
+        webhook_events: REQUIRED_WEBHOOK_EVENTS,
+    });
     await publishRetellAgent(apiKey, agent.agent_id);
     return true;
+}
+
+export async function getRetellAgentVersions(
+    apiKey: string,
+    agentId: string
+): Promise<RetellAgent[]> {
+    return retellFetch<RetellAgent[]>(apiKey, `/get-agent-versions/${agentId}`);
 }
 
 export async function deleteRetellAgent(
