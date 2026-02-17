@@ -125,28 +125,25 @@ export async function POST() {
                         const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
                         const webhookUrl = `${appUrl}/api/webhooks/retell`;
 
-                        const toPatch = externalAgents.filter(a => {
-                            const cfg = a.config;
-                            const currentEvents = (cfg.webhook_events as string[] | undefined) || [];
-                            const needsUrl = !cfg.webhook_url || cfg.webhook_url !== webhookUrl;
-                            const needsEvents = REQUIRED_WEBHOOK_EVENTS.some(e => !currentEvents.includes(e));
-                            return needsUrl || needsEvents;
-                        });
+                        // Diagnostic: log computed URL and current agent configs
+                        console.log(`[SYNC] Webhook patching: computed webhookUrl = "${webhookUrl}" (NEXT_PUBLIC_APP_URL="${process.env.NEXT_PUBLIC_APP_URL}", VERCEL_URL="${process.env.VERCEL_URL}")`);
+                        for (const a of externalAgents.slice(0, 3)) {
+                            console.log(`[SYNC] Agent ${a.externalId} current webhook: url="${a.config.webhook_url}", events=${JSON.stringify(a.config.webhook_events)}`);
+                        }
 
-                        if (toPatch.length > 0) {
-                            await Promise.all(toPatch.map(a => {
-                                const cfg = a.config;
-                                const currentEvents = (cfg.webhook_events as string[] | undefined) || [];
-                                const update: Record<string, unknown> = {};
-                                if (!cfg.webhook_url || cfg.webhook_url !== webhookUrl) {
-                                    update.webhook_url = webhookUrl;
-                                }
-                                if (REQUIRED_WEBHOOK_EVENTS.some(e => !currentEvents.includes(e))) {
-                                    update.webhook_events = [...new Set([...currentEvents, ...REQUIRED_WEBHOOK_EVENTS])];
-                                }
-                                return updateRetellAgent(agency.retell_api_key!, a.externalId, update);
+                        // Force-patch ALL agents to ensure webhook config is correct
+                        // (previous logic skipped agents that "matched" but may have had wrong URLs)
+                        if (externalAgents.length > 0) {
+                            await Promise.all(externalAgents.map(a => {
+                                return updateRetellAgent(agency.retell_api_key!, a.externalId, {
+                                    webhook_url: webhookUrl,
+                                    webhook_events: [...new Set([
+                                        ...((a.config.webhook_events as string[] | undefined) || []),
+                                        ...REQUIRED_WEBHOOK_EVENTS,
+                                    ])],
+                                });
                             }));
-                            console.log(`[SYNC] Patched webhook config on ${toPatch.length} Retell agents`);
+                            console.log(`[SYNC] Force-patched webhook config on ${externalAgents.length} Retell agents → ${webhookUrl}`);
                         }
                     } catch (err) {
                         console.error('[SYNC] Failed to patch webhook config:', err);
