@@ -142,7 +142,7 @@ export async function updateRetellAgent(
         agent_name: string;
         voice_id: string;
         llm_websocket_url: string;
-        webhook_url: string;
+        webhook_url: string | null;
         language: string;
         webhook_events: string[];
     }>

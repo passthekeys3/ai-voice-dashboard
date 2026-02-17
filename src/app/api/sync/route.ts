@@ -128,7 +128,7 @@ export async function POST() {
                         if (agentsWithWebhook.length > 0) {
                             await Promise.all(agentsWithWebhook.map(a => {
                                 return updateRetellAgent(agency.retell_api_key!, a.externalId, {
-                                    webhook_url: '',
+                                    webhook_url: null,
                                 });
                             }));
                             console.log(`[SYNC] Cleared agent-level webhook_url on ${agentsWithWebhook.length} agents (account-level webhook will apply)`);

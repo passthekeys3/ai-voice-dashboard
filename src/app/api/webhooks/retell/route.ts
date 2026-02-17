@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { executeWorkflows } from '@/lib/workflows/executor';
 import { broadcastCallUpdate } from '@/lib/realtime/broadcast';
-import { detectTimezone } from '@/lib/timezone/detector';
 import { accumulateUsage } from '@/lib/billing/usage';
-import { calculateCallScore } from '@/lib/scoring/call-score';
 import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-analyzer';
 import { waitUntil } from '@vercel/functions';
 import type { Workflow } from '@/types';
@@ -196,30 +194,7 @@ export async function POST(request: NextRequest) {
         // Retell combined_cost is already in cents
         const costCents = Math.round(payload.call.call_cost?.combined_cost || 0);
 
-        // Check for active A/B experiment and get variant info from call metadata
-        let experimentId: string | null = null;
-        let variantId: string | null = null;
-
-        // The variant is assigned when the call starts (see call_started event handling above)
-        // It gets stored in the call metadata by our system
-        if (payload.call.metadata?.experiment_id && payload.call.metadata?.variant_id) {
-            experimentId = payload.call.metadata.experiment_id as string;
-            variantId = payload.call.metadata.variant_id as string;
-        }
-
-        // Detect lead timezone from phone number
         const direction = payload.call.direction || 'outbound';
-        const leadPhone = direction === 'inbound'
-            ? payload.call.from_number
-            : payload.call.to_number;
-        const leadTimezone = leadPhone ? detectTimezone(leadPhone) : null;
-
-        // Calculate call quality score
-        const callScore = status === 'completed' ? calculateCallScore({
-            sentiment: payload.call.call_analysis?.user_sentiment,
-            durationSeconds,
-            status,
-        }) : null;
 
         // Upsert call
         const { error } = await supabase
@@ -240,15 +215,11 @@ export async function POST(request: NextRequest) {
                     audio_url: payload.call.recording_url,
                     summary: payload.call.call_analysis?.call_summary,
                     sentiment: payload.call.call_analysis?.user_sentiment,
-                    call_score: callScore,
                     started_at: new Date(payload.call.start_timestamp).toISOString(),
                     ended_at: payload.call.end_timestamp
                         ? new Date(payload.call.end_timestamp).toISOString()
                         : null,
                     metadata: payload.call.metadata,
-                    experiment_id: experimentId,
-                    variant_id: variantId,
-                    lead_timezone: leadTimezone,
                 },
                 { onConflict: 'external_id' }
             );
@@ -281,14 +252,12 @@ export async function POST(request: NextRequest) {
                     const analysis = await analyzeCallTranscript(payload.call.transcript!, agent.name);
                     if (analysis) {
                         // Update the call record with AI-enriched fields
+                        // Use only columns guaranteed to exist (call_score, topics, objections may not be migrated yet)
                         const { error: updateError } = await supabase
                             .from('calls')
                             .update({
                                 sentiment: analysis.sentiment,
                                 summary: analysis.summary,
-                                call_score: analysis.lead_score,
-                                topics: analysis.topics,
-                                objections: analysis.objections,
                                 metadata: {
                                     ...(payload.call.metadata || {}),
                                     ai_analysis: {
@@ -296,6 +265,8 @@ export async function POST(request: NextRequest) {
                                         action_items: analysis.action_items,
                                         call_outcome: analysis.call_outcome,
                                         lead_score: analysis.lead_score,
+                                        topics: analysis.topics,
+                                        objections: analysis.objections,
                                         analyzed_at: new Date().toISOString(),
                                     },
                                 },
