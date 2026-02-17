@@ -1,8 +1,11 @@
 /**
  * Error Logger utility
  *
- * Provides centralized error logging. Add Sentry or other providers here later.
+ * Centralized error logging with Sentry integration.
+ * Falls back to console-only when SENTRY_DSN is not configured.
  */
+
+import * as Sentry from '@sentry/nextjs';
 
 export interface ErrorContext {
     userId?: string;
@@ -22,6 +25,10 @@ export function logError(error: Error | unknown, context?: ErrorContext): void {
         stack: err.stack,
         ...context,
     });
+
+    Sentry.captureException(err, {
+        extra: context ? { ...context } as Record<string, unknown> : undefined,
+    });
 }
 
 /**
@@ -36,6 +43,11 @@ export function logInfo(message: string, data?: Record<string, unknown>): void {
  */
 export function logWarning(message: string, data?: Record<string, unknown>): void {
     console.warn('[WARN]', message, data);
+
+    Sentry.captureMessage(message, {
+        level: 'warning',
+        extra: data,
+    });
 }
 
 /**
