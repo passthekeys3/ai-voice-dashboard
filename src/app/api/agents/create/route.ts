@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { publishRetellAgent } from '@/lib/providers/retell';
 
 // POST /api/agents/create - Create a new agent in Retell
 export async function POST(request: NextRequest) {
@@ -99,8 +100,8 @@ export async function POST(request: NextRequest) {
                     llm_id: retellLlm.llm_id,
                 },
                 enable_backchannel: true,
-                // Note: webhook_url NOT set here — account-level webhook (Retell dashboard) handles all events.
-                // Agent-level webhook_url only updates draft versions, not published.
+                webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`}/api/webhooks/retell`,
+                webhook_events: ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'],
             }),
         });
 
@@ -114,6 +115,15 @@ export async function POST(request: NextRequest) {
 
         const retellAgent = await retellResponse.json();
         console.log('Retell agent created:', retellAgent.agent_id);
+
+        // Publish the agent so webhook config takes effect on live calls
+        // (create-agent creates a draft; publish makes it the active version)
+        try {
+            await publishRetellAgent(agency.retell_api_key, retellAgent.agent_id);
+        } catch (pubErr) {
+            console.error('Failed to publish agent after creation:', pubErr);
+            // Non-fatal: agent exists but webhook config is only on draft
+        }
 
         // Store in our database
         const { data: agent, error: dbError } = await supabase

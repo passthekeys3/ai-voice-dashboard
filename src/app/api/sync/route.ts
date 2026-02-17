@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getAgencyProviders, type NormalizedAgent, type NormalizedCall } from '@/lib/providers';
-import { updateRetellAgent } from '@/lib/providers/retell';
+import { listRetellAgents, ensureAgentWebhookConfig, REQUIRED_WEBHOOK_EVENTS } from '@/lib/providers/retell';
 
 export async function POST() {
     try {
@@ -119,22 +119,36 @@ export async function POST() {
                     }
                 }
 
-                // Clear agent-level webhook_url so account-level webhook (set in Retell dashboard) takes effect.
-                // Agent-level webhook_url overrides account-level, and update-agent only updates drafts
-                // (not published versions), so agent-level patching doesn't work for published agents.
+                // Ensure all Retell agents have webhook_url + transcript_updated event configured.
+                // update-agent only modifies the draft, so ensureAgentWebhookConfig also publishes
+                // the agent to make changes effective on live phone calls.
                 if (provider === 'retell' && agency.retell_api_key) {
+                    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`}/api/webhooks/retell`;
                     try {
-                        const agentsWithWebhook = externalAgents.filter(a => a.config.webhook_url);
-                        if (agentsWithWebhook.length > 0) {
-                            await Promise.all(agentsWithWebhook.map(a => {
-                                return updateRetellAgent(agency.retell_api_key!, a.externalId, {
-                                    webhook_url: null,
-                                });
-                            }));
-                            console.log(`[SYNC] Cleared agent-level webhook_url on ${agentsWithWebhook.length} agents (account-level webhook will apply)`);
+                        // Fetch fresh agent configs from Retell to check current webhook settings
+                        const retellAgents = await listRetellAgents(agency.retell_api_key);
+                        const retellMap = new Map(retellAgents.map(a => [a.agent_id, a]));
+
+                        let patchedCount = 0;
+                        for (const extAgent of externalAgents) {
+                            const retellAgent = retellMap.get(extAgent.externalId);
+                            if (!retellAgent) continue;
+                            try {
+                                const patched = await ensureAgentWebhookConfig(
+                                    agency.retell_api_key,
+                                    retellAgent,
+                                    webhookUrl
+                                );
+                                if (patched) patchedCount++;
+                            } catch (err) {
+                                console.error(`[SYNC] Failed to patch+publish agent ${extAgent.externalId}:`, err);
+                            }
+                        }
+                        if (patchedCount > 0) {
+                            console.log(`[SYNC] Patched & published webhook config on ${patchedCount} agents (url=${webhookUrl}, events=${REQUIRED_WEBHOOK_EVENTS.join(',')})`);
                         }
                     } catch (err) {
-                        console.error('[SYNC] Failed to clear agent webhook_url:', err);
+                        console.error('[SYNC] Failed to ensure agent webhook configs:', err);
                     }
                 }
             } catch (err) {

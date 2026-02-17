@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getAgencyProviders, type NormalizedAgent } from '@/lib/providers';
-// Retell webhook config is now managed at account level (Retell dashboard), not per-agent
+import { listRetellAgents, ensureAgentWebhookConfig, REQUIRED_WEBHOOK_EVENTS } from '@/lib/providers/retell';
 
 /**
  * Cron endpoint to sync all agencies' agents and phone numbers
@@ -90,8 +90,30 @@ export async function POST(request: NextRequest) {
                             }
                         }
 
-                        // Note: Webhook config is handled at the account level (Retell dashboard),
-                        // not per-agent. Agent-level webhook_url only updates drafts, not published versions.
+                        // Ensure webhook config (url + transcript_updated event) on all Retell agents
+                        if (provider === 'retell' && agency.retell_api_key) {
+                            const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`}/api/webhooks/retell`;
+                            try {
+                                const retellAgents = await listRetellAgents(agency.retell_api_key);
+                                const retellMap = new Map(retellAgents.map(a => [a.agent_id, a]));
+                                let patchedCount = 0;
+                                for (const extAgent of externalAgents) {
+                                    const retellAgent = retellMap.get(extAgent.externalId);
+                                    if (!retellAgent) continue;
+                                    try {
+                                        const patched = await ensureAgentWebhookConfig(agency.retell_api_key, retellAgent, webhookUrl);
+                                        if (patched) patchedCount++;
+                                    } catch (err) {
+                                        console.error(`[CRON SYNC] Failed to patch+publish agent ${extAgent.externalId}:`, err);
+                                    }
+                                }
+                                if (patchedCount > 0) {
+                                    console.log(`[CRON SYNC] Agency ${agency.name}: patched & published webhook config on ${patchedCount} agents (events=${REQUIRED_WEBHOOK_EVENTS.join(',')})`);
+                                }
+                            } catch (err) {
+                                console.error(`[CRON SYNC] Failed to ensure webhook configs for agency ${agency.name}:`, err);
+                            }
+                        }
 
                         // Sync Phone Numbers (Retell)
                         if (provider === 'retell' && agency.retell_api_key) {

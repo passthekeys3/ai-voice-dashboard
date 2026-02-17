@@ -154,7 +154,21 @@ export async function updateRetellAgent(
 }
 
 /**
+ * Publish an agent's draft to make changes live (affects phone calls).
+ * update-agent only modifies the draft; this publishes the draft to production.
+ */
+export async function publishRetellAgent(
+    apiKey: string,
+    agentId: string
+): Promise<void> {
+    await retellFetch<unknown>(apiKey, `/publish-agent/${agentId}`, {
+        method: 'POST',
+    });
+}
+
+/**
  * Ensure an agent has the required webhook_url and webhook_events configured.
+ * Updates the draft AND publishes to make changes effective on live calls.
  * Returns true if the agent was patched, false if already up to date.
  */
 export async function ensureAgentWebhookConfig(
@@ -179,7 +193,9 @@ export async function ensureAgentWebhookConfig(
         update.webhook_events = [...new Set([...currentEvents, ...REQUIRED_WEBHOOK_EVENTS])];
     }
 
+    // Update the draft, then publish to make it live
     await updateRetellAgent(apiKey, agent.agent_id, update);
+    await publishRetellAgent(apiKey, agent.agent_id);
     return true;
 }
 

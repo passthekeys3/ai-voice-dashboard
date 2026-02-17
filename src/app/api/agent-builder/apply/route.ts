@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getTemplateById, getTemplateActions } from '@/lib/agent-builder/templates';
+import { publishRetellAgent } from '@/lib/providers/retell';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_NAME_LENGTH = 200;
@@ -168,8 +169,8 @@ export async function POST(request: NextRequest) {
                     },
                     enable_backchannel: true,
                     language: safeLanguage === 'en' ? 'en-US' : safeLanguage,
-                    // Note: webhook_url NOT set here — account-level webhook (Retell dashboard) handles all events.
-                    // Agent-level webhook_url only updates draft versions, not published.
+                    webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`}/api/webhooks/retell`,
+                    webhook_events: ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'],
                 }),
             });
 
@@ -183,6 +184,13 @@ export async function POST(request: NextRequest) {
 
             const retellAgent = await retellResponse.json();
             externalId = retellAgent.agent_id;
+
+            // Publish so webhook config takes effect on live calls
+            try {
+                await publishRetellAgent(apiKey, retellAgent.agent_id);
+            } catch (pubErr) {
+                console.error('Failed to publish agent after creation:', pubErr);
+            }
         } else if (provider === 'vapi') {
             // Vapi agent creation
             const vapiResponse = await fetch('https://api.vapi.ai/assistant', {
