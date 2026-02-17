@@ -107,13 +107,19 @@ async function retellFetch<T>(
     }
 
     // Some endpoints (publish-agent, delete-agent) return non-JSON responses.
-    // Only parse as JSON if content-type indicates JSON; otherwise return undefined.
+    // Layer 1: Check content-type header
     const contentType = response.headers.get('content-type');
     if (!contentType?.includes('application/json')) {
         return undefined as T;
     }
 
-    return response.json();
+    // Layer 2: Catch JSON parse errors as fallback
+    // (some APIs don't set content-type correctly, or return empty bodies)
+    try {
+        return await response.json();
+    } catch {
+        return undefined as T;
+    }
 }
 
 export async function listRetellAgents(apiKey: string): Promise<RetellAgent[]> {
