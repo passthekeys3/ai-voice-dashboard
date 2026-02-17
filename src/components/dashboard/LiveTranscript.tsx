@@ -17,6 +17,7 @@ import {
     CheckCircle,
 } from 'lucide-react';
 import type { ConnectionStatus as ConnectionStatusType } from '@/types/realtime';
+import { createClient } from '@/lib/supabase/client';
 
 interface TranscriptLine {
     speaker: 'agent' | 'user';
@@ -69,17 +70,51 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
     const [loading, setLoading] = useState(true);
     const [ending, setEnding] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [connectionStatus] = useState<ConnectionStatusType>({
-        connected: true,
+    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusType>({
+        connected: false,
         reconnecting: false,
     });
     const transcriptRef = useRef<HTMLDivElement>(null);
     const [autoScroll, setAutoScroll] = useState(true);
-    const [prevLineCount, setPrevLineCount] = useState(0);
+    const prevLineCountRef = useRef(0);
     const [isTyping, setIsTyping] = useState(false);
     const lastActivityRef = useRef<number>(Date.now());
     const isActiveRef = useRef(false);
     const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const supabaseRef = useRef(createClient());
+
+    // Apply transcript update to state — used by both fetch and realtime
+    const applyTranscriptUpdate = useCallback((newCall: LiveCall) => {
+        // Mark new lines
+        if (newCall.transcript.length > prevLineCountRef.current) {
+            newCall.transcript = newCall.transcript.map((line, idx) => ({
+                ...line,
+                isNew: idx >= prevLineCountRef.current,
+            }));
+            prevLineCountRef.current = newCall.transcript.length;
+            lastActivityRef.current = Date.now();
+
+            // Clear "new" flag after animation
+            setTimeout(() => {
+                setCall(prev => prev ? {
+                    ...prev,
+                    transcript: prev.transcript.map(l => ({ ...l, isNew: false }))
+                } : null);
+            }, 1000);
+        }
+
+        // Show typing indicator if call is active and recent activity
+        if (newCall.is_active) {
+            const timeSinceActivity = Date.now() - lastActivityRef.current;
+            setIsTyping(timeSinceActivity < 5000);
+        } else {
+            setIsTyping(false);
+        }
+
+        setCall(newCall);
+        isActiveRef.current = newCall.is_active;
+        setError(null);
+    }, []);
 
     const fetchCall = useCallback(async () => {
         try {
@@ -92,48 +127,48 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                 throw new Error('Failed to fetch call');
             }
             const result = await response.json();
-            const newCall = result.data as LiveCall;
-
-            // Mark new lines
-            if (newCall.transcript.length > prevLineCount) {
-                newCall.transcript = newCall.transcript.map((line, idx) => ({
-                    ...line,
-                    isNew: idx >= prevLineCount,
-                }));
-                setPrevLineCount(newCall.transcript.length);
-                lastActivityRef.current = Date.now();
-
-                // Clear "new" flag after animation
-                setTimeout(() => {
-                    setCall(prev => prev ? {
-                        ...prev,
-                        transcript: prev.transcript.map(l => ({ ...l, isNew: false }))
-                    } : null);
-                }, 1000);
-            }
-
-            // Show typing indicator if call is active and recent activity
-            if (newCall.is_active) {
-                const timeSinceActivity = Date.now() - lastActivityRef.current;
-                setIsTyping(timeSinceActivity < 5000);
-            } else {
-                setIsTyping(false);
-            }
-
-            setCall(newCall);
-            isActiveRef.current = newCall.is_active;
-            setError(null);
+            applyTranscriptUpdate(result.data as LiveCall);
         } catch (err) {
             console.error('Failed to fetch call:', err);
             setError('Failed to load call data');
         } finally {
             setLoading(false);
         }
-    }, [callId, prevLineCount]);
+    }, [callId, providerProp, applyTranscriptUpdate]);
 
     useEffect(() => {
+        const supabase = supabaseRef.current;
+
         // Initial fetch
         fetchCall();
+
+        // Subscribe to Supabase Realtime for instant transcript updates.
+        // The webhook handler writes to the `calls` table, and postgres_changes
+        // broadcasts updates to subscribed clients immediately.
+        const channel = supabase
+            .channel(`live-transcript:${callId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'calls',
+                    filter: `external_id=eq.${callId}`,
+                },
+                () => {
+                    // Transcript updated in DB — re-fetch to get parsed data
+                    fetchCall();
+                }
+            )
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    setConnectionStatus({ connected: true, lastConnected: new Date(), reconnecting: false });
+                } else if (status === 'CLOSED') {
+                    setConnectionStatus(prev => ({ ...prev, connected: false, reconnecting: true }));
+                } else if (status === 'CHANNEL_ERROR') {
+                    setConnectionStatus(prev => ({ ...prev, connected: false, error: 'Channel error' }));
+                }
+            });
 
         // Update duration every second if call is active
         const durationInterval = setInterval(() => {
@@ -156,14 +191,15 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
             }
         }, 1000);
 
-        // Poll every 1 second for near-real-time transcript updates
+        // Fallback polling every 5 seconds (in case Realtime misses an update)
         pollIntervalRef.current = setInterval(() => {
             if (isActiveRef.current) {
                 fetchCall();
             }
-        }, 1000);
+        }, 5000);
 
         return () => {
+            supabase.removeChannel(channel);
             clearInterval(durationInterval);
             clearInterval(typingInterval);
             if (pollIntervalRef.current) {
@@ -295,7 +331,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                         Live Transcript
                         {call.is_active && (
                             <span className="text-xs font-normal text-green-600">
-                                (updating every 3s)
+                                (live)
                             </span>
                         )}
                     </CardTitle>

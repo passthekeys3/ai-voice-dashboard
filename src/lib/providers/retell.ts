@@ -171,23 +171,25 @@ export async function updateRetellAgent(
 /**
  * Publish an agent's draft to make changes live (affects phone calls).
  * update-agent only modifies the draft; this publishes the draft to production.
+ *
+ * Matches the official Retell SDK headers: Accept any content type,
+ * no Content-Type header (no request body).
  */
 export async function publishRetellAgent(
     apiKey: string,
     agentId: string
 ): Promise<void> {
-    // Call publish-agent directly (not via retellFetch) for full diagnostic logging
     const url = `${RETELL_BASE_URL}/publish-agent/${agentId}`;
     const response = await fetch(url, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
+            'Accept': '*/*',
         },
     });
 
     const responseBody = await response.text();
-    console.log(`[RETELL] Publish agent ${agentId}: status=${response.status}, body="${responseBody}", content-type=${response.headers.get('content-type')}`);
+    console.log(`[RETELL] Publish agent ${agentId}: status=${response.status}, body="${responseBody}"`);
 
     if (!response.ok) {
         throw new Error(`Retell publish-agent failed: ${response.status} - ${responseBody}`);
