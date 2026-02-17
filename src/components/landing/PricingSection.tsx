@@ -18,6 +18,7 @@ const plans = [
             'Email support',
         ],
         cta: 'Get started',
+        href: '/signup',
         recommended: false,
     },
     {
@@ -32,6 +33,7 @@ const plans = [
             'White-label client portal',
         ],
         cta: 'Get started',
+        href: '/signup',
         recommended: true,
     },
     {
@@ -46,6 +48,7 @@ const plans = [
             'API access & dedicated support',
         ],
         cta: 'Contact sales',
+        href: 'mailto:hello@buildvoiceai.com',
         recommended: false,
     },
 ];
@@ -134,7 +137,7 @@ export function PricingSection() {
                                 className="relative z-10 w-full rounded-full active:scale-[0.98] transition-[transform,background-color,box-shadow,border-color] duration-200"
                                 asChild
                             >
-                                <Link href="/signup">{plan.cta}</Link>
+                                <Link href={plan.href}>{plan.cta}</Link>
                             </Button>
                         </div>
                     ))}

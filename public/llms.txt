@@ -1,0 +1,50 @@
+# BuildVoiceAI
+
+> BuildVoiceAI is an AI voice agent platform for agencies and businesses. Users describe what they want their phone agent to do in plain English, and the platform generates, deploys, and manages the agent — including voice selection, call scripts, phone number provisioning, and post-call CRM automation. No coding required.
+
+## What it does
+
+BuildVoiceAI covers four core workflows:
+
+- **Build**: Describe your agent in natural language. The system generates the conversation flow, selects a voice, and configures the phone number. Agents are typically live within 30 minutes.
+- **Monitor**: View call volume, success rates, costs, and duration in a unified dashboard. Click any call to read the full transcript or listen to the recording.
+- **Automate**: Post-call workflows automatically update CRM contacts, create deals, book appointments, and send follow-ups. Integrates natively with GoHighLevel, HubSpot, Calendly, and Slack.
+- **Scale**: White-label the entire platform for agency clients. Clients get a branded dashboard — your logo, your domain, their data only. They never see BuildVoiceAI branding.
+
+## Voice providers
+
+Three providers are supported: Retell AI, Vapi, and Bland. Agents can run A/B experiments across providers to find the best performer. All voices use neural models and sound natural and conversational.
+
+## Integrations
+
+- CRM: GoHighLevel, HubSpot
+- Booking: Calendly
+- Notifications: Slack
+- Phone numbers: Bring your own (Twilio) or purchase directly through the platform
+
+## Pricing
+
+All plans include a 14-day free trial.
+
+- **Starter — $49/month**: Up to 3 voice agents, 500 minutes included, call analytics dashboard, email support.
+- **Growth — $149/month** (recommended): Up to 15 voice agents, 2,000 minutes included, CRM integrations (GHL + HubSpot), white-label client portal.
+- **Agency — $399/month**: Unlimited voice agents, 10,000 minutes included, full white-label platform, API access, dedicated support.
+
+## Common use cases
+
+Dental receptionist (appointment booking, insurance questions), real estate lead qualification, sales follow-up calling, customer support with human escalation, after-hours call handling.
+
+## Security
+
+All data is encrypted at rest and in transit. Call recordings and transcripts are scoped per account with row-level security. Customer data is never used to train AI models.
+
+## Key pages
+
+- [Homepage](https://buildvoiceai.com): Landing page with interactive agent builder demo
+- [Pricing](https://buildvoiceai.com/#pricing): Plan comparison and feature details
+- [Sign up](https://buildvoiceai.com/signup): Start a free 14-day trial
+- [Log in](https://buildvoiceai.com/login): Existing user access
+
+## Optional
+
+- [FAQ](https://buildvoiceai.com/#faq): Common questions about setup, integrations, white-labeling, and billing

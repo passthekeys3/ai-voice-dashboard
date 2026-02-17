@@ -38,6 +38,14 @@ const faqs = [
         question: 'Can I try it before committing to a plan?',
         answer: 'Every plan includes a 14-day free trial. You can build agents, make test calls, and explore the full platform before entering payment details.',
     },
+    {
+        question: 'What happens if I go over my included minutes?',
+        answer: 'Overages are billed at per-minute rates that vary by voice provider — typically $0.05–$0.12/min. You can see real-time cost tracking in your dashboard and set monthly spending limits to avoid surprises.',
+    },
+    {
+        question: 'Is the platform HIPAA or SOC 2 compliant?',
+        answer: 'We take compliance seriously. Call data is encrypted at rest and in transit, and access controls are enforced at the row level. For healthcare or regulated industries, contact us to discuss BAA arrangements and our compliance roadmap.',
+    },
 ];
 
 function FAQItem({
@@ -79,6 +87,8 @@ export function FAQSection() {
     const { ref: headerRef, isInView: headerVisible } = useInView({ threshold: 0.2 });
     const { ref: gridRef, isInView: gridVisible } = useInView({ threshold: 0.1 });
 
+    const half = Math.ceil(faqs.length / 2);
+
     return (
         <section id="faq" className="py-24 sm:py-32 px-4 sm:px-6">
             <div className="max-w-5xl mx-auto">
@@ -100,7 +110,7 @@ export function FAQSection() {
                 <div ref={gridRef} className="grid gap-x-12 gap-y-0 md:grid-cols-2">
                     {/* Left column */}
                     <div>
-                        {faqs.slice(0, 4).map((faq, i) => (
+                        {faqs.slice(0, half).map((faq, i) => (
                             <FAQItem
                                 key={i}
                                 faq={faq}
@@ -113,13 +123,13 @@ export function FAQSection() {
                     </div>
                     {/* Right column */}
                     <div>
-                        {faqs.slice(4).map((faq, i) => (
+                        {faqs.slice(half).map((faq, i) => (
                             <FAQItem
-                                key={i + 4}
+                                key={i + half}
                                 faq={faq}
-                                index={i + 4}
-                                isOpen={openIndex === i + 4}
-                                onToggle={() => setOpenIndex(openIndex === i + 4 ? null : i + 4)}
+                                index={i + half}
+                                isOpen={openIndex === i + half}
+                                onToggle={() => setOpenIndex(openIndex === i + half ? null : i + half)}
                                 isInView={gridVisible}
                             />
                         ))}

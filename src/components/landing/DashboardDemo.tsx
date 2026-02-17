@@ -41,9 +41,13 @@ export function DashboardDemo() {
             <div
                 className={`relative z-10 max-w-5xl mx-auto animate-on-scroll-scale stagger-3 ${isInView ? 'is-visible' : ''}`}
             >
-                <div className="rounded-xl border border-border/50 shadow-2xl shadow-black/[0.08] dark:shadow-black/[0.3] overflow-hidden">
+                <div
+                    className="rounded-xl border border-border/50 shadow-2xl shadow-black/[0.08] dark:shadow-black/[0.3] overflow-hidden"
+                    role="img"
+                    aria-label="BuildVoiceAI dashboard overview showing call analytics, agent performance, and recent call activity"
+                >
                     {/* Traffic light dots bar */}
-                    <div className="flex items-center gap-1.5 px-4 py-2.5 bg-muted/80 border-b border-border/50">
+                    <div className="flex items-center gap-1.5 px-4 py-2.5 bg-muted/80 border-b border-border/50" aria-hidden="true">
                         <div className="w-2.5 h-2.5 rounded-full bg-rose-400/80" />
                         <div className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
                         <div className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />

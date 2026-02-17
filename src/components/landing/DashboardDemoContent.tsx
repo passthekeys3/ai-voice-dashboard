@@ -558,7 +558,7 @@ function DashboardView({ isInView, hasAnimated }: { isInView: boolean; hasAnimat
                 }}
             >
                 <h3 className="text-sm sm:text-base font-bold tracking-tight">
-                    Welcome back, Kevin
+                    Welcome back
                 </h3>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                     Here&apos;s an overview of your voice AI performance

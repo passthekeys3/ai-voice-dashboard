@@ -31,7 +31,19 @@ function ProductVisual({ visual, isInView }: { visual: string; isInView: boolean
                 className={`absolute -inset-px rounded-xl bg-gradient-to-br ${accent} opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm`}
                 aria-hidden="true"
             />
-            <div className="relative rounded-xl border border-border overflow-hidden bg-muted/30">
+            <div
+                className="relative rounded-xl border border-border overflow-hidden bg-muted/30"
+                role="img"
+                aria-label={
+                    visual === 'builder'
+                        ? 'AI agent builder interface mockup'
+                        : visual === 'analytics'
+                          ? 'Real-time call analytics dashboard mockup'
+                          : visual === 'workflows'
+                            ? 'Post-call automation workflows mockup'
+                            : 'White-label client portal mockup'
+                }
+            >
                 {visual === 'builder' && <BuilderMockup isInView={isInView} />}
                 {visual === 'analytics' && <AnalyticsMockup isInView={isInView} />}
                 {visual === 'workflows' && <WorkflowsMockup isInView={isInView} />}

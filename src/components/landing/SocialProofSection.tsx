@@ -3,6 +3,12 @@
 import { Quote } from 'lucide-react';
 import { useInView } from '@/hooks/useInView';
 
+const avatarColors = [
+    'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+    'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
+    'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+];
+
 const testimonials = [
     {
         quote: 'We replaced our entire call center with three voice agents. Setup took an afternoon — our CRM was syncing by dinner.',
@@ -27,6 +33,13 @@ const testimonials = [
     },
 ];
 
+function getInitials(name: string) {
+    return name
+        .split(' ')
+        .map((n) => n[0])
+        .join('');
+}
+
 export function SocialProofSection() {
     const { ref: headerRef, isInView: headerVisible } = useInView({ threshold: 0.2 });
     const { ref: gridRef, isInView: gridVisible } = useInView({ threshold: 0.1 });
@@ -39,7 +52,7 @@ export function SocialProofSection() {
                     <p
                         className={`text-xs font-medium text-muted-foreground uppercase tracking-widest mb-3 animate-on-scroll stagger-1 ${headerVisible ? 'is-visible' : ''}`}
                     >
-                        Trusted by agencies
+                        Trusted by 200+ agencies
                     </p>
                     <h2
                         className={`text-3xl sm:text-4xl font-bold tracking-tight animate-on-scroll stagger-2 ${headerVisible ? 'is-visible' : ''}`}
@@ -65,26 +78,34 @@ export function SocialProofSection() {
                                 animationFillMode: 'both',
                             }}
                         >
+                            {/* Metric badge */}
+                            {t.metric && (
+                                <div className="mb-4">
+                                    <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-xs font-semibold text-foreground">
+                                        {t.metric}
+                                    </span>
+                                </div>
+                            )}
+
                             <Quote className="h-5 w-5 text-muted-foreground/40 mb-4 shrink-0" />
 
                             <blockquote className="text-[15px] leading-relaxed text-foreground mb-6 flex-1">
                                 &ldquo;{t.quote}&rdquo;
                             </blockquote>
 
-                            <div className="border-t border-border pt-4">
-                                <p className="text-sm font-medium">{t.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                    {t.role}, {t.company}
-                                </p>
-                            </div>
-
-                            {t.metric && (
-                                <div className="mt-3">
-                                    <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-xs font-medium text-foreground">
-                                        {t.metric}
-                                    </span>
+                            <div className="border-t border-border pt-4 flex items-center gap-3">
+                                <div
+                                    className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold ${avatarColors[index % avatarColors.length]}`}
+                                >
+                                    {getInitials(t.name)}
                                 </div>
-                            )}
+                                <div>
+                                    <p className="text-sm font-medium">{t.name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {t.role}, {t.company}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     ))}
                 </div>

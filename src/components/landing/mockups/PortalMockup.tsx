@@ -182,20 +182,6 @@ function PortalContent({ isInView }: { isInView: boolean }) {
                 </table>
             </div>
 
-            {/* Powered by footer */}
-            <div
-                className="text-center mt-2 animate-fade-up"
-                style={{
-                    opacity: isInView ? undefined : 0,
-                    animationDelay: '850ms',
-                    animationFillMode: 'both',
-                    animationPlayState: isInView ? 'running' : 'paused',
-                }}
-            >
-                <span className="text-[8px] text-muted-foreground/50">
-                    Powered by <span className="font-medium">BuildVoiceAI</span>
-                </span>
-            </div>
         </div>
     );
 }
