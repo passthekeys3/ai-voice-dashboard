@@ -119,11 +119,10 @@ export async function POST() {
                     }
                 }
 
-                // Ensure all Retell agents have webhook_url + transcript_updated event configured.
+                // Ensure all Retell agents have webhook_events (including transcript_updated) configured.
                 // update-agent only modifies the draft, so ensureAgentWebhookConfig also publishes
                 // the agent to make changes effective on live phone calls.
                 if (provider === 'retell' && agency.retell_api_key) {
-                    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`}/api/webhooks/retell`;
                     try {
                         // Fetch fresh agent configs from Retell to check current webhook settings
                         const retellAgents = await listRetellAgents(agency.retell_api_key);
@@ -136,8 +135,7 @@ export async function POST() {
                             try {
                                 const patched = await ensureAgentWebhookConfig(
                                     agency.retell_api_key,
-                                    retellAgent,
-                                    webhookUrl
+                                    retellAgent
                                 );
                                 if (patched) patchedCount++;
                             } catch (err) {
@@ -145,7 +143,7 @@ export async function POST() {
                             }
                         }
                         if (patchedCount > 0) {
-                            console.log(`[SYNC] Patched & published webhook config on ${patchedCount} agents (url=${webhookUrl}, events=${REQUIRED_WEBHOOK_EVENTS.join(',')})`);
+                            console.log(`[SYNC] Patched & published webhook config on ${patchedCount} agents (events=${REQUIRED_WEBHOOK_EVENTS.join(',')})`);
                         }
                     } catch (err) {
                         console.error('[SYNC] Failed to ensure agent webhook configs:', err);

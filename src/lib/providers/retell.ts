@@ -180,6 +180,7 @@ export async function publishRetellAgent(
     agentId: string
 ): Promise<void> {
     const url = `${RETELL_BASE_URL}/publish-agent/${agentId}`;
+    // Uses raw fetch instead of retellFetch — publish needs Accept: */* without Content-Type
     const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -188,10 +189,8 @@ export async function publishRetellAgent(
         },
     });
 
-    const responseBody = await response.text();
-    console.log(`[RETELL] Publish agent ${agentId}: status=${response.status}, body="${responseBody}"`);
-
     if (!response.ok) {
+        const responseBody = await response.text();
         throw new Error(`Retell publish-agent failed: ${response.status} - ${responseBody}`);
     }
 }
@@ -211,8 +210,7 @@ export async function publishRetellAgent(
  */
 export async function ensureAgentWebhookConfig(
     apiKey: string,
-    agent: RetellAgent,
-    webhookUrl: string
+    agent: RetellAgent
 ): Promise<boolean> {
     // Only set webhook_events — do NOT set webhook_url on the agent.
     // The account-level webhook URL handles delivery.

@@ -90,9 +90,8 @@ export async function POST(request: NextRequest) {
                             }
                         }
 
-                        // Ensure webhook config (url + transcript_updated event) on all Retell agents
+                        // Ensure webhook_events (including transcript_updated) on all Retell agents
                         if (provider === 'retell' && agency.retell_api_key) {
-                            const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`}/api/webhooks/retell`;
                             try {
                                 const retellAgents = await listRetellAgents(agency.retell_api_key);
                                 const retellMap = new Map(retellAgents.map(a => [a.agent_id, a]));
@@ -101,7 +100,7 @@ export async function POST(request: NextRequest) {
                                     const retellAgent = retellMap.get(extAgent.externalId);
                                     if (!retellAgent) continue;
                                     try {
-                                        const patched = await ensureAgentWebhookConfig(agency.retell_api_key, retellAgent, webhookUrl);
+                                        const patched = await ensureAgentWebhookConfig(agency.retell_api_key, retellAgent);
                                         if (patched) patchedCount++;
                                     } catch (err) {
                                         console.error(`[CRON SYNC] Failed to patch+publish agent ${extAgent.externalId}:`, err);
