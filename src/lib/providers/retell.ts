@@ -195,23 +195,34 @@ export async function publishRetellAgent(
 }
 
 /**
- * Ensure an agent has the required webhook_url and webhook_events configured.
- * Always updates the draft AND publishes to guarantee the PUBLISHED version
- * has the right config — list-agents returns drafts, so we can't trust that
- * a matching draft means the published version is also correct.
+ * Ensure an agent has the required webhook_events configured.
+ *
+ * Key insight: Phone calls use the account-level webhook (set in Retell
+ * dashboard) since the published agent version has no webhook_url.
+ * The account-level webhook only sends default events (call_started,
+ * call_ended, call_analyzed) — NOT transcript_updated.
+ *
+ * Strategy: Set webhook_events on the agent (including transcript_updated)
+ * WITHOUT setting webhook_url. This tells Retell which events to fire
+ * while keeping the account-level webhook as the delivery target.
+ * Also attempt to publish so the published version has the events config.
  */
 export async function ensureAgentWebhookConfig(
     apiKey: string,
     agent: RetellAgent,
     webhookUrl: string
 ): Promise<boolean> {
-    // Always force update + publish. The update-agent call is idempotent and
-    // publish-agent is cheap. This guarantees the PUBLISHED version (used by
-    // live phone calls) has webhook_url + transcript_updated events.
+    // Only set webhook_events — do NOT set webhook_url on the agent.
+    // The account-level webhook URL handles delivery.
+    // Setting webhook_url on the agent would override the account-level
+    // webhook, but since publish doesn't work via API, the published
+    // version's webhook_url stays null and the account-level webhook
+    // would be used anyway.
     await updateRetellAgent(apiKey, agent.agent_id, {
-        webhook_url: webhookUrl,
         webhook_events: REQUIRED_WEBHOOK_EVENTS,
     });
+    // Attempt to publish — may not actually work (returns 200 with empty body)
+    // but worth trying in case it eventually does
     await publishRetellAgent(apiKey, agent.agent_id);
     return true;
 }
