@@ -8,7 +8,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+const CLAUDE_MODEL = 'claude-sonnet-4-6-20250514';
 const MAX_OUTPUT_TOKENS = 4096;
 
 let anthropicClient: Anthropic | null = null;

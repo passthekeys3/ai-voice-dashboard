@@ -10,7 +10,7 @@ import { BUILDER_SYSTEM_PROMPT, buildMessages } from './prompts';
 import type { LLMBuilderResponse, Voice, VoiceCharacteristics, VoiceRecommendation } from './types';
 
 // --- Configuration constants ---
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+const CLAUDE_MODEL = 'claude-sonnet-4-6-20250514';
 const MAX_OUTPUT_TOKENS = 4096;
 const TOP_VOICES_COUNT = 3;
 

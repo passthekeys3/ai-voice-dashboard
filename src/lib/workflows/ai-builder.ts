@@ -9,7 +9,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { APIError } from '@anthropic-ai/sdk';
 import type { WorkflowTrigger, WorkflowCondition, WorkflowAction } from '@/types';
 
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+const CLAUDE_MODEL = 'claude-haiku-4-20250514';
 const MAX_OUTPUT_TOKENS = 4096;
 
 let anthropicClient: Anthropic | null = null;

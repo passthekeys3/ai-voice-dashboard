@@ -1,7 +1,7 @@
 /**
  * Test Conversation Evaluator
  *
- * Uses Claude Haiku to evaluate a simulated conversation against success criteria.
+ * Uses Claude Sonnet to evaluate a simulated conversation against success criteria.
  * Returns per-criterion pass/fail with reasoning, overall score, and summary.
  * Follows the call-analyzer.ts JSON-output pattern.
  */
@@ -9,7 +9,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { TranscriptMessage, SuccessCriterion, CriterionResult } from '@/types';
 
-const HAIKU_MODEL = 'claude-haiku-4-20250514';
+const CLAUDE_MODEL = 'claude-sonnet-4-6-20250514';
 const MAX_EVAL_TOKENS = 1024;
 
 let anthropicClient: Anthropic | null = null;
@@ -104,7 +104,7 @@ Simulated conversation:
 ${transcriptText}`;
 
         const response = await client.messages.create({
-            model: HAIKU_MODEL,
+            model: CLAUDE_MODEL,
             max_tokens: MAX_EVAL_TOKENS,
             system: EVALUATION_SYSTEM_PROMPT,
             messages: [{ role: 'user', content: userPrompt }],

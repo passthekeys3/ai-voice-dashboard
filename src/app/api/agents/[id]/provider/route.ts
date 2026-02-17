@@ -229,7 +229,7 @@ export async function PATCH(
                     const vapiAssistant = await getVapiAssistant(agency.vapi_api_key, agent.external_id);
                     updateData.model = {
                         provider: vapiAssistant.model?.provider || 'openai',
-                        model: vapiAssistant.model?.model || 'gpt-4o-mini',
+                        model: vapiAssistant.model?.model || 'gpt-4o',
                         systemPrompt: body.prompt,
                     };
                 }

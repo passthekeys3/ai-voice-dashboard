@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
                 body: JSON.stringify({
                     general_prompt: safeSystemPrompt,
                     begin_message: safeFirstMessage || null,
-                    model: 'gpt-4o-mini',
+                    model: 'gpt-4o',
                     start_speaker: 'agent',
                 }),
             });
@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
                     firstMessage: safeFirstMessage || undefined,
                     model: {
                         provider: 'openai',
-                        model: 'gpt-4o-mini',
+                        model: 'gpt-4o',
                         messages: [
                             {
                                 role: 'system',

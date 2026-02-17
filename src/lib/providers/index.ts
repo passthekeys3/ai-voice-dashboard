@@ -211,7 +211,7 @@ function createVapiClient(apiKey: string): VoiceProviderClient {
                 name: config.name,
                 model: config.prompt ? {
                     provider: 'openai',
-                    model: 'gpt-4',
+                    model: 'gpt-4o',
                     systemPrompt: config.prompt,
                 } : undefined,
             });

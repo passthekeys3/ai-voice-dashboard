@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify({
                 general_prompt: system_prompt || undefined,
                 begin_message: first_message || null,
-                model: 'gpt-4o-mini',
+                model: 'gpt-4o',
                 start_speaker: 'agent',
             }),
         });
