@@ -151,21 +151,17 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
         // Initial fetch
         fetchCall();
 
-        // Subscribe to Supabase Realtime for instant transcript updates.
-        // The webhook handler writes to the `calls` table, and postgres_changes
-        // broadcasts updates to subscribed clients immediately.
+        // Subscribe to Supabase Broadcast for instant transcript updates.
+        // The webhook handler broadcasts to this channel after writing to DB.
+        // Uses Broadcast (not postgres_changes) because RLS on the calls table
+        // blocks postgres_changes from delivering events to the anon client.
         const channel = supabase
-            .channel(`live-transcript:${callId}`)
+            .channel(`call:${callId}:transcript`)
             .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'calls',
-                    filter: `external_id=eq.${callId}`,
-                },
+                'broadcast',
+                { event: 'call:transcript' },
                 () => {
-                    // Transcript updated in DB — re-fetch to get parsed data
+                    // Transcript updated — re-fetch to get parsed data
                     lastUpdateSourceRef.current = 'realtime';
                     fetchCall();
                 }

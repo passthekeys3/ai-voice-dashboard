@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { executeWorkflows } from '@/lib/workflows/executor';
-import { broadcastCallUpdate } from '@/lib/realtime/broadcast';
+import { broadcastCallUpdate, broadcastTranscriptUpdate } from '@/lib/realtime/broadcast';
 import { accumulateUsage } from '@/lib/billing/usage';
 import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-analyzer';
 import { waitUntil } from '@vercel/functions';
@@ -153,6 +153,16 @@ export async function POST(request: NextRequest) {
                         started_at: new Date(payload.call.start_timestamp).toISOString(),
                     }, { onConflict: 'external_id' });
             }
+
+            // Broadcast transcript update via Supabase Broadcast (not postgres_changes)
+            // so frontend receives it instantly without RLS blocking the notification
+            waitUntil(
+                broadcastTranscriptUpdate({
+                    _agencyId: agent.agency_id,
+                    callId: payload.call.call_id,
+                    transcript,
+                }).catch(err => console.error('Failed to broadcast transcript update:', err))
+            );
 
             return NextResponse.json({ received: true });
         }
