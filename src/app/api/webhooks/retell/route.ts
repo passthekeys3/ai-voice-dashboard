@@ -181,6 +181,14 @@ export async function POST(request: NextRequest) {
 
         const direction = payload.call.direction || 'outbound';
 
+        // Check for A/B experiment metadata (injected by traffic splitting at call initiation)
+        let experimentId: string | null = null;
+        let variantId: string | null = null;
+        if (payload.call.metadata?.experiment_id && payload.call.metadata?.variant_id) {
+            experimentId = payload.call.metadata.experiment_id as string;
+            variantId = payload.call.metadata.variant_id as string;
+        }
+
         // Upsert call
         const { error } = await supabase
             .from('calls')
@@ -205,6 +213,8 @@ export async function POST(request: NextRequest) {
                         ? new Date(payload.call.end_timestamp).toISOString()
                         : null,
                     metadata: payload.call.metadata,
+                    experiment_id: experimentId,
+                    variant_id: variantId,
                 },
                 { onConflict: 'external_id' }
             );

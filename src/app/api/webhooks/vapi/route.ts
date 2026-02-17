@@ -580,9 +580,10 @@ export async function POST(request: NextRequest) {
                         transcript: call.transcript,
                         recording_url: call.recordingUrl,
                         summary: call.summary,
+                        sentiment: inferredSentiment,
                         started_at: startedAt,
                         ended_at: endedAt,
-                        metadata: {} as Record<string, unknown>,
+                        metadata: (call.metadata || {}) as Record<string, unknown>,
                     };
 
                     // Refresh Google Calendar token if expired before passing to executor

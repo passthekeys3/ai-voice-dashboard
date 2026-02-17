@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
-import { initiateCall } from '@/lib/calls/initiate';
+import { initiateCall, type CallInitiationParams } from '@/lib/calls/initiate';
 import { isWithinCallingWindow, getNextValidCallTime } from '@/lib/timezone/detector';
+import { applyExperiment } from '@/lib/experiments/apply';
 
 // This endpoint should be called by a cron job every minute
 // Example: Vercel Cron, or external service like cron-job.org
@@ -118,7 +119,8 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Initiate call via provider-agnostic module
-                const callResult = await initiateCall({
+                // Resolve A/B experiment before initiating
+                let callInitParams: CallInitiationParams = {
                     provider: provider as 'retell' | 'vapi' | 'bland',
                     providerApiKey,
                     externalAgentId,
@@ -130,7 +132,16 @@ export async function POST(request: NextRequest) {
                         lead_timezone: call.lead_timezone,
                         ...(call.metadata || {}),
                     },
+                };
+
+                const experimentResult = await applyExperiment({
+                    agentId: call.agent_id,
+                    agencyId: call.agency_id,
+                    callParams: callInitParams,
                 });
+                callInitParams = experimentResult.callParams;
+
+                const callResult = await initiateCall(callInitParams);
 
                 if (!callResult.success) {
                     throw new Error(callResult.error || 'Call initiation failed');

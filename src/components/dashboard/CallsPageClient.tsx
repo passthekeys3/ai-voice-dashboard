@@ -137,7 +137,7 @@ export function CallsPageClient({
                             />
                         </div>
                         <SearchInput
-                            placeholder="Search by phone number, agent, or status..."
+                            placeholder="Search by phone, agent, status, or transcript..."
                             value={searchQuery}
                             onChange={handleSearch}
                             className="w-full sm:w-64"

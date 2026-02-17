@@ -12,9 +12,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
-import { initiateCall } from '@/lib/calls/initiate';
+import { initiateCall, type CallInitiationParams } from '@/lib/calls/initiate';
 import { detectTimezone, isWithinCallingWindow, getNextValidCallTime } from '@/lib/timezone/detector';
 import { verifyGHLTriggerSignature, validateGHLTriggerPayload } from './validate';
+import { applyExperiment } from '@/lib/experiments/apply';
 
 export async function POST(request: NextRequest) {
     try {
@@ -230,8 +231,8 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        // Call immediately
-        const callResult = await initiateCall({
+        // Call immediately — resolve A/B experiment before initiating
+        let callInitParams: CallInitiationParams = {
             provider: agentRecord.provider as 'retell' | 'vapi' | 'bland',
             providerApiKey,
             externalAgentId: agentRecord.external_id,
@@ -245,7 +246,17 @@ export async function POST(request: NextRequest) {
                 trigger_source: 'ghl_trigger',
                 ...(data.metadata || {}),
             },
+        };
+
+        // Apply A/B experiment traffic splitting (if a running experiment exists for this agent)
+        const experimentResult = await applyExperiment({
+            agentId: agentRecord.id,
+            agencyId: agency.id,
+            callParams: callInitParams,
         });
+        callInitParams = experimentResult.callParams;
+
+        const callResult = await initiateCall(callInitParams);
 
         if (!callResult.success) {
             await logTrigger(supabase, {

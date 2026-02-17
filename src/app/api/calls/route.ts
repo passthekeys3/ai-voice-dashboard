@@ -91,7 +91,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
         query = query.lte('started_at', `${dateTo}T23:59:59.999Z`);
     }
 
-    // Text search across phone numbers, status, and agent name
+    // Text search across phone numbers, status, agent name, and transcript
     if (search) {
         // Find agents matching the search term (for agent name search)
         const matchingAgentIds = agentIds
@@ -104,9 +104,9 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
             : [];
 
         if (matchingAgentIds.length > 0) {
-            query = query.or(`from_number.ilike.%${search}%,to_number.ilike.%${search}%,status.ilike.%${search}%,agent_id.in.(${matchingAgentIds.join(',')})`);
+            query = query.or(`from_number.ilike.%${search}%,to_number.ilike.%${search}%,status.ilike.%${search}%,transcript.ilike.%${search}%,agent_id.in.(${matchingAgentIds.join(',')})`);
         } else {
-            query = query.or(`from_number.ilike.%${search}%,to_number.ilike.%${search}%,status.ilike.%${search}%`);
+            query = query.or(`from_number.ilike.%${search}%,to_number.ilike.%${search}%,status.ilike.%${search}%,transcript.ilike.%${search}%`);
         }
     }
 

@@ -12,6 +12,14 @@ export interface CallInitiationParams {
     toNumber: string;
     fromNumber?: string;
     metadata?: Record<string, unknown>;
+    /**
+     * Optional prompt override for A/B experiments.
+     * - Retell: Injected via retell_llm_dynamic_variables as {{experiment_prompt}}
+     *   (agent's LLM prompt must include this variable for it to take effect)
+     * - Vapi: Injected via assistantOverrides.variableValues as {{experiment_prompt}}
+     * - Bland: Overrides the `task` parameter directly (full prompt replacement)
+     */
+    promptOverride?: string;
 }
 
 export interface CallInitiationResult {
@@ -49,6 +57,14 @@ async function initiateRetellCall(params: CallInitiationParams): Promise<CallIni
 
         if (params.fromNumber) {
             body.from_number = params.fromNumber;
+        }
+
+        // Inject experiment prompt via dynamic variables.
+        // The agent's LLM prompt must include {{experiment_prompt}} for this to work.
+        if (params.promptOverride) {
+            body.retell_llm_dynamic_variables = {
+                experiment_prompt: params.promptOverride,
+            };
         }
 
         const response = await fetch('https://api.retellai.com/v2/create-phone-call', {
@@ -93,6 +109,16 @@ async function initiateVapiCall(params: CallInitiationParams): Promise<CallIniti
 
         if (params.fromNumber) {
             body.phoneNumberId = params.fromNumber; // Vapi uses phone number ID
+        }
+
+        // Inject experiment prompt via assistant overrides variable values.
+        // The assistant's system prompt must include {{experiment_prompt}} for this to work.
+        if (params.promptOverride) {
+            body.assistantOverrides = {
+                variableValues: {
+                    experiment_prompt: params.promptOverride,
+                },
+            };
         }
 
         const response = await fetch('https://api.vapi.ai/call/phone', {
@@ -142,6 +168,11 @@ async function initiateBlandCall(params: CallInitiationParams): Promise<CallInit
 
         if (params.fromNumber) {
             body.from = params.fromNumber;
+        }
+
+        // Bland supports direct task/prompt override per-call
+        if (params.promptOverride) {
+            body.task = params.promptOverride;
         }
 
         const response = await fetch('https://api.bland.ai/v1/calls', {
