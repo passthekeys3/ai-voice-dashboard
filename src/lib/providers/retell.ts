@@ -176,10 +176,22 @@ export async function publishRetellAgent(
     apiKey: string,
     agentId: string
 ): Promise<void> {
-    await retellFetch<unknown>(apiKey, `/publish-agent/${agentId}`, {
+    // Call publish-agent directly (not via retellFetch) for full diagnostic logging
+    const url = `${RETELL_BASE_URL}/publish-agent/${agentId}`;
+    const response = await fetch(url, {
         method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+        },
     });
-    console.log(`[RETELL] Published agent ${agentId}`);
+
+    const responseBody = await response.text();
+    console.log(`[RETELL] Publish agent ${agentId}: status=${response.status}, body="${responseBody}", content-type=${response.headers.get('content-type')}`);
+
+    if (!response.ok) {
+        throw new Error(`Retell publish-agent failed: ${response.status} - ${responseBody}`);
+    }
 }
 
 /**
