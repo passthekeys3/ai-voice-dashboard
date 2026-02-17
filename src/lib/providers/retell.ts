@@ -106,6 +106,13 @@ async function retellFetch<T>(
         throw new Error(`Retell API error: ${response.status} - ${error}`);
     }
 
+    // Some endpoints (publish-agent, delete-agent) return non-JSON responses.
+    // Only parse as JSON if content-type indicates JSON; otherwise return undefined.
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+        return undefined as T;
+    }
+
     return response.json();
 }
 
@@ -166,6 +173,7 @@ export async function publishRetellAgent(
     await retellFetch<unknown>(apiKey, `/publish-agent/${agentId}`, {
         method: 'POST',
     });
+    console.log(`[RETELL] Published agent ${agentId}`);
 }
 
 /**
