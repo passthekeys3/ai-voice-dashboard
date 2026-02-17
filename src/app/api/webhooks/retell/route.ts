@@ -99,6 +99,18 @@ export async function POST(request: NextRequest) {
 
         // Handle transcript_updated event — lightweight: just update DB transcript and return
         if (payload.event === 'transcript_updated') {
+            // Diagnostic: dump all keys on the call object to see what Retell actually sends
+            const allKeys = Object.keys(payload.call as Record<string, unknown>);
+            const callData = payload.call as Record<string, unknown>;
+            const transcriptKeys = allKeys.filter(k => k.includes('transcript'));
+            console.log(`[RETELL WEBHOOK] transcript_updated KEYS: all=[${allKeys.join(',')}] transcript_fields=[${transcriptKeys.join(',')}]`);
+            // Log first 500 chars of any transcript field found
+            for (const k of transcriptKeys) {
+                const val = callData[k];
+                const preview = typeof val === 'string' ? val.slice(0, 200) : JSON.stringify(val)?.slice(0, 200);
+                console.log(`[RETELL WEBHOOK] transcript_updated ${k}: type=${typeof val}, isArray=${Array.isArray(val)}, preview=${preview}`);
+            }
+
             let transcript: string | undefined;
 
             // Primary: transcript_with_tool_calls — the field Retell populates during LIVE calls.
