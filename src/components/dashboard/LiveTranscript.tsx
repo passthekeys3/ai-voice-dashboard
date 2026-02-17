@@ -156,12 +156,12 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
             }
         }, 1000);
 
-        // Poll every 3 seconds for transcript updates from the provider API
+        // Poll every 1 second for near-real-time transcript updates
         pollIntervalRef.current = setInterval(() => {
             if (isActiveRef.current) {
                 fetchCall();
             }
-        }, 3000);
+        }, 1000);
 
         return () => {
             clearInterval(durationInterval);
