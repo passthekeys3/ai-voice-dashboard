@@ -168,8 +168,8 @@ export async function POST(request: NextRequest) {
                     },
                     enable_backchannel: true,
                     language: safeLanguage === 'en' ? 'en-US' : safeLanguage,
-                    webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`}/api/webhooks/retell`,
-                    webhook_events: ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'],
+                    // Note: webhook_url NOT set here — account-level webhook (Retell dashboard) handles all events.
+                    // Agent-level webhook_url only updates draft versions, not published.
                 }),
             });
 

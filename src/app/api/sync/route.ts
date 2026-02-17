@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getAgencyProviders, type NormalizedAgent, type NormalizedCall } from '@/lib/providers';
-import { updateRetellAgent, REQUIRED_WEBHOOK_EVENTS } from '@/lib/providers/retell';
+import { updateRetellAgent } from '@/lib/providers/retell';
 
 export async function POST() {
     try {
@@ -119,34 +119,22 @@ export async function POST() {
                     }
                 }
 
-                // Auto-patch Retell agents' webhook_url + webhook_events (reuses already-fetched data)
+                // Clear agent-level webhook_url so account-level webhook (set in Retell dashboard) takes effect.
+                // Agent-level webhook_url overrides account-level, and update-agent only updates drafts
+                // (not published versions), so agent-level patching doesn't work for published agents.
                 if (provider === 'retell' && agency.retell_api_key) {
                     try {
-                        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
-                        const webhookUrl = `${appUrl}/api/webhooks/retell`;
-
-                        // Diagnostic: log computed URL and current agent configs
-                        console.log(`[SYNC] Webhook patching: computed webhookUrl = "${webhookUrl}" (NEXT_PUBLIC_APP_URL="${process.env.NEXT_PUBLIC_APP_URL}", VERCEL_URL="${process.env.VERCEL_URL}")`);
-                        for (const a of externalAgents.slice(0, 3)) {
-                            console.log(`[SYNC] Agent ${a.externalId} current webhook: url="${a.config.webhook_url}", events=${JSON.stringify(a.config.webhook_events)}`);
-                        }
-
-                        // Force-patch ALL agents to ensure webhook config is correct
-                        // (previous logic skipped agents that "matched" but may have had wrong URLs)
-                        if (externalAgents.length > 0) {
-                            await Promise.all(externalAgents.map(a => {
+                        const agentsWithWebhook = externalAgents.filter(a => a.config.webhook_url);
+                        if (agentsWithWebhook.length > 0) {
+                            await Promise.all(agentsWithWebhook.map(a => {
                                 return updateRetellAgent(agency.retell_api_key!, a.externalId, {
-                                    webhook_url: webhookUrl,
-                                    webhook_events: [...new Set([
-                                        ...((a.config.webhook_events as string[] | undefined) || []),
-                                        ...REQUIRED_WEBHOOK_EVENTS,
-                                    ])],
+                                    webhook_url: '',
                                 });
                             }));
-                            console.log(`[SYNC] Force-patched webhook config on ${externalAgents.length} Retell agents → ${webhookUrl}`);
+                            console.log(`[SYNC] Cleared agent-level webhook_url on ${agentsWithWebhook.length} agents (account-level webhook will apply)`);
                         }
                     } catch (err) {
-                        console.error('[SYNC] Failed to patch webhook config:', err);
+                        console.error('[SYNC] Failed to clear agent webhook_url:', err);
                     }
                 }
             } catch (err) {

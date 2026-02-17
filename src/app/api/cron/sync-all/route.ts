@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getAgencyProviders, type NormalizedAgent } from '@/lib/providers';
-import { listRetellAgents, ensureAgentWebhookConfig } from '@/lib/providers/retell';
+// Retell webhook config is now managed at account level (Retell dashboard), not per-agent
 
 /**
  * Cron endpoint to sync all agencies' agents and phone numbers
@@ -90,25 +90,8 @@ export async function POST(request: NextRequest) {
                             }
                         }
 
-                        // Auto-patch Retell agents to set webhook_url and webhook_events
-                        if (provider === 'retell' && agency.retell_api_key) {
-                            try {
-                                const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
-                                const webhookUrl = `${appUrl}/api/webhooks/retell`;
-                                const rawAgents = await listRetellAgents(agency.retell_api_key);
-                                let patched = 0;
-                                for (const agent of rawAgents) {
-                                    if (await ensureAgentWebhookConfig(agency.retell_api_key, agent, webhookUrl)) {
-                                        patched++;
-                                    }
-                                }
-                                if (patched > 0) {
-                                    console.log(`[CRON SYNC] Agency ${agency.name}: patched webhook config on ${patched} Retell agents`);
-                                }
-                            } catch (err) {
-                                console.error(`[CRON SYNC] Failed to patch webhook config for ${agency.name}:`, err);
-                            }
-                        }
+                        // Note: Webhook config is handled at the account level (Retell dashboard),
+                        // not per-agent. Agent-level webhook_url only updates drafts, not published versions.
 
                         // Sync Phone Numbers (Retell)
                         if (provider === 'retell' && agency.retell_api_key) {
