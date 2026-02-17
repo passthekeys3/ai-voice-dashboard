@@ -149,9 +149,10 @@ export async function POST(request: NextRequest) {
             variantId = call.metadata.variant_id as string;
         }
 
-        // Infer sentiment from transcript (Vapi doesn't provide it natively)
+        // Infer sentiment from transcript (Vapi doesn't provide it natively).
+        // Default to 'neutral' if transcript is empty/missing to avoid undefined in DB.
         const inferredSentiment = status === 'completed'
-            ? inferBasicSentiment(call.transcript)
+            ? (call.transcript ? inferBasicSentiment(call.transcript) : 'neutral') || 'neutral'
             : undefined;
 
         // Calculate call quality score

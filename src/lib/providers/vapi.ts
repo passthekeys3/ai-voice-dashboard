@@ -3,6 +3,8 @@
  * https://docs.vapi.ai/api-reference/
  */
 
+import { fetchWithRetry } from '@/lib/retry';
+
 const VAPI_BASE_URL = 'https://api.vapi.ai';
 
 export interface VapiAssistant {
@@ -91,18 +93,23 @@ async function vapiFetch<T>(
     path: string,
     options: RequestInit = {}
 ): Promise<T> {
-    const response = await fetch(`${VAPI_BASE_URL}${path}`, {
-        ...options,
-        headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            ...options.headers,
+    const response = await fetchWithRetry(
+        `${VAPI_BASE_URL}${path}`,
+        {
+            ...options,
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+                ...options.headers,
+            },
         },
-    });
+        { onRetry: (attempt, _err, delay) => console.warn(`Vapi ${path} retry #${attempt} in ${delay}ms`) },
+    );
 
     if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Vapi API error: ${response.status} - ${error}`);
+        const errorBody = await response.text();
+        console.error(`Vapi API error [${response.status}] ${path}:`, errorBody);
+        throw new Error(`Vapi API error: ${response.status}`);
     }
 
     return response.json();

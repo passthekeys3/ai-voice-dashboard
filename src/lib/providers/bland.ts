@@ -7,6 +7,8 @@
  * Auth uses a raw API key in the authorization header (NOT Bearer).
  */
 
+import { fetchWithRetry } from '@/lib/retry';
+
 const BLAND_BASE_URL = 'https://api.bland.ai/v1';
 
 // ============================================
@@ -85,18 +87,23 @@ async function blandFetch<T>(
     path: string,
     options: RequestInit = {}
 ): Promise<T> {
-    const response = await fetch(`${BLAND_BASE_URL}${path}`, {
-        ...options,
-        headers: {
-            'authorization': apiKey,  // Raw key, NOT Bearer
-            'Content-Type': 'application/json',
-            ...options.headers,
+    const response = await fetchWithRetry(
+        `${BLAND_BASE_URL}${path}`,
+        {
+            ...options,
+            headers: {
+                'authorization': apiKey,  // Raw key, NOT Bearer
+                'Content-Type': 'application/json',
+                ...options.headers,
+            },
         },
-    });
+        { onRetry: (attempt, _err, delay) => console.warn(`Bland ${path} retry #${attempt} in ${delay}ms`) },
+    );
 
     if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Bland API error: ${response.status} - ${error}`);
+        const errorBody = await response.text();
+        console.error(`Bland API error [${response.status}] ${path}:`, errorBody);
+        throw new Error(`Bland API error: ${response.status}`);
     }
 
     return response.json();

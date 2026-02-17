@@ -731,43 +731,33 @@ export async function updateContactPipeline(
     dealName?: string,
 ): Promise<{ success: boolean; dealId?: string; error?: string }> {
     try {
-        // Search for existing deal associated with this contact in this pipeline
-        const searchResponse = await fetch(
-            `${HUBSPOT_API_BASE}/crm/v3/objects/deals/search`,
+        // Look up deals associated with this contact directly (avoids N+1 queries).
+        // Step 1: Get all deal IDs associated with this contact in one call.
+        let existingDealId: string | null = null;
+        const assocResponse = await fetch(
+            `${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${contactId}/associations/deals`,
             {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${config.accessToken}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    filterGroups: [{
-                        filters: [
-                            { propertyName: 'pipeline', operator: 'EQ', value: pipelineId },
-                        ],
-                    }],
-                    properties: ['dealname', 'dealstage', 'pipeline'],
-                    limit: 100,
-                }),
+                headers: { 'Authorization': `Bearer ${config.accessToken}` },
             }
         );
 
-        let existingDealId: string | null = null;
+        if (assocResponse.ok) {
+            const assocData = await assocResponse.json();
+            const associatedDealIds: string[] = (assocData.results || []).map((a: { id: string }) => a.id);
 
-        if (searchResponse.ok) {
-            const searchData = await searchResponse.json();
-            // Check associations to find deals linked to this contact
-            for (const deal of searchData.results || []) {
-                const assocResponse = await fetch(
-                    `${HUBSPOT_API_BASE}/crm/v3/objects/deals/${deal.id}/associations/contacts`,
+            // Step 2: For each associated deal, check if it belongs to the target pipeline.
+            // This is typically a small list (1-5 deals per contact), not 100s.
+            for (const dealId of associatedDealIds) {
+                const dealResponse = await fetch(
+                    `${HUBSPOT_API_BASE}/crm/v3/objects/deals/${dealId}?properties=pipeline,dealstage`,
                     {
                         headers: { 'Authorization': `Bearer ${config.accessToken}` },
                     }
                 );
-                if (assocResponse.ok) {
-                    const assocData = await assocResponse.json();
-                    if ((assocData.results || []).some((a: { id: string }) => a.id === contactId)) {
-                        existingDealId = deal.id;
+                if (dealResponse.ok) {
+                    const dealData = await dealResponse.json();
+                    if (dealData.properties?.pipeline === pipelineId) {
+                        existingDealId = dealId;
                         break;
                     }
                 }

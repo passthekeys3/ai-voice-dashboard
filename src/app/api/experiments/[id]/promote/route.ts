@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getRetellAgent, updateRetellLLM } from '@/lib/providers/retell';
+import { updateVapiAssistant } from '@/lib/providers/vapi';
 
 interface PromoteRequestBody {
     variant_id: string;
@@ -94,12 +95,21 @@ export async function POST(
                 general_prompt: winnerVariant.prompt,
             });
         } else if (agent.provider === 'vapi') {
-            // TODO: Implement VAPI prompt update when their API supports it
-            // For now, return a message
-            return NextResponse.json(
-                { error: 'VAPI prompt promotion is not yet supported' },
-                { status: 501 }
-            );
+            if (!agency.vapi_api_key) {
+                return NextResponse.json(
+                    { error: 'Vapi API key not configured' },
+                    { status: 400 }
+                );
+            }
+
+            // Update the assistant's model.systemPrompt via PATCH
+            await updateVapiAssistant(agency.vapi_api_key, agent.external_id, {
+                model: {
+                    provider: 'openai',
+                    model: 'gpt-4o',
+                    systemPrompt: winnerVariant.prompt,
+                },
+            });
         }
 
         // Mark experiment as completed with winner

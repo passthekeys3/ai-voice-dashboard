@@ -3,6 +3,8 @@
  * https://docs.retellai.com/api-references/
  */
 
+import { fetchWithRetry } from '@/lib/retry';
+
 const RETELL_BASE_URL = 'https://api.retellai.com';
 
 export interface RetellAgent {
@@ -92,18 +94,23 @@ async function retellFetch<T>(
     path: string,
     options: RequestInit = {}
 ): Promise<T> {
-    const response = await fetch(`${RETELL_BASE_URL}${path}`, {
-        ...options,
-        headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            ...options.headers,
+    const response = await fetchWithRetry(
+        `${RETELL_BASE_URL}${path}`,
+        {
+            ...options,
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+                ...options.headers,
+            },
         },
-    });
+        { onRetry: (attempt, _err, delay) => console.warn(`Retell ${path} retry #${attempt} in ${delay}ms`) },
+    );
 
     if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Retell API error: ${response.status} - ${error}`);
+        const errorBody = await response.text();
+        console.error(`Retell API error [${response.status}] ${path}:`, errorBody);
+        throw new Error(`Retell API error: ${response.status}`);
     }
 
     // Some endpoints (publish-agent, delete-agent) return non-JSON responses.
@@ -191,7 +198,8 @@ export async function publishRetellAgent(
 
     if (!response.ok) {
         const responseBody = await response.text();
-        throw new Error(`Retell publish-agent failed: ${response.status} - ${responseBody}`);
+        console.error(`Retell publish-agent error [${response.status}]:`, responseBody);
+        throw new Error(`Retell publish-agent failed: ${response.status}`);
     }
 }
 
@@ -221,9 +229,27 @@ export async function ensureAgentWebhookConfig(
     await updateRetellAgent(apiKey, agent.agent_id, {
         webhook_events: REQUIRED_WEBHOOK_EVENTS,
     });
-    // Attempt to publish — may not actually work (returns 200 with empty body)
-    // but worth trying in case it eventually does
-    await publishRetellAgent(apiKey, agent.agent_id);
+
+    // Attempt to publish, then verify the config persisted.
+    try {
+        await publishRetellAgent(apiKey, agent.agent_id);
+
+        // Verify: re-fetch agent and confirm webhook_events are set
+        const updated = await getRetellAgent(apiKey, agent.agent_id);
+        const hasAllEvents = REQUIRED_WEBHOOK_EVENTS.every(
+            e => updated.webhook_events?.includes(e)
+        );
+        if (!hasAllEvents) {
+            console.warn(
+                `Retell publish may not have persisted webhook_events for agent ${agent.agent_id}. ` +
+                `Expected: ${REQUIRED_WEBHOOK_EVENTS.join(', ')}; Got: ${updated.webhook_events?.join(', ') ?? 'none'}`
+            );
+        }
+    } catch (err) {
+        // Publish is best-effort — draft config is still correct
+        console.warn('Retell publish-agent failed (non-fatal):', err instanceof Error ? err.message : err);
+    }
+
     return true;
 }
 
@@ -342,7 +368,8 @@ function retellMultipartPost<T>(
                 res.on('data', (chunk: Buffer) => { data += chunk.toString(); });
                 res.on('end', () => {
                     if (res.statusCode && res.statusCode >= 400) {
-                        reject(new Error(`Retell API error: ${res.statusCode} - ${data}`));
+                        console.error(`Retell multipart API error [${res.statusCode}] ${path}:`, data);
+                        reject(new Error(`Retell API error: ${res.statusCode}`));
                         return;
                     }
                     try {

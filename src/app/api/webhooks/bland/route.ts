@@ -7,11 +7,27 @@ import { accumulateUsage } from '@/lib/billing/usage';
 import { calculateCallScore } from '@/lib/scoring/call-score';
 import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-analyzer';
 import { waitUntil } from '@vercel/functions';
+import crypto from 'crypto';
 import type { Workflow } from '@/types';
+
+// Verify Bland webhook signature using HMAC-SHA256 (same pattern as Vapi).
+// The webhook secret is derived from the agency's Bland API key.
+function verifyBlandSignature(body: string, signature: string | null, apiKey: string): boolean {
+    if (!signature) return false;
+
+    try {
+        const hash = crypto
+            .createHmac('sha256', apiKey)
+            .update(body)
+            .digest('hex');
+        return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(hash));
+    } catch {
+        return false;
+    }
+}
 
 // Bland.ai webhook payload
 // Bland fires the webhook URL set per-call (not per-agent).
-// There is no HMAC signature — we validate by checking pathway_id → known agent.
 interface BlandWebhookPayload {
     call_id: string;
     c_id?: string;
@@ -93,6 +109,20 @@ export async function POST(request: NextRequest) {
         if (!blandApiKey) {
             console.error('Bland API key not configured for agency — rejecting webhook');
             return NextResponse.json({ error: 'API key not configured' }, { status: 401 });
+        }
+
+        // Verify webhook signature if present (graceful: warn but allow unsigned
+        // requests during migration period so existing integrations don't break).
+        const blandSignature = request.headers.get('x-bland-signature');
+        if (blandSignature) {
+            if (!verifyBlandSignature(rawBody, blandSignature, blandApiKey)) {
+                console.error('Invalid Bland webhook signature');
+                return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+            }
+        } else {
+            // No signature header — log warning. Once Bland supports signing
+            // webhooks natively, this should become a hard reject.
+            console.warn('Bland webhook received without signature — skipping verification');
         }
 
         // Convert Bland units

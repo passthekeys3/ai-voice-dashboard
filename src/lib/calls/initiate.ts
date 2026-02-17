@@ -78,18 +78,20 @@ async function initiateRetellCall(params: CallInitiationParams): Promise<CallIni
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+            console.error('Retell call initiation error:', response.status, errorData);
             return {
                 success: false,
-                error: errorData.message || `Retell API error: ${response.status}`,
+                error: 'Failed to initiate call via Retell',
             };
         }
 
         const data = await response.json();
         return { success: true, callId: data.call_id };
     } catch (error) {
+        console.error('Retell call initiation exception:', error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Retell call initiation failed',
+            error: 'Failed to initiate call via Retell',
         };
     }
 }
@@ -132,18 +134,20 @@ async function initiateVapiCall(params: CallInitiationParams): Promise<CallIniti
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+            console.error('Vapi call initiation error:', response.status, errorData);
             return {
                 success: false,
-                error: errorData.message || `Vapi API error: ${response.status}`,
+                error: 'Failed to initiate call via Vapi',
             };
         }
 
         const data = await response.json();
         return { success: true, callId: data.id };
     } catch (error) {
+        console.error('Vapi call initiation exception:', error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Vapi call initiation failed',
+            error: 'Failed to initiate call via Vapi',
         };
     }
 }
@@ -186,18 +190,20 @@ async function initiateBlandCall(params: CallInitiationParams): Promise<CallInit
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+            console.error('Bland call initiation error:', response.status, errorData);
             return {
                 success: false,
-                error: errorData.message || `Bland API error: ${response.status}`,
+                error: 'Failed to initiate call via Bland',
             };
         }
 
         const data = await response.json();
         return { success: true, callId: data.call_id };
     } catch (error) {
+        console.error('Bland call initiation exception:', error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Bland call initiation failed',
+            error: 'Failed to initiate call via Bland',
         };
     }
 }
