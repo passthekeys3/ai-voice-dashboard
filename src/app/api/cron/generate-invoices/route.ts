@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
+import { getTierFromPriceId, getTierConfig, type PlanTier } from '@/lib/billing/tiers';
 
 /**
  * Monthly Invoice Generation Cron
@@ -8,8 +9,10 @@ import { createServiceClient } from '@/lib/supabase/server';
  * POST /api/cron/generate-invoices
  *
  * Runs on the 1st of each month at 6 AM UTC.
- * For each client with per_minute billing and a Stripe customer ID,
- * creates a Stripe invoice for the previous month's usage.
+ *
+ * 1. Client per-minute usage invoices (via agency Connect accounts)
+ * 2. Client subscription invoices (via agency Connect accounts)
+ * 3. Agency client overage charges (billed to agency's platform subscription)
  *
  * Protected by CRON_SECRET bearer token.
  */
@@ -70,7 +73,7 @@ export async function POST(request: NextRequest) {
         }
 
         const stripe = getStripe();
-        const results: { clientId: string; clientName: string; billingType: string; status: string; amount?: number }[] = [];
+        const results: { clientId?: string; agencyId?: string; clientName?: string; agencyName?: string; billingType: string; status: string; amount?: number }[] = [];
 
         // ---- Per-Minute Clients ----
         if (clients && clients.length > 0) {
@@ -230,9 +233,84 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // ---- Agency Client Overage Billing ----
+        // For each agency with an active subscription, count active clients
+        // and charge for any over the tier limit.
+        const { data: agencies, error: agenciesError } = await supabase
+            .from('agencies')
+            .select('id, name, stripe_customer_id, subscription_status, subscription_price_id')
+            .in('subscription_status', ['active', 'trialing']);
+
+        if (agenciesError) {
+            console.error('Failed to fetch agencies for overage billing:', agenciesError);
+        }
+
+        if (agencies && agencies.length > 0) {
+            for (const agency of agencies) {
+                try {
+                    if (!agency.stripe_customer_id || !agency.subscription_price_id) {
+                        continue;
+                    }
+
+                    // Determine tier from price ID
+                    const tier = getTierFromPriceId(agency.subscription_price_id);
+                    if (!tier) continue;
+
+                    const tierConfig = getTierConfig(tier);
+                    if (!tierConfig) continue;
+
+                    const maxClients = tierConfig.limits.maxClients;
+                    const overageRate = tierConfig.limits.additionalClientPrice;
+
+                    // Count active clients for this agency
+                    const { count: clientCount, error: countError } = await supabase
+                        .from('clients')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('agency_id', agency.id)
+                        .eq('is_active', true);
+
+                    if (countError || clientCount === null) {
+                        console.error(`Failed to count clients for agency ${agency.name}:`, countError);
+                        continue;
+                    }
+
+                    const extraClients = clientCount - maxClients;
+                    if (extraClients <= 0) continue;
+
+                    const overageCents = extraClients * overageRate * 100; // overageRate is in dollars
+
+                    // Create an invoice item on the agency's platform subscription customer
+                    await stripe.invoiceItems.create({
+                        customer: agency.stripe_customer_id,
+                        amount: overageCents,
+                        currency: 'usd',
+                        description: `Additional clients overage: ${extraClients} extra client${extraClients > 1 ? 's' : ''} × $${overageRate}/client - ${monthLabel}`,
+                    });
+
+                    results.push({
+                        agencyId: agency.id,
+                        agencyName: agency.name,
+                        billingType: 'client_overage',
+                        status: 'invoiced',
+                        amount: overageCents,
+                    });
+
+                    console.log(`[client_overage] Invoice item created for ${agency.name}: ${extraClients} extra clients × $${overageRate} = $${(overageCents / 100).toFixed(2)}`);
+                } catch (err) {
+                    console.error(`Failed to create client overage invoice for agency ${agency.name}:`, err);
+                    results.push({
+                        agencyId: agency.id,
+                        agencyName: agency.name,
+                        billingType: 'client_overage',
+                        status: 'error',
+                    });
+                }
+            }
+        }
+
         const invoicesCreated = results.filter(r => r.status === 'invoiced').length;
-        const totalClients = (clients?.length || 0) + (subClients?.length || 0);
-        console.log(`Invoice generation complete: ${invoicesCreated}/${totalClients} clients invoiced for ${monthLabel}`);
+        const totalItems = results.length;
+        console.log(`Invoice generation complete: ${invoicesCreated}/${totalItems} items invoiced for ${monthLabel}`);
 
         return NextResponse.json({
             success: true,

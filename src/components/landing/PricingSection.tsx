@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,14 +10,15 @@ const byokPlans = [
     {
         name: 'Starter',
         description: 'For small, growing teams.',
-        price: '$99',
-        period: '/mo',
-        billing: 'Billed monthly',
+        monthlyPrice: 99,
+        yearlyMonthly: 83,
+        yearlyTotal: 990,
         features: [
             '3 Clients',
             '$15/client for additional clients',
             'Unlimited Agents',
             'AI Agent Builder',
+            'Custom Domain',
             'Call Analytics Dashboard',
             'Workflow Automation',
             'Email Support',
@@ -28,16 +30,15 @@ const byokPlans = [
     {
         name: 'Growth',
         description: 'For scaling businesses.',
-        price: '$249',
-        period: '/mo',
-        billing: 'Billed monthly',
+        monthlyPrice: 249,
+        yearlyMonthly: 208,
+        yearlyTotal: 2490,
         features: [
             '5 Clients',
             '$12/client for additional clients',
             'All Starter features',
             'CRM Integrations (GHL, HubSpot)',
             'Stripe Connect Billing',
-            'Custom Domain',
         ],
         cta: 'Get started',
         href: '/signup',
@@ -47,9 +48,9 @@ const byokPlans = [
     {
         name: 'Scale',
         description: 'For high-volume agencies.',
-        price: '$499',
-        period: '/mo',
-        billing: 'Billed monthly',
+        monthlyPrice: 499,
+        yearlyMonthly: 416,
+        yearlyTotal: 4990,
         features: [
             '10 Clients',
             '$10/client for additional clients',
@@ -83,6 +84,7 @@ const managedPlan = {
 };
 
 export function PricingSection() {
+    const [isYearly, setIsYearly] = useState(false);
     const { ref: headerRef, isInView: headerVisible } = useInView({ threshold: 0.2 });
     const { ref: gridRef, isInView: gridVisible } = useInView({ threshold: 0.1 });
     const { ref: managedRef, isInView: managedVisible } = useInView({ threshold: 0.1 });
@@ -107,6 +109,33 @@ export function PricingSection() {
                     >
                         Self-serve plans for teams who know AI, or a fully managed option if you don&apos;t.
                     </p>
+
+                    {/* Billing toggle */}
+                    <div className={`mt-8 inline-flex items-center gap-1 rounded-full border bg-muted/50 p-1 animate-on-scroll stagger-3 ${headerVisible ? 'is-visible' : ''}`}>
+                        <button
+                            onClick={() => setIsYearly(false)}
+                            className={`relative rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
+                                !isYearly
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                            Monthly
+                        </button>
+                        <button
+                            onClick={() => setIsYearly(true)}
+                            className={`relative rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
+                                isYearly
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                            Yearly
+                        </button>
+                        <span className="ml-1 mr-2 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium px-2 py-0.5">
+                            -2 months
+                        </span>
+                    </div>
                 </div>
 
                 {/* BYOK label */}
@@ -118,69 +147,77 @@ export function PricingSection() {
 
                 {/* BYOK Cards grid */}
                 <div ref={gridRef} className="grid gap-6 md:grid-cols-3">
-                    {byokPlans.map((plan, index) => (
-                        <div
-                            key={plan.name}
-                            className={`
-                                relative rounded-xl border p-8 flex flex-col
-                                transition-all duration-200
-                                hover:-translate-y-1 hover:shadow-lg
-                                animate-on-scroll-scale
-                                ${gridVisible ? 'is-visible' : ''}
-                                ${plan.recommended
-                                    ? 'border-foreground/20 shadow-sm'
-                                    : 'border-border'
-                                }
-                            `}
-                            style={{
-                                animationDelay: `${index * 100}ms`,
-                                animationFillMode: 'both',
-                            }}
-                        >
-                            {plan.recommended && (
-                                <>
-                                    <div
-                                        className="absolute -inset-px rounded-xl bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-transparent pointer-events-none"
-                                        aria-hidden="true"
-                                    />
-                                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-foreground text-background text-xs font-medium px-3 py-0.5 rounded-full z-10">
-                                        {'badge' in plan && plan.badge ? plan.badge : 'Popular'}
-                                    </span>
-                                </>
-                            )}
+                    {byokPlans.map((plan, index) => {
+                        const displayPrice = isYearly ? plan.yearlyMonthly : plan.monthlyPrice;
 
-                            <div className="relative z-10 mb-6">
-                                <h3 className="text-lg font-semibold">{plan.name}</h3>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    {plan.description}
-                                </p>
-                                <div className="mt-4">
-                                    <span className="text-3xl font-bold">{plan.price}</span>
-                                    <span className="text-muted-foreground text-sm ml-1">{plan.period}</span>
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1">{plan.billing}</p>
-                            </div>
-
-                            <div className="relative z-10 h-px bg-border mb-6" />
-
-                            <ul className="relative z-10 space-y-2.5 mb-8 flex-1">
-                                {plan.features.map((feature) => (
-                                    <li key={feature} className="text-sm text-muted-foreground flex items-center gap-2">
-                                        <Check className="h-4 w-4 shrink-0" />
-                                        {feature}
-                                    </li>
-                                ))}
-                            </ul>
-
-                            <Button
-                                variant={plan.recommended ? 'default' : 'outline'}
-                                className="relative z-10 w-full rounded-full active:scale-[0.98] transition-[transform,background-color,box-shadow,border-color] duration-200"
-                                asChild
+                        return (
+                            <div
+                                key={plan.name}
+                                className={`
+                                    relative rounded-xl border p-8 flex flex-col
+                                    transition-all duration-200
+                                    hover:-translate-y-1 hover:shadow-lg
+                                    animate-on-scroll-scale
+                                    ${gridVisible ? 'is-visible' : ''}
+                                    ${plan.recommended
+                                        ? 'border-foreground/20 shadow-sm'
+                                        : 'border-border'
+                                    }
+                                `}
+                                style={{
+                                    animationDelay: `${index * 100}ms`,
+                                    animationFillMode: 'both',
+                                }}
                             >
-                                <Link href={plan.href}>{plan.cta}</Link>
-                            </Button>
-                        </div>
-                    ))}
+                                {plan.recommended && (
+                                    <>
+                                        <div
+                                            className="absolute -inset-px rounded-xl bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-transparent pointer-events-none"
+                                            aria-hidden="true"
+                                        />
+                                        <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-foreground text-background text-xs font-medium px-3 py-0.5 rounded-full z-10">
+                                            {'badge' in plan && plan.badge ? plan.badge : 'Popular'}
+                                        </span>
+                                    </>
+                                )}
+
+                                <div className="relative z-10 mb-6">
+                                    <h3 className="text-lg font-semibold">{plan.name}</h3>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        {plan.description}
+                                    </p>
+                                    <div className="mt-4">
+                                        <span className="text-3xl font-bold">${displayPrice}</span>
+                                        <span className="text-muted-foreground text-sm ml-1">/mo</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        {isYearly
+                                            ? `$${plan.yearlyTotal}/year — save $${plan.monthlyPrice * 12 - plan.yearlyTotal}`
+                                            : 'Billed monthly'}
+                                    </p>
+                                </div>
+
+                                <div className="relative z-10 h-px bg-border mb-6" />
+
+                                <ul className="relative z-10 space-y-2.5 mb-8 flex-1">
+                                    {plan.features.map((feature) => (
+                                        <li key={feature} className="text-sm text-muted-foreground flex items-center gap-2">
+                                            <Check className="h-4 w-4 shrink-0" />
+                                            {feature}
+                                        </li>
+                                    ))}
+                                </ul>
+
+                                <Button
+                                    variant={plan.recommended ? 'default' : 'outline'}
+                                    className="relative z-10 w-full rounded-full active:scale-[0.98] transition-[transform,background-color,box-shadow,border-color] duration-200"
+                                    asChild
+                                >
+                                    <Link href={plan.href}>{plan.cta}</Link>
+                                </Button>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 <p

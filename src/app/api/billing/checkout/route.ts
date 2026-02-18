@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getTierDefinition, type PlanTier } from '@/lib/billing/tiers';
+import { getTierDefinition, getPriceId, type PlanTier, type BillingInterval } from '@/lib/billing/tiers';
 
 function getStripe() {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -29,9 +29,10 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json().catch(() => ({}));
-        const { tier, return_url } = body;
+        const { tier, interval, return_url } = body;
+        const billingInterval: BillingInterval = interval === 'yearly' ? 'yearly' : 'monthly';
 
-        // Resolve price ID from tier or fall back to legacy single-price env var
+        // Resolve price ID from tier + interval, or fall back to legacy single-price env var
         let priceId: string | undefined;
         let planTier: string = 'unknown';
 
@@ -40,7 +41,8 @@ export async function POST(request: NextRequest) {
             if (!tierDef) {
                 return NextResponse.json({ error: `Tier "${tier}" is not configured` }, { status: 400 });
             }
-            priceId = tierDef.priceId;
+            // Try the requested interval, fall back to monthly if yearly not configured
+            priceId = getPriceId(tier, billingInterval) || tierDef.priceId;
             planTier = tier;
         } else {
             // Backward compat: fall back to legacy STRIPE_PRICE_ID
@@ -126,11 +128,13 @@ export async function POST(request: NextRequest) {
                 metadata: {
                     agency_id: agency.id,
                     plan_tier: planTier,
+                    billing_interval: billingInterval,
                 },
             },
             metadata: {
                 agency_id: agency.id,
                 plan_tier: planTier,
+                billing_interval: billingInterval,
             },
             allow_promotion_codes: true,
             billing_address_collection: 'required',

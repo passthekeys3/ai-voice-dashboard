@@ -6,13 +6,15 @@ import { Header } from '@/components/dashboard/Header';
 import { PricingTable } from '@/components/dashboard/PricingTable';
 import type { PlanTier } from '@/types/database';
 
+type BillingInterval = 'monthly' | 'yearly';
+
 export default function UpgradePage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [loadingTier, setLoadingTier] = useState<PlanTier | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const handleSelectTier = async (tier: PlanTier) => {
+    const handleSelectTier = async (tier: PlanTier, interval: BillingInterval = 'monthly') => {
         setLoading(true);
         setLoadingTier(tier);
         setError(null);
@@ -23,6 +25,7 @@ export default function UpgradePage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     tier,
+                    interval,
                     return_url: window.location.origin + '/billing',
                 }),
             });
@@ -69,7 +72,7 @@ export default function UpgradePage() {
                 </div>
 
                 <p className="text-center text-sm text-muted-foreground">
-                    All plans are billed monthly. You can upgrade, downgrade, or cancel at any time.
+                    Pay yearly and save 2 months. You can upgrade, downgrade, or cancel at any time.
                 </p>
             </div>
         </div>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getTierFromPriceId, getTierDefinition, type PlanTier } from '@/lib/billing/tiers';
+import { getTierFromPriceId, getTierDefinition, getPriceId, type PlanTier, type BillingInterval } from '@/lib/billing/tiers';
 
 function getStripe() {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -198,6 +198,10 @@ export async function PATCH(request: NextRequest) {
                 return NextResponse.json({ error: `Tier "${body.tier}" is not configured` }, { status: 400 });
             }
 
+            // Resolve interval — default to monthly if not provided
+            const billingInterval: BillingInterval = body.interval === 'yearly' ? 'yearly' : 'monthly';
+            const newPriceId = getPriceId(body.tier, billingInterval) || tierDef.priceId;
+
             // Get current subscription to find the item to update
             const currentSub = await stripe.subscriptions.retrieve(agency.subscription_id);
             const currentItem = currentSub.items.data[0];
@@ -208,8 +212,8 @@ export async function PATCH(request: NextRequest) {
 
             // Update the subscription item to the new price (Stripe handles proration)
             const subscription = await stripe.subscriptions.update(agency.subscription_id, {
-                items: [{ id: currentItem.id, price: tierDef.priceId }],
-                metadata: { plan_tier: body.tier },
+                items: [{ id: currentItem.id, price: newPriceId }],
+                metadata: { plan_tier: body.tier, billing_interval: billingInterval },
                 proration_behavior: 'create_prorations',
             });
 
