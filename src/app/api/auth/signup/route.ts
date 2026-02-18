@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendEmail } from '@/lib/email/send';
+import { welcomeEmail } from '@/lib/email/templates';
 
 // Use admin client to bypass RLS for signup
 const supabaseAdmin = createClient(
@@ -103,6 +105,12 @@ export async function POST(request: NextRequest) {
                 { status: 500 }
             );
         }
+
+        // Send welcome email (fire-and-forget — don't block signup response)
+        sendEmail({
+            to: email,
+            ...welcomeEmail({ userName: fullName, agencyName, trialDays }),
+        }).catch(() => { /* logged inside sendEmail */ });
 
         return NextResponse.json({
             success: true,

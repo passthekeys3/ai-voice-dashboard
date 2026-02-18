@@ -3,6 +3,9 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { waitUntil } from '@vercel/functions';
 import { createServiceClient } from '@/lib/supabase/server';
+import { sendEmail } from '@/lib/email/send';
+import { paymentReceivedEmail, paymentFailedEmail } from '@/lib/email/templates';
+import { getTierFromPriceId } from '@/lib/billing/tiers';
 
 function getStripe() {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -141,16 +144,41 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     const supabase = createServiceClient();
     const customerId = invoice.customer as string;
 
-    // Get agency by stripe_customer_id
+    // Get agency + admin profile for email notification
     const { data: agency } = await supabase
         .from('agencies')
-        .select('id, name')
+        .select('id, name, subscription_price_id')
         .eq('stripe_customer_id', customerId)
         .single();
 
     if (agency) {
         console.log(`Invoice ${invoice.id} paid for agency ${agency.name} (${agency.id})`);
-        // You could send a confirmation email or update usage records here
+
+        // Send payment confirmation email to agency admin
+        const { data: admin } = await supabase
+            .from('profiles')
+            .select('email, full_name')
+            .eq('agency_id', agency.id)
+            .eq('role', 'agency_admin')
+            .limit(1)
+            .single();
+
+        if (admin?.email && invoice.amount_paid) {
+            const tier = getTierFromPriceId(agency.subscription_price_id || '');
+            const planName = tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : 'Subscription';
+            const amount = `$${(invoice.amount_paid / 100).toFixed(2)}`;
+            const invoiceUrl = invoice.hosted_invoice_url || undefined;
+
+            await sendEmail({
+                to: admin.email,
+                ...paymentReceivedEmail({
+                    userName: admin.full_name || 'there',
+                    planName,
+                    amount,
+                    invoiceUrl,
+                }),
+            }).catch(() => { /* logged inside sendEmail */ });
+        }
     }
 }
 
@@ -158,15 +186,39 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     const supabase = createServiceClient();
     const customerId = invoice.customer as string;
 
-    // Get agency by stripe_customer_id (include integrations for Slack notification)
+    // Get agency by stripe_customer_id (include integrations for Slack + subscription info for email)
     const { data: agency } = await supabase
         .from('agencies')
-        .select('id, name, integrations')
+        .select('id, name, integrations, subscription_price_id')
         .eq('stripe_customer_id', customerId)
         .single();
 
     if (agency) {
         console.warn(`Invoice ${invoice.id} payment failed for agency ${agency.name} (${agency.id})`);
+
+        // Send payment failed email to agency admin
+        const { data: admin } = await supabase
+            .from('profiles')
+            .select('email, full_name')
+            .eq('agency_id', agency.id)
+            .eq('role', 'agency_admin')
+            .limit(1)
+            .single();
+
+        if (admin?.email) {
+            const tier = getTierFromPriceId(agency.subscription_price_id || '');
+            const planName = tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : 'Subscription';
+            const amount = invoice.amount_due ? `$${(invoice.amount_due / 100).toFixed(2)}` : 'your subscription';
+
+            await sendEmail({
+                to: admin.email,
+                ...paymentFailedEmail({
+                    userName: admin.full_name || 'there',
+                    planName,
+                    amount,
+                }),
+            }).catch(() => { /* logged inside sendEmail */ });
+        }
 
         // Send Slack notification if agency has Slack enabled
         const slackConfig = (agency.integrations as Record<string, unknown> | null)?.slack as { enabled?: boolean; webhook_url?: string } | undefined;
