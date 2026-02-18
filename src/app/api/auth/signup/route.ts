@@ -53,9 +53,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
         }
 
-        // Create agency
+        // Create agency with a 14-day free trial so users can access the dashboard immediately
         const baseSlug = agencyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
         const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 8)}`;
+        const trialDays = parseInt(process.env.TRIAL_DAYS || '14', 10);
+        const trialEnd = new Date();
+        trialEnd.setDate(trialEnd.getDate() + trialDays);
         const { data: agency, error: agencyError } = await supabaseAdmin
             .from('agencies')
             .insert({
@@ -67,6 +70,8 @@ export async function POST(request: NextRequest) {
                     accent_color: '#3b82f6',
                     company_name: agencyName,
                 },
+                subscription_status: 'trialing',
+                subscription_current_period_end: trialEnd.toISOString(),
             })
             .select()
             .single();
