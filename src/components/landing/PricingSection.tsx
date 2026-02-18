@@ -16,6 +16,7 @@ const byokPlans = [
             '3 Clients',
             '$15/client for additional clients',
             'Unlimited Agents',
+            'AI Agent Builder',
             'Call Analytics Dashboard',
             'Workflow Automation',
             'Email Support',
@@ -69,7 +70,7 @@ const managedPlan = {
     price: '$999',
     period: '/mo',
     features: [
-        'Up to 5 fully managed agents',
+        'Unlimited managed agents',
         '3,000 minutes included',
         'Custom agent design & scripting',
         'Ongoing optimization & tuning',

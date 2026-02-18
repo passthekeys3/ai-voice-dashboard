@@ -30,6 +30,7 @@ const TIERS: TierConfig[] = [
             '3 Clients included',
             '$15/client for additional clients',
             'Unlimited agents',
+            'AI Agent Builder',
             'Call analytics',
             'Workflow automation',
             'Email support',
