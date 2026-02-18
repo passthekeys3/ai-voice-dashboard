@@ -215,16 +215,24 @@ export function BillingSection() {
                                             <h4 className="text-sm font-medium mb-3">Plan Limits</h4>
                                             <div className="grid gap-4 md:grid-cols-3">
                                                 <div className="p-4 bg-muted/50 rounded-lg">
-                                                    <p className="text-2xl font-bold">{limits.maxAgents}</p>
-                                                    <p className="text-sm text-muted-foreground">Max Agents</p>
-                                                </div>
-                                                <div className="p-4 bg-muted/50 rounded-lg">
-                                                    <p className="text-2xl font-bold">{limits.maxCallMinutesPerMonth.toLocaleString()}</p>
-                                                    <p className="text-sm text-muted-foreground">Minutes/Month</p>
+                                                    <p className="text-2xl font-bold">
+                                                        {!isFinite(limits.maxAgents) ? '∞' : limits.maxAgents}
+                                                    </p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {!isFinite(limits.maxAgents) ? 'Unlimited Agents' : 'Max Agents'}
+                                                    </p>
                                                 </div>
                                                 <div className="p-4 bg-muted/50 rounded-lg">
                                                     <p className="text-2xl font-bold">{limits.maxClients}</p>
-                                                    <p className="text-sm text-muted-foreground">Max Clients</p>
+                                                    <p className="text-sm text-muted-foreground">Clients Included</p>
+                                                </div>
+                                                <div className="p-4 bg-muted/50 rounded-lg">
+                                                    <p className="text-2xl font-bold">
+                                                        {!isFinite(limits.maxCallMinutesPerMonth) ? '∞' : limits.maxCallMinutesPerMonth.toLocaleString()}
+                                                    </p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {!isFinite(limits.maxCallMinutesPerMonth) ? 'Unlimited Minutes' : 'Minutes/Month'}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>

@@ -8,50 +8,56 @@ import { useInView } from '@/hooks/useInView';
 const byokPlans = [
     {
         name: 'Starter',
-        description: 'One team, a few agents.',
+        description: 'For small, growing teams.',
         price: '$99',
         period: '/mo',
+        billing: 'Billed monthly',
         features: [
-            'Up to 3 voice agents',
-            '500 minutes included',
-            'Call analytics dashboard',
-            'Workflow automation',
-            'Email support',
+            '3 Clients',
+            '$15/client for additional clients',
+            'Unlimited Agents',
+            'Call Analytics Dashboard',
+            'Workflow Automation',
+            'Email Support',
         ],
-        cta: 'Start free trial',
+        cta: 'Get started',
         href: '/signup',
         recommended: false,
     },
     {
         name: 'Growth',
-        description: 'Growing teams and small agencies.',
+        description: 'For scaling businesses.',
         price: '$249',
         period: '/mo',
+        billing: 'Billed monthly',
         features: [
-            'Up to 10 voice agents',
-            '2,000 minutes included',
-            'CRM integrations (GHL, HubSpot)',
-            'Stripe Connect client billing',
-            'Custom domain',
-            'Priority support',
+            '5 Clients',
+            '$12/client for additional clients',
+            'All Starter features',
+            'CRM Integrations (GHL, HubSpot)',
+            'Stripe Connect Billing',
+            'Custom Domain',
         ],
-        cta: 'Start free trial',
+        cta: 'Get started',
         href: '/signup',
         recommended: true,
+        badge: 'Popular',
     },
     {
         name: 'Scale',
-        description: 'Multiple clients, full control.',
+        description: 'For high-volume agencies.',
         price: '$499',
         period: '/mo',
+        billing: 'Billed monthly',
         features: [
-            'Up to 50 voice agents',
-            '10,000 minutes included',
-            'Full white-label platform',
-            'API access',
-            'Dedicated support',
+            '10 Clients',
+            '$10/client for additional clients',
+            'All features',
+            'White-Label Platform',
+            'API Access',
+            'Priority Support',
         ],
-        cta: 'Start free trial',
+        cta: 'Get started',
         href: '/signup',
         recommended: false,
     },
@@ -137,21 +143,24 @@ export function PricingSection() {
                                         aria-hidden="true"
                                     />
                                     <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-foreground text-background text-xs font-medium px-3 py-0.5 rounded-full z-10">
-                                        Recommended
+                                        {'badge' in plan && plan.badge ? plan.badge : 'Popular'}
                                     </span>
                                 </>
                             )}
 
-                            <div className="relative z-10 mb-8">
+                            <div className="relative z-10 mb-6">
                                 <h3 className="text-lg font-semibold">{plan.name}</h3>
                                 <p className="text-sm text-muted-foreground mt-1">
                                     {plan.description}
                                 </p>
                                 <div className="mt-4">
                                     <span className="text-3xl font-bold">{plan.price}</span>
-                                    <span className="text-muted-foreground text-sm">{plan.period}</span>
+                                    <span className="text-muted-foreground text-sm ml-1">{plan.period}</span>
                                 </div>
+                                <p className="text-xs text-muted-foreground mt-1">{plan.billing}</p>
                             </div>
+
+                            <div className="relative z-10 h-px bg-border mb-6" />
 
                             <ul className="relative z-10 space-y-2.5 mb-8 flex-1">
                                 {plan.features.map((feature) => (

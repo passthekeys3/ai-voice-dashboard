@@ -12,6 +12,7 @@ export interface TierLimits {
     maxAgents: number;
     maxCallMinutesPerMonth: number;
     maxClients: number;
+    additionalClientPrice: number; // $/client overage
 }
 
 export interface TierDefinition {
@@ -29,14 +30,15 @@ const TIER_CONFIGS: Omit<TierDefinition, 'priceId'>[] = [
         name: 'Starter',
         monthlyPrice: 99,
         limits: {
-            maxAgents: 3,
-            maxCallMinutesPerMonth: 500,
-            maxClients: 5,
+            maxAgents: Infinity,
+            maxCallMinutesPerMonth: Infinity,
+            maxClients: 3,
+            additionalClientPrice: 15,
         },
         features: [
-            'Up to 3 AI agents',
-            '500 call minutes/month',
-            'Up to 5 clients',
+            '3 Clients included',
+            '$15/client for additional clients',
+            'Unlimited agents',
             'Call analytics',
             'Workflow automation',
             'Email support',
@@ -47,18 +49,18 @@ const TIER_CONFIGS: Omit<TierDefinition, 'priceId'>[] = [
         name: 'Growth',
         monthlyPrice: 249,
         limits: {
-            maxAgents: 10,
-            maxCallMinutesPerMonth: 2000,
-            maxClients: 25,
+            maxAgents: Infinity,
+            maxCallMinutesPerMonth: Infinity,
+            maxClients: 5,
+            additionalClientPrice: 12,
         },
         features: [
-            'Up to 10 AI agents',
-            '2,000 call minutes/month',
-            'Up to 25 clients',
+            '5 Clients included',
+            '$12/client for additional clients',
+            'All Starter features',
             'CRM integrations (GHL + HubSpot)',
             'Stripe Connect client billing',
             'Custom domain',
-            'Priority support',
         ],
     },
     {
@@ -66,19 +68,18 @@ const TIER_CONFIGS: Omit<TierDefinition, 'priceId'>[] = [
         name: 'Scale',
         monthlyPrice: 499,
         limits: {
-            maxAgents: 50,
-            maxCallMinutesPerMonth: 10000,
-            maxClients: 100,
+            maxAgents: Infinity,
+            maxCallMinutesPerMonth: Infinity,
+            maxClients: 10,
+            additionalClientPrice: 10,
         },
         features: [
-            'Up to 50 AI agents',
-            '10,000 call minutes/month',
-            'Up to 100 clients',
-            'All integrations',
-            'Stripe Connect client billing',
-            'Custom domain + white-label',
+            '10 Clients included',
+            '$10/client for additional clients',
+            'All features',
+            'White-label platform',
             'API access',
-            'Dedicated support',
+            'Priority support',
         ],
     },
 ];
