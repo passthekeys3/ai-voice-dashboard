@@ -15,13 +15,16 @@ interface HeroAnimationProps {
 
 export function HeroAnimation({ isInView }: HeroAnimationProps) {
     const playerRef = useRef<PlayerRef>(null);
-    const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+    const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
+        typeof window !== 'undefined'
+            ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            : false
+    );
     const [isDark, setIsDark] = useState(false);
 
-    // Check reduced motion preference
+    // Listen for reduced motion preference changes
     useEffect(() => {
         const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-        setPrefersReducedMotion(mql.matches);
         const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
         mql.addEventListener('change', handler);
         return () => mql.removeEventListener('change', handler);

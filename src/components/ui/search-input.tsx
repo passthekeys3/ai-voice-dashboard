@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -20,32 +20,33 @@ export function SearchInput({
     className,
     debounceMs = 300,
 }: SearchInputProps) {
-    const [internalValue, setInternalValue] = useState(controlledValue ?? '');
+    // Track local typing state separately from the controlled value
+    const [typingValue, setTypingValue] = useState<string | null>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Sync internal value when controlled value changes externally
-    useEffect(() => {
-        if (controlledValue !== undefined) {
-            setInternalValue(controlledValue);
-        }
-    }, [controlledValue]);
+    // The displayed value: use local typing value while typing, otherwise controlled value
+    const displayValue = typingValue ?? controlledValue ?? '';
 
-    const handleChange = (newValue: string) => {
-        setInternalValue(newValue);
+    const handleChange = useCallback((newValue: string) => {
+        setTypingValue(newValue);
 
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
         }
 
         timeoutRef.current = setTimeout(() => {
+            setTypingValue(null); // Hand control back to parent
             onChange(newValue);
         }, debounceMs);
-    };
+    }, [onChange, debounceMs]);
 
-    const handleClear = () => {
-        setInternalValue('');
+    const handleClear = useCallback(() => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+        setTypingValue(null);
         onChange('');
-    };
+    }, [onChange]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -62,11 +63,11 @@ export function SearchInput({
             <Input
                 type="text"
                 placeholder={placeholder}
-                value={internalValue}
+                value={displayValue}
                 onChange={(e) => handleChange(e.target.value)}
                 className="pl-9 pr-8"
             />
-            {internalValue && (
+            {displayValue && (
                 <button
                     type="button"
                     onClick={handleClear}

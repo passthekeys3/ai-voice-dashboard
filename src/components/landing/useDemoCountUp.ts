@@ -59,13 +59,13 @@ export function useDemoCountUp(
     }, [isActive, target, duration, delay]);
 
     // If reduced motion is preferred, show final value immediately
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-        if (mq.matches && isActive) {
-            setValue(target);
-        }
-    }, [isActive, target]);
+    const prefersReducedMotion = typeof window !== 'undefined'
+        ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        : false;
+
+    if (prefersReducedMotion && isActive && value !== target) {
+        return target;
+    }
 
     return value;
 }

@@ -27,7 +27,9 @@ declare module 'retell-client-js-sdk' {
         constructor(options?: Record<string, unknown>);
         startCall(options: Record<string, unknown>): Promise<void>;
         stopCall(): void;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         on(event: string, callback: (...args: any[]) => void): void;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         off(event: string, callback: (...args: any[]) => void): void;
         removeAllListeners(): void;
     }
