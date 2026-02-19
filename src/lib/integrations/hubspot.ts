@@ -468,7 +468,7 @@ export async function upsertContact(
         tags?: string[];
         properties?: Record<string, string>;
     },
-): Promise<{ success: boolean; contactId?: string; isNew?: boolean; error?: string }> {
+): Promise<{ success: boolean; contactId?: string; isNew?: boolean; error?: string; warning?: string }> {
     try {
         let contact = await searchContactByPhone(config, phoneNumber);
         let isNew = false;
@@ -505,8 +505,8 @@ export async function upsertContact(
             const updateResult = await updateContact(config, contact.id, updates);
             if (!updateResult.success) {
                 console.error('HubSpot upsertContact update failed:', updateResult.error);
-                // Still return success with contactId since the contact exists
-                return { success: true, contactId: contact.id, isNew, error: 'Failed to upsert HubSpot contact' };
+                // Contact exists but update failed — return success with warning
+                return { success: true, contactId: contact.id, isNew, warning: 'Contact exists but property update failed' };
             }
         }
 

@@ -12,6 +12,7 @@ import {
     withErrorHandling,
 } from '@/lib/api/response';
 import { VALID_BILLING_TYPES } from '@/lib/constants/config';
+import { getTierFromPriceId, getTierConfig } from '@/lib/billing/tiers';
 
 export const GET = withErrorHandling(async () => {
     const user = await getCurrentUser();
@@ -79,6 +80,26 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
         return badRequest('Billing amount is required when billing type is set');
     }
 
+    // ---- Tier limit enforcement ----
+    const supabase = await createClient();
+
+    const tier = getTierFromPriceId(user.agency.subscription_price_id || '');
+    if (tier) {
+        const tierConfig = getTierConfig(tier);
+        if (tierConfig && tierConfig.limits.maxClients !== Infinity) {
+            const { count, error: countError } = await supabase
+                .from('clients')
+                .select('id', { count: 'exact', head: true })
+                .eq('agency_id', user.agency.id);
+
+            if (!countError && count !== null && count >= tierConfig.limits.maxClients) {
+                return forbidden(
+                    `Client limit reached (${count}/${tierConfig.limits.maxClients}). Upgrade your plan to add more clients.`
+                );
+            }
+        }
+    }
+
     // Auto-generate slug from name
     const baseSlug = name
         .toLowerCase()
@@ -87,8 +108,6 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
 
     // Add random suffix to ensure uniqueness
     const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
-
-    const supabase = await createClient();
 
     // Build insert data
     const insertData: Record<string, unknown> = {

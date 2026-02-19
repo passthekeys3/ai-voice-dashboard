@@ -22,7 +22,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
     const dateFrom = searchParams.get('date_from');
     const dateTo = searchParams.get('date_to');
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const offset = Math.min(Math.max(parseInt(searchParams.get('offset') || '0'), 0), 10_000);
 
     const supabase = await createClient();
 

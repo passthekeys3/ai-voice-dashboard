@@ -71,6 +71,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
+        // Reject stale timestamps to prevent replay attacks (5-minute window)
+        if (timestamp) {
+            const timestampMs = parseInt(timestamp, 10);
+            if (!isNaN(timestampMs) && Math.abs(Date.now() - timestampMs) > 5 * 60 * 1000) {
+                return NextResponse.json({ error: 'Request timestamp too old' }, { status: 401 });
+            }
+        }
+
         // Resolve which agent to use
         let agentId = data.agent_id;
         let agentRecord: { id: string; external_id: string; provider: string; name: string } | null = null;
@@ -171,11 +179,11 @@ export async function POST(request: NextRequest) {
                 contact_name: data.contact_name,
                 status: 'failed',
                 lead_timezone: leadTimezone ?? undefined,
-                error_message: `${agentRecord.provider} API key not configured`,
+                error_message: 'Voice provider API key not configured',
                 request_payload: data as unknown as Record<string, unknown>,
             });
             return NextResponse.json(
-                { error: `${agentRecord.provider} API key not configured` },
+                { error: 'Voice provider API key not configured' },
                 { status: 400 },
             );
         }

@@ -221,13 +221,17 @@ async function executeAction(
                     }
                 }
 
-                // Filter dangerous headers
-                const BLOCKED_HEADERS = ['authorization', 'cookie', 'x-forwarded-for',
-                    'x-forwarded-host', 'x-forwarded-proto', 'host', 'x-real-ip'];
+                // Whitelist safe headers (reject anything not explicitly allowed)
+                const ALLOWED_HEADER_PATTERNS = [
+                    'content-type', 'accept', 'accept-language', 'user-agent',
+                ];
+                const ALLOWED_HEADER_PREFIXES = ['x-webhook-', 'x-custom-'];
                 const rawHeaders = (action.config.headers as Record<string, string>) || {};
                 const safeHeaders: Record<string, string> = {};
                 for (const [key, value] of Object.entries(rawHeaders)) {
-                    if (!BLOCKED_HEADERS.includes(key.toLowerCase())) {
+                    const lower = key.toLowerCase();
+                    if (ALLOWED_HEADER_PATTERNS.includes(lower) ||
+                        ALLOWED_HEADER_PREFIXES.some(prefix => lower.startsWith(prefix))) {
                         safeHeaders[key] = value;
                     }
                 }
@@ -1564,7 +1568,11 @@ async function executeAction(
                 return { success: false, error: `Unknown action type: ${action.type}` };
         }
     } catch (err) {
-        return { success: false, error: String(err) };
+        const message = err instanceof Error ? err.message : String(err);
+        if (err instanceof Error && err.stack) {
+            console.error(`Workflow action error [${action.type}]:`, err.stack);
+        }
+        return { success: false, error: message };
     }
 }
 

@@ -176,11 +176,11 @@ export async function POST(request: NextRequest) {
                 agent_id: agentRecord.id,
                 contact_name: data.contact_name,
                 status: 'failed',
-                error_message: `${agentRecord.provider} API key not configured`,
+                error_message: 'Voice provider API key not configured',
                 request_payload: data as unknown as Record<string, unknown>,
             });
             return NextResponse.json(
-                { error: `${agentRecord.provider} API key not configured` },
+                { error: 'Voice provider API key not configured' },
                 { status: 400 },
             );
         }

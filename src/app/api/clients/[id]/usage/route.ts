@@ -38,7 +38,11 @@ export async function GET(
             return NextResponse.json({ error: 'Client is not on per-minute billing' }, { status: 400 });
         }
 
-        const usage = await getCurrentUsage(supabase, id);
+        const usageResult = await getCurrentUsage(supabase, id);
+
+        if (usageResult.error) {
+            return NextResponse.json({ error: 'Failed to fetch usage data' }, { status: 500 });
+        }
 
         // Calculate current period dates for display
         const now = new Date();
@@ -46,7 +50,7 @@ export async function GET(
         const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
 
         return NextResponse.json({
-            usage: usage || { total_calls: 0, total_minutes: 0, total_cost_cents: 0 },
+            usage: usageResult.data,
             billingRate: client.billing_amount_cents || 0,
             period: {
                 start: periodStart.toISOString().split('T')[0],

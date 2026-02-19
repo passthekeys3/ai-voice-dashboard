@@ -2,6 +2,12 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import type { AuthUser, Profile, Agency, Client } from '@/types';
 
+/** Roles that have agency-level access (admin panel, all clients) */
+export const AGENCY_ROLES = ['agency_admin', 'agency_member'] as const;
+
+/** Roles that have client-level access (own client data only) */
+export const CLIENT_ROLES = ['client_admin', 'client_member'] as const;
+
 /**
  * Get the current authenticated user with their profile, agency, and client data
  */
@@ -77,7 +83,7 @@ export async function requireAuth(): Promise<AuthUser> {
 export async function requireAgencyAdmin(): Promise<AuthUser> {
     const user = await requireAuth();
 
-    if (!['agency_admin', 'agency_member'].includes(user.profile.role)) {
+    if (!(AGENCY_ROLES as readonly string[]).includes(user.profile.role)) {
         redirect('/');
     }
 
@@ -91,7 +97,7 @@ export async function requireClientAccess(clientId: string): Promise<AuthUser> {
     const user = await requireAuth();
 
     // Agency admins/members can access any client in their agency
-    if (['agency_admin', 'agency_member'].includes(user.profile.role)) {
+    if ((AGENCY_ROLES as readonly string[]).includes(user.profile.role)) {
         const supabase = await createClient();
         const { data: client } = await supabase
             .from('clients')
@@ -119,12 +125,12 @@ export async function requireClientAccess(clientId: string): Promise<AuthUser> {
  * Check if current user is an agency admin
  */
 export function isAgencyAdmin(user: AuthUser): boolean {
-    return ['agency_admin', 'agency_member'].includes(user.profile.role);
+    return (AGENCY_ROLES as readonly string[]).includes(user.profile.role);
 }
 
 /**
  * Check if current user is a client user
  */
 export function isClientUser(user: AuthUser): boolean {
-    return ['client_admin', 'client_member'].includes(user.profile.role);
+    return (CLIENT_ROLES as readonly string[]).includes(user.profile.role);
 }

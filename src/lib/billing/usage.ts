@@ -57,13 +57,30 @@ export async function accumulateUsage(
     }
 }
 
+interface UsageData {
+    total_calls: number;
+    total_minutes: number;
+    total_cost_cents: number;
+}
+
+interface UsageResult {
+    data: UsageData;
+    error: null;
+}
+
+interface UsageError {
+    data: null;
+    error: string;
+}
+
 /**
- * Get a client's usage for the current billing period
+ * Get a client's usage for the current billing period.
+ * Returns `{ data, error }` so callers can distinguish "no usage yet" from "query failed".
  */
 export async function getCurrentUsage(
     supabase: SupabaseClient,
     clientId: string
-): Promise<{ total_calls: number; total_minutes: number; total_cost_cents: number } | null> {
+): Promise<UsageResult | UsageError> {
     const { periodStart, periodEnd } = getCurrentPeriod();
 
     const { data, error } = await supabase
@@ -76,8 +93,11 @@ export async function getCurrentUsage(
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
         console.error('Failed to get current usage:', error);
-        return null;
+        return { data: null, error: error.message };
     }
 
-    return data || { total_calls: 0, total_minutes: 0, total_cost_cents: 0 };
+    return {
+        data: data || { total_calls: 0, total_minutes: 0, total_cost_cents: 0 },
+        error: null,
+    };
 }

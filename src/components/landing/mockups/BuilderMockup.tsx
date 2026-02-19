@@ -149,7 +149,7 @@ interface BuilderMockupProps {
 
 export function BuilderMockup({ isInView }: BuilderMockupProps) {
     return (
-        <div className="flex aspect-[16/10]">
+        <div className="flex aspect-[16/12]">
             {/* Chat panel */}
             <div className="flex-1 flex flex-col p-3 min-w-0">
                 {/* Header */}

@@ -4,6 +4,8 @@ type RedisClient = import('ioredis').default;
 let redis: RedisClient | null = null;
 let connectionAttempted = false;
 let connectionFailed = false;
+let connectionFailedAt = 0; // Timestamp of last failure
+const RETRY_AFTER_MS = 60_000; // Retry connection after 60 seconds
 let redisModule: typeof import('ioredis') | null = null;
 
 /**
@@ -11,9 +13,16 @@ let redisModule: typeof import('ioredis') | null = null;
  * Returns null if Redis is not configured, connection failed, or running in Edge runtime
  */
 export async function getRedisClient(): Promise<RedisClient | null> {
-  // If we already know connection failed, return null immediately
+  // If connection previously failed, retry after RETRY_AFTER_MS
   if (connectionFailed) {
-    return null;
+    if (Date.now() - connectionFailedAt < RETRY_AFTER_MS) {
+      return null;
+    }
+    // Enough time has passed — reset and retry
+    connectionFailed = false;
+    connectionAttempted = false;
+    redis = null;
+    console.log('Redis retry: attempting reconnection after cooldown');
   }
 
   // If no Redis URL configured, return null
@@ -39,6 +48,7 @@ export async function getRedisClient(): Promise<RedisClient | null> {
           // Stop retrying after 3 attempts
           if (times > 3) {
             connectionFailed = true;
+            connectionFailedAt = Date.now();
             console.warn('Redis connection failed after 3 attempts, falling back to in-memory rate limiting');
             return null;
           }
@@ -70,6 +80,7 @@ export async function getRedisClient(): Promise<RedisClient | null> {
     } catch (err) {
       console.error('Failed to create Redis client:', err);
       connectionFailed = true;
+      connectionFailedAt = Date.now();
       redis = null;
     }
   }

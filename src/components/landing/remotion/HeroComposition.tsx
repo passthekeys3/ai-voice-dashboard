@@ -51,9 +51,6 @@ const NODE_CONNECTION_THRESHOLD = 22;
 // Waveform config
 const WAVEFORM_LINES = 3;
 
-// Equalizer config — bars per voice source
-const EQ_BARS = 5;
-
 /* ─── Helpers ─── */
 
 function getNodePosition(node: NodeConfig, frame: number) {
@@ -219,61 +216,6 @@ function VoiceGlow({
                 willChange: 'opacity',
             }}
         />
-    );
-}
-
-/** Mini frequency equalizer bars near a voice source */
-function EqualizerBars({
-    source, frame, isDark,
-}: {
-    source: VoiceSourceConfig; frame: number; isDark: boolean;
-}) {
-    const barWidth = 3;
-    const barGap = 2;
-    const maxHeight = 24;
-    const totalWidth = EQ_BARS * barWidth + (EQ_BARS - 1) * barGap;
-
-    // Offset bars toward the center (away from edges)
-    const offsetX = source.direction === 1 ? 4 : -4;
-    const offsetY = -3; // Slightly above center
-
-    return (
-        <div
-            style={{
-                position: 'absolute',
-                left: `${source.cx + offsetX}%`,
-                top: `${source.cy + offsetY}%`,
-                width: totalWidth,
-                height: maxHeight,
-                transform: 'translate(-50%, -50%)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: barGap,
-            }}
-        >
-            {Array.from({ length: EQ_BARS }, (_, i) => {
-                // Each bar bounces at a different frequency
-                const freq = 0.06 + i * 0.015;
-                const phaseOff = i * 1.2 + source.id * 3;
-                const bounce = Math.abs(Math.sin(frame * freq + phaseOff));
-                const height = 4 + bounce * (maxHeight - 4);
-                const barOpacity = (isDark ? 0.35 : 0.45) * (0.5 + bounce * 0.5);
-
-                return (
-                    <div
-                        key={i}
-                        style={{
-                            width: barWidth,
-                            height,
-                            borderRadius: 1.5,
-                            background: `hsl(${source.hue}, ${isDark ? '75%' : '70%'}, ${isDark ? '62%' : '68%'})`,
-                            opacity: barOpacity,
-                            transition: 'none',
-                        }}
-                    />
-                );
-            })}
-        </div>
     );
 }
 
@@ -533,12 +475,7 @@ export const HeroComposition: React.FC<HeroCompositionProps> = ({ isDark }) => {
                 ))
             )}
 
-            {/* Layer 5: Equalizer bars near each voice source */}
-            {VOICE_SOURCES.map((source) => (
-                <EqualizerBars key={`eq-${source.id}`} source={source} frame={frame} isDark={isDark} />
-            ))}
-
-            {/* Layer 6: Center focal point — AI processing hub */}
+            {/* Layer 5: Center focal point — AI processing hub */}
             <CenterFocalPoint frame={frame} isDark={isDark} />
 
             {/* Layer 7: AI network nodes */}

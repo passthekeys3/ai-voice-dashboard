@@ -7,6 +7,8 @@
 
 import * as Sentry from '@sentry/nextjs';
 
+const SENTRY_ENABLED = !!(process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN);
+
 export interface ErrorContext {
     userId?: string;
     agencyId?: string;
@@ -26,9 +28,11 @@ export function logError(error: Error | unknown, context?: ErrorContext): void {
         ...context,
     });
 
-    Sentry.captureException(err, {
-        extra: context ? { ...context } as Record<string, unknown> : undefined,
-    });
+    if (SENTRY_ENABLED) {
+        Sentry.captureException(err, {
+            extra: context ? { ...context } as Record<string, unknown> : undefined,
+        });
+    }
 }
 
 /**
@@ -44,10 +48,12 @@ export function logInfo(message: string, data?: Record<string, unknown>): void {
 export function logWarning(message: string, data?: Record<string, unknown>): void {
     console.warn('[WARN]', message, data);
 
-    Sentry.captureMessage(message, {
-        level: 'warning',
-        extra: data,
-    });
+    if (SENTRY_ENABLED) {
+        Sentry.captureMessage(message, {
+            level: 'warning',
+            extra: data,
+        });
+    }
 }
 
 /**

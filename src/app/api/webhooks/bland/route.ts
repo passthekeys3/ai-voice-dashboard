@@ -111,18 +111,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'API key not configured' }, { status: 401 });
         }
 
-        // Verify webhook signature if present (graceful: warn but allow unsigned
-        // requests during migration period so existing integrations don't break).
+        // Verify webhook signature (required)
         const blandSignature = request.headers.get('x-bland-signature');
-        if (blandSignature) {
-            if (!verifyBlandSignature(rawBody, blandSignature, blandApiKey)) {
-                console.error('Invalid Bland webhook signature');
-                return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-            }
-        } else {
-            // No signature header — log warning. Once Bland supports signing
-            // webhooks natively, this should become a hard reject.
-            console.warn('Bland webhook received without signature — skipping verification');
+        if (!blandSignature) {
+            console.error('Bland webhook received without signature — rejecting');
+            return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+        }
+        if (!verifyBlandSignature(rawBody, blandSignature, blandApiKey)) {
+            console.error('Invalid Bland webhook signature');
+            return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
         // Convert Bland units

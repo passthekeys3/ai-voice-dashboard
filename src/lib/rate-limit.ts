@@ -17,17 +17,22 @@ interface RateLimitEntry {
 }
 
 const rateLimitStore = new Map<string, RateLimitEntry>();
+let lastCleanup = Date.now();
+const CLEANUP_INTERVAL_MS = 60_000; // Clean up stale entries every 60 seconds
 
-// Clean up expired entries periodically (only used for in-memory fallback)
-if (typeof setInterval !== 'undefined') {
-    setInterval(() => {
-        const now = Date.now();
-        for (const [key, entry] of rateLimitStore.entries()) {
-            if (entry.resetTime < now) {
-                rateLimitStore.delete(key);
-            }
+/**
+ * Evict expired rate-limit entries inline.
+ * Called on every check to work reliably in serverless (where setInterval never fires).
+ */
+function evictStaleEntries(): void {
+    const now = Date.now();
+    if (now - lastCleanup < CLEANUP_INTERVAL_MS) return;
+    lastCleanup = now;
+    for (const [key, entry] of rateLimitStore.entries()) {
+        if (entry.resetTime < now) {
+            rateLimitStore.delete(key);
         }
-    }, 60000); // Clean up every minute
+    }
 }
 
 // ============================================================================
@@ -135,6 +140,7 @@ function checkRateLimitMemory(
     identifier: string,
     config: RateLimitConfig
 ): RateLimitResult {
+    evictStaleEntries();
     const now = Date.now();
     const key = identifier;
 
