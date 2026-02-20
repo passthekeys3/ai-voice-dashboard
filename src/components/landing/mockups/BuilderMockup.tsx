@@ -5,13 +5,6 @@ import { cn } from '@/lib/utils';
 
 /* ─── Mock Data ─── */
 
-const STARTER_TEMPLATES = [
-    { emoji: '🦷', label: 'Dental' },
-    { emoji: '🏠', label: 'Real Estate' },
-    { emoji: '💼', label: 'Sales' },
-    { emoji: '🎧', label: 'Support' },
-];
-
 const CHAT_MESSAGES = [
     {
         role: 'user' as const,
@@ -58,30 +51,6 @@ function ChatBubble({ message, index, isInView }: { message: typeof CHAT_MESSAGE
             >
                 <p className="text-[9px] leading-relaxed">{message.text}</p>
             </div>
-        </div>
-    );
-}
-
-function StarterTemplateGrid({ isInView }: { isInView: boolean }) {
-    return (
-        <div
-            className="grid grid-cols-2 gap-1.5 animate-fade-up"
-            style={{
-                opacity: isInView ? undefined : 0,
-                animationDelay: '300ms',
-                animationFillMode: 'both',
-                animationPlayState: isInView ? 'running' : 'paused',
-            }}
-        >
-            {STARTER_TEMPLATES.map((tmpl) => (
-                <div
-                    key={tmpl.label}
-                    className="flex items-center gap-1.5 rounded-md border border-border/50 px-2 py-1.5 bg-card hover:bg-muted/50 transition-colors cursor-default"
-                >
-                    <span className="text-[11px]">{tmpl.emoji}</span>
-                    <span className="text-[9px] font-medium truncate">{tmpl.label}</span>
-                </div>
-            ))}
         </div>
     );
 }
@@ -171,11 +140,8 @@ export function BuilderMockup({ isInView }: BuilderMockupProps) {
                     </div>
                 </div>
 
-                {/* Starter templates */}
-                <StarterTemplateGrid isInView={isInView} />
-
                 {/* Chat messages */}
-                <div className="flex-1 space-y-2 mt-3 overflow-hidden">
+                <div className="flex-1 space-y-2 mt-1 overflow-hidden">
                     {CHAT_MESSAGES.map((msg, i) => (
                         <ChatBubble key={i} message={msg} index={i} isInView={isInView} />
                     ))}
