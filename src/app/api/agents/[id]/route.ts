@@ -89,6 +89,20 @@ export async function PATCH(
 
         const supabase = await createClient();
 
+        // Validate client_id belongs to this agency (if being updated)
+        if (body.client_id !== undefined && body.client_id !== null) {
+            const { data: client } = await supabase
+                .from('clients')
+                .select('id')
+                .eq('id', body.client_id)
+                .eq('agency_id', user.agency.id)
+                .single();
+
+            if (!client) {
+                return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+            }
+        }
+
         // Build update payload — only include fields that are present in the request
         const updatePayload: Record<string, unknown> = {};
         if (body.name !== undefined) updatePayload.name = body.name;
@@ -134,6 +148,43 @@ export async function DELETE(
 
         const { id } = await params;
         const supabase = await createClient();
+
+        // Fetch agent + agency keys so we can clean up on the provider
+        const { data: agent } = await supabase
+            .from('agents')
+            .select('id, external_id, provider')
+            .eq('id', id)
+            .eq('agency_id', user.agency.id)
+            .single();
+
+        if (!agent) {
+            return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+        }
+
+        // Delete from voice provider (best-effort — don't block DB deletion on provider failure)
+        if (agent.external_id) {
+            try {
+                const { data: agency } = await supabase
+                    .from('agencies')
+                    .select('retell_api_key, vapi_api_key, bland_api_key')
+                    .eq('id', user.agency.id)
+                    .single();
+
+                if (agent.provider === 'retell' && agency?.retell_api_key) {
+                    const { deleteRetellAgent } = await import('@/lib/providers/retell');
+                    await deleteRetellAgent(agency.retell_api_key, agent.external_id);
+                } else if (agent.provider === 'vapi' && agency?.vapi_api_key) {
+                    const { deleteVapiAssistant } = await import('@/lib/providers/vapi');
+                    await deleteVapiAssistant(agency.vapi_api_key, agent.external_id);
+                } else if (agent.provider === 'bland' && agency?.bland_api_key) {
+                    const { deleteBlandPathway } = await import('@/lib/providers/bland');
+                    await deleteBlandPathway(agency.bland_api_key, agent.external_id);
+                }
+            } catch (providerErr) {
+                // Log but don't fail — the DB record should still be removed
+                console.error('Provider cleanup failed during agent deletion:', providerErr);
+            }
+        }
 
         const { error } = await supabase
             .from('agents')

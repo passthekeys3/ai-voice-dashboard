@@ -102,7 +102,8 @@ export async function generateAgentConfigStream(
 }
 
 /**
- * Parse Claude's response text into structured LLMBuilderResponse
+ * Parse Claude's response text into structured LLMBuilderResponse.
+ * Validates the shape so unexpected LLM output never propagates raw.
  */
 function parseBuilderResponse(text: string): LLMBuilderResponse {
     // Try to parse as JSON directly
@@ -112,7 +113,8 @@ function parseBuilderResponse(text: string): LLMBuilderResponse {
         const jsonStr = trimmed.startsWith('```')
             ? trimmed.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
             : trimmed;
-        return JSON.parse(jsonStr);
+        const raw = JSON.parse(jsonStr);
+        return sanitizeLLMResponse(raw);
     } catch {
         // If JSON parse fails, return the text as a plain message
         return {
@@ -120,6 +122,46 @@ function parseBuilderResponse(text: string): LLMBuilderResponse {
             updates: undefined,
         };
     }
+}
+
+/** Validate and sanitize parsed JSON into a safe LLMBuilderResponse */
+function sanitizeLLMResponse(raw: unknown): LLMBuilderResponse {
+    if (!raw || typeof raw !== 'object') {
+        return { message: String(raw), updates: undefined };
+    }
+
+    const obj = raw as Record<string, unknown>;
+    const message = typeof obj.message === 'string' ? obj.message : '';
+
+    if (!obj.updates || typeof obj.updates !== 'object') {
+        return { message, updates: undefined };
+    }
+
+    const u = obj.updates as Record<string, unknown>;
+    const updates: LLMBuilderResponse['updates'] = {};
+
+    if (typeof u.name === 'string') updates.name = u.name.slice(0, 200);
+    if (typeof u.systemPrompt === 'string') updates.systemPrompt = u.systemPrompt.slice(0, 50000);
+    if (typeof u.firstMessage === 'string') updates.firstMessage = u.firstMessage.slice(0, 1000);
+    if (typeof u.language === 'string') updates.language = u.language.slice(0, 10);
+
+    if (u.voiceCharacteristics && typeof u.voiceCharacteristics === 'object') {
+        const vc = u.voiceCharacteristics as Record<string, unknown>;
+        updates.voiceCharacteristics = {
+            ...(typeof vc.gender === 'string' && ['male', 'female', 'neutral'].includes(vc.gender) ? { gender: vc.gender as 'male' | 'female' | 'neutral' } : {}),
+            ...(typeof vc.ageRange === 'string' && ['young', 'middle-aged', 'mature'].includes(vc.ageRange) ? { ageRange: vc.ageRange as 'young' | 'middle-aged' | 'mature' } : {}),
+            ...(typeof vc.accent === 'string' ? { accent: vc.accent.slice(0, 50) } : {}),
+            ...(typeof vc.tone === 'string' ? { tone: vc.tone.slice(0, 100) } : {}),
+        };
+    }
+
+    if (Array.isArray(u.integrationSuggestions)) {
+        updates.integrationSuggestions = u.integrationSuggestions
+            .filter((s): s is string => typeof s === 'string')
+            .slice(0, 20);
+    }
+
+    return { message, updates: Object.keys(updates).length > 0 ? updates : undefined };
 }
 
 /**

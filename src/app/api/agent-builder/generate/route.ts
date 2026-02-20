@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { generateAgentConfigStream } from '@/lib/agent-builder/llm';
+import { checkRateLimitAsync } from '@/lib/rate-limit';
 
 const MAX_MESSAGE_LENGTH = 5000;
-const MAX_HISTORY_MESSAGES = 50;
-const MAX_HISTORY_CONTENT_LENGTH = 10000;
+const MAX_HISTORY_MESSAGES = 20;
+const MAX_HISTORY_CONTENT_LENGTH = 4000;
+const MAX_TOTAL_INPUT_CHARS = 60000; // ~15k tokens — caps the total context sent to Claude
+
+// Per-agency rate limits (layered on top of middleware IP-based limits)
+const AGENCY_BURST_LIMIT = { windowMs: 60 * 1000, maxRequests: 10 };      // 10 req/min
+const AGENCY_DAILY_LIMIT = { windowMs: 24 * 60 * 60 * 1000, maxRequests: 200 }; // 200/day
 
 // POST /api/agent-builder/generate - Stream agent config generation via Claude
 export async function POST(request: NextRequest) {
@@ -22,6 +28,26 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 { error: 'AI service not configured' },
                 { status: 503 }
+            );
+        }
+
+        // Per-agency burst rate limit (10 req/min)
+        const burstKey = `agent-builder:burst:${user.agency.id}`;
+        const burstResult = await checkRateLimitAsync(burstKey, AGENCY_BURST_LIMIT);
+        if (!burstResult.allowed) {
+            return NextResponse.json(
+                { error: 'Slow down — too many requests. Please wait a moment.' },
+                { status: 429, headers: { 'Retry-After': '60' } }
+            );
+        }
+
+        // Per-agency daily cap (200 req/day)
+        const dailyKey = `agent-builder:daily:${user.agency.id}`;
+        const dailyResult = await checkRateLimitAsync(dailyKey, AGENCY_DAILY_LIMIT);
+        if (!dailyResult.allowed) {
+            return NextResponse.json(
+                { error: 'Daily AI usage limit reached. Limits reset every 24 hours.' },
+                { status: 429, headers: { 'Retry-After': '3600' } }
             );
         }
 
@@ -66,6 +92,17 @@ export async function POST(request: NextRequest) {
                 }))
             : [];
 
+        // Cap total input size to prevent expensive context windows
+        let totalChars = message.length;
+        const trimmedHistory: typeof safeHistory = [];
+        // Walk history newest-first to keep the most recent context
+        for (let i = safeHistory.length - 1; i >= 0; i--) {
+            const msgLen = safeHistory[i].content.length;
+            if (totalChars + msgLen > MAX_TOTAL_INPUT_CHARS) break;
+            totalChars += msgLen;
+            trimmedHistory.unshift(safeHistory[i]);
+        }
+
         const safeDraft = draft && typeof draft === 'object'
             ? {
                 name: typeof draft.name === 'string' ? draft.name.slice(0, 200) : '',
@@ -83,7 +120,7 @@ export async function POST(request: NextRequest) {
         };
 
         const stream = await generateAgentConfigStream(
-            safeHistory,
+            trimmedHistory,
             message.trim(),
             safeDraft,
             safeContext

@@ -10,6 +10,19 @@ const MAX_PROMPT_LENGTH = 50000;
 const MAX_FIRST_MESSAGE_LENGTH = 1000;
 const MAX_VOICE_ID_LENGTH = 200;
 
+/** Convert BCP 47 short codes to full locale for Retell (requires region suffix) */
+function toRetellLanguage(lang: string): string {
+    // Already has region suffix (e.g. en-US, es-ES)
+    if (lang.includes('-')) return lang;
+    // Map common short codes to their default region
+    const defaults: Record<string, string> = {
+        en: 'en-US', es: 'es-ES', fr: 'fr-FR', de: 'de-DE',
+        pt: 'pt-BR', it: 'it-IT', ja: 'ja-JP', ko: 'ko-KR',
+        zh: 'zh-CN', nl: 'nl-NL', pl: 'pl-PL', hi: 'hi-IN',
+    };
+    return defaults[lang] || `${lang}-${lang.toUpperCase()}`;
+}
+
 // POST /api/agent-builder/apply - Create agent + optional workflows
 export async function POST(request: NextRequest) {
     try {
@@ -168,7 +181,7 @@ export async function POST(request: NextRequest) {
                         llm_id: retellLlm.llm_id,
                     },
                     enable_backchannel: true,
-                    language: safeLanguage === 'en' ? 'en-US' : safeLanguage,
+                    language: toRetellLanguage(safeLanguage),
                     webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`}/api/webhooks/retell`,
                     webhook_events: ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'],
                 }),
@@ -326,6 +339,7 @@ export async function POST(request: NextRequest) {
 
         // Create workflows for enabled integrations
         const workflowsCreated: string[] = [];
+        const workflowsFailed: string[] = [];
         const enabledIntegrations = Array.isArray(draft.integrations)
             ? draft.integrations.filter(
                 (i: { enabled?: boolean; crm?: string; templateId?: string }) =>
@@ -359,6 +373,7 @@ export async function POST(request: NextRequest) {
 
             if (workflowError) {
                 console.error(`Error creating workflow ${template.id}:`, workflowError);
+                workflowsFailed.push(template.name);
             } else if (workflow) {
                 workflowsCreated.push(workflow.id);
             }
@@ -370,6 +385,10 @@ export async function POST(request: NextRequest) {
                 external_id: externalId,
                 provider,
                 workflows_created: workflowsCreated.length,
+                ...(workflowsFailed.length > 0 && {
+                    workflows_failed: workflowsFailed,
+                    warning: `${workflowsFailed.length} workflow(s) could not be created: ${workflowsFailed.join(', ')}`,
+                }),
             },
         }, { status: 201 });
     } catch (error) {
