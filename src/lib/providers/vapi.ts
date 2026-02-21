@@ -107,8 +107,7 @@ async function vapiFetch<T>(
     );
 
     if (!response.ok) {
-        const errorBody = await response.text();
-        console.error(`Vapi API error [${response.status}] ${path}:`, errorBody);
+        console.error(`Vapi API error [${response.status}] ${path}`);
         throw new Error(`Vapi API error: ${response.status}`);
     }
 

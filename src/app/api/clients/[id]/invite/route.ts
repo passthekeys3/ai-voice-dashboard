@@ -110,7 +110,7 @@ export const POST = withErrorHandling(async (
         });
 
         if (authError) {
-            console.error('Auth error:', authError);
+            console.error('Auth error:', authError.message);
             return badRequest('Failed to create user account');
         }
 
@@ -126,7 +126,7 @@ export const POST = withErrorHandling(async (
         });
 
         if (resetError) {
-            console.error('Failed to send invite email:', resetError);
+            console.error('Failed to send invite email:', resetError.message);
             inviteEmailFailed = true;
         }
     }
@@ -146,7 +146,7 @@ export const POST = withErrorHandling(async (
         .single();
 
     if (profileError) {
-        console.error('Profile error:', profileError);
+        console.error('Profile error:', profileError.code);
         // If profile creation fails and we created a new user, clean up
         if (!existingUser) {
             await supabaseAdmin.auth.admin.deleteUser(authUserId);

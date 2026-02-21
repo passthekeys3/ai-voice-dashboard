@@ -108,8 +108,7 @@ async function retellFetch<T>(
     );
 
     if (!response.ok) {
-        const errorBody = await response.text();
-        console.error(`Retell API error [${response.status}] ${path}:`, errorBody);
+        console.error(`Retell API error [${response.status}] ${path}`);
         throw new Error(`Retell API error: ${response.status}`);
     }
 
@@ -197,8 +196,7 @@ export async function publishRetellAgent(
     });
 
     if (!response.ok) {
-        const responseBody = await response.text();
-        console.error(`Retell publish-agent error [${response.status}]:`, responseBody);
+        console.error(`Retell publish-agent error [${response.status}]`);
         throw new Error(`Retell publish-agent failed: ${response.status}`);
     }
 }
@@ -368,7 +366,7 @@ function retellMultipartPost<T>(
                 res.on('data', (chunk: Buffer) => { data += chunk.toString(); });
                 res.on('end', () => {
                     if (res.statusCode && res.statusCode >= 400) {
-                        console.error(`Retell multipart API error [${res.statusCode}] ${path}:`, data);
+                        console.error(`Retell multipart API error [${res.statusCode}] ${path}`);
                         reject(new Error(`Retell API error: ${res.statusCode}`));
                         return;
                     }

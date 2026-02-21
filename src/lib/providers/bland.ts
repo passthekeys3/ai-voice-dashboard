@@ -101,8 +101,7 @@ async function blandFetch<T>(
     );
 
     if (!response.ok) {
-        const errorBody = await response.text();
-        console.error(`Bland API error [${response.status}] ${path}:`, errorBody);
+        console.error(`Bland API error [${response.status}] ${path}`);
         throw new Error(`Bland API error: ${response.status}`);
     }
 

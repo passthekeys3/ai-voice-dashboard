@@ -64,7 +64,7 @@ export async function GET(
             },
         });
     } catch (err) {
-        console.error('Failed to get client usage:', err);
+        console.error('Failed to get client usage:', err instanceof Error ? err.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
