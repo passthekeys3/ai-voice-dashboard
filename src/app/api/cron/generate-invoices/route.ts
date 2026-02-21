@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getTierFromPriceId, getTierConfig, type PlanTier } from '@/lib/billing/tiers';
@@ -37,7 +38,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Service not configured' }, { status: 503 });
         }
 
-        if (authHeader !== `Bearer ${cronSecret}`) {
+        const expected = `Bearer ${cronSecret}`;
+        if (!authHeader || authHeader.length !== expected.length ||
+            !crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected))) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 

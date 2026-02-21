@@ -68,6 +68,13 @@ export async function POST(request: NextRequest) {
 
         const payload: RetellWebhookPayload = JSON.parse(rawBody);
 
+        // Validate event type at runtime (TypeScript union doesn't enforce this)
+        const ALLOWED_EVENTS = ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'] as const;
+        if (!ALLOWED_EVENTS.includes(payload.event as typeof ALLOWED_EVENTS[number])) {
+            console.warn(`[RETELL WEBHOOK] Unknown event type: ${String(payload.event)}`);
+            return NextResponse.json({ received: true });
+        }
+
         console.log(`[RETELL WEBHOOK] Received: event=${payload.event}, call=${payload.call.call_id}, agent=${payload.call.agent_id}`);
 
         // Use service client for webhook operations (bypasses RLS)

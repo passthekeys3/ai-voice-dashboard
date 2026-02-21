@@ -55,10 +55,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         // Add source based on type
         let result;
         if (type === 'text') {
+            // Validate content length to prevent DoS/memory exhaustion
+            if (!content || typeof content !== 'string') {
+                return NextResponse.json({ error: 'Content is required for text sources' }, { status: 400 });
+            }
+            if (content.length > 100000) {
+                return NextResponse.json({ error: 'Content too large (max 100KB)' }, { status: 400 });
+            }
+            if (title && typeof title === 'string' && title.length > 500) {
+                return NextResponse.json({ error: 'Title too long (max 500 characters)' }, { status: 400 });
+            }
             result = await retell.addRetellKBSources(agency.retell_api_key, kbId, {
                 knowledge_base_texts: [{ title, text: content }],
             });
         } else if (type === 'url') {
+            // Validate URL length
+            if (!url || typeof url !== 'string' || url.length > 2048) {
+                return NextResponse.json({ error: 'Invalid or overly long URL (max 2048 characters)' }, { status: 400 });
+            }
             // SSRF protection: Validate URL before adding to knowledge base
             try {
                 const urlObj = new URL(url);
@@ -76,6 +90,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 if (ipv4Match) {
                     const [, a, b] = ipv4Match.map(Number);
                     if (a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254)) {
+                        return NextResponse.json({ error: 'Cannot add private IP addresses' }, { status: 400 });
+                    }
+                }
+                // Block IPv6 private/reserved ranges
+                const bareHost = hostname.replace(/^\[|\]$/g, '');
+                if (bareHost.includes(':')) {
+                    const lowerIpv6 = bareHost.toLowerCase();
+                    if (lowerIpv6 === '::1' || lowerIpv6 === '::' ||
+                        lowerIpv6.startsWith('fe80') || lowerIpv6.startsWith('fc') ||
+                        lowerIpv6.startsWith('fd') || lowerIpv6.startsWith('::ffff:')) {
                         return NextResponse.json({ error: 'Cannot add private IP addresses' }, { status: 400 });
                     }
                 }

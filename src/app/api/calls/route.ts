@@ -21,8 +21,10 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
     const search = searchParams.get('search')?.trim();
     const dateFrom = searchParams.get('date_from');
     const dateTo = searchParams.get('date_to');
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
-    const offset = Math.min(Math.max(parseInt(searchParams.get('offset') || '0'), 0), 10_000);
+    const parsedLimit = parseInt(searchParams.get('limit') || '50');
+    const limit = Math.min(isNaN(parsedLimit) || parsedLimit < 1 ? 50 : parsedLimit, 100);
+    const parsedOffset = parseInt(searchParams.get('offset') || '0');
+    const offset = Math.min(Math.max(isNaN(parsedOffset) ? 0 : parsedOffset, 0), 10_000);
 
     const supabase = await createClient();
 

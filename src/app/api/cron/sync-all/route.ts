@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getAgencyProviders, type NormalizedAgent } from '@/lib/providers';
 import { listRetellAgents, ensureAgentWebhookConfig, REQUIRED_WEBHOOK_EVENTS } from '@/lib/providers/retell';
@@ -21,7 +22,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Service not configured' }, { status: 503 });
         }
 
-        if (authHeader !== `Bearer ${cronSecret}`) {
+        const expected = `Bearer ${cronSecret}`;
+        if (!authHeader || authHeader.length !== expected.length ||
+            !crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected))) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
