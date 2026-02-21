@@ -101,6 +101,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         if (body.description !== undefined) updateData.description = body.description;
         if (body.goal !== undefined) updateData.goal = body.goal;
         if (body.status !== undefined) {
+            const ALLOWED_STATUSES = ['draft', 'running', 'completed', 'paused'];
+            if (!ALLOWED_STATUSES.includes(body.status)) {
+                return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+            }
             updateData.status = body.status;
             if (body.status === 'running' && !body.start_date) {
                 updateData.start_date = new Date().toISOString();

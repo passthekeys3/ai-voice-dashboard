@@ -23,8 +23,10 @@ export function TestTranscript({ transcript }: TestTranscriptProps) {
         const text = transcript
             .map((m) => `[Turn ${m.turn}] ${m.role === 'agent' ? 'Agent' : 'Caller'}: ${m.content}`)
             .join('\n\n');
-        navigator.clipboard.writeText(text);
-        setCopied(true);
+        navigator.clipboard.writeText(text).then(
+            () => setCopied(true),
+            () => { /* clipboard unavailable — silently fail */ }
+        );
     };
 
     if (!transcript || transcript.length === 0) {

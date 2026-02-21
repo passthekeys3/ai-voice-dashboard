@@ -21,10 +21,13 @@ export function CallPlayer({ audioUrl, transcript, summary }: CallPlayerProps) {
         if (audioRef.current) {
             if (isPlaying) {
                 audioRef.current.pause();
+                setIsPlaying(false);
             } else {
-                audioRef.current.play();
+                audioRef.current.play().then(
+                    () => setIsPlaying(true),
+                    () => { /* playback blocked or unavailable */ }
+                );
             }
-            setIsPlaying(!isPlaying);
         }
     };
 

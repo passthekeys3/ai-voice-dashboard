@@ -1047,7 +1047,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                     className="shrink-0"
                                                     aria-label="Copy to clipboard"
                                                     onClick={() => {
-                                                        navigator.clipboard.writeText(`${window.location.origin}/api/ghl/trigger-call`);
+                                                        navigator.clipboard.writeText(`${window.location.origin}/api/ghl/trigger-call`).catch(() => {});
                                                     }}
                                                 >
                                                     <Copy className="h-3 w-3" />
@@ -1070,7 +1070,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                     className="shrink-0"
                                                     aria-label="Copy to clipboard"
                                                     onClick={() => {
-                                                        navigator.clipboard.writeText(formData.ghlTriggerSecret);
+                                                        navigator.clipboard.writeText(formData.ghlTriggerSecret).catch(() => {});
                                                     }}
                                                 >
                                                     <Copy className="h-3 w-3" />
@@ -1282,7 +1282,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                     className="shrink-0"
                                                     aria-label="Copy to clipboard"
                                                     onClick={() => {
-                                                        navigator.clipboard.writeText(`${window.location.origin}/api/hubspot/trigger-call`);
+                                                        navigator.clipboard.writeText(`${window.location.origin}/api/hubspot/trigger-call`).catch(() => {});
                                                     }}
                                                 >
                                                     <Copy className="h-3 w-3" />
@@ -1305,7 +1305,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                     className="shrink-0"
                                                     aria-label="Copy to clipboard"
                                                     onClick={() => {
-                                                        navigator.clipboard.writeText(formData.hubspotTriggerSecret);
+                                                        navigator.clipboard.writeText(formData.hubspotTriggerSecret).catch(() => {});
                                                     }}
                                                 >
                                                     <Copy className="h-3 w-3" />
@@ -1445,7 +1445,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                 size="icon"
                                                 className="shrink-0"
                                                 aria-label="Copy to clipboard"
-                                                onClick={() => navigator.clipboard.writeText(formData.slackWebhookUrl)}
+                                                onClick={() => navigator.clipboard.writeText(formData.slackWebhookUrl).catch(() => {})}
                                             >
                                                 <Copy className="h-3 w-3" />
                                             </Button>
@@ -1662,7 +1662,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                 className="shrink-0"
                                                 aria-label="Copy to clipboard"
                                                 onClick={() => {
-                                                    navigator.clipboard.writeText(`${window.location.origin}/api/trigger-call`);
+                                                    navigator.clipboard.writeText(`${window.location.origin}/api/trigger-call`).catch(() => {});
                                                 }}
                                             >
                                                 <Copy className="h-3 w-3" />
@@ -1685,7 +1685,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                 className="shrink-0"
                                                 aria-label="Copy to clipboard"
                                                 onClick={() => {
-                                                    navigator.clipboard.writeText(formData.apiTriggerKey);
+                                                    navigator.clipboard.writeText(formData.apiTriggerKey).catch(() => {});
                                                 }}
                                             >
                                                 <Copy className="h-3 w-3" />

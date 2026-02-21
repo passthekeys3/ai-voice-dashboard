@@ -250,7 +250,7 @@ export function CustomDomainSettings() {
     };
 
     const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
+        navigator.clipboard.writeText(text).catch(() => { /* clipboard unavailable */ });
     };
 
     if (loading) {

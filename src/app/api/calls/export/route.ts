@@ -65,6 +65,12 @@ export async function GET(request: NextRequest) {
         } else if (user.client) {
             // Client sees only their calls
             query = query.eq('client_id', user.client.id);
+        } else {
+            // Non-admin without client — no calls to export
+            const emptyHeaders = 'Date,Agent,Direction,Status,Duration,Phone,Summary\n';
+            return new Response(emptyHeaders, {
+                headers: { 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename="calls-export.csv"' },
+            });
         }
 
         // Date filters

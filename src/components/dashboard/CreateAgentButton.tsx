@@ -119,9 +119,11 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
             audioRef.current = null;
             setPlayingVoice(null);
         };
-        newAudio.play();
         audioRef.current = newAudio;
-        setPlayingVoice(voice.id);
+        newAudio.play().then(
+            () => setPlayingVoice(voice.id),
+            () => { audioRef.current = null; }
+        );
     };
 
     const resetForm = () => {
