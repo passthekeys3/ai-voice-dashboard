@@ -36,7 +36,7 @@ export function Navbar() {
     return (
         <nav
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-                scrolled
+                scrolled || mobileOpen
                     ? 'bg-background/80 backdrop-blur-lg backdrop-saturate-150 border-b border-border/50 shadow-sm shadow-black/[0.03]'
                     : 'bg-transparent border-b border-transparent'
             }`}
