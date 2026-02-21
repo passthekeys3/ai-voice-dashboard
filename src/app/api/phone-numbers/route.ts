@@ -53,6 +53,19 @@ export async function POST(request: NextRequest) {
 
         const supabase = await createClient();
 
+        // Validate agent belongs to this agency (prevent cross-tenant assignment)
+        if (agent_id) {
+            const { data: agentCheck } = await supabase
+                .from('agents')
+                .select('id')
+                .eq('id', agent_id)
+                .eq('agency_id', user.agency.id)
+                .single();
+            if (!agentCheck) {
+                return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+            }
+        }
+
         // Get API keys for all providers
         const { data: agency } = await supabase
             .from('agencies')
@@ -79,9 +92,7 @@ export async function POST(request: NextRequest) {
             if (!retellResponse.ok) {
                 const errorData = await retellResponse.json().catch(() => ({}));
                 console.error('Retell phone number error:', errorData);
-                return NextResponse.json({
-                    error: errorData.message || 'Failed to purchase phone number'
-                }, { status: 500 });
+                return NextResponse.json({ error: 'Failed to purchase phone number from provider' }, { status: 500 });
             }
 
             const retellNumber = await retellResponse.json();
@@ -124,9 +135,7 @@ export async function POST(request: NextRequest) {
             if (!vapiResponse.ok) {
                 const errorData = await vapiResponse.json().catch(() => ({}));
                 console.error('Vapi phone number error:', errorData);
-                return NextResponse.json({
-                    error: errorData.message || 'Failed to purchase phone number'
-                }, { status: 500 });
+                return NextResponse.json({ error: 'Failed to purchase phone number from provider' }, { status: 500 });
             }
 
             const vapiNumber = await vapiResponse.json();

@@ -1,29 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
-import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
     try {
-        // Get user from cookie-based session
-        const supabaseClient = await createClient();
-        const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-
-        if (!user || authError) {
+        const user = await getCurrentUser();
+        if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const supabase = createServiceClient();
-
-        // Get user profile to find agency
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('agency_id')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile) {
-            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-        }
 
         const { searchParams } = new URL(request.url);
         const clientId = searchParams.get('client_id');
@@ -39,10 +25,17 @@ export async function GET(request: NextRequest) {
 
         // Get agents for this agency with their names in a single query
         // This avoids the N+1 query problem by fetching agent names upfront
-        const { data: agents } = await supabase
+        // Non-admin client users only see their own client's agents
+        let agentsQuery = supabase
             .from('agents')
             .select('id, name')
-            .eq('agency_id', profile.agency_id);
+            .eq('agency_id', user.agency.id);
+
+        if (!isAgencyAdmin(user) && user.profile.client_id) {
+            agentsQuery = agentsQuery.eq('client_id', user.profile.client_id);
+        }
+
+        const { data: agents } = await agentsQuery;
 
         const agentIds = agents?.map(a => a.id) || [];
         const agentNameMap = new Map(agents?.map(a => [a.id, a.name]) || []);

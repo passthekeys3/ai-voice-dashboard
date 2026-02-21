@@ -69,7 +69,7 @@ export function AgentCard({ agent, phoneNumber, showDelete = true }: AgentCardPr
                 toast.success('Agent deleted', {
                     description: deleteFromProvider
                         ? `"${agent.name}" has been removed from your dashboard and ${providerDisplayName}`
-                        : `"${agent.name}" has been removed from your dashboard`,
+                        : `"${agent.name}" has been removed from your dashboard. It still exists in ${providerDisplayName}.`,
                 });
                 router.refresh();
             } else {

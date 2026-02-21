@@ -95,7 +95,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         });
     } catch (error) {
         console.error('Error adding KB source:', error);
-        const message = error instanceof Error ? error.message : 'Failed to add source';
-        return NextResponse.json({ error: message }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to add knowledge base source' }, { status: 500 });
     }
 }
