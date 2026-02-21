@@ -127,6 +127,12 @@ export default async function DashboardPage() {
                     totalCost={totalCost}
                     successRate={successRate}
                     showCosts={permissions.show_costs}
+                    links={{
+                        totalCalls: '/calls',
+                        totalMinutes: '/analytics',
+                        totalCost: '/billing',
+                        successRate: '/analytics',
+                    }}
                 />
 
                 {/* Charts */}

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Phone, Clock, DollarSign, TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -16,6 +17,13 @@ interface AnalyticsCardsProps {
         totalMinutes?: number;
         totalCost?: number;
         successRate?: number;
+    };
+    // Optional links for each card — when set, card becomes clickable
+    links?: {
+        totalCalls?: string;
+        totalMinutes?: string;
+        totalCost?: string;
+        successRate?: string;
     };
     loading?: boolean;
     showCosts?: boolean;
@@ -126,6 +134,7 @@ export function AnalyticsCards({
     totalCost,
     successRate,
     previousPeriod,
+    links,
     loading = false,
     showCosts = true,
 }: AnalyticsCardsProps) {
@@ -138,6 +147,7 @@ export function AnalyticsCards({
             icon: Phone,
             theme: 'blue' as CardTheme,
             invertTrend: false,
+            href: links?.totalCalls,
         },
         {
             title: 'Total Minutes',
@@ -147,6 +157,7 @@ export function AnalyticsCards({
             icon: Clock,
             theme: 'green' as CardTheme,
             invertTrend: false,
+            href: links?.totalMinutes,
         },
         {
             title: 'Total Cost',
@@ -157,6 +168,7 @@ export function AnalyticsCards({
             theme: 'amber' as CardTheme,
             invertTrend: true, // Lower cost is better
             isCostCard: true,
+            href: links?.totalCost,
         },
         {
             title: 'Success Rate',
@@ -166,6 +178,7 @@ export function AnalyticsCards({
             icon: TrendingUp,
             theme: 'purple' as CardTheme,
             invertTrend: false,
+            href: links?.successRate,
         },
     ];
 
@@ -186,7 +199,7 @@ export function AnalyticsCards({
         <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
             {cards.map((card, index) => {
                 const theme = cardThemes[card.theme];
-                return (
+                const cardElement = (
                     <Card
                         key={card.title}
                         className={cn(
@@ -198,7 +211,9 @@ export function AnalyticsCards({
                             "transition-all duration-200 ease-out",
                             "hover:-translate-y-1 hover:shadow-lg",
                             // Entrance animation with stagger
-                            "animate-fade-up"
+                            "animate-fade-up",
+                            // Clickable cursor when linked
+                            card.href && "cursor-pointer"
                         )}
                         style={{
                             animationDelay: `${index * 75}ms`,
@@ -228,6 +243,16 @@ export function AnalyticsCards({
                         </CardContent>
                     </Card>
                 );
+
+                if (card.href) {
+                    return (
+                        <Link key={card.title} href={card.href} className="block">
+                            {cardElement}
+                        </Link>
+                    );
+                }
+
+                return cardElement;
             })}
         </div>
     );

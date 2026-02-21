@@ -119,6 +119,11 @@ export default async function ClientDashboardPage() {
                     totalCost={totalCost}
                     successRate={successRate}
                     showCosts={permissions.show_costs}
+                    links={{
+                        totalCalls: '/portal/calls',
+                        totalMinutes: '/portal/analytics',
+                        successRate: '/portal/analytics',
+                    }}
                 />
 
                 <div className="grid gap-4 md:grid-cols-7">
