@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
             : null;
 
         // Build timestamps
-        const startedAt = payload.started_at || payload.created_at;
+        const startedAt = payload.started_at || payload.created_at || new Date().toISOString();
         const endedAt = payload.end_at || null;
 
         // Prefer structured transcripts array (speaker-attributed) over flat string.

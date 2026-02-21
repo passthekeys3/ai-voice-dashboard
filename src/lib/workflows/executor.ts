@@ -1392,8 +1392,7 @@ async function executeAction(
                 });
 
                 if (!smsResponse.ok) {
-                    const errorText = await smsResponse.text();
-                    console.error('Twilio SMS error:', errorText);
+                    console.error(`Twilio SMS error: ${smsResponse.status}`);
                     return { success: false, error: `SMS send failed: ${smsResponse.status}` };
                 }
 
@@ -1439,8 +1438,7 @@ async function executeAction(
                 });
 
                 if (!emailResponse.ok) {
-                    const errorText = await emailResponse.text();
-                    console.error('Resend email error:', errorText);
+                    console.error(`Resend email error: ${emailResponse.status}`);
                     return { success: false, error: `Email send failed: ${emailResponse.status}` };
                 }
 

@@ -82,8 +82,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
         if (body.notes !== undefined) updateData.notes = body.notes;
         if (body.status !== undefined) {
-            const ALLOWED_STATUSES = ['pending', 'completed', 'cancelled', 'in_progress', 'failed'];
-            if (!ALLOWED_STATUSES.includes(body.status)) {
+            // Only allow user-settable statuses; in_progress/failed/completed are set by internal processes
+            const USER_SETTABLE_STATUSES = ['pending', 'cancelled'];
+            if (!USER_SETTABLE_STATUSES.includes(body.status)) {
                 return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
             }
             updateData.status = body.status;

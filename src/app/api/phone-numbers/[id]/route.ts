@@ -147,7 +147,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
                 // Update phone number in Retell
                 if (Object.keys(retellUpdate).length > 0) {
-                    await fetch(`https://api.retellai.com/update-phone-number/${existing.external_id}`, {
+                    const retellRes = await fetch(`https://api.retellai.com/update-phone-number/${existing.external_id}`, {
                         method: 'PATCH',
                         headers: {
                             'Authorization': `Bearer ${agency.retell_api_key}`,
@@ -155,6 +155,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                         },
                         body: JSON.stringify(retellUpdate),
                     });
+                    if (!retellRes.ok) {
+                        console.error('Retell phone number update failed:', retellRes.status);
+                        return NextResponse.json({ error: 'Failed to update phone number with provider' }, { status: 502 });
+                    }
                 }
             }
         }

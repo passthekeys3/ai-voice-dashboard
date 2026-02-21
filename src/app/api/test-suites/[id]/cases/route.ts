@@ -88,6 +88,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'At least one test case is required' }, { status: 400 });
         }
 
+        if (casesToCreate.length > 100) {
+            return NextResponse.json({ error: 'Maximum 100 test cases per request' }, { status: 400 });
+        }
+
         // Get current max sort_order
         const { data: maxSortRow } = await supabase
             .from('test_cases')
@@ -105,8 +109,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             if (!tc.name || !tc.name.trim()) {
                 return NextResponse.json({ error: 'Each test case requires a name' }, { status: 400 });
             }
+            if (tc.name.length > 255) {
+                return NextResponse.json({ error: 'Test case name must be 255 characters or less' }, { status: 400 });
+            }
             if (!tc.scenario || !tc.scenario.trim()) {
                 return NextResponse.json({ error: 'Each test case requires a scenario' }, { status: 400 });
+            }
+            if (tc.scenario.length > 5000) {
+                return NextResponse.json({ error: 'Test case scenario must be 5000 characters or less' }, { status: 400 });
+            }
+            if (Array.isArray(tc.success_criteria) && tc.success_criteria.length > 20) {
+                return NextResponse.json({ error: 'Maximum 20 success criteria per test case' }, { status: 400 });
             }
 
             // Validate persona_id if provided — must be preset or belong to this agency
@@ -119,7 +132,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                     .single();
 
                 if (!persona) {
-                    return NextResponse.json({ error: `Persona not found: ${tc.persona_id}` }, { status: 400 });
+                    return NextResponse.json({ error: 'Persona not found or not accessible' }, { status: 400 });
                 }
             }
 

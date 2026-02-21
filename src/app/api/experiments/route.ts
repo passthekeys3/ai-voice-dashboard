@@ -79,8 +79,11 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { name, description, agent_id, goal, variants } = body;
 
-        if (!name) {
+        if (!name || typeof name !== 'string') {
             return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+        }
+        if (name.length > 255) {
+            return NextResponse.json({ error: 'Name must be 255 characters or less' }, { status: 400 });
         }
 
         if (!agent_id) {
@@ -89,6 +92,10 @@ export async function POST(request: NextRequest) {
 
         if (!variants || !Array.isArray(variants) || variants.length < 2) {
             return NextResponse.json({ error: 'At least 2 variants are required' }, { status: 400 });
+        }
+
+        if (variants.length > 10) {
+            return NextResponse.json({ error: 'Maximum 10 variants per experiment' }, { status: 400 });
         }
 
         // Validate traffic weights

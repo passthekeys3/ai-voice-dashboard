@@ -77,6 +77,9 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
         setLoadingVoices(true);
         try {
             const response = await fetch('/api/voices');
+            if (!response.ok) {
+                throw new Error('Failed to load voices');
+            }
             const data = await response.json();
             if (data.data) {
                 setVoices(data.data);

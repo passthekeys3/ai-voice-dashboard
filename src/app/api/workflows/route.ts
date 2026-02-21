@@ -58,8 +58,11 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { name, description, trigger, agent_id, conditions, actions, is_active } = body;
 
-        if (!name) {
+        if (!name || typeof name !== 'string') {
             return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+        }
+        if (name.length > 255) {
+            return NextResponse.json({ error: 'Name must be 255 characters or less' }, { status: 400 });
         }
 
         if (!actions || !Array.isArray(actions) || actions.length === 0) {
