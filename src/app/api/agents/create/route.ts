@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
         if (!llmResponse.ok) {
             const errorData = await llmResponse.text();
-            console.error('Retell create LLM error:', errorData);
+            console.error('Retell create LLM error:', llmResponse.status);
             return NextResponse.json({
                 error: 'Failed to create agent on provider'
             }, { status: 500 });
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
 
         if (!retellResponse.ok) {
             const errorData = await retellResponse.text();
-            console.error('Retell create agent error:', errorData);
+            console.error('Retell create agent error:', retellResponse.status);
             return NextResponse.json({
                 error: 'Failed to create agent on provider'
             }, { status: 500 });
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
         try {
             await publishRetellAgent(agency.retell_api_key, retellAgent.agent_id);
         } catch (pubErr) {
-            console.error('Failed to publish agent after creation:', pubErr);
+            console.error('Failed to publish agent after creation:', pubErr instanceof Error ? pubErr.message : 'Unknown error');
             // Non-fatal: agent exists but webhook config is only on draft
         }
 
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
                 // Don't fail the agent creation, just skip phone assignment
             } else if (phoneNumber.external_id) {
                 // Update phone number in Retell
-                await fetch(`https://api.retellai.com/update-phone-number/${phoneNumber.external_id}`, {
+                const phoneUpdateResponse = await fetch(`https://api.retellai.com/update-phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
                     method: 'PATCH',
                     headers: {
                         'Authorization': `Bearer ${agency.retell_api_key}`,
@@ -175,6 +175,10 @@ export async function POST(request: NextRequest) {
                         inbound_agent_id: retellAgent.agent_id,
                     }),
                 });
+
+                if (!phoneUpdateResponse.ok) {
+                    console.warn('Failed to update phone number in Retell:', phoneUpdateResponse.status);
+                }
 
                 // Update in our DB with optimistic lock + agency scoping
                 const { error: updateError } = await supabase
@@ -192,7 +196,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ data: agent }, { status: 201 });
     } catch (error) {
-        console.error('Error creating agent:', error);
+        console.error('Error creating agent:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

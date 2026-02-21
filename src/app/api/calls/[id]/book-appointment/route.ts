@@ -41,6 +41,29 @@ export async function POST(
             duration_minutes,   // Appointment duration (optional, default 30)
         } = body;
 
+        // Validate input types and formats
+        if (calendar_id !== undefined && (typeof calendar_id !== 'string' || calendar_id.length > 200)) {
+            return NextResponse.json({ error: 'Invalid calendar_id' }, { status: 400 });
+        }
+        if (preferred_date !== undefined && (typeof preferred_date !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(preferred_date))) {
+            return NextResponse.json({ error: 'Invalid preferred_date format (expected ISO date)' }, { status: 400 });
+        }
+        if (preferred_time !== undefined && (typeof preferred_time !== 'string' || !/^\d{1,2}:\d{2}$/.test(preferred_time))) {
+            return NextResponse.json({ error: 'Invalid preferred_time format (expected HH:MM)' }, { status: 400 });
+        }
+        if (timezone !== undefined && (typeof timezone !== 'string' || timezone.length > 100)) {
+            return NextResponse.json({ error: 'Invalid timezone' }, { status: 400 });
+        }
+        if (contact_phone !== undefined && (typeof contact_phone !== 'string' || !/^\+?[0-9\s\-()]{7,20}$/.test(contact_phone))) {
+            return NextResponse.json({ error: 'Invalid contact_phone format' }, { status: 400 });
+        }
+        if (contact_name !== undefined && (typeof contact_name !== 'string' || contact_name.length > 200)) {
+            return NextResponse.json({ error: 'Invalid contact_name' }, { status: 400 });
+        }
+        if (duration_minutes !== undefined && (typeof duration_minutes !== 'number' || duration_minutes < 5 || duration_minutes > 480)) {
+            return NextResponse.json({ error: 'duration_minutes must be between 5 and 480' }, { status: 400 });
+        }
+
         const supabase = createServiceClient();
 
         // Look up the call to find the agency and agent
@@ -210,7 +233,7 @@ export async function POST(
             start_time: result.startTime,
         });
     } catch (error) {
-        console.error('Live appointment booking error:', error);
+        console.error('Live appointment booking error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

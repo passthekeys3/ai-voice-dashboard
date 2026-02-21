@@ -160,13 +160,13 @@ async function sendControlCommand(controlUrl: string, action: ControlAction, mes
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`Vapi control command failed: ${action}`, errorText);
+            console.error(`Vapi control command failed: ${action}`, response.status);
             return externalServiceError('Vapi', `Failed to execute ${action} command`);
         }
 
         return apiSuccess({ message: `${action} command sent successfully` });
     } catch (err) {
-        console.error('Vapi control URL error:', err);
+        console.error('Vapi control URL error:', err instanceof Error ? err.message : 'Unknown error');
         return externalServiceError('Vapi', 'Failed to communicate with call control endpoint');
     }
 }

@@ -82,7 +82,7 @@ export const POST = withErrorHandling(async (
         });
         if (!endResponse.ok) {
             const errorData = await endResponse.text();
-            console.error('Failed to end Retell call:', errorData);
+            console.error('Failed to end Retell call:', endResponse.status);
             return externalServiceError('Retell', 'Failed to end call');
         }
     } else if (provider === 'vapi') {
@@ -95,7 +95,7 @@ export const POST = withErrorHandling(async (
         });
         if (!endResponse.ok) {
             const errorData = await endResponse.text();
-            console.error('Failed to end Vapi call:', errorData);
+            console.error('Failed to end Vapi call:', endResponse.status);
             return externalServiceError('Vapi', 'Failed to end call');
         }
     } else if (provider === 'bland') {
@@ -108,7 +108,7 @@ export const POST = withErrorHandling(async (
         });
         if (!endResponse.ok) {
             const errorData = await endResponse.text();
-            console.error('Failed to end Bland call:', errorData);
+            console.error('Failed to end Bland call:', endResponse.status);
             return externalServiceError('Bland', 'Failed to end call');
         }
     } else {
