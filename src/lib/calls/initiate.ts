@@ -159,9 +159,12 @@ async function initiateVapiCall(params: CallInitiationParams): Promise<CallIniti
  */
 async function initiateBlandCall(params: CallInitiationParams): Promise<CallInitiationResult> {
     try {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
-            ? `https://${process.env.VERCEL_URL}`
-            : 'http://localhost:3000';
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL
+            || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+
+        if (!appUrl) {
+            return { success: false, error: 'Server URL not configured. Set NEXT_PUBLIC_APP_URL to enable call initiation.' };
+        }
 
         const body: Record<string, unknown> = {
             phone_number: params.toNumber,

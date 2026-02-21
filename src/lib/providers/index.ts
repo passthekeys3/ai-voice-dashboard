@@ -214,6 +214,10 @@ function createVapiClient(apiKey: string): VoiceProviderClient {
                     model: 'gpt-4o',
                     systemPrompt: config.prompt,
                 } : undefined,
+                // Ensure webhook delivery points to our Vapi webhook handler
+                serverUrl: process.env.NEXT_PUBLIC_APP_URL
+                    ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/vapi`
+                    : undefined,
             });
             return normalizeAgent(assistant);
         },

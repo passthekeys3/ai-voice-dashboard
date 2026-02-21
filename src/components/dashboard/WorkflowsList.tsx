@@ -8,6 +8,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from '@/lib/toast';
+import {
     Table,
     TableBody,
     TableCell,
@@ -112,31 +123,36 @@ const triggerLabels: Record<string, string> = {
 export function WorkflowsList({ workflows }: WorkflowsListProps) {
     const router = useRouter();
     const [updatingId, setUpdatingId] = useState<string | null>(null);
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
     const handleToggleActive = async (workflowId: string, isActive: boolean) => {
         setUpdatingId(workflowId);
         try {
-            await fetch(`/api/workflows/${workflowId}`, {
+            const response = await fetch(`/api/workflows/${workflowId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ is_active: isActive }),
             });
+            if (!response.ok) throw new Error('Failed to update');
+            toast.success(isActive ? 'Workflow activated' : 'Workflow deactivated');
             router.refresh();
         } catch (err) {
             console.error('Failed to update workflow:', err);
+            toast.error('Failed to update workflow');
         } finally {
             setUpdatingId(null);
         }
     };
 
     const handleDelete = async (workflowId: string) => {
-        if (!confirm('Are you sure you want to delete this workflow?')) return;
-
         try {
-            await fetch(`/api/workflows/${workflowId}`, { method: 'DELETE' });
+            const response = await fetch(`/api/workflows/${workflowId}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Failed to delete');
+            toast.success('Workflow deleted');
             router.refresh();
         } catch (err) {
             console.error('Failed to delete workflow:', err);
+            toast.error('Failed to delete workflow');
         }
     };
 
@@ -156,10 +172,12 @@ export function WorkflowsList({ workflows }: WorkflowsListProps) {
                 }),
             });
             if (response.ok) {
+                toast.success('Workflow duplicated');
                 router.refresh();
             }
         } catch (err) {
             console.error('Failed to duplicate workflow:', err);
+            toast.error('Failed to duplicate workflow');
         }
     };
 
@@ -208,6 +226,7 @@ export function WorkflowsList({ workflows }: WorkflowsListProps) {
                                         checked={workflow.is_active}
                                         disabled={updatingId === workflow.id}
                                         onCheckedChange={(checked: boolean) => handleToggleActive(workflow.id, checked)}
+                                        aria-label={`Toggle ${workflow.name} active`}
                                     />
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -232,7 +251,7 @@ export function WorkflowsList({ workflows }: WorkflowsListProps) {
                                                     History
                                                 </Link>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleDelete(workflow.id)} className="text-red-600">
+                                            <DropdownMenuItem onClick={() => setDeleteConfirmId(workflow.id)} className="text-red-600">
                                                 <Trash2 className="h-4 w-4 mr-2" />
                                                 Delete
                                             </DropdownMenuItem>
@@ -331,12 +350,13 @@ export function WorkflowsList({ workflows }: WorkflowsListProps) {
                                             checked={workflow.is_active}
                                             disabled={updatingId === workflow.id}
                                             onCheckedChange={(checked: boolean) => handleToggleActive(workflow.id, checked)}
+                                            aria-label={`Toggle ${workflow.name} active`}
                                         />
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
+                                                <Button variant="ghost" size="icon" aria-label="Workflow actions">
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
@@ -375,6 +395,31 @@ export function WorkflowsList({ workflows }: WorkflowsListProps) {
                     </Table>
                 </div>
             </CardContent>
+
+            <AlertDialog open={!!deleteConfirmId} onOpenChange={(open: boolean) => !open && setDeleteConfirmId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete workflow?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete this workflow and all its execution history. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => {
+                                if (deleteConfirmId) {
+                                    handleDelete(deleteConfirmId);
+                                    setDeleteConfirmId(null);
+                                }
+                            }}
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Card>
     );
 }

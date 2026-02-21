@@ -27,7 +27,7 @@ export default function GlobalError({
                 }}>
                     <h2 style={{ marginBottom: '1rem' }}>Something went wrong</h2>
                     <p style={{ color: '#666', marginBottom: '1.5rem' }}>
-                        An unexpected error occurred. Our team has been notified.
+                        An unexpected error occurred. Please try again or contact support if the problem persists.
                     </p>
                     <button
                         onClick={reset}

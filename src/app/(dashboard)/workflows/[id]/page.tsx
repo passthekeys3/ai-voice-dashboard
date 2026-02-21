@@ -44,7 +44,7 @@ export default async function EditWorkflowPage({
     return (
         <div className="flex flex-col h-full">
             <Header
-                title="Edit Workflow"
+                title={workflow.name}
                 userName={user.profile.full_name}
                 userEmail={user.email}
                 userAvatar={user.profile.avatar_url}
@@ -58,7 +58,7 @@ export default async function EditWorkflowPage({
                         </Link>
                     </Button>
                     <div>
-                        <h2 className="text-2xl font-bold tracking-tight">Edit Workflow</h2>
+                        <h2 className="text-2xl font-bold tracking-tight">{workflow.name}</h2>
                         <p className="text-muted-foreground">
                             Modify your workflow configuration
                         </p>

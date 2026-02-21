@@ -6,5 +6,6 @@ if (dsn) {
     Sentry.init({
         dsn,
         tracesSampleRate: 0.1,
+        environment: process.env.VERCEL_ENV || 'development',
     });
 }

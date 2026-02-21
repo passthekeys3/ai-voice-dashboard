@@ -16,6 +16,7 @@ import { initiateCall, type CallInitiationParams } from '@/lib/calls/initiate';
 import { detectTimezone, isWithinCallingWindow, getNextValidCallTime } from '@/lib/timezone/detector';
 import { verifyGHLTriggerSignature, validateGHLTriggerPayload } from './validate';
 import { applyExperiment } from '@/lib/experiments/apply';
+import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 
 export async function POST(request: NextRequest) {
     try {
@@ -71,13 +72,13 @@ export async function POST(request: NextRequest) {
 
         // Resolve which agent to use
         let agentId = data.agent_id;
-        let agentRecord: { id: string; external_id: string; provider: string; name: string } | null = null;
+        let agentRecord: { id: string; external_id: string; provider: string; name: string; client_id: string | null } | null = null;
 
         if (agentId) {
             // Explicit agent_id provided
             const { data: agent } = await supabase
                 .from('agents')
-                .select('id, external_id, provider, name')
+                .select('id, external_id, provider, name, client_id')
                 .eq('id', agentId)
                 .eq('agency_id', agency.id)
                 .single();
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
             agentId = triggerConfig.default_agent_id;
             const { data: agent } = await supabase
                 .from('agents')
-                .select('id, external_id, provider, name')
+                .select('id, external_id, provider, name, client_id')
                 .eq('id', agentId)
                 .eq('agency_id', agency.id)
                 .single();
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
             if (phoneNumber?.outbound_agent_id) {
                 const { data: agent } = await supabase
                     .from('agents')
-                    .select('id, external_id, provider, name')
+                    .select('id, external_id, provider, name, client_id')
                     .eq('id', phoneNumber.outbound_agent_id)
                     .eq('agency_id', agency.id)
                     .single();
@@ -158,12 +159,16 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Get provider API key
-        const providerApiKey = agentRecord.provider === 'vapi'
-            ? agency.vapi_api_key
-            : agentRecord.provider === 'bland'
-            ? agency.bland_api_key
-            : agency.retell_api_key;
+        // Resolve provider API key (client key → agency key fallback)
+        const resolvedKeys = agentRecord.client_id
+            ? await resolveProviderApiKeys(supabase, agency.id, agentRecord.client_id)
+            : {
+                retell_api_key: agency.retell_api_key || null,
+                vapi_api_key: agency.vapi_api_key || null,
+                bland_api_key: agency.bland_api_key || null,
+                source: { retell: 'agency' as const, vapi: 'agency' as const, bland: 'agency' as const },
+            };
+        const providerApiKey = getProviderKey(resolvedKeys, agentRecord.provider as 'retell' | 'vapi' | 'bland');
 
         if (!providerApiKey) {
             await logTrigger(supabase, {

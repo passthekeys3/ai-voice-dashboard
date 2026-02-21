@@ -4,6 +4,8 @@ import { executeWorkflows } from '@/lib/workflows/executor';
 import { broadcastCallUpdate, broadcastTranscriptUpdate } from '@/lib/realtime/broadcast';
 import { accumulateUsage } from '@/lib/billing/usage';
 import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-analyzer';
+import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
+import { isValidWebhookUrl } from '@/lib/webhooks/validation';
 import { waitUntil } from '@vercel/functions';
 import type { Workflow } from '@/types';
 import Retell from 'retell-sdk';
@@ -30,6 +32,7 @@ interface RetellWebhookPayload {
         };
         call_cost?: {
             combined_cost?: number;
+            product_costs?: Array<{ product: string; cost: number; unit_price?: number }>;
         };
         metadata?: Record<string, unknown>;
     };
@@ -42,15 +45,18 @@ interface RetellWebhookPayload {
 
 // Forward call data to agent's webhook URL
 async function forwardToWebhook(webhookUrl: string, callData: Record<string, unknown>) {
+    if (!isValidWebhookUrl(webhookUrl)) {
+        console.error('Blocked webhook forwarding to invalid/private URL');
+        return;
+    }
     try {
         await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(callData),
         });
-        console.log(`Webhook forwarded to: ${webhookUrl}`);
     } catch (err) {
-        console.error(`Failed to forward webhook to ${webhookUrl}:`, err);
+        console.error('Failed to forward webhook:', err);
     }
 }
 
@@ -70,7 +76,7 @@ export async function POST(request: NextRequest) {
         // Find agent by external_id (include webhook_url and agency_id)
         const { data: agent } = await supabase
             .from('agents')
-            .select('id, name, client_id, agency_id, webhook_url, agencies(retell_api_key)')
+            .select('id, name, client_id, agency_id, webhook_url')
             .eq('external_id', payload.call.agent_id)
             .eq('provider', 'retell')
             .single();
@@ -80,16 +86,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ received: true });
         }
 
-        // Safely extract the Retell API key from the joined agencies data
-        // The agencies field is a nested object from the join
-        type AgentWithAgency = typeof agent & {
-            agencies: { retell_api_key: string | null } | null;
-        };
-        const agentWithAgency = agent as AgentWithAgency;
-        const retellApiKey = agentWithAgency.agencies?.retell_api_key;
+        // Resolve API key (client key → agency key fallback)
+        const resolvedKeys = await resolveProviderApiKeys(supabase, agent.agency_id, agent.client_id);
+        const retellApiKey = resolvedKeys.retell_api_key;
 
         if (!retellApiKey) {
-            console.error('Retell API key not configured for agency - cannot verify webhook signature');
+            console.error('Retell API key not configured - cannot verify webhook signature');
             return NextResponse.json({ error: 'API key not configured' }, { status: 401 });
         }
 
@@ -212,7 +214,10 @@ export async function POST(request: NextRequest) {
                     ended_at: payload.call.end_timestamp
                         ? new Date(payload.call.end_timestamp).toISOString()
                         : null,
-                    metadata: payload.call.metadata,
+                    metadata: {
+                        ...(payload.call.metadata || {}),
+                        ...(payload.call.call_cost?.product_costs ? { cost_breakdown: payload.call.call_cost.product_costs } : {}),
+                    },
                     experiment_id: experimentId,
                     variant_id: variantId,
                 },
@@ -255,6 +260,7 @@ export async function POST(request: NextRequest) {
                                 summary: analysis.summary,
                                 metadata: {
                                     ...(payload.call.metadata || {}),
+                                    ...(payload.call.call_cost?.product_costs ? { cost_breakdown: payload.call.call_cost.product_costs } : {}),
                                     ai_analysis: {
                                         sentiment_score: analysis.sentiment_score,
                                         action_items: analysis.action_items,

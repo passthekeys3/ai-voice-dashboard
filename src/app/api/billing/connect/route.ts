@@ -109,7 +109,22 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json().catch(() => ({}));
-        const returnUrl = body.return_url || `${process.env.NEXT_PUBLIC_APP_URL}/settings`;
+
+        // Validate return_url to prevent open redirect attacks
+        const appOrigin = process.env.NEXT_PUBLIC_APP_URL
+            ? new URL(process.env.NEXT_PUBLIC_APP_URL).origin
+            : null;
+        let returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings`;
+        if (body.return_url && appOrigin) {
+            try {
+                const parsed = new URL(body.return_url);
+                if (parsed.origin === appOrigin) {
+                    returnUrl = body.return_url;
+                }
+            } catch {
+                // Invalid URL — fall through to default
+            }
+        }
 
         const stripe = getStripe();
         const supabase = createServiceClient();

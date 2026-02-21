@@ -13,9 +13,10 @@ export default async function ClientsPage() {
     const user = await requireAgencyAdmin();
     const supabase = await createClient();
 
+    // Only select fields needed by the UI — never send API keys to client components
     const { data: clients } = await supabase
         .from('clients')
-        .select('*')
+        .select('id, name, email, is_active, created_at')
         .eq('agency_id', user.agency.id)
         .order('created_at', { ascending: false });
 

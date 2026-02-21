@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getTemplateById, getTemplateActions } from '@/lib/agent-builder/templates';
 import { publishRetellAgent } from '@/lib/providers/retell';
+import { resolveProviderApiKeys, autoSelectProvider } from '@/lib/providers/resolve-keys';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_NAME_LENGTH = 200;
@@ -102,32 +103,30 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Get provider API keys
-        const { data: agency } = await supabase
-            .from('agencies')
-            .select('retell_api_key, vapi_api_key, bland_api_key')
-            .eq('id', user.agency.id)
-            .single();
+        // Resolve provider API keys (client key takes precedence over agency key)
+        const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, client_id);
 
         // Use the provider from draft if specified and valid, otherwise auto-select
         const requestedProvider = draft.provider as string | undefined;
-        const providerApiKeys: Record<string, string | null> = {
-            retell: agency?.retell_api_key || null,
-            vapi: agency?.vapi_api_key || null,
-            bland: agency?.bland_api_key || null,
-        };
 
         let provider: string | null = null;
         let apiKey: string | null = null;
 
-        if (requestedProvider && ['retell', 'vapi', 'bland'].includes(requestedProvider) && providerApiKeys[requestedProvider]) {
+        if (
+            requestedProvider &&
+            ['retell', 'vapi', 'bland'].includes(requestedProvider) &&
+            resolvedKeys[`${requestedProvider}_api_key` as keyof typeof resolvedKeys]
+        ) {
             // User explicitly chose a provider and it has a valid API key
             provider = requestedProvider;
-            apiKey = providerApiKeys[requestedProvider];
+            apiKey = resolvedKeys[`${requestedProvider}_api_key` as 'retell_api_key' | 'vapi_api_key' | 'bland_api_key'] as string;
         } else {
             // Auto-select: Retell → Vapi → Bland
-            provider = agency?.retell_api_key ? 'retell' : agency?.vapi_api_key ? 'vapi' : agency?.bland_api_key ? 'bland' : null;
-            apiKey = agency?.retell_api_key || agency?.vapi_api_key || agency?.bland_api_key || null;
+            const auto = autoSelectProvider(resolvedKeys);
+            if (auto) {
+                provider = auto.provider;
+                apiKey = auto.apiKey;
+            }
         }
 
         if (!provider || !apiKey) {

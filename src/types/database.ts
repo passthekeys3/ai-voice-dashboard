@@ -3,6 +3,7 @@
 export type UserRole = 'agency_admin' | 'agency_member' | 'client_admin' | 'client_member';
 export type VoiceProvider = 'retell' | 'vapi' | 'bland';
 export type CallStatus = 'completed' | 'failed' | 'in_progress' | 'queued';
+export type CallSentiment = 'positive' | 'negative' | 'neutral';
 export type BillingType = 'subscription' | 'per_minute' | 'one_time';
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused';
 export type PlanTier = 'starter' | 'growth' | 'scale';
@@ -187,6 +188,10 @@ export interface Client {
     stripe_subscription_id?: string;
     next_billing_date?: string;
     ai_call_analysis?: boolean; // Per-client opt-in for AI call analysis ($0.01/call)
+    // Per-client voice provider API keys (null = use agency key)
+    retell_api_key?: string;
+    vapi_api_key?: string;
+    bland_api_key?: string;
     is_active: boolean;
     created_at: string;
     updated_at: string;
@@ -271,8 +276,8 @@ export interface Call {
     transcript?: string;
     audio_url?: string;
     summary?: string;
-    sentiment?: string;
-    metadata?: Record<string, unknown>;
+    sentiment?: CallSentiment | string; // Typed for known values, string for AI-generated
+    metadata?: CallMetadata;
     lead_timezone?: string;
     started_at: string;
     ended_at?: string;
@@ -288,6 +293,29 @@ export interface Call {
     insights?: CallInsights;
     // Joined data
     agent?: { name: string };
+}
+
+/** Known metadata fields populated by webhook handlers. Allows additional provider-specific fields. */
+export interface CallMetadata {
+    // Common
+    answered_by?: 'human' | 'voicemail' | null;
+    ai_analysis?: {
+        sentiment_score?: number;
+        action_items?: string[];
+        call_outcome?: string;
+        lead_score?: number;
+        analyzed_at?: string;
+    };
+    // Retell
+    cost_breakdown?: Array<{ product: string; cost: number; unit_price?: number }>;
+    // Vapi
+    vapi_control_url?: string;
+    vapi_listen_url?: string;
+    vapi_success_evaluation?: string;
+    // Workflow
+    slack_webhook_url?: string;
+    // Allow additional provider-specific fields
+    [key: string]: unknown;
 }
 
 export interface CallInsights {

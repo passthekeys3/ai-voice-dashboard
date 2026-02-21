@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { listBlandActiveCalls } from '@/lib/providers/bland';
+import { listVapiCalls } from '@/lib/providers/vapi';
 
 // GET /api/calls/active - Get all active calls from all configured providers
 export async function GET(_request: NextRequest) {
@@ -135,8 +136,43 @@ export async function GET(_request: NextRequest) {
             }
         }
 
-        // Note: Vapi doesn't have a dedicated active calls endpoint
-        // Active Vapi calls are tracked via webhook events in real-time
+        // Fetch active Vapi calls from provider API (real-time, like Retell/Bland)
+        if (agency.vapi_api_key) {
+            try {
+                const vapiAgentExternalIds = new Set(
+                    agents?.filter(a => a.provider === 'vapi').map(a => a.external_id).filter(Boolean) || []
+                );
+
+                if (vapiAgentExternalIds.size > 0) {
+                    // Vapi API doesn't support filtering by status, so fetch recent calls and filter
+                    const vapiCalls = await listVapiCalls(agency.vapi_api_key, { limit: 100 });
+                    const activeCalls = vapiCalls.filter(
+                        c => c.status === 'in-progress' && vapiAgentExternalIds.has(c.assistantId)
+                    );
+
+                    for (const call of activeCalls) {
+                        const agentInfo = agentMap.get(call.assistantId);
+                        allActiveCalls.push({
+                            id: call.id,
+                            external_id: call.id,
+                            agent_id: call.assistantId,
+                            agent_name: agentInfo?.name || 'Vapi Call',
+                            status: 'ongoing',
+                            started_at: call.startedAt || call.createdAt,
+                            duration_seconds: call.startedAt
+                                ? Math.floor((Date.now() - new Date(call.startedAt).getTime()) / 1000)
+                                : 0,
+                            from_number: call.customer?.number,
+                            to_number: call.phoneNumber?.number,
+                            direction: call.type === 'inboundPhoneCall' ? 'inbound' : 'outbound',
+                            provider: 'vapi',
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching Vapi active calls:', err);
+            }
+        }
 
         return NextResponse.json({ data: allActiveCalls });
     } catch (error) {

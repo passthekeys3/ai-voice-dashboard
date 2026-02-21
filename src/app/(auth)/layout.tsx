@@ -24,8 +24,8 @@ export default async function AuthLayout({
 
     return (
         <div className="min-h-screen flex flex-col bg-background">
-            {/* Dot-grid background */}
-            <div className="auth-grid-bg fixed inset-0 pointer-events-none" />
+            {/* Gradient glow backdrop (matches landing page hero) */}
+            <div className="hero-glow fixed inset-0 pointer-events-none" aria-hidden="true" />
 
             {/* Inject brand colors as CSS variables */}
             <style
@@ -40,7 +40,7 @@ export default async function AuthLayout({
 
             {/* Header with logo */}
             <header className="relative z-10 w-full py-8 px-4">
-                <div className="max-w-md mx-auto flex flex-col items-center">
+                <div className="max-w-md mx-auto flex flex-col items-center animate-fade-up">
                     {logoUrl ? (
                         <Image
                             src={logoUrl}
@@ -70,7 +70,7 @@ export default async function AuthLayout({
 
             {/* Main content */}
             <main className="relative z-10 flex-1 flex items-center justify-center px-4 pb-12">
-                <div className="w-full max-w-md">
+                <div className="w-full max-w-md animate-fade-up" style={{ animationDelay: '80ms', animationFillMode: 'both' }}>
                     {loginMessage && (
                         <div
                             className="mb-6 p-4 rounded-lg text-center text-sm"
@@ -88,7 +88,7 @@ export default async function AuthLayout({
             </main>
 
             {/* Footer */}
-            <footer className="relative z-10 py-6 px-4 text-center text-sm text-muted-foreground/60">
+            <footer className="relative z-10 py-6 px-4 text-center text-sm text-muted-foreground/60 animate-fade-up" style={{ animationDelay: '160ms', animationFillMode: 'both' }}>
                 {branding?.footer_text || (
                     <>
                         {companyName ? `© ${new Date().getFullYear()} ${companyName}` : 'Powered by BuildVoiceAI'}

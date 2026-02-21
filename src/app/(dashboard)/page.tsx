@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { requireAuth, isAgencyAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
@@ -141,7 +142,12 @@ export default async function DashboardPage() {
                                 {agents && agents.length > 0 ? (
                                     agents.map((agent) => (
                                         <div key={agent.id} className="flex items-center justify-between">
-                                            <span className="font-medium truncate">{agent.name}</span>
+                                            <Link
+                                                href={`/agents/${agent.id}`}
+                                                className="font-medium truncate hover:underline"
+                                            >
+                                                {agent.name}
+                                            </Link>
                                         </div>
                                     ))
                                 ) : (

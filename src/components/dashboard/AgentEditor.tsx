@@ -19,6 +19,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Sparkles, Loader2, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 
 interface PromptSuggestion {
     title: string;
@@ -401,14 +402,12 @@ export function AgentEditor({
 
                             <div className="space-y-2">
                                 <Label>Responsiveness: {responsiveness.toFixed(1)}</Label>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="1"
-                                    step="0.1"
-                                    value={responsiveness}
-                                    onChange={(e) => setResponsiveness(parseFloat(e.target.value))}
-                                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700"
+                                <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.1}
+                                    value={[responsiveness]}
+                                    onValueChange={([val]: number[]) => setResponsiveness(val)}
                                 />
                                 <p className="text-sm text-muted-foreground">
                                     How quickly the agent responds (0 = slow, 1 = fast)
@@ -484,6 +483,7 @@ export function AgentEditor({
                                             e.stopPropagation();
                                             fetchSuggestions(true);
                                         }}
+                                        aria-label="Refresh suggestions"
                                     >
                                         <RefreshCw className={`h-3.5 w-3.5 ${suggestionsLoading ? 'animate-spin' : ''}`} />
                                     </Button>

@@ -9,6 +9,16 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Eye, Palette, Mail, Phone, Globe, Clock, Webhook, Copy, RefreshCw, Key, Hash, CalendarCheck, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Agency } from '@/types';
@@ -18,6 +28,12 @@ interface SettingsFormProps {
     agents?: { id: string; name: string }[];
 }
 
+// Values masked by the server look like "...abc1" — they are not real keys
+const isMasked = (v?: string | null): boolean => !!v?.startsWith('...');
+
+// For a secret field: if it was masked, init to "" (user types to replace)
+const initSecret = (v?: string | null): string => isMasked(v) ? '' : (v || '');
+
 export function SettingsForm({ agency, agents }: SettingsFormProps) {
     const [showPreview, setShowPreview] = useState(false);
     const [savingBranding, setSavingBranding] = useState(false);
@@ -26,6 +42,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
     const [savingIntegrations, setSavingIntegrations] = useState(false);
     const [integrationsSaved, setIntegrationsSaved] = useState(false);
     const [integrationsError, setIntegrationsError] = useState<string | null>(null);
+    const [disconnectConfirm, setDisconnectConfirm] = useState<string | null>(null);
     const [apiGuideTab, setApiGuideTab] = useState<'zapier' | 'generic'>('zapier');
     const [savingKeys, setSavingKeys] = useState(false);
     const [keysSaved, setKeysSaved] = useState(false);
@@ -36,6 +53,21 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
     const [slackTestResult, setSlackTestResult] = useState<string | null>(null);
     const [calendlyValidating, setCalendlyValidating] = useState(false);
     const [calendlyEventTypes, setCalendlyEventTypes] = useState<{ uri: string; name: string; duration: number }[]>([]);
+
+    // Track which secret fields have an existing value on the server (came as masked "...xxxx")
+    // This never changes — it's computed once from the initial agency prop.
+    const [hadMasked] = useState(() => ({
+        retellApiKey: isMasked(agency.retell_api_key),
+        vapiApiKey: isMasked(agency.vapi_api_key),
+        blandApiKey: isMasked(agency.bland_api_key),
+        ghlApiKey: isMasked(agency.integrations?.ghl?.api_key),
+        ghlTriggerSecret: isMasked(agency.integrations?.ghl?.trigger_config?.webhook_secret),
+        hubspotTriggerSecret: isMasked(agency.integrations?.hubspot?.trigger_config?.webhook_secret),
+        slackWebhookUrl: isMasked(agency.integrations?.slack?.webhook_url),
+        calendlyApiToken: isMasked(agency.integrations?.calendly?.api_token),
+        apiTriggerKey: isMasked(agency.integrations?.api?.api_key),
+    }));
+
     const [formData, setFormData] = useState({
         name: agency.name,
         companyName: agency.branding?.company_name || '',
@@ -50,34 +82,34 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
         websiteUrl: agency.branding?.website_url || '',
         supportEmail: agency.branding?.support_email || '',
         supportPhone: agency.branding?.support_phone || '',
-        retellApiKey: agency.retell_api_key || '',
-        vapiApiKey: agency.vapi_api_key || '',
-        blandApiKey: agency.bland_api_key || '',
+        retellApiKey: initSecret(agency.retell_api_key),
+        vapiApiKey: initSecret(agency.vapi_api_key),
+        blandApiKey: initSecret(agency.bland_api_key),
         // CRM Integrations
-        ghlApiKey: agency.integrations?.ghl?.api_key || '',
+        ghlApiKey: initSecret(agency.integrations?.ghl?.api_key),
         ghlLocationId: agency.integrations?.ghl?.location_id || '',
         hubspotEnabled: agency.integrations?.hubspot?.enabled || false,
         // HubSpot Trigger
         hubspotTriggerEnabled: agency.integrations?.hubspot?.trigger_config?.enabled || false,
-        hubspotTriggerSecret: agency.integrations?.hubspot?.trigger_config?.webhook_secret || '',
+        hubspotTriggerSecret: initSecret(agency.integrations?.hubspot?.trigger_config?.webhook_secret),
         hubspotDefaultAgentId: agency.integrations?.hubspot?.trigger_config?.default_agent_id || '',
         gcalDefaultCalendarId: agency.integrations?.google_calendar?.default_calendar_id || 'primary',
         // GHL Trigger
         ghlTriggerEnabled: agency.integrations?.ghl?.trigger_config?.enabled || false,
-        ghlTriggerSecret: agency.integrations?.ghl?.trigger_config?.webhook_secret || '',
+        ghlTriggerSecret: initSecret(agency.integrations?.ghl?.trigger_config?.webhook_secret),
         ghlDefaultAgentId: agency.integrations?.ghl?.trigger_config?.default_agent_id || '',
         // Slack
-        slackWebhookUrl: agency.integrations?.slack?.webhook_url || '',
+        slackWebhookUrl: initSecret(agency.integrations?.slack?.webhook_url),
         slackEnabled: agency.integrations?.slack?.enabled || false,
         slackChannelName: agency.integrations?.slack?.channel_name || '',
         // Calendly
-        calendlyApiToken: agency.integrations?.calendly?.api_token || '',
+        calendlyApiToken: initSecret(agency.integrations?.calendly?.api_token),
         calendlyEnabled: agency.integrations?.calendly?.enabled || false,
         calendlyUserUri: agency.integrations?.calendly?.user_uri || '',
         calendlyDefaultEventType: agency.integrations?.calendly?.default_event_type_uri || '',
         // API Trigger (Make.com / n8n)
         apiTriggerEnabled: agency.integrations?.api?.enabled || false,
-        apiTriggerKey: agency.integrations?.api?.api_key || '',
+        apiTriggerKey: initSecret(agency.integrations?.api?.api_key),
         apiDefaultAgentId: agency.integrations?.api?.default_agent_id || '',
         // Calling Window
         callingWindowEnabled: agency.calling_window?.enabled ?? agency.integrations?.ghl?.calling_window?.enabled ?? false,
@@ -86,20 +118,30 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
         callingWindowDays: agency.calling_window?.days_of_week ?? agency.integrations?.ghl?.calling_window?.days_of_week ?? [1, 2, 3, 4, 5],
     });
 
+    // Whether a key exists on the server: either user typed a new value or a masked value was present
+    const hasKey = (field: keyof typeof hadMasked, formValue: string) => !!formValue || hadMasked[field];
+
     const handleSaveApiKeys = async () => {
         setSavingKeys(true);
         setKeysSaved(false);
         setKeysError(null);
         setSyncResult(null);
         try {
+            // Only include keys that were actually changed.
+            // If user typed a new key → send it. If empty and was masked → skip (preserve server value).
+            // If empty and no previous value → send null.
+            const payload: Record<string, string | null> = {};
+            if (formData.retellApiKey) payload.retell_api_key = formData.retellApiKey;
+            else if (!hadMasked.retellApiKey) payload.retell_api_key = null;
+            if (formData.vapiApiKey) payload.vapi_api_key = formData.vapiApiKey;
+            else if (!hadMasked.vapiApiKey) payload.vapi_api_key = null;
+            if (formData.blandApiKey) payload.bland_api_key = formData.blandApiKey;
+            else if (!hadMasked.blandApiKey) payload.bland_api_key = null;
+
             const response = await fetch('/api/settings', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    retell_api_key: formData.retellApiKey || null,
-                    vapi_api_key: formData.vapiApiKey || null,
-                    bland_api_key: formData.blandApiKey || null,
-                }),
+                body: JSON.stringify(payload),
             });
 
             if (!response.ok) {
@@ -209,62 +251,73 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
         setIntegrationsError(null);
 
         try {
+            // Build integration payloads with ONLY form-managed fields.
+            // Server deep-merges, so omitted fields (OAuth tokens, etc.) are preserved.
+            // For secret fields: only include if user typed a new value.
+            // If empty and was masked → omit (server preserves existing).
+            const ghlPayload: Record<string, unknown> = {
+                location_id: formData.ghlLocationId || agency.integrations?.ghl?.oauth_location_id || null,
+                enabled: !!(formData.ghlApiKey || hadMasked.ghlApiKey || agency.integrations?.ghl?.auth_method === 'oauth'),
+                trigger_config: {
+                    enabled: formData.ghlTriggerEnabled,
+                    default_agent_id: formData.ghlDefaultAgentId || null,
+                    ...(formData.ghlTriggerSecret ? { webhook_secret: formData.ghlTriggerSecret } : {}),
+                },
+                calling_window: {
+                    enabled: formData.callingWindowEnabled,
+                    start_hour: formData.callingWindowStart,
+                    end_hour: formData.callingWindowEnd,
+                    days_of_week: formData.callingWindowDays,
+                },
+            };
+            if (formData.ghlApiKey) ghlPayload.api_key = formData.ghlApiKey;
+            else if (!hadMasked.ghlApiKey) ghlPayload.api_key = null;
+
+            const hubspotPayload: Record<string, unknown> = {
+                trigger_config: {
+                    enabled: formData.hubspotTriggerEnabled,
+                    default_agent_id: formData.hubspotDefaultAgentId || null,
+                    ...(formData.hubspotTriggerSecret ? { webhook_secret: formData.hubspotTriggerSecret } : {}),
+                },
+            };
+
+            const gcalPayload: Record<string, unknown> = {
+                default_calendar_id: formData.gcalDefaultCalendarId || 'primary',
+            };
+
+            const apiPayload: Record<string, unknown> = {
+                enabled: formData.apiTriggerEnabled,
+                default_agent_id: formData.apiDefaultAgentId || null,
+            };
+            if (formData.apiTriggerKey) apiPayload.api_key = formData.apiTriggerKey;
+            else if (!hadMasked.apiTriggerKey) apiPayload.api_key = null;
+
+            const slackPayload: Record<string, unknown> = {
+                enabled: formData.slackEnabled,
+                channel_name: formData.slackChannelName || null,
+            };
+            if (formData.slackWebhookUrl) slackPayload.webhook_url = formData.slackWebhookUrl;
+            else if (!hadMasked.slackWebhookUrl) slackPayload.webhook_url = null;
+
+            const calendlyPayload: Record<string, unknown> = {
+                enabled: formData.calendlyEnabled,
+                user_uri: formData.calendlyUserUri || null,
+                default_event_type_uri: formData.calendlyDefaultEventType || null,
+            };
+            if (formData.calendlyApiToken) calendlyPayload.api_token = formData.calendlyApiToken;
+            else if (!hadMasked.calendlyApiToken) calendlyPayload.api_token = null;
+
             const response = await fetch('/api/settings', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     integrations: {
-                        ...agency.integrations,
-                        ghl: {
-                            ...agency.integrations?.ghl,
-                            api_key: formData.ghlApiKey || null,
-                            location_id: formData.ghlLocationId || agency.integrations?.ghl?.oauth_location_id || null,
-                            enabled: !!(formData.ghlApiKey || agency.integrations?.ghl?.access_token),
-                            trigger_config: {
-                                ...agency.integrations?.ghl?.trigger_config,
-                                enabled: formData.ghlTriggerEnabled,
-                                webhook_secret: formData.ghlTriggerSecret || agency.integrations?.ghl?.trigger_config?.webhook_secret || '',
-                                default_agent_id: formData.ghlDefaultAgentId || null,
-                            },
-                            calling_window: {
-                                enabled: formData.callingWindowEnabled,
-                                start_hour: formData.callingWindowStart,
-                                end_hour: formData.callingWindowEnd,
-                                days_of_week: formData.callingWindowDays,
-                            },
-                        },
-                        hubspot: {
-                            ...agency.integrations?.hubspot,
-                            trigger_config: {
-                                ...agency.integrations?.hubspot?.trigger_config,
-                                enabled: formData.hubspotTriggerEnabled,
-                                webhook_secret: formData.hubspotTriggerSecret || agency.integrations?.hubspot?.trigger_config?.webhook_secret || '',
-                                default_agent_id: formData.hubspotDefaultAgentId || null,
-                            },
-                        },
-                        google_calendar: {
-                            ...agency.integrations?.google_calendar,
-                            default_calendar_id: formData.gcalDefaultCalendarId || 'primary',
-                        },
-                        api: {
-                            ...agency.integrations?.api,
-                            enabled: formData.apiTriggerEnabled,
-                            api_key: formData.apiTriggerKey || agency.integrations?.api?.api_key || null,
-                            default_agent_id: formData.apiDefaultAgentId || null,
-                        },
-                        slack: {
-                            ...agency.integrations?.slack,
-                            webhook_url: formData.slackWebhookUrl || null,
-                            enabled: formData.slackEnabled,
-                            channel_name: formData.slackChannelName || null,
-                        },
-                        calendly: {
-                            ...agency.integrations?.calendly,
-                            api_token: formData.calendlyApiToken || null,
-                            enabled: formData.calendlyEnabled,
-                            user_uri: formData.calendlyUserUri || agency.integrations?.calendly?.user_uri || null,
-                            default_event_type_uri: formData.calendlyDefaultEventType || null,
-                        },
+                        ghl: ghlPayload,
+                        hubspot: hubspotPayload,
+                        google_calendar: gcalPayload,
+                        api: apiPayload,
+                        slack: slackPayload,
+                        calendly: calendlyPayload,
                     },
                     calling_window: {
                         enabled: formData.callingWindowEnabled,
@@ -762,7 +815,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                 setKeysSaved(false);
                                 setSyncResult(null);
                             }}
-                            placeholder="Enter your Retell API key"
+                            placeholder={hadMasked.retellApiKey ? `Key set (${agency.retell_api_key}) — type to replace` : 'Enter your Retell API key'}
                         />
                         <p className="text-xs text-muted-foreground">
                             Find your API key at{' '}
@@ -782,7 +835,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                 setKeysSaved(false);
                                 setSyncResult(null);
                             }}
-                            placeholder="Enter your Vapi API key"
+                            placeholder={hadMasked.vapiApiKey ? `Key set (${agency.vapi_api_key}) — type to replace` : 'Enter your Vapi API key'}
                         />
                         <p className="text-xs text-muted-foreground">
                             Find your API key at{' '}
@@ -802,7 +855,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                 setKeysSaved(false);
                                 setSyncResult(null);
                             }}
-                            placeholder="Enter your Bland API key"
+                            placeholder={hadMasked.blandApiKey ? `Key set (${agency.bland_api_key}) — type to replace` : 'Enter your Bland API key'}
                         />
                         <p className="text-xs text-muted-foreground">
                             Find your API key at{' '}
@@ -829,7 +882,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                     <div className="flex gap-3">
                         <Button
                             onClick={handleSaveApiKeys}
-                            disabled={savingKeys || (!formData.retellApiKey && !formData.vapiApiKey && !formData.blandApiKey)}
+                            disabled={savingKeys || (!hasKey('retellApiKey', formData.retellApiKey) && !hasKey('vapiApiKey', formData.vapiApiKey) && !hasKey('blandApiKey', formData.blandApiKey))}
                             variant={keysSaved ? 'outline' : 'default'}
                         >
                             {savingKeys ? (
@@ -849,7 +902,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                         <Button
                             variant="outline"
                             onClick={handleSyncAgents}
-                            disabled={syncing || (!formData.retellApiKey && !formData.vapiApiKey && !formData.blandApiKey)}
+                            disabled={syncing || (!hasKey('retellApiKey', formData.retellApiKey) && !hasKey('vapiApiKey', formData.vapiApiKey) && !hasKey('blandApiKey', formData.blandApiKey))}
                         >
                             {syncing ? (
                                 <>
@@ -889,7 +942,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                         </div>
 
                         {/* OAuth Connection (Primary) */}
-                        {agency.integrations?.ghl?.auth_method === 'oauth' && agency.integrations?.ghl?.access_token ? (
+                        {agency.integrations?.ghl?.auth_method === 'oauth' ? (
                             <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg">
                                 <div>
                                     <p className="text-sm font-medium text-green-700 dark:text-green-300">Connected via OAuth</p>
@@ -902,7 +955,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => { window.location.href = '/api/auth/ghl?action=disconnect'; }}
+                                    onClick={() => setDisconnectConfirm('ghl')}
                                 >
                                     Disconnect
                                 </Button>
@@ -929,8 +982,8 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                 id="ghlApiKey"
                                                 type="password"
                                                 value={formData.ghlApiKey}
-                                                onChange={(e) => setFormData({ ...formData, ghlApiKey: e.target.value })}
-                                                placeholder="Enter your GHL API key"
+                                                onChange={(e) => { setFormData({ ...formData, ghlApiKey: e.target.value }); setIntegrationsSaved(false); }}
+                                                placeholder={hadMasked.ghlApiKey ? `Key set (${agency.integrations?.ghl?.api_key}) — type to replace` : 'Enter your GHL API key'}
                                             />
                                         </div>
                                         <div className="space-y-2">
@@ -938,12 +991,12 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                             <Input
                                                 id="ghlLocationId"
                                                 value={formData.ghlLocationId}
-                                                onChange={(e) => setFormData({ ...formData, ghlLocationId: e.target.value })}
+                                                onChange={(e) => { setFormData({ ...formData, ghlLocationId: e.target.value }); setIntegrationsSaved(false); }}
                                                 placeholder="Your GHL Location ID"
                                             />
                                         </div>
                                     </div>
-                                    {formData.ghlApiKey && (
+                                    {(formData.ghlApiKey || hadMasked.ghlApiKey) && (
                                         <p className="text-sm text-green-600 mt-2">Connected via API key</p>
                                     )}
                                 </details>
@@ -951,7 +1004,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                         )}
 
                         {/* GHL Outbound Trigger */}
-                        {(formData.ghlApiKey || (agency.integrations?.ghl?.auth_method === 'oauth' && agency.integrations?.ghl?.access_token)) && (
+                        {(formData.ghlApiKey || hadMasked.ghlApiKey || agency.integrations?.ghl?.auth_method === 'oauth') && (
                             <div className="mt-6 space-y-4 border-t pt-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -992,6 +1045,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                     variant="outline"
                                                     size="icon"
                                                     className="shrink-0"
+                                                    aria-label="Copy to clipboard"
                                                     onClick={() => {
                                                         navigator.clipboard.writeText(`${window.location.origin}/api/ghl/trigger-call`);
                                                     }}
@@ -1014,6 +1068,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                     variant="outline"
                                                     size="icon"
                                                     className="shrink-0"
+                                                    aria-label="Copy to clipboard"
                                                     onClick={() => {
                                                         navigator.clipboard.writeText(formData.ghlTriggerSecret);
                                                     }}
@@ -1043,11 +1098,12 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
 
                                         {agents && agents.length > 0 && (
                                             <div className="space-y-1">
-                                                <Label className="text-xs">Default Outbound Agent</Label>
+                                                <Label className="text-xs" htmlFor="ghlDefaultAgentId">Default Outbound Agent</Label>
                                                 <select
+                                                    id="ghlDefaultAgentId"
                                                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                                                     value={formData.ghlDefaultAgentId}
-                                                    onChange={(e) => setFormData({ ...formData, ghlDefaultAgentId: e.target.value })}
+                                                    onChange={(e) => { setFormData({ ...formData, ghlDefaultAgentId: e.target.value }); setIntegrationsSaved(false); }}
                                                 >
                                                     <option value="">Select an agent...</option>
                                                     {agents.map(a => (
@@ -1062,7 +1118,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                         )}
 
                         {/* Calling Window */}
-                        {(formData.ghlApiKey || (agency.integrations?.ghl?.auth_method === 'oauth' && agency.integrations?.ghl?.access_token)) && (
+                        {(formData.ghlApiKey || hadMasked.ghlApiKey || agency.integrations?.ghl?.auth_method === 'oauth') && (
                             <div className="mt-4 space-y-4 border-t pt-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -1076,7 +1132,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                     </div>
                                     <Switch
                                         checked={formData.callingWindowEnabled}
-                                        onCheckedChange={(checked: boolean) => setFormData({ ...formData, callingWindowEnabled: checked })}
+                                        onCheckedChange={(checked: boolean) => { setFormData({ ...formData, callingWindowEnabled: checked }); setIntegrationsSaved(false); }}
                                     />
                                 </div>
 
@@ -1084,11 +1140,12 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                     <div className="space-y-3 pl-6">
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-1">
-                                                <Label className="text-xs">Start Hour</Label>
+                                                <Label className="text-xs" htmlFor="callingWindowStart">Start Hour</Label>
                                                 <select
+                                                    id="callingWindowStart"
                                                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                                                     value={formData.callingWindowStart}
-                                                    onChange={(e) => setFormData({ ...formData, callingWindowStart: parseInt(e.target.value) })}
+                                                    onChange={(e) => { setFormData({ ...formData, callingWindowStart: parseInt(e.target.value) }); setIntegrationsSaved(false); }}
                                                 >
                                                     {Array.from({ length: 24 }, (_, i) => (
                                                         <option key={i} value={i}>
@@ -1098,11 +1155,12 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                 </select>
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-xs">End Hour</Label>
+                                                <Label className="text-xs" htmlFor="callingWindowEnd">End Hour</Label>
                                                 <select
+                                                    id="callingWindowEnd"
                                                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                                                     value={formData.callingWindowEnd}
-                                                    onChange={(e) => setFormData({ ...formData, callingWindowEnd: parseInt(e.target.value) })}
+                                                    onChange={(e) => { setFormData({ ...formData, callingWindowEnd: parseInt(e.target.value) }); setIntegrationsSaved(false); }}
                                                 >
                                                     {Array.from({ length: 24 }, (_, i) => (
                                                         <option key={i} value={i}>
@@ -1120,6 +1178,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                     <button
                                                         key={i}
                                                         type="button"
+                                                        aria-pressed={formData.callingWindowDays.includes(i)}
                                                         className={`px-2 py-1 text-xs rounded border ${
                                                             formData.callingWindowDays.includes(i)
                                                                 ? 'bg-primary text-primary-foreground border-primary'
@@ -1166,7 +1225,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => window.location.href = '/api/auth/hubspot?action=disconnect'}
+                                    onClick={() => setDisconnectConfirm('hubspot')}
                                 >
                                     Disconnect
                                 </Button>
@@ -1197,7 +1256,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                         checked={formData.hubspotTriggerEnabled}
                                         onCheckedChange={(checked: boolean) => {
                                             const updates: Partial<typeof formData> = { hubspotTriggerEnabled: checked };
-                                            if (checked && !formData.hubspotTriggerSecret) {
+                                            if (checked && !formData.hubspotTriggerSecret && !hadMasked.hubspotTriggerSecret) {
                                                 const array = new Uint8Array(32);
                                                 crypto.getRandomValues(array);
                                                 updates.hubspotTriggerSecret = Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
@@ -1221,6 +1280,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                     variant="outline"
                                                     size="icon"
                                                     className="shrink-0"
+                                                    aria-label="Copy to clipboard"
                                                     onClick={() => {
                                                         navigator.clipboard.writeText(`${window.location.origin}/api/hubspot/trigger-call`);
                                                     }}
@@ -1243,6 +1303,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                     variant="outline"
                                                     size="icon"
                                                     className="shrink-0"
+                                                    aria-label="Copy to clipboard"
                                                     onClick={() => {
                                                         navigator.clipboard.writeText(formData.hubspotTriggerSecret);
                                                     }}
@@ -1272,11 +1333,12 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
 
                                         {agents && agents.length > 0 && (
                                             <div className="space-y-1">
-                                                <Label className="text-xs">Default Outbound Agent</Label>
+                                                <Label className="text-xs" htmlFor="hubspotDefaultAgentId">Default Outbound Agent</Label>
                                                 <select
+                                                    id="hubspotDefaultAgentId"
                                                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                                                     value={formData.hubspotDefaultAgentId}
-                                                    onChange={(e) => setFormData({ ...formData, hubspotDefaultAgentId: e.target.value })}
+                                                    onChange={(e) => { setFormData({ ...formData, hubspotDefaultAgentId: e.target.value }); setIntegrationsSaved(false); }}
                                                 >
                                                     <option value="">Select an agent...</option>
                                                     {agents.map(a => (
@@ -1311,7 +1373,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => window.location.href = '/api/auth/google-calendar?action=disconnect'}
+                                        onClick={() => setDisconnectConfirm('google_calendar')}
                                     >
                                         Disconnect
                                     </Button>
@@ -1320,7 +1382,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                     <Label className="text-xs">Default Calendar ID</Label>
                                     <Input
                                         value={formData.gcalDefaultCalendarId}
-                                        onChange={(e) => setFormData({ ...formData, gcalDefaultCalendarId: e.target.value })}
+                                        onChange={(e) => { setFormData({ ...formData, gcalDefaultCalendarId: e.target.value }); setIntegrationsSaved(false); }}
                                         placeholder="primary"
                                     />
                                     <p className="text-xs text-muted-foreground">
@@ -1362,7 +1424,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                 </div>
                                 <Switch
                                     checked={formData.slackEnabled}
-                                    onCheckedChange={(checked: boolean) => setFormData({ ...formData, slackEnabled: checked })}
+                                    onCheckedChange={(checked: boolean) => { setFormData({ ...formData, slackEnabled: checked }); setIntegrationsSaved(false); }}
                                 />
                             </div>
 
@@ -1374,7 +1436,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                             <Input
                                                 type="password"
                                                 value={formData.slackWebhookUrl}
-                                                onChange={(e) => setFormData({ ...formData, slackWebhookUrl: e.target.value })}
+                                                onChange={(e) => { setFormData({ ...formData, slackWebhookUrl: e.target.value }); setIntegrationsSaved(false); }}
                                                 placeholder="https://hooks.slack.com/services/T.../B.../..."
                                                 className="text-xs font-mono"
                                             />
@@ -1382,6 +1444,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                 variant="outline"
                                                 size="icon"
                                                 className="shrink-0"
+                                                aria-label="Copy to clipboard"
                                                 onClick={() => navigator.clipboard.writeText(formData.slackWebhookUrl)}
                                             >
                                                 <Copy className="h-3 w-3" />
@@ -1396,7 +1459,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                         <Label className="text-xs">Channel Name (optional)</Label>
                                         <Input
                                             value={formData.slackChannelName}
-                                            onChange={(e) => setFormData({ ...formData, slackChannelName: e.target.value })}
+                                            onChange={(e) => { setFormData({ ...formData, slackChannelName: e.target.value }); setIntegrationsSaved(false); }}
                                             placeholder="#call-notifications"
                                             className="text-xs"
                                         />
@@ -1461,7 +1524,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                 </div>
                                 <Switch
                                     checked={formData.calendlyEnabled}
-                                    onCheckedChange={(checked: boolean) => setFormData({ ...formData, calendlyEnabled: checked })}
+                                    onCheckedChange={(checked: boolean) => { setFormData({ ...formData, calendlyEnabled: checked }); setIntegrationsSaved(false); }}
                                 />
                             </div>
 
@@ -1473,7 +1536,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                             <Input
                                                 type="password"
                                                 value={formData.calendlyApiToken}
-                                                onChange={(e) => setFormData({ ...formData, calendlyApiToken: e.target.value })}
+                                                onChange={(e) => { setFormData({ ...formData, calendlyApiToken: e.target.value }); setIntegrationsSaved(false); }}
                                                 placeholder="Paste your Calendly API token"
                                                 className="text-xs font-mono"
                                             />
@@ -1522,11 +1585,12 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
 
                                     {calendlyEventTypes.length > 0 && (
                                         <div className="space-y-1">
-                                            <Label className="text-xs">Default Event Type</Label>
+                                            <Label className="text-xs" htmlFor="calendlyDefaultEventType">Default Event Type</Label>
                                             <select
+                                                id="calendlyDefaultEventType"
                                                 className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                                                 value={formData.calendlyDefaultEventType}
-                                                onChange={(e) => setFormData({ ...formData, calendlyDefaultEventType: e.target.value })}
+                                                onChange={(e) => { setFormData({ ...formData, calendlyDefaultEventType: e.target.value }); setIntegrationsSaved(false); }}
                                             >
                                                 <option value="">Select an event type...</option>
                                                 {calendlyEventTypes.map(et => (
@@ -1572,7 +1636,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                     onCheckedChange={(checked: boolean) => {
                                         const updates: Partial<typeof formData> = { apiTriggerEnabled: checked };
                                         // Generate API key if enabling for the first time
-                                        if (checked && !formData.apiTriggerKey) {
+                                        if (checked && !formData.apiTriggerKey && !hadMasked.apiTriggerKey) {
                                             const array = new Uint8Array(32);
                                             crypto.getRandomValues(array);
                                             updates.apiTriggerKey = 'pdy_sk_' + Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
@@ -1596,6 +1660,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                 variant="outline"
                                                 size="icon"
                                                 className="shrink-0"
+                                                aria-label="Copy to clipboard"
                                                 onClick={() => {
                                                     navigator.clipboard.writeText(`${window.location.origin}/api/trigger-call`);
                                                 }}
@@ -1618,6 +1683,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                                 variant="outline"
                                                 size="icon"
                                                 className="shrink-0"
+                                                aria-label="Copy to clipboard"
                                                 onClick={() => {
                                                     navigator.clipboard.writeText(formData.apiTriggerKey);
                                                 }}
@@ -1647,11 +1713,12 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
 
                                     {agents && agents.length > 0 && (
                                         <div className="space-y-1">
-                                            <Label className="text-xs">Default Outbound Agent</Label>
+                                            <Label className="text-xs" htmlFor="apiDefaultAgentId">Default Outbound Agent</Label>
                                             <select
+                                                id="apiDefaultAgentId"
                                                 className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                                                 value={formData.apiDefaultAgentId}
-                                                onChange={(e) => setFormData({ ...formData, apiDefaultAgentId: e.target.value })}
+                                                onChange={(e) => { setFormData({ ...formData, apiDefaultAgentId: e.target.value }); setIntegrationsSaved(false); }}
                                             >
                                                 <option value="">Select an agent...</option>
                                                 {agents.map(a => (
@@ -1740,6 +1807,36 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                     </div>
                 </CardContent>
             </Card>
+
+            <AlertDialog open={disconnectConfirm !== null} onOpenChange={(open: boolean) => { if (!open) setDisconnectConfirm(null); }}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Disconnect integration?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will disconnect your{' '}
+                            {disconnectConfirm === 'ghl' ? 'GoHighLevel' : disconnectConfirm === 'hubspot' ? 'HubSpot' : 'Google Calendar'}{' '}
+                            integration. Any workflows using this integration will stop working.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => {
+                                if (disconnectConfirm === 'ghl') {
+                                    window.location.href = '/api/auth/ghl?action=disconnect';
+                                } else if (disconnectConfirm === 'hubspot') {
+                                    window.location.href = '/api/auth/hubspot?action=disconnect';
+                                } else if (disconnectConfirm === 'google_calendar') {
+                                    window.location.href = '/api/auth/google-calendar?action=disconnect';
+                                }
+                            }}
+                        >
+                            Disconnect
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

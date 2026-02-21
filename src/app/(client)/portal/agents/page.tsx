@@ -75,7 +75,7 @@ export default async function ClientAgentsPage() {
                     {canCreate && (
                         <div className="flex flex-wrap gap-2">
                             <Link
-                                href="/portal/agents/builder"
+                                href="/agent-builder"
                                 className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-gradient-to-r from-violet-500 to-purple-600 text-white hover:from-violet-600 hover:to-purple-700 transition-all shadow-sm"
                             >
                                 <Sparkles className="h-4 w-4" />

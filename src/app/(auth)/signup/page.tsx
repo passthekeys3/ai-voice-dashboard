@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Mail, Eye, EyeOff } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 export default function SignupPage() {
     const [email, setEmail] = useState('');
@@ -67,32 +68,35 @@ export default function SignupPage() {
 
     if (success) {
         return (
-            <div className="w-full max-w-md text-center">
-                <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-6">
-                    <Mail className="h-6 w-6 text-green-600 dark:text-green-400" />
-                </div>
-                <h1 className="text-2xl font-bold tracking-tight">Check your email</h1>
-                <p className="text-muted-foreground mt-2 text-base">
-                    We&apos;ve sent a verification link to <strong>{email}</strong>.
-                    Click the link to activate your account.
-                </p>
-                <p className="text-sm text-muted-foreground mt-6">
-                    Didn&apos;t receive the email? Check your spam folder.
-                </p>
-                <Button variant="outline" className="w-full mt-4 rounded-full" asChild>
-                    <Link href="/login">Back to Login</Link>
-                </Button>
-            </div>
+            <Card className="w-full max-w-md border-l-4 border-l-green-500 text-center">
+                <CardContent className="pt-6">
+                    <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-6">
+                        <Mail className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    </div>
+                    <h1 className="text-2xl font-bold tracking-tight">Check your email</h1>
+                    <p className="text-muted-foreground mt-2 text-base">
+                        We&apos;ve sent a verification link to <strong>{email}</strong>.
+                        Click the link to activate your account.
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-6">
+                        Didn&apos;t receive the email? Check your spam folder.
+                    </p>
+                    <Button variant="outline" className="w-full mt-4 rounded-full" asChild>
+                        <Link href="/login">Back to Login</Link>
+                    </Button>
+                </CardContent>
+            </Card>
         );
     }
 
     return (
-        <div className="w-full max-w-md">
-            <div className="text-center mb-8">
+        <Card className="w-full max-w-md border-l-4 border-l-green-500">
+            <CardHeader className="text-center pb-2">
                 <h1 className="text-2xl font-bold tracking-tight">Create your account</h1>
                 <p className="text-muted-foreground mt-1">Start your voice AI agency today</p>
-            </div>
+            </CardHeader>
 
+            <CardContent>
             <form onSubmit={handleSignup} className="space-y-5">
                 {error && (
                     <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-md">
@@ -173,7 +177,7 @@ export default function SignupPage() {
                         <p className="text-xs text-red-500">Passwords do not match</p>
                     )}
                 </div>
-                <Button type="submit" className="w-full rounded-full" disabled={loading}>
+                <Button type="submit" className="w-full rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg" disabled={loading}>
                     {loading ? (
                         <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -191,6 +195,7 @@ export default function SignupPage() {
                     Sign in
                 </Link>
             </div>
-        </div>
+            </CardContent>
+        </Card>
     );
 }

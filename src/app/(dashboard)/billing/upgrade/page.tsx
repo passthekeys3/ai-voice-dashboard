@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { Header } from '@/components/dashboard/Header';
 import { PricingTable } from '@/components/dashboard/PricingTable';
 import type { PlanTier } from '@/types/database';
@@ -49,6 +51,13 @@ export default function UpgradePage() {
     return (
         <div className="flex flex-col h-full">
             <div className="flex-1 p-4 sm:p-6 space-y-6 overflow-auto">
+                <Link
+                    href="/billing"
+                    className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 mb-4"
+                >
+                    <ArrowLeft className="h-4 w-4" /> Back to Billing
+                </Link>
+
                 <div className="text-center max-w-2xl mx-auto">
                     <h2 className="text-3xl font-bold tracking-tight">Choose Your Plan</h2>
                     <p className="text-muted-foreground mt-2">

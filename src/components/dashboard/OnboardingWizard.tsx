@@ -29,6 +29,20 @@ type Step = 'welcome' | 'provider' | 'verify' | 'complete';
 
 const STEPS: Step[] = ['welcome', 'provider', 'verify', 'complete'];
 
+const STEP_COLORS: Record<Step, string> = {
+    welcome: 'bg-blue-500',
+    provider: 'bg-green-500',
+    verify: 'bg-amber-500',
+    complete: 'bg-purple-500',
+};
+
+const STEP_BORDERS: Record<Step, string> = {
+    welcome: 'border-l-blue-500',
+    provider: 'border-l-green-500',
+    verify: 'border-l-amber-500',
+    complete: 'border-l-purple-500',
+};
+
 export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWizardProps) {
     const router = useRouter();
     const [step, setStep] = useState<Step>(isOnboarded ? 'complete' : 'welcome');
@@ -113,17 +127,17 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                 {STEPS.map((s, i) => (
                     <div key={s} className="flex items-center">
                         <div
-                            className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                            className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
                                 i <= currentIndex
-                                    ? 'bg-foreground'
+                                    ? STEP_COLORS[s]
                                     : 'bg-muted-foreground/20'
                             }`}
                         />
                         {i < STEPS.length - 1 && (
                             <div
-                                className={`w-10 h-px transition-colors ${
+                                className={`w-10 h-px transition-all duration-300 ${
                                     i < currentIndex
-                                        ? 'bg-foreground'
+                                        ? STEP_COLORS[STEPS[i]]
                                         : 'bg-muted-foreground/20'
                                 }`}
                             />
@@ -132,12 +146,12 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                 ))}
             </div>
 
-            <Card className="w-full">
+            <Card className={`w-full border-l-4 transition-colors duration-300 ${STEP_BORDERS[step]}`}>
                 {step === 'welcome' && (
                     <>
                         <CardHeader className="text-center pb-2">
-                            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                                <Sparkles className="h-8 w-8 text-primary" />
+                            <div className="mx-auto w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
+                                <Sparkles className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                             </div>
                             <CardTitle className="text-3xl">Welcome, {userName.split(' ')[0]}!</CardTitle>
                             <CardDescription className="text-base">
@@ -146,22 +160,22 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="space-y-3">
-                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted">
-                                    <Key className="h-5 w-5 text-primary mt-0.5" />
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted border-l-2 border-l-blue-500">
+                                    <Key className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
                                     <div>
                                         <p className="font-medium text-sm">Connect your provider</p>
                                         <p className="text-sm text-muted-foreground">Add your Retell, VAPI, or Bland API key</p>
                                     </div>
                                 </div>
-                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted">
-                                    <Bot className="h-5 w-5 text-primary mt-0.5" />
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted border-l-2 border-l-green-500">
+                                    <Bot className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
                                     <div>
                                         <p className="font-medium text-sm">Sync your agents</p>
                                         <p className="text-sm text-muted-foreground">Import existing AI agents automatically</p>
                                     </div>
                                 </div>
-                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted">
-                                    <Phone className="h-5 w-5 text-primary mt-0.5" />
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted border-l-2 border-l-amber-500">
+                                    <Phone className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
                                     <div>
                                         <p className="font-medium text-sm">Manage everything</p>
                                         <p className="text-sm text-muted-foreground">Calls, analytics, clients - all in one place</p>
@@ -173,7 +187,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                 <Button variant="outline" className="flex-1 rounded-full" onClick={handleSkip}>
                                     Skip for now
                                 </Button>
-                                <Button className="flex-1 rounded-full" onClick={() => setStep('provider')}>
+                                <Button className="flex-1 rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg" onClick={() => setStep('provider')}>
                                     Get started
                                     <ArrowRight className="h-4 w-4 ml-2" />
                                 </Button>
@@ -273,7 +287,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                     Back
                                 </Button>
                                 <Button
-                                    className="flex-1 rounded-full"
+                                    className="flex-1 rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
                                     onClick={handleSaveApiKey}
                                     disabled={saving || !apiKey.trim()}
                                 >
@@ -328,7 +342,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                     Back
                                 </Button>
                                 <Button
-                                    className="flex-1 rounded-full"
+                                    className="flex-1 rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
                                     onClick={handleVerify}
                                     disabled={verifying || verified}
                                 >
@@ -354,8 +368,8 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                 {step === 'complete' && (
                     <>
                         <CardHeader className="text-center pb-2">
-                            <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
-                                <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+                            <div className="mx-auto w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mb-4">
+                                <CheckCircle2 className="h-8 w-8 text-purple-600 dark:text-purple-400" />
                             </div>
                             <CardTitle className="text-2xl">You&apos;re all set!</CardTitle>
                             <CardDescription className="text-base">
@@ -363,7 +377,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <Button className="w-full rounded-full" size="lg" onClick={handleComplete}>
+                            <Button className="w-full rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg" size="lg" onClick={handleComplete}>
                                 Go to Dashboard
                                 <ArrowRight className="h-4 w-4 ml-2" />
                             </Button>

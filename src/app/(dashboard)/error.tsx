@@ -41,9 +41,9 @@ export default function DashboardError({
                             <RefreshCw className="h-4 w-4 mr-2" />
                             Try Again
                         </Button>
-                        <Button onClick={() => window.location.href = '/settings'}>
+                        <Button onClick={() => window.location.href = '/'}>
                             <Home className="h-4 w-4 mr-2" />
-                            Reload Page
+                            Go Home
                         </Button>
                     </div>
                 </CardContent>

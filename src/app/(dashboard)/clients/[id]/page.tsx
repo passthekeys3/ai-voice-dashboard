@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
 import { InviteClientUserDialog } from '@/components/dashboard/InviteClientUserDialog';
 import { ClientPermissionsEditor } from '@/components/dashboard/ClientPermissionsEditor';
+import { ClientApiKeysEditor } from '@/components/dashboard/ClientApiKeysEditor';
 import { ClientBillingEditor } from '@/components/dashboard/ClientBillingEditor';
 import { ClientUsageDashboard } from '@/components/dashboard/ClientUsageDashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +18,11 @@ import type { Profile, Client } from '@/types';
 import { getClientPermissions } from '@/lib/permissions';
 
 export const metadata: Metadata = { title: 'Client Details' };
+
+/** Mask an API key for safe display: "...last4" or null */
+function maskKey(key: string | null | undefined): string | null {
+    return key ? '...' + key.slice(-4) : null;
+}
 
 export default async function ClientDetailPage({
     params,
@@ -171,6 +177,14 @@ export default async function ClientDetailPage({
                     agencyId={user.agency.id}
                     isAgencyDefault={false}
                     clientId={id}
+                />
+
+                {/* Voice Provider API Keys */}
+                <ClientApiKeysEditor
+                    clientId={id}
+                    retellApiKey={maskKey((client as Client).retell_api_key)}
+                    vapiApiKey={maskKey((client as Client).vapi_api_key)}
+                    blandApiKey={maskKey((client as Client).bland_api_key)}
                 />
 
                 {/* Billing Section */}

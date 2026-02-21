@@ -24,7 +24,7 @@ export default async function AgentBuilderPage() {
     const [clientsResult, phoneNumbersResult] = await Promise.all([
         supabase
             .from('clients')
-            .select('id, name')
+            .select('id, name, retell_api_key, vapi_api_key, bland_api_key')
             .eq('agency_id', user.agency.id)
             .order('name'),
         supabase
@@ -60,7 +60,13 @@ export default async function AgentBuilderPage() {
             />
 
             <AgentBuilder
-                clients={clientsResult.data || []}
+                clients={(clientsResult.data || []).map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    hasRetellKey: !!c.retell_api_key,
+                    hasVapiKey: !!c.vapi_api_key,
+                    hasBlandKey: !!c.bland_api_key,
+                }))}
                 phoneNumbers={phoneNumbersResult.data || []}
                 context={context}
                 availableProviders={availableProviders}

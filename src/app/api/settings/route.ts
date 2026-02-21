@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 
+/** Recursively deep-merge source into target. Arrays are replaced, not merged. */
+function deepMerge(
+    target: Record<string, unknown>,
+    source: Record<string, unknown>,
+): Record<string, unknown> {
+    const result = { ...target };
+    for (const [key, value] of Object.entries(source)) {
+        if (
+            typeof value === 'object' && value !== null && !Array.isArray(value) &&
+            typeof target[key] === 'object' && target[key] !== null && !Array.isArray(target[key])
+        ) {
+            result[key] = deepMerge(
+                target[key] as Record<string, unknown>,
+                value as Record<string, unknown>,
+            );
+        } else {
+            result[key] = value;
+        }
+    }
+    return result;
+}
+
 export async function PATCH(request: NextRequest) {
     try {
         const user = await getCurrentUser();
@@ -219,7 +241,8 @@ export async function PATCH(request: NextRequest) {
         if (vapi_api_key !== undefined) updatePayload.vapi_api_key = vapi_api_key || null;
         if (bland_api_key !== undefined) updatePayload.bland_api_key = bland_api_key || null;
 
-        // Deep merge integrations to prevent overwriting sibling keys (e.g., GHL when updating HubSpot)
+        // Deep merge integrations to prevent overwriting sibling/nested keys
+        // (e.g., GHL trigger_config.webhook_secret preserved when only updating enabled flag)
         if (integrations !== undefined) {
             const { data: current } = await supabase
                 .from('agencies')
@@ -228,17 +251,7 @@ export async function PATCH(request: NextRequest) {
                 .single();
 
             const existingIntegrations = (current?.integrations as Record<string, unknown>) || {};
-            const mergedIntegrations: Record<string, unknown> = { ...existingIntegrations };
-
-            for (const [key, value] of Object.entries(integrations)) {
-                if (typeof value === 'object' && value !== null && typeof existingIntegrations[key] === 'object') {
-                    mergedIntegrations[key] = { ...(existingIntegrations[key] as Record<string, unknown>), ...(value as Record<string, unknown>) };
-                } else {
-                    mergedIntegrations[key] = value;
-                }
-            }
-
-            updatePayload.integrations = mergedIntegrations;
+            updatePayload.integrations = deepMerge(existingIntegrations, integrations as Record<string, unknown>);
         }
 
         const { error } = await supabase

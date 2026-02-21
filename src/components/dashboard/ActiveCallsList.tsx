@@ -5,6 +5,16 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ConnectionStatus } from './ConnectionStatus';
 import {
     Radio,
@@ -23,6 +33,7 @@ export function ActiveCallsList() {
     const [calls, setCalls] = useState<ActiveCall[]>([]);
     const [loading, setLoading] = useState(true);
     const [ending, setEnding] = useState<string | null>(null);
+    const [endConfirmCallId, setEndConfirmCallId] = useState<string | null>(null);
     const [connectionStatus] = useState<ConnectionStatusType>({
         connected: true,
         reconnecting: false,
@@ -79,8 +90,6 @@ export function ActiveCallsList() {
     }, [fetchActiveCalls]);
 
     const handleEndCall = async (callId: string) => {
-        if (!confirm('Are you sure you want to end this call?')) return;
-
         const call = calls.find((c) => c.id === callId);
         setEnding(callId);
         try {
@@ -147,7 +156,7 @@ export function ActiveCallsList() {
                     </div>
                     <ConnectionStatus status={connectionStatus} />
                 </div>
-                <Button variant="ghost" size="icon" onClick={fetchActiveCalls} title="Refresh">
+                <Button variant="ghost" size="icon" onClick={fetchActiveCalls} title="Refresh" aria-label="Refresh active calls">
                     <RefreshCw className="h-4 w-4" />
                 </Button>
             </div>
@@ -193,7 +202,7 @@ export function ActiveCallsList() {
                                         </Button>
                                         <Button
                                             variant="destructive"
-                                            onClick={() => handleEndCall(call.id)}
+                                            onClick={() => setEndConfirmCallId(call.id)}
                                             disabled={ending === call.id}
                                         >
                                             {ending === call.id ? (
@@ -225,6 +234,31 @@ export function ActiveCallsList() {
                     </CardContent>
                 </Card>
             )}
+
+            <AlertDialog open={!!endConfirmCallId} onOpenChange={(open: boolean) => !open && setEndConfirmCallId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>End this call?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will immediately terminate the active call. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => {
+                                if (endConfirmCallId) {
+                                    handleEndCall(endConfirmCallId);
+                                    setEndConfirmCallId(null);
+                                }
+                            }}
+                        >
+                            End Call
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

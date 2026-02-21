@@ -163,9 +163,6 @@ export function ClientBillingEditor({
             // For now, show the client_secret in a toast — a full Stripe Elements modal
             // would be implemented as a separate component in production.
             toast.success('Payment setup initiated! Client secret ready for Stripe Elements integration.');
-            // In production, you would mount Stripe Elements with:
-            // data.client_secret and data.stripe_account_id
-            console.log('SetupIntent created:', { clientSecret: data.client_secret, stripeAccountId: data.stripe_account_id });
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Failed to set up payment');
         } finally {
@@ -373,6 +370,7 @@ export function ClientBillingEditor({
                                 setAiCallAnalysis(checked);
                                 setHasChanges(true);
                             }}
+                            aria-label="Toggle AI call analysis"
                         />
                     </div>
                     {aiCallAnalysis && (

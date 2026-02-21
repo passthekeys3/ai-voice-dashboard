@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getAgencyProviders, type NormalizedAgent } from '@/lib/providers';
 import { listRetellAgents, ensureAgentWebhookConfig, REQUIRED_WEBHOOK_EVENTS } from '@/lib/providers/retell';
+import { listVapiAssistants, updateVapiAssistant } from '@/lib/providers/vapi';
 
 /**
  * Cron endpoint to sync all agencies' agents and phone numbers
@@ -111,6 +112,36 @@ export async function POST(request: NextRequest) {
                                 }
                             } catch (err) {
                                 console.error(`[CRON SYNC] Failed to ensure webhook configs for agency ${agency.name}:`, err);
+                            }
+                        }
+
+                        // Ensure serverUrl points to our webhook handler on all Vapi assistants
+                        if (provider === 'vapi' && agency.vapi_api_key && process.env.NEXT_PUBLIC_APP_URL) {
+                            try {
+                                const expectedServerUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/vapi`;
+                                const vapiAssistants = await listVapiAssistants(agency.vapi_api_key);
+                                const vapiExternalIds = new Set(
+                                    externalAgents.map(a => a.externalId)
+                                );
+                                let patchedCount = 0;
+                                for (const assistant of vapiAssistants) {
+                                    // Only patch assistants that belong to this agency (synced above)
+                                    if (!vapiExternalIds.has(assistant.id)) continue;
+                                    if (assistant.serverUrl === expectedServerUrl) continue;
+                                    try {
+                                        await updateVapiAssistant(agency.vapi_api_key, assistant.id, {
+                                            serverUrl: expectedServerUrl,
+                                        });
+                                        patchedCount++;
+                                    } catch (err) {
+                                        console.error(`[CRON SYNC] Failed to patch Vapi serverUrl for assistant ${assistant.id}:`, err);
+                                    }
+                                }
+                                if (patchedCount > 0) {
+                                    console.log(`[CRON SYNC] Agency ${agency.name}: patched serverUrl on ${patchedCount} Vapi assistants`);
+                                }
+                            } catch (err) {
+                                console.error(`[CRON SYNC] Failed to ensure Vapi serverUrl for agency ${agency.name}:`, err);
                             }
                         }
 

@@ -4,6 +4,7 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { updateRetellAgent, getRetellAgent, getRetellLLM, updateRetellLLM } from '@/lib/providers/retell';
 import { getVapiAssistant, updateVapiAssistant } from '@/lib/providers/vapi';
 import { getBlandPathway, updateBlandPathway } from '@/lib/providers/bland';
+import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 
 export async function GET(
     request: NextRequest,
@@ -21,7 +22,7 @@ export async function GET(
         // Get the agent
         const { data: agent, error: agentError } = await supabase
             .from('agents')
-            .select('external_id, provider, config')
+            .select('external_id, provider, config, client_id')
             .eq('id', id)
             .eq('agency_id', user.agency.id)
             .single();
@@ -30,21 +31,18 @@ export async function GET(
             return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
         }
 
-        // Get agency API keys
-        const { data: agency } = await supabase
-            .from('agencies')
-            .select('retell_api_key, vapi_api_key, bland_api_key')
-            .eq('id', user.agency.id)
-            .single();
+        // Resolve API keys (client key → agency key fallback)
+        const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, agent.client_id);
+        const apiKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
 
-        if (!agency) {
-            return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
+        if (!apiKey) {
+            return NextResponse.json({ error: 'No API key configured for this provider' }, { status: 400 });
         }
 
         // Fetch from provider
-        if (agent.provider === 'retell' && agency.retell_api_key) {
+        if (agent.provider === 'retell') {
             try {
-                const retellAgent = await getRetellAgent(agency.retell_api_key, agent.external_id);
+                const retellAgent = await getRetellAgent(apiKey, agent.external_id);
 
                 // Get LLM details if agent has a response_engine with llm_id
                 let llmPrompt = '';
@@ -53,7 +51,7 @@ export async function GET(
                 if (retellAgent.response_engine?.type === 'retell-llm' && retellAgent.response_engine.llm_id) {
                     llmId = retellAgent.response_engine.llm_id;
                     try {
-                        const llm = await getRetellLLM(agency.retell_api_key, llmId);
+                        const llm = await getRetellLLM(apiKey, llmId);
                         llmPrompt = llm.general_prompt || '';
                     } catch (err) {
                         console.error('Error fetching LLM:', err);
@@ -74,9 +72,9 @@ export async function GET(
                 console.error('Error fetching Retell agent:', err);
                 return NextResponse.json({ error: 'Failed to fetch from provider' }, { status: 500 });
             }
-        } else if (agent.provider === 'vapi' && agency.vapi_api_key) {
+        } else if (agent.provider === 'vapi') {
             try {
-                const vapiAssistant = await getVapiAssistant(agency.vapi_api_key, agent.external_id);
+                const vapiAssistant = await getVapiAssistant(apiKey, agent.external_id);
 
                 return NextResponse.json({
                     data: {
@@ -94,9 +92,9 @@ export async function GET(
                 console.error('Error fetching Vapi assistant:', err);
                 return NextResponse.json({ error: 'Failed to fetch from provider' }, { status: 500 });
             }
-        } else if (agent.provider === 'bland' && agency.bland_api_key) {
+        } else if (agent.provider === 'bland') {
             try {
-                const pathway = await getBlandPathway(agency.bland_api_key, agent.external_id);
+                const pathway = await getBlandPathway(apiKey, agent.external_id);
 
                 return NextResponse.json({
                     data: {
@@ -139,7 +137,7 @@ export async function PATCH(
         // Get the agent
         const { data: agent, error: agentError } = await supabase
             .from('agents')
-            .select('external_id, provider, config')
+            .select('external_id, provider, config, client_id')
             .eq('id', id)
             .eq('agency_id', user.agency.id)
             .single();
@@ -148,22 +146,19 @@ export async function PATCH(
             return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
         }
 
-        // Get agency API keys
-        const { data: agency, error: agencyError } = await supabase
-            .from('agencies')
-            .select('retell_api_key, vapi_api_key, bland_api_key')
-            .eq('id', user.agency.id)
-            .single();
+        // Resolve API keys (client key → agency key fallback)
+        const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, agent.client_id);
+        const apiKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
 
-        if (agencyError || !agency) {
-            return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
+        if (!apiKey) {
+            return NextResponse.json({ error: 'No API key configured for this provider' }, { status: 400 });
         }
 
         // Update on provider
-        if (agent.provider === 'retell' && agency.retell_api_key) {
+        if (agent.provider === 'retell') {
             try {
                 // First, get the current agent to find LLM ID
-                const retellAgent = await getRetellAgent(agency.retell_api_key, agent.external_id);
+                const retellAgent = await getRetellAgent(apiKey, agent.external_id);
 
                 // Update agent settings (name, voice, language, responsiveness)
                 const updateData: Record<string, unknown> = {};
@@ -173,20 +168,12 @@ export async function PATCH(
                 if (body.responsiveness !== undefined) updateData.responsiveness = body.responsiveness;
 
                 if (Object.keys(updateData).length > 0) {
-                    await updateRetellAgent(
-                        agency.retell_api_key,
-                        agent.external_id,
-                        updateData
-                    );
+                    await updateRetellAgent(apiKey, agent.external_id, updateData);
                 }
 
                 // Update LLM prompt if provided
                 if (body.prompt && retellAgent.response_engine?.llm_id) {
-                    await updateRetellLLM(
-                        agency.retell_api_key,
-                        retellAgent.response_engine.llm_id,
-                        { general_prompt: body.prompt }
-                    );
+                    await updateRetellLLM(apiKey, retellAgent.response_engine.llm_id, { general_prompt: body.prompt });
                 }
 
                 // Store in local config
@@ -215,32 +202,54 @@ export async function PATCH(
                     { status: 500 }
                 );
             }
-        } else if (agent.provider === 'vapi' && agency.vapi_api_key) {
+        } else if (agent.provider === 'vapi') {
             try {
+                // Fetch current assistant to preserve existing config structures
+                const vapiAssistant = await getVapiAssistant(apiKey, agent.external_id);
+
                 const updateData: Partial<{
                     name: string;
-                    model: { provider: string; model: string; systemPrompt?: string };
+                    model: { provider: string; model: string; systemPrompt?: string; temperature?: number };
+                    voice: { provider: string; voiceId: string; speed?: number; stability?: number };
+                    transcriber: { provider: string; model?: string; language?: string };
                     firstMessage: string;
                 }> = {};
 
                 if (body.agent_name) updateData.name = body.agent_name;
-                if (body.prompt) {
-                    // Preserve existing model config, just update the prompt
-                    const vapiAssistant = await getVapiAssistant(agency.vapi_api_key, agent.external_id);
+
+                // Update model config (prompt, model selection, or both)
+                if (body.prompt || body.model || body.model_provider) {
                     updateData.model = {
-                        provider: vapiAssistant.model?.provider || 'openai',
-                        model: vapiAssistant.model?.model || 'gpt-4o',
-                        systemPrompt: body.prompt,
+                        provider: body.model_provider || vapiAssistant.model?.provider || 'openai',
+                        model: body.model || vapiAssistant.model?.model || 'gpt-4o',
+                        systemPrompt: body.prompt || vapiAssistant.model?.systemPrompt,
+                        ...(vapiAssistant.model?.temperature !== undefined ? { temperature: vapiAssistant.model.temperature } : {}),
                     };
                 }
+
+                // Update voice config
+                if (body.voice_id || body.voice_provider) {
+                    updateData.voice = {
+                        provider: body.voice_provider || vapiAssistant.voice?.provider || 'openai',
+                        voiceId: body.voice_id || vapiAssistant.voice?.voiceId || '',
+                        ...(vapiAssistant.voice?.speed !== undefined ? { speed: vapiAssistant.voice.speed } : {}),
+                        ...(vapiAssistant.voice?.stability !== undefined ? { stability: vapiAssistant.voice.stability } : {}),
+                    };
+                }
+
+                // Update transcriber language
+                if (body.language) {
+                    updateData.transcriber = {
+                        provider: vapiAssistant.transcriber?.provider || 'deepgram',
+                        model: vapiAssistant.transcriber?.model,
+                        language: body.language,
+                    };
+                }
+
                 if (body.first_message) updateData.firstMessage = body.first_message;
 
                 if (Object.keys(updateData).length > 0) {
-                    await updateVapiAssistant(
-                        agency.vapi_api_key,
-                        agent.external_id,
-                        updateData
-                    );
+                    await updateVapiAssistant(apiKey, agent.external_id, updateData);
                 }
 
                 // Store in local config
@@ -248,6 +257,8 @@ export async function PATCH(
                     ...agent.config,
                     agent_name: body.agent_name || agent.config?.agent_name,
                     prompt: body.prompt || agent.config?.prompt,
+                    voice_id: body.voice_id || agent.config?.voice_id,
+                    language: body.language || agent.config?.language,
                 };
 
                 await supabase
@@ -265,7 +276,7 @@ export async function PATCH(
                     { status: 500 }
                 );
             }
-        } else if (agent.provider === 'bland' && agency.bland_api_key) {
+        } else if (agent.provider === 'bland') {
             try {
                 const updateData: Partial<{ name: string; description: string }> = {};
 
@@ -273,11 +284,7 @@ export async function PATCH(
                 if (body.prompt) updateData.description = body.prompt;
 
                 if (Object.keys(updateData).length > 0) {
-                    await updateBlandPathway(
-                        agency.bland_api_key,
-                        agent.external_id,
-                        updateData
-                    );
+                    await updateBlandPathway(apiKey, agent.external_id, updateData);
                 }
 
                 // Store in local config

@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import { SearchInput } from '@/components/ui/search-input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users } from 'lucide-react';
 import Link from 'next/link';
@@ -55,31 +54,35 @@ export function FilterableClientGrid({ clients }: FilterableClientGridProps) {
             {filteredClients.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredClients.map((client) => (
-                        <Card key={client.id} className="hover:shadow-md transition-shadow">
-                            <CardHeader className="flex flex-row items-start justify-between pb-2">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800">
-                                        <Users className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                        <Link
+                            key={client.id}
+                            href={`/clients/${client.id}`}
+                            className="block"
+                        >
+                            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                                <CardHeader className="flex flex-row items-start justify-between pb-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800">
+                                            <Users className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-lg">{client.name}</CardTitle>
+                                            <p className="text-sm text-muted-foreground">{client.email}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <CardTitle className="text-lg">{client.name}</CardTitle>
-                                        <p className="text-sm text-muted-foreground">{client.email}</p>
+                                    <Badge variant={client.is_active ? 'default' : 'secondary'}>
+                                        {client.is_active ? 'Active' : 'Inactive'}
+                                    </Badge>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="flex justify-end">
+                                        <span className="text-sm text-muted-foreground hover:text-foreground">
+                                            View Details &rarr;
+                                        </span>
                                     </div>
-                                </div>
-                                <Badge variant={client.is_active ? 'default' : 'secondary'}>
-                                    {client.is_active ? 'Active' : 'Inactive'}
-                                </Badge>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex justify-end">
-                                    <Button variant="ghost" size="sm" asChild>
-                                        <Link href={`/clients/${client.id}`}>
-                                            View Details
-                                        </Link>
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                </CardContent>
+                            </Card>
+                        </Link>
                     ))}
                 </div>
             ) : (

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { requireAuth, isAgencyAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
+import { getUserPermissions } from '@/lib/permissions';
 import { Header } from '@/components/dashboard/Header';
 import { CallPlayer } from '@/components/dashboard/CallPlayer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +23,8 @@ export default async function CallDetailPage({
     const user = await requireAuth();
     const supabase = await createClient();
     const isAdmin = isAgencyAdmin(user);
+    const permissions = getUserPermissions(user);
+    const showCosts = isAdmin || permissions.show_costs;
 
     const { data: call, error } = await supabase
         .from('calls')
@@ -103,10 +106,12 @@ export default async function CallDetailPage({
                                     <p className="text-sm text-muted-foreground">Duration</p>
                                     <p className="font-medium">{formatDuration(call.duration_seconds)}</p>
                                 </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Cost</p>
-                                    <p className="font-medium">${(call.cost_cents / 100).toFixed(2)}</p>
-                                </div>
+                                {showCosts && (
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">Cost</p>
+                                        <p className="font-medium">${(call.cost_cents / 100).toFixed(2)}</p>
+                                    </div>
+                                )}
                                 <div>
                                     <p className="text-sm text-muted-foreground">Provider</p>
                                     <p className="font-medium capitalize">{call.provider}</p>

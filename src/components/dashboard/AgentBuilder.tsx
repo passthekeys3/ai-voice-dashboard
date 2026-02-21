@@ -17,7 +17,7 @@ import { getAvailableTemplates } from '@/lib/agent-builder/templates';
 import { matchVoicesToDescription } from '@/lib/agent-builder/llm';
 
 interface AgentBuilderProps {
-    clients: { id: string; name: string }[];
+    clients: { id: string; name: string; hasRetellKey?: boolean; hasVapiKey?: boolean; hasBlandKey?: boolean }[];
     phoneNumbers: { id: string; phone_number: string; nickname?: string; agent_id?: string | null }[];
     context: BuilderContext;
     availableProviders: ('retell' | 'vapi' | 'bland')[];

@@ -168,6 +168,7 @@ function SidebarContent({
                             key={item.name}
                             href={item.href}
                             onClick={onNavigate}
+                            aria-current={isActive ? 'page' : undefined}
                             className={cn(
                                 'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                                 isActive

@@ -6,6 +6,7 @@ import {
     forbidden,
     notFound,
     databaseError,
+    validationError,
     apiSuccess,
     noContent,
     withErrorHandling,
@@ -42,7 +43,16 @@ export const GET = withErrorHandling(async (
         return notFound('Client');
     }
 
-    return apiSuccess(client);
+    // Mask API keys — never return raw keys to the frontend
+    const masked = { ...client };
+    const API_KEY_FIELDS = ['retell_api_key', 'vapi_api_key', 'bland_api_key'] as const;
+    for (const k of API_KEY_FIELDS) {
+        if (masked[k]) {
+            masked[k] = '...' + (masked[k] as string).slice(-4);
+        }
+    }
+
+    return apiSuccess(masked);
 });
 
 export const PATCH = withErrorHandling(async (
@@ -73,6 +83,26 @@ export const PATCH = withErrorHandling(async (
     if (body.stripe_subscription_id !== undefined) updateData.stripe_subscription_id = body.stripe_subscription_id;
     if (body.next_billing_date !== undefined) updateData.next_billing_date = body.next_billing_date;
 
+    // Voice provider API keys (per-client override — null/empty clears the key)
+    const API_KEY_MAX_LENGTH = 256;
+    const API_KEY_PATTERN = /^[a-zA-Z0-9_\-:.]+$/;
+
+    for (const keyField of ['retell_api_key', 'vapi_api_key', 'bland_api_key'] as const) {
+        if (body[keyField] !== undefined) {
+            if (body[keyField] === '' || body[keyField] === null) {
+                updateData[keyField] = null; // Clear the key → fall back to agency key
+            } else {
+                if (typeof body[keyField] !== 'string' || body[keyField].length > API_KEY_MAX_LENGTH) {
+                    return validationError(`${keyField} is too long (max ${API_KEY_MAX_LENGTH} chars)`);
+                }
+                if (!API_KEY_PATTERN.test(body[keyField])) {
+                    return validationError(`${keyField} has an invalid format`);
+                }
+                updateData[keyField] = body[keyField];
+            }
+        }
+    }
+
     const { data: client, error } = await supabase
         .from('clients')
         .update(updateData)
@@ -89,7 +119,16 @@ export const PATCH = withErrorHandling(async (
         return notFound('Client');
     }
 
-    return apiSuccess(client);
+    // Mask API keys — never return raw keys to the frontend
+    const masked = { ...client };
+    const KEY_FIELDS = ['retell_api_key', 'vapi_api_key', 'bland_api_key'] as const;
+    for (const k of KEY_FIELDS) {
+        if (masked[k]) {
+            masked[k] = '...' + (masked[k] as string).slice(-4);
+        }
+    }
+
+    return apiSuccess(masked);
 });
 
 export const DELETE = withErrorHandling(async (

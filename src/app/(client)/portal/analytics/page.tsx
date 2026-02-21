@@ -148,6 +148,7 @@ export default async function ClientAnalyticsPage({ searchParams }: Props) {
                     totalMinutes={analytics.total_minutes}
                     totalCost={analytics.total_cost}
                     successRate={analytics.success_rate}
+                    showCosts={permissions.show_costs}
                 />
 
                 <div className="grid gap-4 md:grid-cols-7">
@@ -203,21 +204,23 @@ export default async function ClientAnalyticsPage({ searchParams }: Props) {
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Cost per Call</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-4xl font-bold">
-                                ${analytics.total_calls > 0
-                                    ? (analytics.total_cost / analytics.total_calls).toFixed(2)
-                                    : '0.00'}
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Average cost per call
-                            </p>
-                        </CardContent>
-                    </Card>
+                    {permissions.show_costs && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Cost per Call</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-4xl font-bold">
+                                    ${analytics.total_calls > 0
+                                        ? (analytics.total_cost / analytics.total_calls).toFixed(2)
+                                        : '0.00'}
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Average cost per call
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </div>
         </div>

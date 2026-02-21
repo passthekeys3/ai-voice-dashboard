@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
-import { broadcastCallUpdate } from '@/lib/realtime/broadcast';
+import { broadcastCallUpdate, broadcastTranscriptUpdate } from '@/lib/realtime/broadcast';
 import { executeWorkflows } from '@/lib/workflows/executor';
 import { detectTimezone } from '@/lib/timezone/detector';
 import { accumulateUsage } from '@/lib/billing/usage';
 import { calculateCallScore, inferBasicSentiment } from '@/lib/scoring/call-score';
 import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-analyzer';
+import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
+import { isValidWebhookUrl } from '@/lib/webhooks/validation';
 import { waitUntil } from '@vercel/functions';
 import type { Workflow } from '@/types';
 import crypto from 'crypto';
@@ -25,17 +27,22 @@ function verifyVapiSignature(body: string, signature: string | null, apiKey: str
     }
 }
 
+
+
 // Forward call data to agent's webhook URL
 async function forwardToWebhook(webhookUrl: string, callData: Record<string, unknown>) {
+    if (!isValidWebhookUrl(webhookUrl)) {
+        console.error('Blocked webhook forwarding to invalid/private URL');
+        return;
+    }
     try {
         await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(callData),
         });
-        console.log(`Vapi webhook forwarded to: ${webhookUrl}`);
     } catch (err) {
-        console.error(`Failed to forward Vapi webhook to ${webhookUrl}:`, err);
+        console.error('Failed to forward Vapi webhook:', err);
     }
 }
 
@@ -54,11 +61,25 @@ interface VapiWebhookPayload {
             recordingUrl?: string;
             summary?: string;
             cost?: number;
+            costBreakdown?: {
+                transport?: number;
+                stt?: number;
+                llm?: number;
+                tts?: number;
+                vapi?: number;
+                total: number;
+            };
             customer?: { number?: string };
             phoneNumber?: { number?: string };
             metadata?: Record<string, unknown>;
+            monitor?: { controlUrl?: string; listenUrl?: string };
+            analysis?: { summary?: string; successEvaluation?: string };
         };
         endedReason?: string;
+        // Transcript event fields (at message level, not inside call)
+        role?: 'user' | 'assistant';
+        transcriptType?: 'partial' | 'final';
+        transcript?: string;
     };
 }
 
@@ -70,9 +91,12 @@ export async function POST(request: NextRequest) {
 
         const payload: VapiWebhookPayload = JSON.parse(rawBody);
 
-        // Process end-of-call-report and status-update (for call_started)
+        // Process end-of-call-report, status-update (for call_started), and transcript events
         const messageType = payload.message.type;
-        if ((messageType !== 'end-of-call-report' && messageType !== 'status-update') || !payload.message.call) {
+        if (messageType !== 'end-of-call-report' && messageType !== 'status-update' && messageType !== 'transcript') {
+            return NextResponse.json({ received: true });
+        }
+        if (!payload.message.call) {
             return NextResponse.json({ received: true });
         }
 
@@ -86,10 +110,10 @@ export async function POST(request: NextRequest) {
         // Use service client for webhook operations (bypasses RLS)
         const supabase = createServiceClient();
 
-        // Find agent by external_id (include agency_id, name, webhook_url, and vapi_api_key)
+        // Find agent by external_id (include agency_id, name, webhook_url)
         const { data: agent } = await supabase
             .from('agents')
-            .select('id, name, client_id, agency_id, webhook_url, agencies(vapi_api_key)')
+            .select('id, name, client_id, agency_id, webhook_url')
             .eq('external_id', call.assistantId)
             .eq('provider', 'vapi')
             .single();
@@ -99,21 +123,82 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ received: true });
         }
 
-        // Safely extract the Vapi API key from the joined agencies data
-        type AgentWithAgency = typeof agent & {
-            agencies: { vapi_api_key: string | null } | null;
-        };
-        const agentWithAgency = agent as AgentWithAgency;
-        const vapiApiKey = agentWithAgency.agencies?.vapi_api_key;
+        // Resolve API key (client key → agency key fallback)
+        const resolvedKeys = await resolveProviderApiKeys(supabase, agent.agency_id, agent.client_id);
+        const vapiApiKey = resolvedKeys.vapi_api_key;
 
         if (!vapiApiKey) {
-            console.error('Vapi API key not configured for agency - cannot verify webhook signature');
+            console.error('Vapi API key not configured - cannot verify webhook signature');
             return NextResponse.json({ error: 'API key not configured' }, { status: 401 });
         }
 
         if (!verifyVapiSignature(rawBody, signature, vapiApiKey)) {
             console.error('Invalid Vapi webhook signature');
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+        }
+
+        // ======================================
+        // Handle transcript events — append to DB and broadcast for live UI
+        // ======================================
+        if (messageType === 'transcript') {
+            // Only process final transcripts to avoid duplicates/stuttering from partials
+            if (payload.message.transcriptType !== 'final') {
+                return NextResponse.json({ received: true });
+            }
+
+            const role = payload.message.role;
+            const text = payload.message.transcript;
+            if (!role || !text) {
+                return NextResponse.json({ received: true });
+            }
+
+            // Format to match existing "Agent: text\nUser: text" format
+            const speaker = role === 'assistant' ? 'Agent' : 'User';
+            const newLine = `${speaker}: ${text}`;
+
+            // Read current transcript, append new line, write back
+            const { data: existingCall } = await supabase
+                .from('calls')
+                .select('transcript')
+                .eq('external_id', call.id)
+                .single();
+
+            const currentTranscript = existingCall?.transcript || '';
+            const updatedTranscript = currentTranscript
+                ? `${currentTranscript}\n${newLine}`
+                : newLine;
+
+            const { error: updateError } = await supabase
+                .from('calls')
+                .update({ transcript: updatedTranscript })
+                .eq('external_id', call.id);
+
+            if (updateError) {
+                // Call record may not exist yet (race with status-update) — upsert minimal record
+                await supabase
+                    .from('calls')
+                    .upsert({
+                        agent_id: agent.id,
+                        client_id: agent.client_id,
+                        external_id: call.id,
+                        provider: 'vapi',
+                        status: 'in_progress',
+                        direction: call.type === 'inboundPhoneCall' ? 'inbound' : 'outbound',
+                        transcript: newLine,
+                        started_at: call.startedAt || new Date().toISOString(),
+                    }, { onConflict: 'external_id' });
+            }
+
+            // Broadcast transcript update for real-time UI
+            waitUntil(
+                broadcastTranscriptUpdate({
+                    _agencyId: agent.agency_id,
+                    callId: call.id,
+                    transcript: updatedTranscript,
+                }).catch(err => console.error('Failed to broadcast Vapi transcript update:', err))
+            );
+
+            return NextResponse.json({ received: true });
         }
 
         const startedAt = call.startedAt || new Date().toISOString();
@@ -149,11 +234,19 @@ export async function POST(request: NextRequest) {
             variantId = call.metadata.variant_id as string;
         }
 
-        // Infer sentiment from transcript (Vapi doesn't provide it natively).
-        // Default to 'neutral' if transcript is empty/missing to avoid undefined in DB.
-        const inferredSentiment = status === 'completed'
-            ? (call.transcript ? inferBasicSentiment(call.transcript) : 'neutral') || 'neutral'
-            : undefined;
+        // Derive sentiment from Vapi's native analysis if available, otherwise infer from transcript.
+        // successEvaluation maps: "success" → positive, "failure" → negative, else → inferred
+        let inferredSentiment: string | undefined;
+        if (status === 'completed') {
+            const successEval = call.analysis?.successEvaluation?.toLowerCase();
+            if (successEval === 'success' || successEval === 'true') {
+                inferredSentiment = 'positive';
+            } else if (successEval === 'failure' || successEval === 'false') {
+                inferredSentiment = 'negative';
+            } else {
+                inferredSentiment = (call.transcript ? inferBasicSentiment(call.transcript) : 'neutral') || 'neutral';
+            }
+        }
 
         // Calculate call quality score
         const callScore = status === 'completed' ? calculateCallScore({
@@ -179,12 +272,18 @@ export async function POST(request: NextRequest) {
                     to_number: call.phoneNumber?.number,
                     transcript: call.transcript,
                     audio_url: call.recordingUrl,
-                    summary: call.summary,
+                    summary: call.analysis?.summary || call.summary,
                     sentiment: inferredSentiment,
                     call_score: callScore,
                     started_at: startedAt,
                     ended_at: endedAt,
-                    metadata: call.metadata || null,
+                    metadata: {
+                        ...(call.metadata || {}),
+                        ...(call.monitor?.controlUrl ? { vapi_control_url: call.monitor.controlUrl } : {}),
+                        ...(call.monitor?.listenUrl ? { vapi_listen_url: call.monitor.listenUrl } : {}),
+                        ...(call.costBreakdown ? { cost_breakdown: call.costBreakdown } : {}),
+                        ...(call.analysis?.successEvaluation ? { vapi_success_evaluation: call.analysis.successEvaluation } : {}),
+                    },
                     experiment_id: experimentId,
                     variant_id: variantId,
                     lead_timezone: leadTimezone,
@@ -276,7 +375,7 @@ export async function POST(request: NextRequest) {
                 duration_seconds: durationSeconds,
                 transcript: call.transcript,
                 cost_cents: costCents,
-                summary: call.summary,
+                summary: call.analysis?.summary || call.summary,
                 sentiment: inferredSentiment,
             },
         }).catch(err => console.error('Failed to broadcast Vapi call update:', err)));
@@ -295,7 +394,7 @@ export async function POST(request: NextRequest) {
                 to_number: call.phoneNumber?.number,
                 transcript: call.transcript,
                 recording_url: call.recordingUrl,
-                summary: call.summary,
+                summary: call.analysis?.summary || call.summary,
                 started_at: startedAt,
                 ended_at: endedAt,
                 metadata: call.metadata,
@@ -580,7 +679,7 @@ export async function POST(request: NextRequest) {
                         to_number: call.phoneNumber?.number,
                         transcript: call.transcript,
                         recording_url: call.recordingUrl,
-                        summary: call.summary,
+                        summary: call.analysis?.summary || call.summary,
                         sentiment: inferredSentiment,
                         started_at: startedAt,
                         ended_at: endedAt,

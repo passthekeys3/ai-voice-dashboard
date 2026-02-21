@@ -6,6 +6,8 @@ import { detectTimezone } from '@/lib/timezone/detector';
 import { accumulateUsage } from '@/lib/billing/usage';
 import { calculateCallScore } from '@/lib/scoring/call-score';
 import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-analyzer';
+import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
+import { isValidWebhookUrl } from '@/lib/webhooks/validation';
 import { waitUntil } from '@vercel/functions';
 import crypto from 'crypto';
 import type { Workflow } from '@/types';
@@ -58,15 +60,18 @@ interface BlandWebhookPayload {
 
 // Forward call data to agent's webhook URL
 async function forwardToWebhook(webhookUrl: string, callData: Record<string, unknown>) {
+    if (!isValidWebhookUrl(webhookUrl)) {
+        console.error('Blocked webhook forwarding to invalid/private URL');
+        return;
+    }
     try {
         await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(callData),
         });
-        console.log(`Bland webhook forwarded to: ${webhookUrl}`);
     } catch (err) {
-        console.error(`Failed to forward Bland webhook to ${webhookUrl}:`, err);
+        console.error('Failed to forward Bland webhook:', err);
     }
 }
 
@@ -89,7 +94,7 @@ export async function POST(request: NextRequest) {
         // Find agent by external_id (pathway_id) + provider = 'bland'
         const { data: agent } = await supabase
             .from('agents')
-            .select('id, name, client_id, agency_id, webhook_url, agencies(bland_api_key)')
+            .select('id, name, client_id, agency_id, webhook_url')
             .eq('external_id', pathwayId)
             .eq('provider', 'bland')
             .single();
@@ -99,15 +104,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ received: true });
         }
 
-        // Verify the agency has a Bland API key configured (basic validation)
-        type AgentWithAgency = typeof agent & {
-            agencies: { bland_api_key: string | null } | null;
-        };
-        const agentWithAgency = agent as AgentWithAgency;
-        const blandApiKey = agentWithAgency.agencies?.bland_api_key;
+        // Resolve API key (client key → agency key fallback)
+        const resolvedKeys = await resolveProviderApiKeys(supabase, agent.agency_id, agent.client_id);
+        const blandApiKey = resolvedKeys.bland_api_key;
 
         if (!blandApiKey) {
-            console.error('Bland API key not configured for agency — rejecting webhook');
+            console.error('Bland API key not configured — rejecting webhook');
             return NextResponse.json({ error: 'API key not configured' }, { status: 401 });
         }
 
@@ -139,8 +141,9 @@ export async function POST(request: NextRequest) {
             status = 'failed';
         }
 
-        // Bland is always outbound (inbound is configured per-number, not per-call webhook)
-        const direction = 'outbound';
+        // Detect inbound direction: Bland inbound calls may set direction in metadata,
+        // or the agency's own number appears as `from` for outbound and `to` for inbound.
+        const direction = (payload.metadata?.direction === 'inbound') ? 'inbound' : 'outbound';
 
         // Detect lead timezone from phone number
         const leadPhone = payload.to;
@@ -154,19 +157,32 @@ export async function POST(request: NextRequest) {
             variantId = payload.metadata.variant_id as string;
         }
 
-        // Calculate call quality score
-        const callScore = status === 'completed' ? calculateCallScore({
-            sentiment: undefined,
-            durationSeconds,
-            status,
-        }) : null;
+        // Detect voicemail calls — Bland provides answered_by: 'human' | 'voicemail' | null
+        const isVoicemail = payload.answered_by === 'voicemail';
+
+        // Calculate call quality score (voicemail = 0, not a meaningful interaction)
+        const callScore = status === 'completed'
+            ? (isVoicemail ? 0 : calculateCallScore({
+                sentiment: undefined,
+                durationSeconds,
+                status,
+            }))
+            : null;
 
         // Build timestamps
         const startedAt = payload.started_at || payload.created_at;
         const endedAt = payload.end_at || null;
 
-        // Use concatenated_transcript (string form)
-        const transcript = payload.concatenated_transcript || undefined;
+        // Prefer structured transcripts array (speaker-attributed) over flat string.
+        // Formats into "Agent: ...\nUser: ..." matching Retell/Vapi parseTranscript() expectations.
+        let transcript: string | undefined;
+        if (payload.transcripts && payload.transcripts.length > 0) {
+            transcript = payload.transcripts
+                .map(t => `${t.user === 'assistant' ? 'Agent' : 'User'}: ${t.text}`)
+                .join('\n');
+        } else {
+            transcript = payload.concatenated_transcript || undefined;
+        }
 
         // Upsert call
         const { error } = await supabase
@@ -186,7 +202,7 @@ export async function POST(request: NextRequest) {
                     transcript,
                     audio_url: payload.recording_url,
                     summary: payload.summary,
-                    sentiment: null,
+                    sentiment: isVoicemail ? 'neutral' : null,
                     call_score: callScore,
                     started_at: startedAt,
                     ended_at: endedAt,
@@ -208,7 +224,8 @@ export async function POST(request: NextRequest) {
         }
 
         // AI-powered call analysis (runs in background)
-        if (status === 'completed' && transcript) {
+        // Skip voicemail calls — no meaningful conversation to analyze, saves AI credits
+        if (status === 'completed' && transcript && !isVoicemail) {
             waitUntil((async () => {
                 try {
                     let aiEnabled = false;
@@ -262,7 +279,12 @@ export async function POST(request: NextRequest) {
             })());
         }
 
-        // Broadcast real-time update
+        // Broadcast real-time update.
+        // NOTE: Bland only fires a single webhook event (on call completion), so unlike
+        // Retell (call_started event) and Vapi (status-update → in-progress), we CANNOT
+        // broadcast a 'call:started' event. The dashboard's active calls panel relies on
+        // the real-time Bland API query (GET /api/calls/active → listBlandActiveCalls)
+        // to show in-progress Bland calls instead.
         const isCallEnded = status === 'completed' || status === 'failed';
         waitUntil(broadcastCallUpdate({
             agencyId: agent.agency_id,
@@ -347,7 +369,7 @@ export async function POST(request: NextRequest) {
                     .from('workflows')
                     .select('*')
                     .eq('agency_id', agent.agency_id)
-                    .in('trigger', ['call_ended'])
+                    .in('trigger', direction === 'inbound' ? ['call_ended', 'inbound_call_ended'] : ['call_ended'])
                     .eq('is_active', true)
                     .or(`agent_id.is.null,agent_id.eq.${agent.id}`);
 

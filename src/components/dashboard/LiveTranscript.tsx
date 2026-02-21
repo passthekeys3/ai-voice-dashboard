@@ -5,7 +5,18 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ConnectionStatus } from './ConnectionStatus';
+import { Input } from '@/components/ui/input';
 import {
     Radio,
     Phone,
@@ -14,10 +25,15 @@ import {
     PhoneOff,
     Loader2,
     Clock,
-    CheckCircle,
+    AlertCircle,
     Zap,
     RotateCw,
+    Mic,
+    MicOff,
+    MessageSquare,
+    Send,
 } from 'lucide-react';
+import { toast } from '@/lib/toast';
 import type { ConnectionStatus as ConnectionStatusType } from '@/types/realtime';
 import { createClient } from '@/lib/supabase/client';
 
@@ -71,6 +87,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
     const [call, setCall] = useState<LiveCall | null>(null);
     const [loading, setLoading] = useState(true);
     const [ending, setEnding] = useState(false);
+    const [showEndConfirm, setShowEndConfirm] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusType>({
         connected: false,
@@ -86,6 +103,12 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
     const supabaseRef = useRef(createClient());
     const lastUpdateSourceRef = useRef<'realtime' | 'poll' | 'initial'>('initial');
     const [lastUpdateInfo, setLastUpdateInfo] = useState<{ source: 'realtime' | 'poll'; time: Date } | null>(null);
+
+    // Vapi call control state
+    const [isMuted, setIsMuted] = useState(false);
+    const [sayMessage, setSayMessage] = useState('');
+    const [sendingSay, setSendingSay] = useState(false);
+    const [togglingMute, setTogglingMute] = useState(false);
 
     // Apply transcript update to state — used by both fetch and realtime
     const applyTranscriptUpdate = useCallback((newCall: LiveCall) => {
@@ -223,17 +246,71 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
     }, [call?.transcript, autoScroll]);
 
     const handleEndCall = async () => {
-        if (!confirm('Are you sure you want to end this call?')) return;
-
         setEnding(true);
         try {
             const endProvider = call?.provider || providerProp;
-            await fetch(`/api/calls/${callId}/end?provider=${endProvider}`, { method: 'POST' });
+            const response = await fetch(`/api/calls/${callId}/end?provider=${endProvider}`, { method: 'POST' });
+            if (!response.ok) {
+                throw new Error('Failed to end call');
+            }
+            toast.success('Call ended');
             router.push('/live');
         } catch (err) {
             console.error('Failed to end call:', err);
+            toast.error('Failed to end call. Please try again.');
         } finally {
             setEnding(false);
+        }
+    };
+
+    const isVapiCall = call?.provider === 'vapi' && call?.is_active;
+
+    const handleToggleMute = async () => {
+        if (!call) return;
+        setTogglingMute(true);
+        try {
+            const action = isMuted ? 'unmute' : 'mute';
+            const response = await fetch(`/api/calls/${callId}/control`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action }),
+            });
+            if (!response.ok) {
+                throw new Error('Failed to toggle mute');
+            }
+            setIsMuted(!isMuted);
+            toast.success(isMuted ? 'AI unmuted' : 'AI muted', {
+                description: isMuted
+                    ? 'The AI agent will resume speaking'
+                    : 'The AI agent is now silent. You can type messages for it to say.',
+            });
+        } catch {
+            toast.error('Failed to toggle mute');
+        } finally {
+            setTogglingMute(false);
+        }
+    };
+
+    const handleSayMessage = async () => {
+        if (!call || !sayMessage.trim()) return;
+        setSendingSay(true);
+        try {
+            const response = await fetch(`/api/calls/${callId}/control`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'say', message: sayMessage.trim() }),
+            });
+            if (!response.ok) {
+                throw new Error('Failed to send message');
+            }
+            toast.success('Message sent', {
+                description: 'The AI will speak your message to the caller',
+            });
+            setSayMessage('');
+        } catch {
+            toast.error('Failed to send message');
+        } finally {
+            setSendingSay(false);
         }
     };
 
@@ -255,7 +332,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
         return (
             <Card>
                 <CardContent className="py-12 text-center">
-                    <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <PhoneOff className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-medium mb-2">{error || 'Call ended'}</h3>
                     <p className="text-muted-foreground mb-4">
                         This call is no longer active
@@ -281,7 +358,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                                     <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-500 animate-pulse"></span>
                                 </div>
                             ) : (
-                                <CheckCircle className="h-8 w-8 text-gray-400" />
+                                <AlertCircle className="h-8 w-8 text-gray-400" />
                             )}
                             <div>
                                 <div className="flex items-center gap-2">
@@ -324,7 +401,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                         {call.is_active && (
                             <Button
                                 variant="destructive"
-                                onClick={handleEndCall}
+                                onClick={() => setShowEndConfirm(true)}
                                 disabled={ending}
                             >
                                 {ending ? (
@@ -340,6 +417,79 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Vapi Call Control Panel — only visible for active Vapi calls */}
+            {isVapiCall && (
+                <Card className="border-l-4 border-l-blue-500">
+                    <CardContent className="py-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <MessageSquare className="h-4 w-4 text-blue-500" />
+                                <span className="font-medium text-sm">Call Control</span>
+                                <Badge variant="outline" className="text-xs">Vapi</Badge>
+                            </div>
+                            <Button
+                                variant={isMuted ? 'destructive' : 'outline'}
+                                size="sm"
+                                onClick={handleToggleMute}
+                                disabled={togglingMute}
+                            >
+                                {togglingMute ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : isMuted ? (
+                                    <>
+                                        <MicOff className="h-4 w-4 mr-2" />
+                                        AI Muted — Click to Unmute
+                                    </>
+                                ) : (
+                                    <>
+                                        <Mic className="h-4 w-4 mr-2" />
+                                        Mute AI
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                        <div className="flex gap-2">
+                            <Input
+                                value={sayMessage}
+                                onChange={(e) => setSayMessage(e.target.value)}
+                                placeholder={isMuted
+                                    ? 'Type a message for the AI to speak...'
+                                    : 'Type a message for the AI to speak (overrides current response)...'
+                                }
+                                maxLength={500}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSayMessage();
+                                    }
+                                }}
+                                disabled={sendingSay || togglingMute}
+                            />
+                            <Button
+                                onClick={handleSayMessage}
+                                disabled={sendingSay || togglingMute || !sayMessage.trim()}
+                                size="sm"
+                            >
+                                {sendingSay ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <>
+                                        <Send className="h-4 w-4 mr-2" />
+                                        Say
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                        {isMuted && (
+                            <p className="text-xs text-muted-foreground mt-2">
+                                The AI is muted. Type messages above and they will be spoken to the caller.
+                                The transcript will continue updating in real-time below.
+                            </p>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Live Transcript */}
             <Card className="flex flex-col h-[500px]">
@@ -366,6 +516,8 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                     <div
                         ref={transcriptRef}
                         className="h-full overflow-y-auto p-4 space-y-3"
+                        role="log"
+                        aria-live="polite"
                     >
                         {call.transcript.length > 0 ? (
                             <>
@@ -429,6 +581,29 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                     </div>
                 </CardContent>
             </Card>
+
+            <AlertDialog open={showEndConfirm} onOpenChange={setShowEndConfirm}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>End this call?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will immediately terminate the active call. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => {
+                                setShowEndConfirm(false);
+                                handleEndCall();
+                            }}
+                        >
+                            End Call
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

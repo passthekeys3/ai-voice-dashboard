@@ -134,15 +134,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         });
     } catch (error: unknown) {
         console.error('Error creating KB:', error);
-        let message = 'Failed to create knowledge base';
-        if (error instanceof Error) {
-            message = error.message;
-        } else if (typeof error === 'object' && error !== null && 'message' in error) {
-            message = String((error as { message: unknown }).message);
-        } else if (typeof error === 'string') {
-            message = error;
-        }
-        return NextResponse.json({ error: message }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to create knowledge base' }, { status: 500 });
     }
 }
 
