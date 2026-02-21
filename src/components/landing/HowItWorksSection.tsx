@@ -28,7 +28,7 @@ export function HowItWorksSection() {
     const { ref: stepsRef, isInView: stepsVisible } = useInView({ threshold: 0.1 });
 
     return (
-        <section className="py-20 sm:py-28 px-4 sm:px-6">
+        <section id="how-it-works" className="py-20 sm:py-28 px-4 sm:px-6">
             <div className="max-w-3xl mx-auto">
                 {/* Header */}
                 <div ref={headerRef} className="mb-12">
