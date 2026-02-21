@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Copy, Check } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { TranscriptMessage } from '@/types';
 
 interface TestTranscriptProps {
@@ -12,13 +12,19 @@ interface TestTranscriptProps {
 export function TestTranscript({ transcript }: TestTranscriptProps) {
     const [copied, setCopied] = useState(false);
 
+    // Auto-reset copied state with cleanup
+    useEffect(() => {
+        if (!copied) return;
+        const id = setTimeout(() => setCopied(false), 2000);
+        return () => clearTimeout(id);
+    }, [copied]);
+
     const handleCopy = () => {
         const text = transcript
             .map((m) => `[Turn ${m.turn}] ${m.role === 'agent' ? 'Agent' : 'Caller'}: ${m.content}`)
             .join('\n\n');
         navigator.clipboard.writeText(text);
         setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
     };
 
     if (!transcript || transcript.length === 0) {

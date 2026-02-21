@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,14 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
     const [saving, setSaving] = useState(false);
     const [verifying, setVerifying] = useState(false);
     const [verified, setVerified] = useState(false);
+    const stepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current);
+        };
+    }, []);
 
     const currentIndex = STEPS.indexOf(step);
 
@@ -103,7 +111,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
             toast.success(`Connected! Found ${data.synced || 0} agents.`);
 
             // Short delay then move to complete
-            setTimeout(() => setStep('complete'), 1500);
+            stepTimeoutRef.current = setTimeout(() => setStep('complete'), 1500);
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Verification failed');
         } finally {

@@ -123,10 +123,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             knowledge_base_id: kb.knowledge_base_id,
         };
 
-        await supabase
+        const { error: updateError } = await supabase
             .from('agents')
             .update({ config: updatedConfig })
-            .eq('id', agentId);
+            .eq('id', agentId)
+            .eq('agency_id', user.agency.id);
+
+        if (updateError) {
+            console.error('Error saving KB config:', updateError);
+            return NextResponse.json({ error: 'Failed to save knowledge base configuration' }, { status: 500 });
+        }
 
         return NextResponse.json({
             data: kb,
@@ -190,10 +196,16 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         const updatedConfig = { ...agent.config };
         delete updatedConfig.knowledge_base_id;
 
-        await supabase
+        const { error: updateError } = await supabase
             .from('agents')
             .update({ config: updatedConfig })
-            .eq('id', agentId);
+            .eq('id', agentId)
+            .eq('agency_id', user.agency.id);
+
+        if (updateError) {
+            console.error('Error removing KB config:', updateError);
+            return NextResponse.json({ error: 'Failed to remove knowledge base configuration' }, { status: 500 });
+        }
 
         return NextResponse.json({ message: 'Knowledge base deleted' });
     } catch (error) {

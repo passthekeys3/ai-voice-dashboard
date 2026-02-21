@@ -176,11 +176,12 @@ export async function POST(request: NextRequest) {
                     }),
                 });
 
-                // Update in our DB with optimistic lock check
+                // Update in our DB with optimistic lock + agency scoping
                 const { error: updateError } = await supabase
                     .from('phone_numbers')
                     .update({ agent_id: agent.id, updated_at: new Date().toISOString() })
                     .eq('id', phone_number_id)
+                    .eq('agency_id', user.agency.id)
                     .is('agent_id', null);  // Only update if still unassigned
 
                 if (updateError) {

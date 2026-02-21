@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,19 @@ export function WidgetSettings({
     const [copied, setCopied] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Auto-reset transient UI states with cleanup
+    useEffect(() => {
+        if (!saved) return;
+        const id = setTimeout(() => setSaved(false), 3000);
+        return () => clearTimeout(id);
+    }, [saved]);
+
+    useEffect(() => {
+        if (!copied) return;
+        const id = setTimeout(() => setCopied(false), 2000);
+        return () => clearTimeout(id);
+    }, [copied]);
+
     const baseUrl = typeof window !== 'undefined'
         ? window.location.origin
         : 'https://buildvoiceai.com';
@@ -72,7 +85,6 @@ export function WidgetSettings({
             }
 
             setSaved(true);
-            setTimeout(() => setSaved(false), 3000);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save');
         } finally {
@@ -84,7 +96,6 @@ export function WidgetSettings({
         try {
             await navigator.clipboard.writeText(embedCode);
             setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
         } catch {
             // Fallback for older browsers
             const textarea = document.createElement('textarea');
@@ -94,7 +105,6 @@ export function WidgetSettings({
             document.execCommand('copy');
             document.body.removeChild(textarea);
             setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
         }
     };
 

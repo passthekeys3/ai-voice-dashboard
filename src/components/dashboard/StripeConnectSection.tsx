@@ -33,6 +33,13 @@ export function StripeConnectSection() {
     const [platformFee, setPlatformFee] = useState<string>('0');
     const [feeLoading, setFeeLoading] = useState(false);
 
+    // Auto-clear success message with cleanup
+    useEffect(() => {
+        if (!successMessage) return;
+        const id = setTimeout(() => setSuccessMessage(null), 3000);
+        return () => clearTimeout(id);
+    }, [successMessage]);
+
     // Check for onboarding return in URL params
     useEffect(() => {
         const stripeConnect = searchParams.get('stripe_connect');
@@ -92,7 +99,6 @@ export function StripeConnectSection() {
             }
 
             setSuccessMessage('Platform fee updated successfully');
-            setTimeout(() => setSuccessMessage(null), 3000);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update platform fee');
         } finally {

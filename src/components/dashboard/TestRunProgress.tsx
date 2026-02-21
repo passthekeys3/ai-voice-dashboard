@@ -32,6 +32,7 @@ export function TestRunProgress({ runId, onComplete }: TestRunProgressProps) {
     } | null>(null);
     const [error, setError] = useState<string | null>(null);
     const startedRef = useRef(false);
+    const completeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (startedRef.current) return;
@@ -133,14 +134,18 @@ export function TestRunProgress({ runId, onComplete }: TestRunProgressProps) {
                     }
                 }
 
-                // Signal completion
-                setTimeout(onComplete, 1500);
+                // Signal completion (with cleanup ref)
+                completeTimeoutRef.current = setTimeout(onComplete, 1500);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Execution failed');
             }
         };
 
         execute();
+
+        return () => {
+            if (completeTimeoutRef.current) clearTimeout(completeTimeoutRef.current);
+        };
     }, [runId, onComplete]);
 
     const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;

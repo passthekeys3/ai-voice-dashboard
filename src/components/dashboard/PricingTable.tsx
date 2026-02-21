@@ -93,7 +93,7 @@ export function PricingTable({
     buttonLabel = 'Get Started',
     currentInterval = 'monthly',
 }: PricingTableProps) {
-    const [interval, setInterval] = useState<BillingInterval>(currentInterval);
+    const [interval, setBillingInterval] = useState<BillingInterval>(currentInterval);
 
     return (
         <div className="space-y-6">
@@ -101,7 +101,7 @@ export function PricingTable({
             <div className="flex justify-center">
                 <div className="inline-flex items-center gap-1 rounded-full border bg-muted/50 p-1">
                     <button
-                        onClick={() => setInterval('monthly')}
+                        onClick={() => setBillingInterval('monthly')}
                         className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
                             interval === 'monthly'
                                 ? 'bg-background text-foreground shadow-sm'
@@ -111,7 +111,7 @@ export function PricingTable({
                         Monthly
                     </button>
                     <button
-                        onClick={() => setInterval('yearly')}
+                        onClick={() => setBillingInterval('yearly')}
                         className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
                             interval === 'yearly'
                                 ? 'bg-background text-foreground shadow-sm'
