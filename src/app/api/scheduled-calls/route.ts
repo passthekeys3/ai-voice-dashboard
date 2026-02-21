@@ -23,6 +23,27 @@ export async function GET(request: NextRequest) {
             .eq('agency_id', user.agency.id)
             .order('scheduled_at', { ascending: true });
 
+        // Non-admin client users can only see scheduled calls for their client's agents
+        if (!isAgencyAdmin(user)) {
+            if (user.profile.client_id) {
+                // Get agent IDs belonging to this client
+                const { data: clientAgents } = await supabase
+                    .from('agents')
+                    .select('id')
+                    .eq('agency_id', user.agency.id)
+                    .eq('client_id', user.profile.client_id);
+
+                const clientAgentIds = clientAgents?.map(a => a.id) || [];
+                if (clientAgentIds.length === 0) {
+                    return NextResponse.json({ data: [] });
+                }
+                query = query.in('agent_id', clientAgentIds);
+            } else {
+                // Non-admin user with no client — no scheduled calls to show
+                return NextResponse.json({ data: [] });
+            }
+        }
+
         if (status) {
             query = query.eq('status', status);
         }

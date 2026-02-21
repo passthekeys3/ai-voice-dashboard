@@ -177,7 +177,7 @@ export function InsightsDashboard() {
                                 </div>
                                 <span className="font-medium">{data.sentimentBreakdown.positive}%</span>
                             </div>
-                            <Progress value={data.sentimentBreakdown.positive} className="h-2 bg-gray-200" />
+                            <Progress value={data.sentimentBreakdown.positive} className="h-2 bg-gray-200 dark:bg-gray-800" />
                         </div>
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
@@ -187,7 +187,7 @@ export function InsightsDashboard() {
                                 </div>
                                 <span className="font-medium">{data.sentimentBreakdown.neutral}%</span>
                             </div>
-                            <Progress value={data.sentimentBreakdown.neutral} className="h-2 bg-gray-200" />
+                            <Progress value={data.sentimentBreakdown.neutral} className="h-2 bg-gray-200 dark:bg-gray-800" />
                         </div>
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
@@ -197,7 +197,7 @@ export function InsightsDashboard() {
                                 </div>
                                 <span className="font-medium">{data.sentimentBreakdown.negative}%</span>
                             </div>
-                            <Progress value={data.sentimentBreakdown.negative} className="h-2 bg-gray-200" />
+                            <Progress value={data.sentimentBreakdown.negative} className="h-2 bg-gray-200 dark:bg-gray-800" />
                         </div>
                     </CardContent>
                 </Card>

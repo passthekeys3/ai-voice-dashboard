@@ -114,7 +114,7 @@ export function Header({ title = 'Dashboard', userName, userEmail, userAvatar, o
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                            className="text-red-600 cursor-pointer"
+                            className="text-red-600 dark:text-red-400 cursor-pointer"
                             onClick={handleLogout}
                         >
                             <LogOut className="mr-2 h-4 w-4" />

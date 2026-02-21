@@ -32,8 +32,13 @@ export async function GET(_request: NextRequest) {
             .eq('agency_id', user.agency.id);
 
         // Client users can only see calls from agents assigned to their client
-        if (!isAgencyAdmin(user) && user.client) {
-            agentsQuery = agentsQuery.eq('client_id', user.client.id);
+        // Non-admin users without a client assignment should see no calls
+        if (!isAgencyAdmin(user)) {
+            if (user.client) {
+                agentsQuery = agentsQuery.eq('client_id', user.client.id);
+            } else {
+                return NextResponse.json({ data: [] });
+            }
         }
 
         const { data: agents } = await agentsQuery;
