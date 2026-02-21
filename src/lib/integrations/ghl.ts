@@ -152,8 +152,12 @@ export async function searchContactByPhone(
         // Normalize phone number (remove +, spaces, etc.)
         const normalizedPhone = phoneNumber.replace(/[^0-9]/g, '');
 
+        const searchUrl = new URL(`${GHL_API_BASE}/contacts/`);
+        searchUrl.searchParams.set('locationId', config.locationId);
+        searchUrl.searchParams.set('query', normalizedPhone);
+
         const response = await fetch(
-            `${GHL_API_BASE}/contacts/?locationId=${config.locationId}&query=${normalizedPhone}`,
+            searchUrl.toString(),
             {
                 method: 'GET',
                 headers: {
@@ -1023,7 +1027,7 @@ export async function upsertContact(
             }
 
             if (Object.keys(updates).length > 0) {
-                await fetch(
+                const updateRes = await fetch(
                     `${GHL_API_BASE}/contacts/${contact.id}`,
                     {
                         method: 'PUT',
@@ -1035,6 +1039,10 @@ export async function upsertContact(
                         body: JSON.stringify(updates),
                     }
                 );
+                if (!updateRes.ok) {
+                    console.error('GHL update contact error:', await updateRes.text());
+                    return { success: false, error: 'Failed to update contact' };
+                }
             }
         }
 

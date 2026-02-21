@@ -51,6 +51,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Area code is required' }, { status: 400 });
         }
 
+        // Validate area code format (3-digit, 200-999)
+        const areaCodeStr = String(area_code).trim();
+        if (!/^[2-9]\d{2}$/.test(areaCodeStr)) {
+            return NextResponse.json({ error: 'Area code must be a valid 3-digit code (e.g., 415)' }, { status: 400 });
+        }
+
         const supabase = await createClient();
 
         // Validate agent belongs to this agency (prevent cross-tenant assignment)

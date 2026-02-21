@@ -62,10 +62,14 @@ export function InsightsDashboard() {
             setLoading(true);
             try {
                 const response = await fetch(`/api/insights?days=${days}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch insights');
+                }
                 const result = await response.json();
                 setData(result.data);
             } catch (err) {
                 console.error('Failed to fetch insights:', err);
+                setData(null);
             } finally {
                 setLoading(false);
             }

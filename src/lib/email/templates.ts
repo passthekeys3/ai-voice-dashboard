@@ -8,6 +8,16 @@
 const APP_NAME = 'Prosody';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://buildvoiceai.com';
 
+/** Escape user-supplied strings for safe insertion into HTML email templates. */
+function escapeHtml(text: string): string {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function layout(content: string): string {
     return `<!DOCTYPE html>
 <html>
@@ -59,13 +69,15 @@ export function welcomeEmail(params: {
     trialDays: number;
 }): { subject: string; html: string; text: string } {
     const { userName, agencyName, trialDays } = params;
+    const safeUserName = escapeHtml(userName);
+    const safeAgencyName = escapeHtml(agencyName);
 
     return {
         subject: `Welcome to ${APP_NAME} — your trial is active`,
         html: layout(`
-            <h2 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#0f172a;">Welcome, ${userName}!</h2>
+            <h2 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#0f172a;">Welcome, ${safeUserName}!</h2>
             <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.6;">
-                Your agency <strong>${agencyName}</strong> is set up with a <strong>${trialDays}-day free trial</strong>. Here&rsquo;s how to get started:
+                Your agency <strong>${safeAgencyName}</strong> is set up with a <strong>${trialDays}-day free trial</strong>. Here&rsquo;s how to get started:
             </p>
             <ol style="margin:0 0 24px;padding-left:20px;font-size:15px;color:#334155;line-height:1.8;">
                 <li>Connect your voice provider (Retell, Vapi, or Bland)</li>
@@ -96,13 +108,14 @@ export function trialEndingEmail(params: {
     daysRemaining: number;
 }): { subject: string; html: string; text: string } {
     const { userName, daysRemaining } = params;
+    const safeUserName = escapeHtml(userName);
 
     return {
         subject: `Your ${APP_NAME} trial ends in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}`,
         html: layout(`
             <h2 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#0f172a;">Trial ending soon</h2>
             <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.6;">
-                Hi ${userName}, your free trial ends in <strong>${daysRemaining} day${daysRemaining === 1 ? '' : 's'}</strong>. Subscribe to keep your agents running.
+                Hi ${safeUserName}, your free trial ends in <strong>${daysRemaining} day${daysRemaining === 1 ? '' : 's'}</strong>. Subscribe to keep your agents running.
             </p>
             <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
                 <tr>
@@ -130,13 +143,16 @@ export function paymentReceivedEmail(params: {
     invoiceUrl?: string;
 }): { subject: string; html: string; text: string } {
     const { userName, planName, amount, invoiceUrl } = params;
+    const safeUserName = escapeHtml(userName);
+    const safePlanName = escapeHtml(planName);
+    const safeAmount = escapeHtml(amount);
 
     return {
         subject: `Payment received — ${APP_NAME} ${planName}`,
         html: layout(`
             <h2 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#0f172a;">Payment confirmed</h2>
             <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.6;">
-                Hi ${userName}, we&rsquo;ve received your payment of <strong>${amount}</strong> for the <strong>${planName}</strong> plan.
+                Hi ${safeUserName}, we&rsquo;ve received your payment of <strong>${safeAmount}</strong> for the <strong>${safePlanName}</strong> plan.
             </p>
             ${invoiceUrl ? `
             <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
@@ -165,13 +181,16 @@ export function paymentFailedEmail(params: {
     amount: string;
 }): { subject: string; html: string; text: string } {
     const { userName, planName, amount } = params;
+    const safeUserName = escapeHtml(userName);
+    const safePlanName = escapeHtml(planName);
+    const safeAmount = escapeHtml(amount);
 
     return {
         subject: `Action required — payment failed for ${APP_NAME}`,
         html: layout(`
             <h2 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#dc2626;">Payment failed</h2>
             <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.6;">
-                Hi ${userName}, your payment of <strong>${amount}</strong> for the <strong>${planName}</strong> plan was declined. Please update your payment method to avoid service interruption.
+                Hi ${safeUserName}, your payment of <strong>${safeAmount}</strong> for the <strong>${safePlanName}</strong> plan was declined. Please update your payment method to avoid service interruption.
             </p>
             <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
                 <tr>

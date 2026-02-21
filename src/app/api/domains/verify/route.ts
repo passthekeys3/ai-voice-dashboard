@@ -50,11 +50,14 @@ async function verifyDomain(domain: string, verificationToken: string): Promise<
     // Check for CNAME record pointing to platform
     try {
         const cnameRecords = await resolveCname(domain);
-        result.cname_configured = cnameRecords.some(record =>
-            record.toLowerCase().includes(PLATFORM_HOSTNAME.toLowerCase()) ||
-            record.toLowerCase().endsWith('.vercel.app') ||
-            record.toLowerCase().endsWith('.vercel-dns.com')
-        );
+        const platformHost = PLATFORM_HOSTNAME.toLowerCase();
+        result.cname_configured = cnameRecords.some(record => {
+            const r = record.toLowerCase().replace(/\.$/, ''); // Remove trailing dot
+            return r === platformHost ||
+                r.endsWith('.' + platformHost) ||
+                r.endsWith('.vercel.app') ||
+                r.endsWith('.vercel-dns.com');
+        });
 
         if (!result.cname_configured) {
             result.errors.push(`CNAME record should point to ${PLATFORM_HOSTNAME}`);

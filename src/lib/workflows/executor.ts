@@ -1403,12 +1403,18 @@ async function executeAction(
 
             case 'send_email': {
                 const rawConfig = action.config as Record<string, string>;
-                const to = resolveTemplate(rawConfig.to || '', callData);
-                const subject = resolveTemplate(rawConfig.subject || '', callData);
+                // Sanitize resolved values to prevent header injection
+                const to = resolveTemplate(rawConfig.to || '', callData).replace(/[\r\n]/g, '').trim();
+                const subject = resolveTemplate(rawConfig.subject || '', callData).replace(/[\r\n]/g, '').trim();
                 const body = resolveTemplate(rawConfig.body || '', callData);
 
                 if (!to || !subject) {
                     return { success: false, error: 'Email recipient or subject not configured' };
+                }
+
+                // Validate email format
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+                    return { success: false, error: 'Invalid email address format' };
                 }
 
                 const resendApiKey = process.env.RESEND_API_KEY;
@@ -1438,7 +1444,7 @@ async function executeAction(
                     return { success: false, error: `Email send failed: ${emailResponse.status}` };
                 }
 
-                console.log(`Email sent to ${to}`);
+                console.log('Email sent successfully');
                 return { success: true };
             }
 

@@ -47,10 +47,14 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
     const fetchKB = useCallback(async () => {
         try {
             const response = await fetch(`/api/agents/${agentId}/knowledge-base`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch knowledge base');
+            }
             const data = await response.json();
             setKb(data.data);
         } catch (error) {
             console.error('Error fetching KB:', error);
+            setKb(null);
         } finally {
             setLoading(false);
         }
