@@ -430,8 +430,11 @@ export async function getPipelines(
     config: GHLConfig
 ): Promise<{ id: string; name: string; stages: { id: string; name: string }[] }[]> {
     try {
+        const pipelinesUrl = new URL(`${GHL_API_BASE}/opportunities/pipelines`);
+        pipelinesUrl.searchParams.set('locationId', config.locationId);
+
         const response = await fetch(
-            `${GHL_API_BASE}/opportunities/pipelines?locationId=${config.locationId}`,
+            pipelinesUrl.toString(),
             {
                 method: 'GET',
                 headers: {
@@ -467,8 +470,13 @@ export async function updateContactPipeline(
 ): Promise<{ success: boolean; opportunityId?: string; error?: string }> {
     try {
         // First, check if contact has an existing opportunity in this pipeline
+        const oppSearchUrl = new URL(`${GHL_API_BASE}/opportunities/search`);
+        oppSearchUrl.searchParams.set('locationId', config.locationId);
+        oppSearchUrl.searchParams.set('contactId', contactId);
+        oppSearchUrl.searchParams.set('pipelineId', pipelineId);
+
         const searchResponse = await fetch(
-            `${GHL_API_BASE}/opportunities/search?locationId=${config.locationId}&contactId=${contactId}&pipelineId=${pipelineId}`,
+            oppSearchUrl.toString(),
             {
                 method: 'GET',
                 headers: {
@@ -631,8 +639,11 @@ export async function getCalendars(
     config: GHLConfig
 ): Promise<GHLCalendar[]> {
     try {
+        const calendarsUrl = new URL(`${GHL_API_BASE}/calendars/`);
+        calendarsUrl.searchParams.set('locationId', config.locationId);
+
         const response = await fetch(
-            `${GHL_API_BASE}/calendars/?locationId=${config.locationId}`,
+            calendarsUrl.toString(),
             {
                 method: 'GET',
                 headers: {
@@ -671,12 +682,14 @@ export async function getCalendarFreeSlots(
         const startTimestamp = startDate.getTime();
         const endTimestamp = endDate.getTime();
 
-        let url = `${GHL_API_BASE}/calendars/${calendarId}/free-slots?startDate=${startTimestamp}&endDate=${endTimestamp}`;
+        const slotsUrl = new URL(`${GHL_API_BASE}/calendars/${calendarId}/free-slots`);
+        slotsUrl.searchParams.set('startDate', String(startTimestamp));
+        slotsUrl.searchParams.set('endDate', String(endTimestamp));
         if (timezone) {
-            url += `&timezone=${encodeURIComponent(timezone)}`;
+            slotsUrl.searchParams.set('timezone', timezone);
         }
 
-        const response = await fetch(url, {
+        const response = await fetch(slotsUrl.toString(), {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${config.apiKey}`,

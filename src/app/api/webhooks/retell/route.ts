@@ -43,6 +43,9 @@ interface RetellWebhookPayload {
 // Signature verification uses the official Retell SDK's Retell.verify()
 // to ensure compatibility with Retell's signature format.
 
+// Max transcript length to store in DB (≈100k words — generous for any real call, prevents abuse)
+const MAX_TRANSCRIPT_LENGTH = 500_000;
+
 // Forward call data to agent's webhook URL
 async function forwardToWebhook(webhookUrl: string, callData: Record<string, unknown>) {
     if (!isValidWebhookUrl(webhookUrl)) {
@@ -133,6 +136,11 @@ export async function POST(request: NextRequest) {
                     .join('\n');
             }
 
+            // Cap transcript length to prevent oversized payloads
+            if (transcript && transcript.length > MAX_TRANSCRIPT_LENGTH) {
+                transcript = transcript.slice(0, MAX_TRANSCRIPT_LENGTH);
+            }
+
             const twtcLen = Array.isArray(payload.transcript_with_tool_calls) ? payload.transcript_with_tool_calls.length : 0;
             console.log(`[RETELL WEBHOOK] transcript_updated: call=${payload.call.call_id}, twtc_items=${twtcLen}, len=${transcript?.length || 0}`);
 
@@ -198,6 +206,9 @@ export async function POST(request: NextRequest) {
             variantId = payload.call.metadata.variant_id as string;
         }
 
+        // Cap transcript length
+        const callTranscript = payload.call.transcript?.slice(0, MAX_TRANSCRIPT_LENGTH);
+
         // Upsert call
         const { error } = await supabase
             .from('calls')
@@ -213,7 +224,7 @@ export async function POST(request: NextRequest) {
                     cost_cents: costCents,
                     from_number: payload.call.from_number,
                     to_number: payload.call.to_number,
-                    transcript: payload.call.transcript,
+                    transcript: callTranscript,
                     audio_url: payload.call.recording_url,
                     summary: payload.call.call_analysis?.call_summary,
                     sentiment: payload.call.call_analysis?.user_sentiment,
@@ -238,7 +249,7 @@ export async function POST(request: NextRequest) {
         }
 
         // AI-powered call analysis (runs in background, gated behind per-client opt-in)
-        if (status === 'completed' && payload.call.transcript) {
+        if (status === 'completed' && callTranscript) {
             waitUntil((async () => {
                 try {
                     // Check if client has AI analysis enabled
@@ -252,11 +263,11 @@ export async function POST(request: NextRequest) {
                         aiEnabled = !!clientRow?.ai_call_analysis;
                     }
 
-                    if (!shouldAnalyzeCall(aiEnabled, durationSeconds, payload.call.transcript!.length)) {
+                    if (!shouldAnalyzeCall(aiEnabled, durationSeconds, callTranscript.length)) {
                         return;
                     }
 
-                    const analysis = await analyzeCallTranscript(payload.call.transcript!, agent.name);
+                    const analysis = await analyzeCallTranscript(callTranscript, agent.name);
                     if (analysis) {
                         // Update the call record with AI-enriched fields
                         // Use only columns guaranteed to exist (call_score, topics, objections may not be migrated yet)
@@ -314,7 +325,7 @@ export async function POST(request: NextRequest) {
                     ? new Date(payload.call.end_timestamp).toISOString()
                     : undefined,
                 duration_seconds: durationSeconds,
-                transcript: payload.call.transcript,
+                transcript: callTranscript,
                 cost_cents: costCents,
                 summary: payload.call.call_analysis?.call_summary,
                 sentiment: payload.call.call_analysis?.user_sentiment,
@@ -480,7 +491,7 @@ export async function POST(request: NextRequest) {
                 cost_cents: costCents,
                 from_number: payload.call.from_number,
                 to_number: payload.call.to_number,
-                transcript: payload.call.transcript,
+                transcript: callTranscript,
                 recording_url: payload.call.recording_url,
                 summary: payload.call.call_analysis?.call_summary,
                 sentiment: payload.call.call_analysis?.user_sentiment,
@@ -559,7 +570,7 @@ export async function POST(request: NextRequest) {
                     cost_cents: costCents,
                     from_number: payload.call.from_number,
                     to_number: payload.call.to_number,
-                    transcript: payload.call.transcript,
+                    transcript: callTranscript,
                     recording_url: payload.call.recording_url,
                     summary: payload.call.call_analysis?.call_summary,
                     sentiment: payload.call.call_analysis?.user_sentiment,

@@ -69,7 +69,7 @@ export async function logTransferEvent(
     ghlConfig?: { apiKey: string; locationId: string },
     hubspotConfig?: { accessToken: string },
 ): Promise<void> {
-    console.log(`Call ${event.callId} transferred to ${event.transferTarget.name} (${event.transferTarget.phoneNumber})`);
+    console.log(`Call ${event.callId} transferred to ${event.transferTarget.name}`);
 
     // Update GHL contact with transfer info if configured
     if (ghlConfig?.apiKey && event.fromNumber) {

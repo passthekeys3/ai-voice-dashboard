@@ -18,13 +18,13 @@ export function SyncButton() {
                 method: 'POST',
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                setResult(`Error: ${data.error}`);
+                const errData = await response.json().catch(() => ({}));
+                setResult(`Error: ${errData.error || 'Sync failed'}`);
                 return;
             }
 
+            const data = await response.json();
             const message = `Synced ${data.results.agents.synced} agents, ${data.results.calls.synced} calls`;
             setResult(message);
             toast.success(message);

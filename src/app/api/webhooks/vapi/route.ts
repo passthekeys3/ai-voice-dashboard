@@ -12,6 +12,9 @@ import { waitUntil } from '@vercel/functions';
 import type { Workflow } from '@/types';
 import crypto from 'crypto';
 
+// Max transcript length to store in DB (≈100k words — generous for any real call, prevents abuse)
+const MAX_TRANSCRIPT_LENGTH = 500_000;
+
 // Verify Vapi webhook signature using HMAC-SHA256
 function verifyVapiSignature(body: string, signature: string | null, apiKey: string): boolean {
     if (!signature) return false;
@@ -164,9 +167,13 @@ export async function POST(request: NextRequest) {
                 .single();
 
             const currentTranscript = existingCall?.transcript || '';
-            const updatedTranscript = currentTranscript
+            let updatedTranscript = currentTranscript
                 ? `${currentTranscript}\n${newLine}`
                 : newLine;
+            // Cap transcript length to prevent oversized payloads
+            if (updatedTranscript.length > MAX_TRANSCRIPT_LENGTH) {
+                updatedTranscript = updatedTranscript.slice(0, MAX_TRANSCRIPT_LENGTH);
+            }
 
             const { error: updateError } = await supabase
                 .from('calls')
@@ -255,6 +262,9 @@ export async function POST(request: NextRequest) {
             status,
         }) : null;
 
+        // Cap transcript length
+        const callTranscript = call.transcript?.slice(0, MAX_TRANSCRIPT_LENGTH);
+
         // Upsert call
         const { error } = await supabase
             .from('calls')
@@ -270,7 +280,7 @@ export async function POST(request: NextRequest) {
                     cost_cents: call.cost ? Math.round(call.cost * 100) : 0,
                     from_number: call.customer?.number,
                     to_number: call.phoneNumber?.number,
-                    transcript: call.transcript,
+                    transcript: callTranscript,
                     audio_url: call.recordingUrl,
                     summary: call.analysis?.summary || call.summary,
                     sentiment: inferredSentiment,
@@ -298,7 +308,7 @@ export async function POST(request: NextRequest) {
         }
 
         // AI-powered call analysis (runs in background, gated behind per-client opt-in)
-        if (status === 'completed' && call.transcript) {
+        if (status === 'completed' && callTranscript) {
             waitUntil((async () => {
                 try {
                     // Check if client has AI analysis enabled
@@ -312,11 +322,11 @@ export async function POST(request: NextRequest) {
                         aiEnabled = !!clientRow?.ai_call_analysis;
                     }
 
-                    if (!shouldAnalyzeCall(aiEnabled, durationSeconds, call.transcript!.length)) {
+                    if (!shouldAnalyzeCall(aiEnabled, durationSeconds, callTranscript.length)) {
                         return;
                     }
 
-                    const analysis = await analyzeCallTranscript(call.transcript!, agent.name);
+                    const analysis = await analyzeCallTranscript(callTranscript, agent.name);
                     if (analysis) {
                         const { error: updateError } = await supabase
                             .from('calls')
@@ -373,7 +383,7 @@ export async function POST(request: NextRequest) {
                 started_at: startedAt,
                 ended_at: endedAt,
                 duration_seconds: durationSeconds,
-                transcript: call.transcript,
+                transcript: callTranscript,
                 cost_cents: costCents,
                 summary: call.analysis?.summary || call.summary,
                 sentiment: inferredSentiment,
@@ -392,7 +402,7 @@ export async function POST(request: NextRequest) {
                 cost_cents: costCents,
                 from_number: call.customer?.number,
                 to_number: call.phoneNumber?.number,
-                transcript: call.transcript,
+                transcript: callTranscript,
                 recording_url: call.recordingUrl,
                 summary: call.analysis?.summary || call.summary,
                 started_at: startedAt,
@@ -677,7 +687,7 @@ export async function POST(request: NextRequest) {
                         cost_cents: costCents,
                         from_number: call.customer?.number,
                         to_number: call.phoneNumber?.number,
-                        transcript: call.transcript,
+                        transcript: callTranscript,
                         recording_url: call.recordingUrl,
                         summary: call.analysis?.summary || call.summary,
                         sentiment: inferredSentiment,

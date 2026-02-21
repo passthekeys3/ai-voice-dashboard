@@ -29,6 +29,9 @@ export default function TestRunPage() {
     const fetchRun = useCallback(async () => {
         try {
             const res = await fetch(`/api/test-runs/${runId}`);
+            if (!res.ok) {
+                throw new Error('Failed to fetch test run');
+            }
             const data = await res.json();
             if (data.data) {
                 setRun(data.data);

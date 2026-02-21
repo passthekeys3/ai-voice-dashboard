@@ -12,13 +12,15 @@ export function SyncPhoneNumbersButton() {
 
         try {
             const response = await fetch('/api/phone-numbers/sync', { method: 'POST' });
-            const data = await response.json();
 
-            if (response.ok) {
-                toast.success(`Synced: ${data.synced} added, ${data.updated} updated`);
-            } else {
-                toast.error(data.error || 'Sync failed');
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                toast.error(errData.error || 'Sync failed');
+                return;
             }
+
+            const data = await response.json();
+            toast.success(`Synced: ${data.synced} added, ${data.updated} updated`);
         } catch (err) {
             console.error('Failed to sync:', err);
             toast.error('Network error — please try again.');

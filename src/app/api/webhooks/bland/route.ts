@@ -12,6 +12,9 @@ import { waitUntil } from '@vercel/functions';
 import crypto from 'crypto';
 import type { Workflow } from '@/types';
 
+// Max transcript length to store in DB (≈100k words — generous for any real call, prevents abuse)
+const MAX_TRANSCRIPT_LENGTH = 500_000;
+
 // Verify Bland webhook signature using HMAC-SHA256 (same pattern as Vapi).
 // The webhook secret is derived from the agency's Bland API key.
 function verifyBlandSignature(body: string, signature: string | null, apiKey: string): boolean {
@@ -182,6 +185,11 @@ export async function POST(request: NextRequest) {
                 .join('\n');
         } else {
             transcript = payload.concatenated_transcript || undefined;
+        }
+
+        // Cap transcript length to prevent oversized payloads
+        if (transcript && transcript.length > MAX_TRANSCRIPT_LENGTH) {
+            transcript = transcript.slice(0, MAX_TRANSCRIPT_LENGTH);
         }
 
         // Upsert call
