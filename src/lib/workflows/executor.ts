@@ -1364,8 +1364,8 @@ async function executeAction(
                     return { success: false, error: 'SMS recipient or message not configured' };
                 }
 
-                // Validate phone number format (E.164-like)
-                if (!to.match(/^\+?[1-9]\d{1,14}$/)) {
+                // Validate phone number format (E.164: must start with +)
+                if (!to.match(/^\+[1-9]\d{1,14}$/)) {
                     return { success: false, error: 'Invalid phone number format for SMS recipient' };
                 }
 
@@ -1411,8 +1411,8 @@ async function executeAction(
                     return { success: false, error: 'Email recipient or subject not configured' };
                 }
 
-                // Validate email format
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+                // Validate email format (stricter: single @, valid domain chars, 2+ char TLD)
+                if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(to)) {
                     return { success: false, error: 'Invalid email address format' };
                 }
 

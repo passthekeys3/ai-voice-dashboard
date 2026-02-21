@@ -192,7 +192,7 @@ export async function updateContact(
 ): Promise<{ success: boolean; error?: string }> {
     try {
         const response = await fetch(
-            `${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${contactId}`,
+            `${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${encodeURIComponent(contactId)}`,
             {
                 method: 'PATCH',
                 headers: {
@@ -664,7 +664,7 @@ export async function updateContactTags(
     let existingTags: string[] = [];
     try {
         const contactResponse = await fetch(
-            `${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${contactId}?properties=ai_call_tags`,
+            `${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${encodeURIComponent(contactId)}?properties=ai_call_tags`,
             {
                 headers: { 'Authorization': `Bearer ${config.accessToken}` },
             }
@@ -735,7 +735,7 @@ export async function updateContactPipeline(
         // Step 1: Get all deal IDs associated with this contact in one call.
         let existingDealId: string | null = null;
         const assocResponse = await fetch(
-            `${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${contactId}/associations/deals`,
+            `${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${encodeURIComponent(contactId)}/associations/deals`,
             {
                 headers: { 'Authorization': `Bearer ${config.accessToken}` },
             }
@@ -749,7 +749,7 @@ export async function updateContactPipeline(
             // This is typically a small list (1-5 deals per contact), not 100s.
             for (const dealId of associatedDealIds) {
                 const dealResponse = await fetch(
-                    `${HUBSPOT_API_BASE}/crm/v3/objects/deals/${dealId}?properties=pipeline,dealstage`,
+                    `${HUBSPOT_API_BASE}/crm/v3/objects/deals/${encodeURIComponent(dealId)}?properties=pipeline,dealstage`,
                     {
                         headers: { 'Authorization': `Bearer ${config.accessToken}` },
                     }
@@ -767,7 +767,7 @@ export async function updateContactPipeline(
         if (existingDealId) {
             // Update existing deal stage
             const updateResponse = await fetch(
-                `${HUBSPOT_API_BASE}/crm/v3/objects/deals/${existingDealId}`,
+                `${HUBSPOT_API_BASE}/crm/v3/objects/deals/${encodeURIComponent(existingDealId)}`,
                 {
                     method: 'PATCH',
                     headers: {
@@ -896,7 +896,7 @@ export async function cancelMeeting(
 ): Promise<{ success: boolean; error?: string }> {
     try {
         const response = await fetch(
-            `${HUBSPOT_API_BASE}/crm/v3/objects/meetings/${meetingId}`,
+            `${HUBSPOT_API_BASE}/crm/v3/objects/meetings/${encodeURIComponent(meetingId)}`,
             {
                 method: 'PATCH',
                 headers: {
@@ -933,7 +933,7 @@ export async function getMeetingsByContact(
 ): Promise<HubSpotMeeting[]> {
     try {
         const response = await fetch(
-            `${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${contactId}/associations/meetings`,
+            `${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${encodeURIComponent(contactId)}/associations/meetings`,
             {
                 headers: {
                     'Authorization': `Bearer ${config.accessToken}`,
@@ -1038,7 +1038,7 @@ export async function triggerWorkflow(
 ): Promise<{ success: boolean; error?: string }> {
     try {
         const response = await fetch(
-            `${HUBSPOT_API_BASE}/automation/v4/flows/${workflowId}/enrollments`,
+            `${HUBSPOT_API_BASE}/automation/v4/flows/${encodeURIComponent(workflowId)}/enrollments`,
             {
                 method: 'POST',
                 headers: {
