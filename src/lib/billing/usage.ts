@@ -52,8 +52,8 @@ export async function accumulateUsage(
     });
 
     if (error) {
-        console.error('Failed to accumulate usage:', error);
-        throw new Error(`Usage accumulation failed: ${error.message}`);
+        console.error('Failed to accumulate usage:', error.code);
+        throw new Error('Usage accumulation failed');
     }
 }
 
