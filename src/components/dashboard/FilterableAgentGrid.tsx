@@ -9,9 +9,11 @@ import type { Agent } from '@/types';
 interface FilterableAgentGridProps {
     agents: (Agent & { clients: { name: string } | null })[];
     agentPhoneMap: Record<string, string>;
+    /** Base path for agent configure links (default: "/agents") */
+    configBasePath?: string;
 }
 
-export function FilterableAgentGrid({ agents, agentPhoneMap }: FilterableAgentGridProps) {
+export function FilterableAgentGrid({ agents, agentPhoneMap, configBasePath }: FilterableAgentGridProps) {
     const [search, setSearch] = useState('');
 
     const filteredAgents = useMemo(() => {
@@ -54,6 +56,7 @@ export function FilterableAgentGrid({ agents, agentPhoneMap }: FilterableAgentGr
                             key={agent.id}
                             agent={agent}
                             phoneNumber={agentPhoneMap[agent.id]}
+                            configBasePath={configBasePath}
                         />
                     ))}
                 </div>

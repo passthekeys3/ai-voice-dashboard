@@ -100,6 +100,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
     const lastActivityRef = useRef<number>(Date.now());
     const isActiveRef = useRef(false);
     const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const newLineTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const supabaseRef = useRef(createClient());
     const lastUpdateSourceRef = useRef<'realtime' | 'poll' | 'initial'>('initial');
     const [lastUpdateInfo, setLastUpdateInfo] = useState<{ source: 'realtime' | 'poll'; time: Date } | null>(null);
@@ -126,12 +127,16 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                 setLastUpdateInfo({ source: lastUpdateSourceRef.current, time: new Date() });
             }
 
-            // Clear "new" flag after animation
-            setTimeout(() => {
+            // Clear "new" flag after animation (with cleanup to prevent memory leak)
+            if (newLineTimeoutRef.current) {
+                clearTimeout(newLineTimeoutRef.current);
+            }
+            newLineTimeoutRef.current = setTimeout(() => {
                 setCall(prev => prev ? {
                     ...prev,
                     transcript: prev.transcript.map(l => ({ ...l, isNew: false }))
                 } : null);
+                newLineTimeoutRef.current = null;
             }, 1000);
         }
 
@@ -234,6 +239,9 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
             clearInterval(typingInterval);
             if (pollIntervalRef.current) {
                 clearInterval(pollIntervalRef.current);
+            }
+            if (newLineTimeoutRef.current) {
+                clearTimeout(newLineTimeoutRef.current);
             }
         };
     }, [callId, fetchCall]);

@@ -163,6 +163,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             .from('phone_numbers')
             .update(updateData)
             .eq('id', id)
+            .eq('agency_id', user.agency.id)
             .select(`
                 *,
                 inbound_agent:agents!phone_numbers_inbound_agent_id_fkey(id, name),
@@ -225,14 +226,15 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             });
         }
 
-        // Mark as released in our DB
+        // Mark as released in our DB (agency_id check for defense-in-depth)
         await supabase
             .from('phone_numbers')
             .update({
                 status: 'released',
                 updated_at: new Date().toISOString(),
             })
-            .eq('id', id);
+            .eq('id', id)
+            .eq('agency_id', user.agency.id);
 
         return NextResponse.json({ success: true });
     } catch (error) {

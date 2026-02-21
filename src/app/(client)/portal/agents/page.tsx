@@ -92,6 +92,7 @@ export default async function ClientAgentsPage() {
                 <FilterableAgentGrid
                     agents={(agents || []) as (Agent & { clients: { name: string } | null })[]}
                     agentPhoneMap={agentPhoneMap}
+                    configBasePath="/portal/agents"
                 />
             </div>
         </div>

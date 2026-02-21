@@ -100,7 +100,7 @@ export default async function AgentDetailPage({
                         </div>
                     </div>
                     <Badge className={providerStyles[agent.provider as keyof typeof providerStyles]}>
-                        {agent.provider}
+                        {agent.provider === 'bland' ? 'Bland.ai' : agent.provider.charAt(0).toUpperCase() + agent.provider.slice(1)}
                     </Badge>
                 </div>
 

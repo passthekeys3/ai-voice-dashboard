@@ -43,6 +43,7 @@ export default async function ClientAgentDetailPage({
     const providerStyles = {
         retell: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
         vapi: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+        bland: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300',
     };
 
     return (
@@ -73,7 +74,7 @@ export default async function ClientAgentDetailPage({
                         </div>
                     </div>
                     <Badge className={providerStyles[agent.provider as keyof typeof providerStyles]}>
-                        {agent.provider}
+                        {agent.provider === 'bland' ? 'Bland.ai' : agent.provider.charAt(0).toUpperCase() + agent.provider.slice(1)}
                     </Badge>
                 </div>
 

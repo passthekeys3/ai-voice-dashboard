@@ -27,6 +27,8 @@ interface AgentCardProps {
     agent: Agent & { clients?: { name: string } | null };
     phoneNumber?: string;
     showDelete?: boolean;
+    /** Base path for configure link (default: "/agents") — use "/portal/agents" in client portal */
+    configBasePath?: string;
 }
 
 const providerIconStyles: Record<string, string> = {
@@ -43,7 +45,7 @@ function formatPhoneNumber(number: string) {
     return number;
 }
 
-export function AgentCard({ agent, phoneNumber, showDelete = true }: AgentCardProps) {
+export function AgentCard({ agent, phoneNumber, showDelete = true, configBasePath = '/agents' }: AgentCardProps) {
     const router = useRouter();
     const [deleting, setDeleting] = useState(false);
     const [deleteFromProvider, setDeleteFromProvider] = useState(false);
@@ -213,7 +215,7 @@ export function AgentCard({ agent, phoneNumber, showDelete = true }: AgentCardPr
                                         : 'hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-900/20'
                             )}
                         >
-                            <Link href={`/agents/${agent.id}`}>
+                            <Link href={`${configBasePath}/${agent.id}`}>
                                 <Settings className="h-4 w-4 mr-2" />
                                 Configure
                             </Link>
