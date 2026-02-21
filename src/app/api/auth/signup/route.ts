@@ -20,6 +20,22 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Validate email format
+        if (typeof email !== 'string' || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+            return NextResponse.json(
+                { error: 'Invalid email format' },
+                { status: 400 }
+            );
+        }
+
+        // Validate input lengths
+        if (typeof fullName !== 'string' || fullName.length > 200) {
+            return NextResponse.json({ error: 'Name is too long' }, { status: 400 });
+        }
+        if (typeof agencyName !== 'string' || agencyName.length > 200) {
+            return NextResponse.json({ error: 'Agency name is too long' }, { status: 400 });
+        }
+
         if (password.length < 8) {
             return NextResponse.json(
                 { error: 'Password must be at least 8 characters' },
@@ -43,7 +59,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (authError) {
-            console.error('Signup auth error:', authError);
+            console.error('Signup auth error:', authError.message);
             // Surface duplicate email errors clearly
             if (authError.message?.includes('already been registered') || authError.message?.includes('already exists')) {
                 return NextResponse.json({ error: 'An account with this email already exists' }, { status: 400 });

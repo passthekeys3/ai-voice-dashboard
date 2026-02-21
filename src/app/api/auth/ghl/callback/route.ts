@@ -95,8 +95,7 @@ export async function GET(request: NextRequest) {
         });
 
         if (!tokenResponse.ok) {
-            const errorText = await tokenResponse.text();
-            console.error('GHL token exchange error:', errorText);
+            console.error('GHL token exchange error:', tokenResponse.status);
             return NextResponse.redirect(
                 new URL('/settings?ghl=error&message=Failed+to+exchange+code', request.url)
             );

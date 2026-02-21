@@ -111,8 +111,7 @@ export async function GET(request: NextRequest) {
         });
 
         if (!tokenResponse.ok) {
-            const errorText = await tokenResponse.text();
-            console.error('HubSpot token exchange error:', errorText);
+            console.error('HubSpot token exchange error:', tokenResponse.status);
             return NextResponse.redirect(
                 new URL('/settings?hubspot=error&message=Failed+to+exchange+code', request.url)
             );

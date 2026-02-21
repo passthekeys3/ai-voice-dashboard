@@ -94,8 +94,7 @@ export async function GET(request: NextRequest) {
         });
 
         if (!tokenResponse.ok) {
-            const errorText = await tokenResponse.text();
-            console.error('Google Calendar token exchange error:', errorText);
+            console.error('Google Calendar token exchange error:', tokenResponse.status);
             return NextResponse.redirect(
                 new URL('/settings?google_calendar=error&message=Failed+to+exchange+code', request.url)
             );
