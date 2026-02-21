@@ -140,7 +140,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         if (body.name !== undefined) updateData.name = body.name;
         if (body.description !== undefined) updateData.description = body.description;
         if (body.trigger !== undefined) updateData.trigger = body.trigger;
-        if (body.agent_id !== undefined) updateData.agent_id = body.agent_id || null;
+        if (body.agent_id !== undefined) {
+            // Validate agent_id belongs to this agency (prevent cross-tenant assignment)
+            if (body.agent_id) {
+                const { data: agentCheck } = await supabase
+                    .from('agents')
+                    .select('id')
+                    .eq('id', body.agent_id)
+                    .eq('agency_id', user.agency.id)
+                    .single();
+                if (!agentCheck) {
+                    return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+                }
+            }
+            updateData.agent_id = body.agent_id || null;
+        }
         if (body.conditions !== undefined) updateData.conditions = body.conditions;
         if (body.actions !== undefined) updateData.actions = body.actions;
         if (body.is_active !== undefined) updateData.is_active = body.is_active;

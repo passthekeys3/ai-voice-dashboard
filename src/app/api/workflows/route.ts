@@ -154,6 +154,19 @@ export async function POST(request: NextRequest) {
 
         const supabase = await createClient();
 
+        // Validate agent_id belongs to this agency (prevent cross-tenant assignment)
+        if (agent_id) {
+            const { data: agentCheck } = await supabase
+                .from('agents')
+                .select('id')
+                .eq('id', agent_id)
+                .eq('agency_id', user.agency.id)
+                .single();
+            if (!agentCheck) {
+                return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+            }
+        }
+
         const { data: workflow, error } = await supabase
             .from('workflows')
             .insert({

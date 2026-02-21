@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getCurrentUsage } from '@/lib/billing/usage';
 
 /**
@@ -18,6 +18,11 @@ export async function GET(
         const user = await getCurrentUser();
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Non-admin users can only view their own client's usage
+        if (!isAgencyAdmin(user) && user.profile.client_id !== id) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
         const supabase = await createClient();

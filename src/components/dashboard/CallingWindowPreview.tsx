@@ -76,7 +76,7 @@ export function CallingWindowPreview({ startHour, endHour, daysOfWeek }: Calling
                         key={i}
                         className={`px-1.5 py-0.5 text-[10px] rounded ${
                             daysOfWeek.includes(i)
-                                ? 'bg-green-500/20 text-green-700'
+                                ? 'bg-green-500/20 text-green-700 dark:text-green-400'
                                 : 'bg-muted/50 text-muted-foreground line-through'
                         }`}
                     >
