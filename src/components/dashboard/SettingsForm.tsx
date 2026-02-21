@@ -414,8 +414,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                                 Live Preview - Login Page
                             </div>
                             <div
-                                className="p-8 flex flex-col items-center justify-center min-h-[300px]"
-                                style={{ backgroundColor: '#f8fafc' }}
+                                className="p-8 flex flex-col items-center justify-center min-h-[300px] bg-slate-50 dark:bg-slate-900"
                             >
                                 {/* Header Preview */}
                                 <div className="text-center mb-6">

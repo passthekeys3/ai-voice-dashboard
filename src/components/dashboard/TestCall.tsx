@@ -188,7 +188,7 @@ export function TestCall({ agentId, agentName }: TestCallProps) {
                             onClick={startCall}
                             disabled={isConnecting || !sdkLoaded}
                             variant="default"
-                            style={{ backgroundColor: '#16a34a', color: 'white' }}
+                            className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700"
                         >
                             {isConnecting ? (
                                 <>

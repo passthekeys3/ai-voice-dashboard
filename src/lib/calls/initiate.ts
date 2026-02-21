@@ -28,6 +28,9 @@ export interface CallInitiationResult {
     error?: string;
 }
 
+/** Timeout for provider API calls (30 seconds) */
+const PROVIDER_TIMEOUT_MS = 30_000;
+
 /**
  * Initiate an outbound phone call via the appropriate voice provider.
  */
@@ -74,6 +77,7 @@ async function initiateRetellCall(params: CallInitiationParams): Promise<CallIni
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(body),
+            signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
         });
 
         if (!response.ok) {
@@ -130,6 +134,7 @@ async function initiateVapiCall(params: CallInitiationParams): Promise<CallIniti
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(body),
+            signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
         });
 
         if (!response.ok) {
@@ -189,6 +194,7 @@ async function initiateBlandCall(params: CallInitiationParams): Promise<CallInit
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(body),
+            signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
         });
 
         if (!response.ok) {

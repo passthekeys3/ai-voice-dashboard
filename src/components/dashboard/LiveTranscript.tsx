@@ -408,7 +408,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                                     )}
                                     <ConnectionStatus status={connectionStatus} />
                                     {lastUpdateInfo && call.is_active && (
-                                        <span className={`flex items-center gap-1 text-xs ${lastUpdateInfo.source === 'realtime' ? 'text-green-600' : 'text-yellow-600'}`}>
+                                        <span className={`flex items-center gap-1 text-xs ${lastUpdateInfo.source === 'realtime' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
                                             {lastUpdateInfo.source === 'realtime' ? (
                                                 <Zap className="h-3 w-3" />
                                             ) : (
@@ -519,13 +519,14 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                     <CardTitle className="text-lg flex items-center gap-2">
                         Live Transcript
                         {call.is_active && (
-                            <span className="text-xs font-normal text-green-600">
+                            <span className="text-xs font-normal text-green-600 dark:text-green-400">
                                 (live)
                             </span>
                         )}
                     </CardTitle>
-                    <label className="flex items-center gap-2 text-sm">
+                    <label htmlFor="auto-scroll-toggle" className="flex items-center gap-2 text-sm cursor-pointer">
                         <input
+                            id="auto-scroll-toggle"
                             type="checkbox"
                             checked={autoScroll}
                             onChange={(e) => setAutoScroll(e.target.checked)}
@@ -550,8 +551,8 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                                             } ${line.isNew ? 'animate-in fade-in slide-in-from-bottom-2' : ''}`}
                                     >
                                         <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${line.speaker === 'agent'
-                                            ? 'bg-blue-100 text-blue-600'
-                                            : 'bg-gray-100 text-gray-600'
+                                            ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
+                                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                                             }`}>
                                             {line.speaker === 'agent' ? (
                                                 <Bot className="h-4 w-4" />
@@ -560,8 +561,8 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                                             )}
                                         </div>
                                         <div className={`flex-1 max-w-[80%] rounded-lg p-3 ${line.speaker === 'agent'
-                                            ? 'bg-blue-50 text-blue-900'
-                                            : 'bg-gray-100 text-gray-900'
+                                            ? 'bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100'
+                                            : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'
                                             } ${line.isNew ? 'ring-2 ring-green-400 ring-opacity-50' : ''}`}>
                                             <p className="text-sm">{line.text}</p>
                                         </div>
@@ -571,13 +572,13 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                                 {/* Typing indicator */}
                                 {isTyping && call.is_active && (
                                     <div className="flex gap-3 animate-in fade-in">
-                                        <div className="flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center bg-gray-100 text-gray-600">
+                                        <div className="flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
                                             <Bot className="h-4 w-4" />
                                         </div>
-                                        <div className="bg-gray-100 rounded-lg p-3 flex items-center gap-1">
-                                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                                        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 flex items-center gap-1">
+                                            <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                                            <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                                            <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                                         </div>
                                     </div>
                                 )}

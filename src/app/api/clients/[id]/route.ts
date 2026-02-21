@@ -80,7 +80,7 @@ export const PATCH = withErrorHandling(async (
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
     if (body.billing_type !== undefined) updateData.billing_type = body.billing_type;
     if (body.billing_amount_cents !== undefined) updateData.billing_amount_cents = body.billing_amount_cents;
-    if (body.stripe_subscription_id !== undefined) updateData.stripe_subscription_id = body.stripe_subscription_id;
+    // stripe_subscription_id is managed by Stripe webhooks only — not writable via API
     if (body.next_billing_date !== undefined) updateData.next_billing_date = body.next_billing_date;
 
     // Voice provider API keys (per-client override — null/empty clears the key)

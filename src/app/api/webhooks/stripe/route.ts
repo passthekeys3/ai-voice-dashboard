@@ -272,6 +272,21 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
         }
 
+        // Only process event types we explicitly handle — ignore the rest early
+        const HANDLED_EVENTS = new Set([
+            'customer.subscription.created',
+            'customer.subscription.updated',
+            'customer.subscription.deleted',
+            'invoice.paid',
+            'invoice.payment_failed',
+            'checkout.session.completed',
+        ]);
+
+        if (!HANDLED_EVENTS.has(event.type)) {
+            // Acknowledge but do not process unknown event types
+            return NextResponse.json({ received: true });
+        }
+
         // Handle the event — use waitUntil to ensure completion in serverless
         const handleEvent = async () => {
             switch (event.type) {
@@ -305,9 +320,6 @@ export async function POST(request: NextRequest) {
                     await handleCheckoutSessionCompleted(session);
                     break;
                 }
-
-                default:
-                    console.log(`Unhandled Stripe event type: ${event.type}`);
             }
         };
 

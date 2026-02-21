@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 
+/** Keys that should never appear in user-supplied objects (prototype pollution). */
+const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 /** Recursively deep-merge source into target. Arrays are replaced, not merged. */
 function deepMerge(
     target: Record<string, unknown>,
@@ -9,6 +12,9 @@ function deepMerge(
 ): Record<string, unknown> {
     const result = { ...target };
     for (const [key, value] of Object.entries(source)) {
+        // Prevent prototype pollution attacks
+        if (DANGEROUS_KEYS.has(key)) continue;
+
         if (
             typeof value === 'object' && value !== null && !Array.isArray(value) &&
             typeof target[key] === 'object' && target[key] !== null && !Array.isArray(target[key])
@@ -23,6 +29,11 @@ function deepMerge(
     }
     return result;
 }
+
+/** Only these top-level integration keys are accepted from the client. */
+const ALLOWED_INTEGRATION_KEYS = new Set([
+    'ghl', 'hubspot', 'google_calendar', 'slack', 'calendly', 'api',
+]);
 
 export async function PATCH(request: NextRequest) {
     try {
@@ -244,6 +255,14 @@ export async function PATCH(request: NextRequest) {
         // Deep merge integrations to prevent overwriting sibling/nested keys
         // (e.g., GHL trigger_config.webhook_secret preserved when only updating enabled flag)
         if (integrations !== undefined) {
+            // Strip unknown top-level integration keys to prevent injection
+            const sanitizedIntegrations: Record<string, unknown> = {};
+            for (const [key, value] of Object.entries(integrations as Record<string, unknown>)) {
+                if (ALLOWED_INTEGRATION_KEYS.has(key)) {
+                    sanitizedIntegrations[key] = value;
+                }
+            }
+
             const { data: current } = await supabase
                 .from('agencies')
                 .select('integrations')
@@ -251,7 +270,7 @@ export async function PATCH(request: NextRequest) {
                 .single();
 
             const existingIntegrations = (current?.integrations as Record<string, unknown>) || {};
-            updatePayload.integrations = deepMerge(existingIntegrations, integrations as Record<string, unknown>);
+            updatePayload.integrations = deepMerge(existingIntegrations, sanitizedIntegrations);
         }
 
         const { error } = await supabase
