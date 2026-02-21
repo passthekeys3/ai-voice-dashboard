@@ -211,6 +211,21 @@ async function executeAction(
                 if (blockedHosts.includes(hostname)) {
                     return { success: false, error: 'Webhook URL cannot target internal hosts' };
                 }
+
+                // Block IPv6 private/reserved ranges (with or without brackets)
+                const bareHost = hostname.replace(/^\[|\]$/g, '');
+                if (bareHost.includes(':')) {
+                    // IPv6 address — block all private/reserved ranges
+                    const lowerIpv6 = bareHost.toLowerCase();
+                    if (lowerIpv6 === '::1' || lowerIpv6 === '::' ||
+                        lowerIpv6.startsWith('fe80') ||   // link-local
+                        lowerIpv6.startsWith('fc') ||     // unique-local (fc00::/7)
+                        lowerIpv6.startsWith('fd') ||     // unique-local (fc00::/7)
+                        lowerIpv6.startsWith('::ffff:')) { // IPv4-mapped IPv6
+                        return { success: false, error: 'Webhook URL cannot target private IP ranges' };
+                    }
+                }
+
                 const ipMatch = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
                 if (ipMatch) {
                     const [, a, b] = ipMatch.map(Number);

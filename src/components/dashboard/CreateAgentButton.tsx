@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,7 +56,7 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
     const [voices, setVoices] = useState<Voice[]>([]);
     const [loadingVoices, setLoadingVoices] = useState(false);
     const [playingVoice, setPlayingVoice] = useState<string | null>(null);
-    const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     // Form state
     const [name, setName] = useState('');
@@ -89,20 +89,38 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
         }
     };
 
+    // Cleanup audio on unmount
+    useEffect(() => {
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.onended = null;
+                audioRef.current = null;
+            }
+        };
+    }, []);
+
     const playVoicePreview = (voice: Voice) => {
         if (!voice.preview_url) return;
 
         if (playingVoice === voice.id) {
-            audio?.pause();
+            audioRef.current?.pause();
+            audioRef.current = null;
             setPlayingVoice(null);
             return;
         }
 
-        audio?.pause();
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.onended = null;
+        }
         const newAudio = new Audio(voice.preview_url);
-        newAudio.onended = () => setPlayingVoice(null);
+        newAudio.onended = () => {
+            audioRef.current = null;
+            setPlayingVoice(null);
+        };
         newAudio.play();
-        setAudio(newAudio);
+        audioRef.current = newAudio;
         setPlayingVoice(voice.id);
     };
 
@@ -171,7 +189,11 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
         <Dialog open={open} onOpenChange={(isOpen: boolean) => {
             setOpen(isOpen);
             if (!isOpen) {
-                audio?.pause();
+                if (audioRef.current) {
+                    audioRef.current.pause();
+                    audioRef.current.onended = null;
+                    audioRef.current = null;
+                }
                 setPlayingVoice(null);
             }
         }}>

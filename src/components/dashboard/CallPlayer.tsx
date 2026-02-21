@@ -80,6 +80,7 @@ export function CallPlayer({ audioUrl, transcript, summary }: CallPlayerProps) {
                                 max="100"
                                 value={progress}
                                 onChange={handleSeek}
+                                aria-label="Call playback progress"
                                 className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700"
                             />
                             <Button variant="ghost" size="icon" onClick={toggleMute}>

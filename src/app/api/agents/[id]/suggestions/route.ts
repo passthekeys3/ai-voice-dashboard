@@ -188,7 +188,8 @@ Rules:
                             },
                         },
                     })
-                    .eq('id', id);
+                    .eq('id', id)
+                    .eq('agency_id', user.agency.id);
             }
 
             return NextResponse.json({

@@ -253,6 +253,7 @@ export function useRealtimeLiveCall({
   const channelRef = useRef<RealtimeChannel | null>(null);
   const supabaseRef = useRef(createClient());
   const prevTranscriptLengthRef = useRef(0);
+  const newLineTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch call details from API
   const fetchCall = useCallback(async () => {
@@ -381,7 +382,8 @@ export function useRealtimeLiveCall({
           });
 
           // Clear "new" flag after animation
-          setTimeout(() => {
+          if (newLineTimeoutRef.current) clearTimeout(newLineTimeoutRef.current);
+          newLineTimeoutRef.current = setTimeout(() => {
             setCall((prev) =>
               prev
                 ? {
@@ -390,6 +392,7 @@ export function useRealtimeLiveCall({
                   }
                 : null
             );
+            newLineTimeoutRef.current = null;
           }, 1000);
         }
       )
@@ -444,6 +447,7 @@ export function useRealtimeLiveCall({
     return () => {
       clearInterval(durationInterval);
       clearInterval(pollInterval);
+      if (newLineTimeoutRef.current) clearTimeout(newLineTimeoutRef.current);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
