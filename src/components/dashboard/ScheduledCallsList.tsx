@@ -72,10 +72,15 @@ export function ScheduledCallsList({ upcomingCalls, pastCalls }: ScheduledCallsL
 
         setCancelling(id);
         try {
-            await fetch(`/api/scheduled-calls/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/scheduled-calls/${id}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || 'Failed to cancel call');
+            }
             router.refresh();
         } catch (err) {
             console.error('Failed to cancel call:', err);
+            alert(err instanceof Error ? err.message : 'Failed to cancel call');
         } finally {
             setCancelling(null);
         }

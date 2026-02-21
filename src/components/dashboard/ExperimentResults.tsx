@@ -55,7 +55,7 @@ export function ExperimentResults({ experiment }: ExperimentResultsProps) {
     const handleStatusChange = async (newStatus: 'running' | 'paused' | 'completed') => {
         setUpdating(true);
         try {
-            await fetch(`/api/experiments/${experiment.id}`, {
+            const res = await fetch(`/api/experiments/${experiment.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -63,9 +63,14 @@ export function ExperimentResults({ experiment }: ExperimentResultsProps) {
                     ...(newStatus === 'completed' && leader ? { winner_variant_id: leader.id } : {}),
                 }),
             });
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || 'Failed to update experiment');
+            }
             router.refresh();
         } catch (err) {
             console.error('Failed to update experiment:', err);
+            alert(err instanceof Error ? err.message : 'Failed to update experiment');
         } finally {
             setUpdating(false);
         }

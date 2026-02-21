@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import crypto from 'crypto';
 
 const HUBSPOT_CLIENT_ID = process.env.HUBSPOT_CLIENT_ID;
@@ -67,6 +68,22 @@ export async function GET(request: NextRequest) {
         } catch {
             return NextResponse.redirect(
                 new URL('/settings?hubspot=error&message=Invalid+state+parameter', request.url)
+            );
+        }
+
+        // Defense-in-depth: verify the current session matches the agencyId in the state
+        // The HMAC signature prevents state tampering, but this ensures the same user
+        // who initiated the flow is completing it.
+        const user = await getCurrentUser();
+        if (!user || !isAgencyAdmin(user)) {
+            return NextResponse.redirect(
+                new URL('/settings?hubspot=error&message=Session+expired+or+unauthorized', request.url)
+            );
+        }
+        if (user.agency.id !== agencyId) {
+            console.error(`HubSpot OAuth: session agency ${user.agency.id} does not match state agency ${agencyId}`);
+            return NextResponse.redirect(
+                new URL('/settings?hubspot=error&message=Agency+mismatch', request.url)
             );
         }
 

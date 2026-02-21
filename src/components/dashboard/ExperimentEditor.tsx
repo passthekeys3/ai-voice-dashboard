@@ -112,20 +112,28 @@ export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) 
         try {
             if (experiment) {
                 // Update existing
-                await fetch(`/api/experiments/${experiment.id}`, {
+                const expRes = await fetch(`/api/experiments/${experiment.id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, description, goal }),
                 });
+                if (!expRes.ok) {
+                    const errData = await expRes.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Failed to update experiment');
+                }
                 // Update variants
-                await fetch(`/api/experiments/${experiment.id}/variants`, {
+                const varRes = await fetch(`/api/experiments/${experiment.id}/variants`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ variants }),
                 });
+                if (!varRes.ok) {
+                    const errData = await varRes.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Failed to update variants');
+                }
             } else {
                 // Create new
-                await fetch('/api/experiments', {
+                const createRes = await fetch('/api/experiments', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -136,6 +144,10 @@ export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) 
                         variants,
                     }),
                 });
+                if (!createRes.ok) {
+                    const errData = await createRes.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Failed to create experiment');
+                }
             }
 
             router.push('/experiments');

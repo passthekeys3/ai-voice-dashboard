@@ -62,8 +62,11 @@ export async function GET(request: NextRequest) {
             .gte('started_at', startDate.toISOString())
             .lte('started_at', endDate.toISOString());
 
-        // Filter by client
+        // Filter by client — non-admins can only filter by their own client
         if (clientId) {
+            if (!isAgencyAdmin(user) && user.profile.client_id && clientId !== user.profile.client_id) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+            }
             callsQuery = callsQuery.eq('client_id', clientId);
         }
 

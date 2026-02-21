@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { ALLOWED_ACTION_TYPES, ALLOWED_TRIGGERS, ALLOWED_ACTION_TYPES_LIST, ALLOWED_TRIGGERS_LIST } from '@/lib/workflows/constants';
 
 // GET /api/workflows - List all workflows
 export async function GET(request: NextRequest) {
@@ -65,34 +66,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'At least one action is required' }, { status: 400 });
         }
 
-        // Validate action types against whitelist
-        const ALLOWED_ACTION_TYPES = [
-            'webhook',
-            // GHL integrations
-            'ghl_log_call', 'ghl_create_contact', 'ghl_add_tags', 'ghl_update_pipeline', 'ghl_lead_score',
-            'ghl_book_appointment', 'ghl_cancel_appointment',
-            'ghl_upsert_contact', 'ghl_add_call_note', 'ghl_trigger_workflow', 'ghl_update_contact_field',
-            // HubSpot integrations
-            'hubspot_log_call', 'hubspot_create_contact', 'hubspot_update_contact',
-            'hubspot_add_tags', 'hubspot_update_pipeline', 'hubspot_lead_score',
-            'hubspot_book_appointment', 'hubspot_cancel_appointment',
-            'hubspot_upsert_contact', 'hubspot_add_call_note', 'hubspot_trigger_workflow', 'hubspot_update_contact_field',
-            // Google Calendar integrations
-            'gcal_book_event', 'gcal_cancel_event', 'gcal_check_availability',
-            // Calendly integrations
-            'calendly_check_availability', 'calendly_create_booking_link', 'calendly_cancel_event',
-            // Messaging & notifications
-            'send_sms', 'send_email', 'send_slack',
-        ];
-        const ALLOWED_TRIGGERS = [
-            'call_ended', 'call_started',
-            'inbound_call_started', 'inbound_call_ended',
-        ];
-
+        // Validate action types against shared whitelist
         for (const action of actions) {
-            if (!action.type || !ALLOWED_ACTION_TYPES.includes(action.type)) {
+            if (!action.type || !ALLOWED_ACTION_TYPES.has(action.type)) {
                 return NextResponse.json({
-                    error: `Invalid action type: ${action.type}. Allowed: ${ALLOWED_ACTION_TYPES.join(', ')}`
+                    error: `Invalid action type: ${action.type}. Allowed: ${ALLOWED_ACTION_TYPES_LIST.join(', ')}`
                 }, { status: 400 });
             }
             // Validate required fields for each action type
@@ -141,9 +119,9 @@ export async function POST(request: NextRequest) {
         }
 
         // Validate trigger
-        if (trigger && !ALLOWED_TRIGGERS.includes(trigger)) {
+        if (trigger && !ALLOWED_TRIGGERS.has(trigger)) {
             return NextResponse.json({
-                error: `Invalid trigger: ${trigger}. Allowed: ${ALLOWED_TRIGGERS.join(', ')}`
+                error: `Invalid trigger: ${trigger}. Allowed: ${ALLOWED_TRIGGERS_LIST.join(', ')}`
             }, { status: 400 });
         }
 

@@ -8,6 +8,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { APIError } from '@anthropic-ai/sdk';
 import type { WorkflowTrigger, WorkflowCondition, WorkflowAction } from '@/types';
+import { ALLOWED_ACTION_TYPES, ALLOWED_TRIGGERS } from '@/lib/workflows/constants';
 
 const CLAUDE_MODEL = 'claude-haiku-4-20250514';
 const MAX_OUTPUT_TOKENS = 4096;
@@ -24,26 +25,6 @@ function getClient(): Anthropic {
     }
     return anthropicClient;
 }
-
-// Whitelist of allowed action types (must match /api/workflows/route.ts)
-const ALLOWED_ACTION_TYPES = new Set([
-    'webhook',
-    'ghl_log_call', 'ghl_create_contact', 'ghl_add_tags', 'ghl_update_pipeline', 'ghl_lead_score',
-    'ghl_book_appointment', 'ghl_cancel_appointment',
-    'ghl_upsert_contact', 'ghl_add_call_note', 'ghl_trigger_workflow', 'ghl_update_contact_field',
-    'hubspot_log_call', 'hubspot_create_contact', 'hubspot_update_contact',
-    'hubspot_add_tags', 'hubspot_update_pipeline', 'hubspot_lead_score',
-    'hubspot_book_appointment', 'hubspot_cancel_appointment',
-    'hubspot_upsert_contact', 'hubspot_add_call_note', 'hubspot_trigger_workflow', 'hubspot_update_contact_field',
-    'gcal_book_event', 'gcal_cancel_event', 'gcal_check_availability',
-    'calendly_check_availability', 'calendly_create_booking_link', 'calendly_cancel_event',
-    'send_sms', 'send_email', 'send_slack',
-]);
-
-const ALLOWED_TRIGGERS = new Set([
-    'call_ended', 'call_started',
-    'inbound_call_started', 'inbound_call_ended',
-]);
 
 export interface AIWorkflowResponse {
     message: string;

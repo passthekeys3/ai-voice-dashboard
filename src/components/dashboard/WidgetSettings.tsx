@@ -58,10 +58,14 @@ export function WidgetSettings({
         ? window.location.origin
         : 'https://buildvoiceai.com';
 
+    // Sanitize color to prevent XSS injection via embed code
+    const safeColor = /^#[0-9a-fA-F]{3,8}$/.test(config.color || '') ? config.color : '#0f172a';
+    const safePosition = config.position === 'left' ? 'left' : 'right';
+
     const embedCode = `<script src="${baseUrl}/widget/embed.js"
   data-agent-id="${agentId}"
-  data-color="${config.color || '#0f172a'}"
-  data-position="${config.position || 'right'}">
+  data-color="${safeColor}"
+  data-position="${safePosition}">
 </script>`;
 
     const handleSave = async () => {

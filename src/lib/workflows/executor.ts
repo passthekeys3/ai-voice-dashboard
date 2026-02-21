@@ -1366,7 +1366,7 @@ async function executeAction(
 
                 // Validate phone number format (E.164-like)
                 if (!to.match(/^\+?[1-9]\d{1,14}$/)) {
-                    return { success: false, error: `Invalid phone number format: ${to}` };
+                    return { success: false, error: 'Invalid phone number format for SMS recipient' };
                 }
 
                 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -1397,7 +1397,7 @@ async function executeAction(
                     return { success: false, error: `SMS send failed: ${smsResponse.status}` };
                 }
 
-                console.log(`SMS sent to ${to}`);
+                console.log('SMS sent successfully');
                 return { success: true };
             }
 

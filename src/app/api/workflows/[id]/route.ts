@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { ALLOWED_ACTION_TYPES, ALLOWED_ACTION_TYPES_LIST } from '@/lib/workflows/constants';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -61,29 +62,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                 return NextResponse.json({ error: 'At least one action is required' }, { status: 400 });
             }
 
-            const ALLOWED_ACTION_TYPES = [
-                'webhook',
-                // GHL integrations
-                'ghl_log_call', 'ghl_create_contact', 'ghl_add_tags', 'ghl_update_pipeline', 'ghl_lead_score',
-                'ghl_book_appointment', 'ghl_cancel_appointment',
-                'ghl_upsert_contact', 'ghl_add_call_note', 'ghl_trigger_workflow', 'ghl_update_contact_field',
-                // HubSpot integrations
-                'hubspot_log_call', 'hubspot_create_contact', 'hubspot_update_contact',
-                'hubspot_add_tags', 'hubspot_update_pipeline', 'hubspot_lead_score',
-                'hubspot_book_appointment', 'hubspot_cancel_appointment',
-                'hubspot_upsert_contact', 'hubspot_add_call_note', 'hubspot_trigger_workflow', 'hubspot_update_contact_field',
-                // Google Calendar integrations
-                'gcal_book_event', 'gcal_cancel_event', 'gcal_check_availability',
-                // Calendly integrations
-                'calendly_check_availability', 'calendly_create_booking_link', 'calendly_cancel_event',
-                // Messaging & notifications
-                'send_sms', 'send_email', 'send_slack',
-            ];
-
             for (const action of body.actions) {
-                if (!action.type || !ALLOWED_ACTION_TYPES.includes(action.type)) {
+                if (!action.type || !ALLOWED_ACTION_TYPES.has(action.type)) {
                     return NextResponse.json({
-                        error: `Invalid action type: ${action.type}. Allowed: ${ALLOWED_ACTION_TYPES.join(', ')}`
+                        error: `Invalid action type: ${action.type}. Allowed: ${ALLOWED_ACTION_TYPES_LIST.join(', ')}`
                     }, { status: 400 });
                 }
                 // Validate webhook URLs for SSRF protection
