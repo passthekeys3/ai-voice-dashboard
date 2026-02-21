@@ -54,6 +54,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'No active test cases found' }, { status: 400 });
         }
 
+        const MAX_TEST_CASES_PER_RUN = 50;
+        if (testCases.length > MAX_TEST_CASES_PER_RUN) {
+            return NextResponse.json(
+                { error: `Test suite has ${testCases.length} cases, max ${MAX_TEST_CASES_PER_RUN}. Please split into smaller suites.` },
+                { status: 400 }
+            );
+        }
+
         // Stream progress back via ReadableStream
         const encoder = new TextEncoder();
         const stream = new ReadableStream({

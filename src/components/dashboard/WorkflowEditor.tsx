@@ -160,10 +160,46 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
             return;
         }
 
-        // Validate webhook URLs
+        // Validate required fields per action type
         for (const action of actions) {
             if (action.type === 'webhook' && !action.config.url) {
                 setError('Webhook URL is required');
+                return;
+            }
+            if (action.type === 'ghl_update_pipeline' && !action.config.pipeline_id) {
+                setError('Pipeline ID is required for GHL pipeline updates');
+                return;
+            }
+            if (action.type === 'hubspot_update_pipeline' && !action.config.pipeline_id) {
+                setError('Pipeline ID is required for HubSpot pipeline updates');
+                return;
+            }
+            if (action.type === 'ghl_book_appointment' && !action.config.calendar_id) {
+                setError('Calendar ID is required for GHL appointment booking');
+                return;
+            }
+            if (action.type === 'ghl_trigger_workflow' && !action.config.workflow_id) {
+                setError('Workflow ID is required for GHL workflow triggers');
+                return;
+            }
+            if (action.type === 'hubspot_trigger_workflow' && !action.config.workflow_id) {
+                setError('Workflow ID is required for HubSpot workflow triggers');
+                return;
+            }
+            if (action.type === 'ghl_update_contact_field' && (!action.config.field_key || !action.config.value_template)) {
+                setError('Field key and value are required for GHL contact field updates');
+                return;
+            }
+            if (action.type === 'hubspot_update_contact_field' && (!action.config.property_name || !action.config.value_template)) {
+                setError('Property name and value are required for HubSpot contact field updates');
+                return;
+            }
+            if (action.type === 'send_sms' && !action.config.message) {
+                setError('Message is required for SMS actions');
+                return;
+            }
+            if (action.type === 'send_email' && (!action.config.to || !action.config.subject)) {
+                setError('Recipient and subject are required for email actions');
                 return;
             }
         }

@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
                             currency: 'usd',
                             description: `Voice AI Usage: ${Number(usage.total_minutes).toFixed(1)} minutes (${usage.total_calls} calls) - ${monthLabel}`,
                         },
-                        stripeAccountOptions
+                        { ...stripeAccountOptions, idempotencyKey: `ii-pm-${client.id}-${periodStart}` }
                     );
 
                     const feePercent = agency.platform_fee_percent || 0;
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
                             collection_method: 'charge_automatically',
                             ...(applicationFeeAmount && { application_fee_amount: applicationFeeAmount }),
                         },
-                        stripeAccountOptions
+                        { ...stripeAccountOptions, idempotencyKey: `inv-pm-${client.id}-${periodStart}` }
                     );
 
                     const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
                             currency: 'usd',
                             description: `Monthly AI Voice Agent Service - ${monthLabel}`,
                         },
-                        stripeAccountOptions
+                        { ...stripeAccountOptions, idempotencyKey: `ii-sub-${client.id}-${periodStart}` }
                     );
 
                     const feePercent = agency.platform_fee_percent || 0;
@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
                             collection_method: 'charge_automatically',
                             ...(applicationFeeAmount && { application_fee_amount: applicationFeeAmount }),
                         },
-                        stripeAccountOptions
+                        { ...stripeAccountOptions, idempotencyKey: `inv-sub-${client.id}-${periodStart}` }
                     );
 
                     const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
@@ -285,7 +285,7 @@ export async function POST(request: NextRequest) {
                         amount: overageCents,
                         currency: 'usd',
                         description: `Additional clients overage: ${extraClients} extra client${extraClients > 1 ? 's' : ''} × $${overageRate}/client - ${monthLabel}`,
-                    });
+                    }, { idempotencyKey: `ii-overage-${agency.id}-${periodStart}` });
 
                     results.push({
                         agencyId: agency.id,
