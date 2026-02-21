@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
                     const feeNote = applicationFeeAmount ? ` (platform fee: $${(applicationFeeAmount / 100).toFixed(2)})` : '';
                     console.log(`[per_minute] Invoice created for ${client.name}: $${(usage.total_cost_cents / 100).toFixed(2)}${feeNote} (${invoice.id})`);
                 } catch (err) {
-                    console.error(`Failed to create per_minute invoice for client ${client.name}:`, err);
+                    console.error(`Failed to create per_minute invoice for client ${client.id}:`, err instanceof Error ? err.message : 'Unknown error');
                     results.push({ clientId: client.id, clientName: client.name, billingType: 'per_minute', status: 'error' });
                 }
             }
@@ -230,7 +230,7 @@ export async function POST(request: NextRequest) {
                     const feeNote = applicationFeeAmount ? ` (platform fee: $${(applicationFeeAmount / 100).toFixed(2)})` : '';
                     console.log(`[subscription] Invoice created for ${client.name}: $${(amountCents / 100).toFixed(2)}${feeNote} (${invoice.id})`);
                 } catch (err) {
-                    console.error(`Failed to create subscription invoice for client ${client.name}:`, err);
+                    console.error(`Failed to create subscription invoice for client ${client.id}:`, err instanceof Error ? err.message : 'Unknown error');
                     results.push({ clientId: client.id, clientName: client.name, billingType: 'subscription', status: 'error' });
                 }
             }
@@ -273,7 +273,7 @@ export async function POST(request: NextRequest) {
                         .eq('is_active', true);
 
                     if (countError || clientCount === null) {
-                        console.error(`Failed to count clients for agency ${agency.name}:`, countError);
+                        console.error(`Failed to count clients for agency ${agency.id}:`, countError?.code ?? 'unknown');
                         continue;
                     }
 
@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
 
                     console.log(`[client_overage] Invoice item created for ${agency.name}: ${extraClients} extra clients × $${overageRate} = $${(overageCents / 100).toFixed(2)}`);
                 } catch (err) {
-                    console.error(`Failed to create client overage invoice for agency ${agency.name}:`, err);
+                    console.error(`Failed to create client overage invoice for agency ${agency.id}:`, err instanceof Error ? err.message : 'Unknown error');
                     results.push({
                         agencyId: agency.id,
                         agencyName: agency.name,
@@ -322,7 +322,7 @@ export async function POST(request: NextRequest) {
             results,
         });
     } catch (err) {
-        console.error('Invoice generation cron error:', err);
+        console.error('Invoice generation cron error:', err instanceof Error ? err.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
                 .single();
 
             if (schedError) {
-                console.error('GHL trigger schedule error:', schedError);
+                console.error('GHL trigger schedule error:', schedError.code);
                 return NextResponse.json({ error: 'Failed to schedule call' }, { status: 500 });
             }
 
@@ -320,7 +320,7 @@ export async function POST(request: NextRequest) {
             agent: agentRecord.name,
         });
     } catch (error) {
-        console.error('GHL trigger-call error:', error);
+        console.error('GHL trigger-call error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -347,6 +347,6 @@ async function logTrigger(supabase: any, log: {
     try {
         await supabase.from('ghl_trigger_log').insert(log);
     } catch (err) {
-        console.error('Failed to log GHL trigger:', err);
+        console.error('Failed to log GHL trigger:', err instanceof Error ? err.message : 'Unknown error');
     }
 }

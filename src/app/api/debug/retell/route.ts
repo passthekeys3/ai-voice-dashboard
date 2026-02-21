@@ -3,8 +3,8 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 
 export async function GET() {
-    // Only allow in development mode
-    if (process.env.NODE_ENV === 'production') {
+    // Only allow in development mode — check both NODE_ENV and app URL
+    if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') {
         return NextResponse.json({ error: 'Not available' }, { status: 404 });
     }
 
@@ -40,6 +40,10 @@ export async function GET() {
             body: JSON.stringify({ limit: 10, sort_order: 'descending' }),
         });
 
+        if (!response.ok) {
+            return NextResponse.json({ error: 'Failed to fetch calls from Retell' }, { status: 502 });
+        }
+
         const calls = await response.json();
 
         // Extract cost info from each call
@@ -56,6 +60,7 @@ export async function GET() {
             samples: costInfo.slice(0, 5),
         });
     } catch (error) {
-        return NextResponse.json({ error: String(error) }, { status: 500 });
+        console.error('Debug retell error:', error instanceof Error ? error.message : 'Unknown error');
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

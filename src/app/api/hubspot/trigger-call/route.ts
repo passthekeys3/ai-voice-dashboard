@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
                 .single();
 
             if (schedError) {
-                console.error('HubSpot trigger schedule error:', schedError);
+                console.error('HubSpot trigger schedule error:', schedError.code);
                 return NextResponse.json({ error: 'Failed to schedule call' }, { status: 500 });
             }
 
@@ -325,7 +325,7 @@ export async function POST(request: NextRequest) {
             agent: agentRecord.name,
         });
     } catch (error) {
-        console.error('HubSpot trigger-call error:', error);
+        console.error('HubSpot trigger-call error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -352,6 +352,6 @@ async function logTrigger(supabase: any, log: {
     try {
         await supabase.from('hubspot_trigger_log').insert(log);
     } catch (err) {
-        console.error('Failed to log HubSpot trigger:', err);
+        console.error('Failed to log HubSpot trigger:', err instanceof Error ? err.message : 'Unknown error');
     }
 }
