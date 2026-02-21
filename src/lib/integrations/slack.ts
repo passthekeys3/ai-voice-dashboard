@@ -80,7 +80,8 @@ export async function sendSlackMessage(
 
         if (!response.ok) {
             const text = await response.text().catch(() => '');
-            return { success: false, error: `Slack returned ${response.status}: ${text}` };
+            console.error(`Slack webhook returned ${response.status}: ${text}`);
+            return { success: false, error: `Slack webhook failed with status ${response.status}` };
         }
 
         return { success: true };

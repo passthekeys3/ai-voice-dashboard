@@ -42,15 +42,21 @@ export function TestCall({ agentId, agentName }: TestCallProps) {
         };
         loadSDK();
 
-        // Cleanup: stop call and remove listeners on unmount
+        // Cleanup: stop call, remove listeners, and clear timeout on unmount
         return () => {
             const client = retellClientRef.current;
             if (client) {
                 client.stopCall();
                 client.removeAllListeners();
             }
+            if (connectionTimeoutRef.current) {
+                clearTimeout(connectionTimeoutRef.current);
+                connectionTimeoutRef.current = null;
+            }
         };
     }, []);
+
+    const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const startCall = async () => {
         setIsConnecting(true);
@@ -88,9 +94,24 @@ export function TestCall({ agentId, agentName }: TestCallProps) {
             // Remove any previous listeners to avoid duplicates
             client.removeAllListeners();
 
-            // Set up event listeners
+            // Start connection timeout — if call_started doesn't fire within 15s, something is wrong
+            if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
+            connectionTimeoutRef.current = setTimeout(() => {
+                if (!retellClientRef.current) return;
+                console.error('[TestCall] Connection timed out after 15 seconds');
+                setError('Connection timed out. Check your microphone permissions and try again.');
+                setIsConnecting(false);
+                try { retellClientRef.current.stopCall(); } catch { /* ignore */ }
+                connectionTimeoutRef.current = null;
+            }, 15000);
+
+            // Set up event listeners (single call_started handler that also clears timeout)
             client.on('call_started', () => {
                 console.log('[TestCall] Call started');
+                if (connectionTimeoutRef.current) {
+                    clearTimeout(connectionTimeoutRef.current);
+                    connectionTimeoutRef.current = null;
+                }
                 setIsCallActive(true);
                 setIsConnecting(false);
             });
@@ -112,19 +133,6 @@ export function TestCall({ agentId, agentName }: TestCallProps) {
                 if (update.transcript) {
                     setTranscript(update.transcript);
                 }
-            });
-
-            // Start the call with a timeout — if call_started doesn't fire within 15s, something is wrong
-            const timeoutId = setTimeout(() => {
-                if (!retellClientRef.current) return;
-                console.error('[TestCall] Connection timed out after 15 seconds');
-                setError('Connection timed out. Check your microphone permissions and try again.');
-                setIsConnecting(false);
-                try { retellClientRef.current.stopCall(); } catch { /* ignore */ }
-            }, 15000);
-
-            client.on('call_started', () => {
-                clearTimeout(timeoutId);
             });
 
             console.log('[TestCall] Starting call with Retell SDK...');

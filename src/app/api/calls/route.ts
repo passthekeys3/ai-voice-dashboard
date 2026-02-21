@@ -93,20 +93,25 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
 
     // Text search across phone numbers, status, agent name, and transcript
     if (search) {
-        // Find agents matching the search term (for agent name search)
-        const matchingAgentIds = agentIds
-            ? (await supabase
-                .from('agents')
-                .select('id')
-                .eq('agency_id', user.agency.id)
-                .ilike('name', `%${search}%`)
-              ).data?.map(a => a.id) || []
-            : [];
+        // Sanitize search to prevent PostgREST filter injection via .or() string interpolation.
+        // Commas separate conditions and parentheses form nested expressions in PostgREST syntax.
+        const sanitizedSearch = search.replace(/[,()]/g, '');
+        if (sanitizedSearch) {
+            // Find agents matching the search term (for agent name search)
+            const matchingAgentIds = agentIds
+                ? (await supabase
+                    .from('agents')
+                    .select('id')
+                    .eq('agency_id', user.agency.id)
+                    .ilike('name', `%${sanitizedSearch}%`)
+                  ).data?.map(a => a.id) || []
+                : [];
 
-        if (matchingAgentIds.length > 0) {
-            query = query.or(`from_number.ilike.%${search}%,to_number.ilike.%${search}%,status.ilike.%${search}%,transcript.ilike.%${search}%,agent_id.in.(${matchingAgentIds.join(',')})`);
-        } else {
-            query = query.or(`from_number.ilike.%${search}%,to_number.ilike.%${search}%,status.ilike.%${search}%,transcript.ilike.%${search}%`);
+            if (matchingAgentIds.length > 0) {
+                query = query.or(`from_number.ilike.%${sanitizedSearch}%,to_number.ilike.%${sanitizedSearch}%,status.ilike.%${sanitizedSearch}%,transcript.ilike.%${sanitizedSearch}%,agent_id.in.(${matchingAgentIds.join(',')})`);
+            } else {
+                query = query.or(`from_number.ilike.%${sanitizedSearch}%,to_number.ilike.%${sanitizedSearch}%,status.ilike.%${sanitizedSearch}%,transcript.ilike.%${sanitizedSearch}%`);
+            }
         }
     }
 

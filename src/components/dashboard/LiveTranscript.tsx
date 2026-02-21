@@ -153,9 +153,19 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
         setError(null);
     }, []);
 
+    // AbortController ref for cancelling in-flight fetch requests on unmount
+    const abortControllerRef = useRef<AbortController | null>(null);
+
     const fetchCall = useCallback(async () => {
+        // Cancel any previous in-flight request
+        abortControllerRef.current?.abort();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
         try {
-            const response = await fetch(`/api/calls/${callId}/live?provider=${providerProp}`);
+            const response = await fetch(`/api/calls/${callId}/live?provider=${providerProp}`, {
+                signal: controller.signal,
+            });
             if (!response.ok) {
                 if (response.status === 404) {
                     setError('Call not found or has ended');
@@ -166,6 +176,8 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
             const result = await response.json();
             applyTranscriptUpdate(result.data as LiveCall);
         } catch (err) {
+            // Ignore abort errors — these are expected on cleanup
+            if (err instanceof DOMException && err.name === 'AbortError') return;
             console.error('Failed to fetch call:', err);
             setError('Failed to load call data');
         } finally {
@@ -243,6 +255,8 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
             if (newLineTimeoutRef.current) {
                 clearTimeout(newLineTimeoutRef.current);
             }
+            // Abort any in-flight fetch to prevent state updates after unmount
+            abortControllerRef.current?.abort();
         };
     }, [callId, fetchCall]);
 
