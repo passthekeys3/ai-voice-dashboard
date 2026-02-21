@@ -162,8 +162,9 @@ export async function DELETE(
             return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
         }
 
-        // Delete from voice provider (best-effort — don't block DB deletion on provider failure)
-        if (agent.external_id) {
+        // Delete from voice provider only if explicitly requested
+        const deleteFromProvider = request.nextUrl.searchParams.get('deleteFromProvider') === 'true';
+        if (deleteFromProvider && agent.external_id) {
             try {
                 // Resolve keys (client key → agency key fallback)
                 const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, agent.client_id);

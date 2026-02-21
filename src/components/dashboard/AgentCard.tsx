@@ -17,6 +17,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Bot, Settings, Phone, Trash2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
@@ -45,6 +46,7 @@ function formatPhoneNumber(number: string) {
 export function AgentCard({ agent, phoneNumber, showDelete = true }: AgentCardProps) {
     const router = useRouter();
     const [deleting, setDeleting] = useState(false);
+    const [deleteFromProvider, setDeleteFromProvider] = useState(false);
 
     const providerStyles: Record<string, string> = {
         retell: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
@@ -52,15 +54,22 @@ export function AgentCard({ agent, phoneNumber, showDelete = true }: AgentCardPr
         bland: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300',
     };
 
+    const providerDisplayName = agent.provider === 'bland' ? 'Bland.ai' : agent.provider.charAt(0).toUpperCase() + agent.provider.slice(1);
+
     const handleDelete = async () => {
         setDeleting(true);
         try {
-            const response = await fetch(`/api/agents/${agent.id}`, {
+            const url = deleteFromProvider
+                ? `/api/agents/${agent.id}?deleteFromProvider=true`
+                : `/api/agents/${agent.id}`;
+            const response = await fetch(url, {
                 method: 'DELETE',
             });
             if (response.ok) {
                 toast.success('Agent deleted', {
-                    description: `"${agent.name}" has been removed from your dashboard`,
+                    description: deleteFromProvider
+                        ? `"${agent.name}" has been removed from your dashboard and ${providerDisplayName}`
+                        : `"${agent.name}" has been removed from your dashboard`,
                 });
                 router.refresh();
             } else {
@@ -143,7 +152,7 @@ export function AgentCard({ agent, phoneNumber, showDelete = true }: AgentCardPr
                     </div>
                     <div className="flex items-center gap-2 sm:gap-1">
                         {showDelete && (
-                            <AlertDialog>
+                            <AlertDialog onOpenChange={(open: boolean) => { if (!open) setDeleteFromProvider(false); }}>
                                 <AlertDialogTrigger asChild>
                                     <Button
                                         variant="ghost"
@@ -163,9 +172,22 @@ export function AgentCard({ agent, phoneNumber, showDelete = true }: AgentCardPr
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Delete Agent</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            Are you sure you want to delete &quot;{agent.name}&quot;? This will remove the agent from your dashboard but will NOT delete it from your voice provider. You can re-sync it later.
+                                            Are you sure you want to delete &quot;{agent.name}&quot;? This will remove the agent from your dashboard.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
+                                    <div className="flex items-center gap-3 py-2">
+                                        <Checkbox
+                                            id={`delete-provider-${agent.id}`}
+                                            checked={deleteFromProvider}
+                                            onCheckedChange={(checked) => setDeleteFromProvider(checked === true)}
+                                        />
+                                        <label
+                                            htmlFor={`delete-provider-${agent.id}`}
+                                            className="text-sm text-muted-foreground cursor-pointer select-none"
+                                        >
+                                            Also delete from {providerDisplayName}
+                                        </label>
+                                    </div>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                                         <AlertDialogAction
