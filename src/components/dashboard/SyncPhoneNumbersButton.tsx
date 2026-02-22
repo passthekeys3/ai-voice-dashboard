@@ -1,14 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export function SyncPhoneNumbersButton() {
+interface SyncPhoneNumbersButtonProps {
+    onSyncComplete?: () => void;
+}
+
+export function SyncPhoneNumbersButton({ onSyncComplete }: SyncPhoneNumbersButtonProps) {
     const [syncing, setSyncing] = useState(false);
-    const router = useRouter();
     const handleSync = async () => {
         setSyncing(true);
 
@@ -23,7 +25,7 @@ export function SyncPhoneNumbersButton() {
 
             const data = await response.json();
             toast.success(`Synced: ${data.synced} added, ${data.updated} updated`);
-            router.refresh();
+            onSyncComplete?.();
         } catch (err) {
             console.error('Failed to sync:', err);
             toast.error('Network error — please try again.');

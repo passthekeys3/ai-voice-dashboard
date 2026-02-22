@@ -3,9 +3,7 @@ import type { Metadata } from 'next';
 import { requireAgencyAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
-import { PhoneNumbersList } from '@/components/dashboard/PhoneNumbersList';
-import { BuyPhoneNumberButton } from '@/components/dashboard/BuyPhoneNumberButton';
-import { SyncPhoneNumbersButton } from '@/components/dashboard/SyncPhoneNumbersButton';
+import { PhoneNumbersPageClient } from '@/components/dashboard/PhoneNumbersPageClient';
 
 export const metadata: Metadata = { title: 'Phone Numbers' };
 
@@ -42,21 +40,8 @@ export default async function PhoneNumbersPage() {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h2 className="text-2xl font-bold tracking-tight">Phone Numbers</h2>
-                        <p className="text-muted-foreground">
-                            Purchase and manage phone numbers for your AI agents
-                        </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        <SyncPhoneNumbersButton />
-                        <BuyPhoneNumberButton agents={agents || []} />
-                    </div>
-                </div>
-
-                <PhoneNumbersList
-                    phoneNumbers={phoneNumbers || []}
+                <PhoneNumbersPageClient
+                    initialPhoneNumbers={phoneNumbers || []}
                     agents={agents || []}
                 />
             </div>

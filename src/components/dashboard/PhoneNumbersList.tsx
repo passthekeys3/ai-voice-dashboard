@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,12 +33,12 @@ import type { PhoneNumber } from '@/types';
 interface PhoneNumbersListProps {
     phoneNumbers: PhoneNumber[];
     agents: { id: string; name: string }[];
+    onDataChange?: () => void;
 }
 
 type AssignmentType = 'inbound' | 'outbound';
 
-export function PhoneNumbersList({ phoneNumbers, agents }: PhoneNumbersListProps) {
-    const router = useRouter();
+export function PhoneNumbersList({ phoneNumbers, agents, onDataChange }: PhoneNumbersListProps) {
     const [assigning, setAssigning] = useState<{ phoneId: string; type: AssignmentType } | null>(null);
     const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -58,7 +57,7 @@ export function PhoneNumbersList({ phoneNumbers, agents }: PhoneNumbersListProps
                 throw new Error(data.error || 'Failed to assign agent');
             }
             toast.success('Agent assigned successfully');
-            router.refresh();
+            onDataChange?.();
         } catch (err) {
             console.error('Failed to assign number:', err);
             toast.error('Failed to assign agent', {
@@ -82,7 +81,7 @@ export function PhoneNumbersList({ phoneNumbers, agents }: PhoneNumbersListProps
                 throw new Error(data.error || 'Failed to release number');
             }
             toast.success('Phone number released successfully');
-            router.refresh();
+            onDataChange?.();
         } catch (err) {
             console.error('Failed to release number:', err);
             toast.error('Failed to release phone number', {

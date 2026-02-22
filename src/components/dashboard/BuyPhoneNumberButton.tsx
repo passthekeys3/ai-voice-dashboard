@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,6 +24,7 @@ import { Plus, Loader2, PhoneIcon, MapPin, DollarSign } from 'lucide-react';
 
 interface BuyPhoneNumberButtonProps {
     agents: { id: string; name: string }[];
+    onPurchaseComplete?: () => void;
 }
 
 const POPULAR_AREA_CODES = [
@@ -42,8 +42,7 @@ const POPULAR_AREA_CODES = [
     { code: '503', region: 'Portland, OR' },
 ];
 
-export function BuyPhoneNumberButton({ agents }: BuyPhoneNumberButtonProps) {
-    const router = useRouter();
+export function BuyPhoneNumberButton({ agents, onPurchaseComplete }: BuyPhoneNumberButtonProps) {
     const [open, setOpen] = useState(false);
     const [purchasing, setPurchasing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -87,7 +86,7 @@ export function BuyPhoneNumberButton({ agents }: BuyPhoneNumberButtonProps) {
 
             setOpen(false);
             resetForm();
-            router.refresh();
+            onPurchaseComplete?.();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
