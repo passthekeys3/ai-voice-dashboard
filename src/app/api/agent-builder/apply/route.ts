@@ -288,7 +288,7 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (dbError) {
-            console.error('Error saving agent to DB:', safeName, dbError);
+            console.error('Error saving agent to DB:', dbError.code);
             return NextResponse.json({ error: 'Failed to save agent' }, { status: 500 });
         }
 
@@ -304,7 +304,7 @@ export async function POST(request: NextRequest) {
 
             if (phoneNumber?.external_id) {
                 if (provider === 'retell') {
-                    await fetch(`https://api.retellai.com/update-phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
+                    const phoneUpdateRes = await fetch(`https://api.retellai.com/update-phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
                         method: 'PATCH',
                         headers: {
                             'Authorization': `Bearer ${apiKey}`,
@@ -314,8 +314,11 @@ export async function POST(request: NextRequest) {
                             inbound_agent_id: externalId,
                         }),
                     });
+                    if (!phoneUpdateRes.ok) {
+                        console.warn('Failed to update phone number in Retell:', phoneUpdateRes.status);
+                    }
                 } else if (provider === 'vapi') {
-                    await fetch(`https://api.vapi.ai/phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
+                    const phoneUpdateRes = await fetch(`https://api.vapi.ai/phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
                         method: 'PATCH',
                         headers: {
                             'Authorization': `Bearer ${apiKey}`,
@@ -325,6 +328,9 @@ export async function POST(request: NextRequest) {
                             assistantId: externalId,
                         }),
                     });
+                    if (!phoneUpdateRes.ok) {
+                        console.warn('Failed to update phone number in Vapi:', phoneUpdateRes.status);
+                    }
                 }
                 // Note: Bland phone assignment is done at call time via pathway_id, not per-number
 

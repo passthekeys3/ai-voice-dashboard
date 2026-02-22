@@ -203,7 +203,7 @@ export async function POST() {
                 if (callsFetchError) {
                     console.error('[SYNC] Error fetching existing calls:', callsFetchError);
                     results.calls.errors += callsWithAgents.length;
-                    results.calls.errorDetails = `Fetch error: ${callsFetchError.message}`;
+                    results.calls.errorDetails = 'Failed to fetch existing calls';
                     continue;
                 }
 
@@ -247,14 +247,14 @@ export async function POST() {
                     if (callUpsertError) {
                         console.error('[SYNC] Batch call upsert error:', callUpsertError);
                         results.calls.errors += callsToUpsert.length;
-                        results.calls.errorDetails = `Upsert error: ${callUpsertError.message}`;
+                        results.calls.errorDetails = 'Failed to upsert calls';
                     } else {
                         results.calls.synced += callsToUpsert.length;
                         console.log(`[SYNC] Successfully upserted ${callsToUpsert.length} calls`);
                     }
                 }
             } catch (err) {
-                console.error(`Error syncing calls from ${provider}:`, err);
+                console.error(`Error syncing calls from ${provider}:`, err instanceof Error ? err.message : 'Unknown error');
             }
         }
 

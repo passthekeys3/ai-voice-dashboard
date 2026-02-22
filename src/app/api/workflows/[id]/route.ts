@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-import { ALLOWED_ACTION_TYPES, ALLOWED_ACTION_TYPES_LIST } from '@/lib/workflows/constants';
+import { ALLOWED_ACTION_TYPES, ALLOWED_ACTION_TYPES_LIST, ALLOWED_TRIGGERS, ALLOWED_TRIGGERS_LIST } from '@/lib/workflows/constants';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -104,13 +104,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         // Validate trigger if being updated
         if (body.trigger !== undefined) {
-            const ALLOWED_TRIGGERS = [
-                'call_ended', 'call_started',
-                'inbound_call_started', 'inbound_call_ended',
-            ];
-            if (!ALLOWED_TRIGGERS.includes(body.trigger)) {
+            if (!ALLOWED_TRIGGERS.has(body.trigger)) {
                 return NextResponse.json({
-                    error: `Invalid trigger: ${body.trigger}. Allowed: ${ALLOWED_TRIGGERS.join(', ')}`
+                    error: `Invalid trigger: ${body.trigger}. Allowed: ${ALLOWED_TRIGGERS_LIST.join(', ')}`
                 }, { status: 400 });
             }
         }
