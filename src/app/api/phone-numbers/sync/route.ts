@@ -88,7 +88,7 @@ export async function POST(_request: NextRequest) {
                                 .eq('id', existing.id);
                             updated++;
                         } else {
-                            await supabase
+                            const { error: insertErr } = await supabase
                                 .from('phone_numbers')
                                 .insert({
                                     agency_id: user.agency.id,
@@ -101,7 +101,11 @@ export async function POST(_request: NextRequest) {
                                     monthly_cost_cents: 200,
                                     purchased_at: new Date().toISOString(),
                                 });
-                            synced++;
+                            if (insertErr) {
+                                console.error('Retell phone insert error:', insertErr.code);
+                            } else {
+                                synced++;
+                            }
                         }
                     }
                 } else {
@@ -146,19 +150,23 @@ export async function POST(_request: NextRequest) {
                             .eq('id', existing.id);
                         updated++;
                     } else {
-                        await supabase
+                        const { error: insertErr } = await supabase
                             .from('phone_numbers')
                             .insert({
                                 agency_id: user.agency.id,
-                                external_id: vapiNumber.id, // VAPI has a separate ID
+                                external_id: vapiNumber.id,
                                 phone_number: phoneNumber,
                                 provider: 'vapi',
                                 inbound_agent_id: inboundAgentId,
                                 agent_id: inboundAgentId,
-                                monthly_cost_cents: 200, // Approximate
+                                monthly_cost_cents: 200,
                                 purchased_at: new Date().toISOString(),
                             });
-                        synced++;
+                        if (insertErr) {
+                            console.error('Vapi phone insert error:', insertErr.code, 'for number:', phoneNumber);
+                        } else {
+                            synced++;
+                        }
                     }
                 }
             } catch (error) {
@@ -197,7 +205,7 @@ export async function POST(_request: NextRequest) {
                             .eq('id', existing.id);
                         updated++;
                     } else {
-                        await supabase
+                        const { error: insertErr } = await supabase
                             .from('phone_numbers')
                             .insert({
                                 agency_id: user.agency.id,
@@ -208,7 +216,11 @@ export async function POST(_request: NextRequest) {
                                 monthly_cost_cents: 200,
                                 purchased_at: new Date().toISOString(),
                             });
-                        synced++;
+                        if (insertErr) {
+                            console.error('Bland phone insert error:', insertErr.code);
+                        } else {
+                            synced++;
+                        }
                     }
                 }
             } catch (error) {
