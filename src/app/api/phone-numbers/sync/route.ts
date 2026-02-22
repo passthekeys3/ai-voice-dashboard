@@ -129,8 +129,15 @@ export async function POST(_request: NextRequest) {
                         ? agentMap.get(vapiNumber.assistantId)
                         : null;
 
+                    // Debug: log Vapi phone number fields to diagnose sync issues
+                    const vapiKeys = Object.keys(vapiNumber);
+                    console.log('Vapi phone number keys:', vapiKeys.join(','), 'number:', vapiNumber.number, 'id:', vapiNumber.id);
+
                     const phoneNumber = vapiNumber.number;
-                    if (!phoneNumber) continue; // Skip numbers without a phone number
+                    if (!phoneNumber) {
+                        console.warn('Vapi phone number missing number field, skipping. id:', vapiNumber.id);
+                        continue;
+                    }
 
                     // Check by external_id first (unique constraint), then by phone_number
                     const { data: existingById } = await supabase
