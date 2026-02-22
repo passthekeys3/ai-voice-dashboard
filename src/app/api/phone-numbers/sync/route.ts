@@ -42,7 +42,6 @@ export async function POST(_request: NextRequest) {
         let synced = 0;
         let updated = 0;
         let total = 0;
-        const _debug: Record<string, unknown>[] = [];
 
         // Sync Retell phone numbers
         if (agency.retell_api_key) {
@@ -121,8 +120,9 @@ export async function POST(_request: NextRequest) {
         if (agency.vapi_api_key) {
             try {
                 const vapiNumbers = await listVapiPhoneNumbers(agency.vapi_api_key);
-                console.log('VAPI numbers fetched:', vapiNumbers?.length || 0);
-                total += vapiNumbers?.length || 0;
+                // Only count numbers that have an actual phone number (excludes virtual/SIP)
+                const vapiWithNumber = vapiNumbers.filter(n => n.number);
+                total += vapiWithNumber.length;
 
                 for (const vapiNumber of vapiNumbers) {
                     // VAPI uses assistantId for inbound, no separate outbound
@@ -130,23 +130,10 @@ export async function POST(_request: NextRequest) {
                         ? agentMap.get(vapiNumber.assistantId)
                         : null;
 
+                    // Vapi-managed virtual/SIP numbers don't have a phone number field —
+                    // only Twilio/Vonage-backed numbers include "number". Skip virtual numbers.
                     const phoneNumber = vapiNumber.number;
-                    const rawNumber = vapiNumber as unknown as Record<string, unknown>;
-                    const debugEntry: Record<string, unknown> = {
-                        vapiId: vapiNumber.id,
-                        number: phoneNumber,
-                        keys: Object.keys(vapiNumber),
-                        name: rawNumber.name,
-                        provider: rawNumber.provider,
-                        status: rawNumber.status,
-                        sipUri: rawNumber.sipUri,
-                    };
-
-                    if (!phoneNumber) {
-                        debugEntry.skipped = 'missing number';
-                        _debug.push(debugEntry);
-                        continue;
-                    }
+                    if (!phoneNumber) continue;
 
                     // Check by external_id first (unique constraint), then by phone_number
                     const { data: existingById } = await supabase
@@ -163,9 +150,6 @@ export async function POST(_request: NextRequest) {
                         .eq('agency_id', user.agency.id)
                         .maybeSingle()).data;
 
-                    debugEntry.existingById = existingById?.id || null;
-                    debugEntry.existing = existing?.id || null;
-
                     if (existing) {
                         await supabase
                             .from('phone_numbers')
@@ -177,7 +161,6 @@ export async function POST(_request: NextRequest) {
                                 updated_at: new Date().toISOString(),
                             })
                             .eq('id', existing.id);
-                        debugEntry.action = 'updated';
                         updated++;
                     } else {
                         const { error: insertErr } = await supabase
@@ -193,14 +176,11 @@ export async function POST(_request: NextRequest) {
                                 purchased_at: new Date().toISOString(),
                             });
                         if (insertErr) {
-                            debugEntry.action = 'insert_failed';
-                            debugEntry.errorCode = insertErr.code;
+                            console.error('Vapi phone insert error:', insertErr.code);
                         } else {
-                            debugEntry.action = 'inserted';
                             synced++;
                         }
                     }
-                    _debug.push(debugEntry);
                 }
             } catch (error) {
                 console.error('Error syncing VAPI phone numbers:', error instanceof Error ? error.message : 'Unknown error');
@@ -266,7 +246,6 @@ export async function POST(_request: NextRequest) {
             synced,
             updated,
             total,
-            _debug,
         });
     } catch (error) {
         console.error('Error syncing phone numbers:', error instanceof Error ? error.message : 'Unknown error');
