@@ -97,13 +97,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             .single();
 
         if (error) {
-            console.error('Error updating test case:', error);
+            console.error('Error updating test case:', error.code);
             return NextResponse.json({ error: 'Failed to update test case' }, { status: 500 });
         }
 
         return NextResponse.json({ data: testCase });
     } catch (error) {
-        console.error('Error updating test case:', error);
+        console.error('Error updating test case:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -142,13 +142,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             .eq('test_suite_id', suiteId);
 
         if (error) {
-            console.error('Error deleting test case:', error);
+            console.error('Error deleting test case:', error.code);
             return NextResponse.json({ error: 'Failed to delete test case' }, { status: 500 });
         }
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Error deleting test case:', error);
+        console.error('Error deleting test case:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

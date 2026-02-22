@@ -124,7 +124,7 @@ export async function POST(
             .eq('agency_id', user.agency.id);
 
         if (updateError) {
-            console.error('Failed to update experiment status:', updateError);
+            console.error('Failed to update experiment status:', updateError.code);
             // Don't return error - the prompt was already updated
         }
 
@@ -134,7 +134,7 @@ export async function POST(
             variant: winnerVariant,
         });
     } catch (error) {
-        console.error('Error promoting experiment winner:', error);
+        console.error('Error promoting experiment winner:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }

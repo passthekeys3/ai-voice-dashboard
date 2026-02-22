@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         try {
             event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
         } catch (err) {
-            console.error('Stripe Connect webhook signature verification failed:', err);
+            console.error('Stripe Connect webhook signature verification failed:', err instanceof Error ? err.message : 'Unknown error');
             return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
         }
 
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
                         .eq('stripe_connect_account_id', account.id);
 
                     if (error) {
-                        console.error(`Failed to update Connect status for account ${account.id}:`, error);
+                        console.error(`Failed to update Connect status for account ${account.id}:`, error.code);
                     } else {
                         console.log(`Connect account ${account.id} updated: charges=${account.charges_enabled}, payouts=${account.payouts_enabled}`);
                     }
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
                                         ],
                                     });
                                 } catch (err) {
-                                    console.error('Failed to send Slack notification for Connect invoice:', err);
+                                    console.error('Failed to send Slack notification for Connect invoice:', err instanceof Error ? err.message : 'Unknown error');
                                 }
                             }
                         }
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
                                     );
                                     await sendSlackMessage(slackConfig.webhook_url, payload);
                                 } catch (err) {
-                                    console.error('Failed to send Slack notification for Connect payment failure:', err);
+                                    console.error('Failed to send Slack notification for Connect payment failure:', err instanceof Error ? err.message : 'Unknown error');
                                 }
                             }
                         }
@@ -188,12 +188,12 @@ export async function POST(request: NextRequest) {
         };
 
         waitUntil(handleEvent().catch(err => {
-            console.error(`Error handling Stripe Connect event ${event.type}:`, err);
+            console.error(`Error handling Stripe Connect event ${event.type}:`, err instanceof Error ? err.message : 'Unknown error');
         }));
 
         return NextResponse.json({ received: true });
     } catch (error) {
-        console.error('Stripe Connect webhook error:', error);
+        console.error('Stripe Connect webhook error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ received: true, warning: 'Processing error' }, { status: 200 });
     }
 }

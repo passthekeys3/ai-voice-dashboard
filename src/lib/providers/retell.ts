@@ -136,7 +136,7 @@ export async function getRetellAgent(
     apiKey: string,
     agentId: string
 ): Promise<RetellAgent> {
-    return retellFetch<RetellAgent>(apiKey, `/get-agent/${agentId}`);
+    return retellFetch<RetellAgent>(apiKey, `/get-agent/${encodeURIComponent(agentId)}`);
 }
 
 export async function createRetellAgent(
@@ -168,7 +168,7 @@ export async function updateRetellAgent(
         webhook_events: string[];
     }>
 ): Promise<RetellAgent> {
-    return retellFetch<RetellAgent>(apiKey, `/update-agent/${agentId}`, {
+    return retellFetch<RetellAgent>(apiKey, `/update-agent/${encodeURIComponent(agentId)}`, {
         method: 'PATCH',
         body: JSON.stringify(config),
     });
@@ -185,7 +185,7 @@ export async function publishRetellAgent(
     apiKey: string,
     agentId: string
 ): Promise<void> {
-    const url = `${RETELL_BASE_URL}/publish-agent/${agentId}`;
+    const url = `${RETELL_BASE_URL}/publish-agent/${encodeURIComponent(agentId)}`;
     // Uses raw fetch instead of retellFetch — publish needs Accept: */* without Content-Type
     const response = await fetch(url, {
         method: 'POST',
@@ -245,7 +245,7 @@ export async function ensureAgentWebhookConfig(
         }
     } catch (err) {
         // Publish is best-effort — draft config is still correct
-        console.warn('Retell publish-agent failed (non-fatal):', err instanceof Error ? err.message : err);
+        console.warn('Retell publish-agent failed (non-fatal):', err instanceof Error ? err.message : 'Unknown error');
     }
 
     return true;
@@ -255,14 +255,14 @@ export async function getRetellAgentVersions(
     apiKey: string,
     agentId: string
 ): Promise<RetellAgent[]> {
-    return retellFetch<RetellAgent[]>(apiKey, `/get-agent-versions/${agentId}`);
+    return retellFetch<RetellAgent[]>(apiKey, `/get-agent-versions/${encodeURIComponent(agentId)}`);
 }
 
 export async function deleteRetellAgent(
     apiKey: string,
     agentId: string
 ): Promise<void> {
-    await retellFetch<void>(apiKey, `/delete-agent/${agentId}`, {
+    await retellFetch<void>(apiKey, `/delete-agent/${encodeURIComponent(agentId)}`, {
         method: 'DELETE',
     });
 }
@@ -281,14 +281,14 @@ export async function getRetellCall(
     apiKey: string,
     callId: string
 ): Promise<RetellCall> {
-    return retellFetch<RetellCall>(apiKey, `/v2/get-call/${callId}`);
+    return retellFetch<RetellCall>(apiKey, `/v2/get-call/${encodeURIComponent(callId)}`);
 }
 
 export async function getRetellLLM(
     apiKey: string,
     llmId: string
 ): Promise<RetellLLM> {
-    return retellFetch<RetellLLM>(apiKey, `/get-retell-llm/${llmId}`);
+    return retellFetch<RetellLLM>(apiKey, `/get-retell-llm/${encodeURIComponent(llmId)}`);
 }
 
 export interface UpdateRetellLLMParams {
@@ -302,7 +302,7 @@ export async function updateRetellLLM(
     llmId: string,
     params: UpdateRetellLLMParams
 ): Promise<RetellLLM> {
-    return retellFetch<RetellLLM>(apiKey, `/update-retell-llm/${llmId}`, {
+    return retellFetch<RetellLLM>(apiKey, `/update-retell-llm/${encodeURIComponent(llmId)}`, {
         method: 'PATCH',
         body: JSON.stringify(params),
     });
@@ -393,7 +393,7 @@ export async function getRetellKnowledgeBase(
     apiKey: string,
     kbId: string
 ): Promise<RetellKnowledgeBase> {
-    return retellFetch<RetellKnowledgeBase>(apiKey, `/get-knowledge-base/${kbId}`);
+    return retellFetch<RetellKnowledgeBase>(apiKey, `/get-knowledge-base/${encodeURIComponent(kbId)}`);
 }
 
 export async function createRetellKnowledgeBase(
@@ -415,7 +415,7 @@ export async function deleteRetellKnowledgeBase(
     apiKey: string,
     kbId: string
 ): Promise<void> {
-    await retellFetch(apiKey, `/delete-knowledge-base/${kbId}`, {
+    await retellFetch(apiKey, `/delete-knowledge-base/${encodeURIComponent(kbId)}`, {
         method: 'DELETE',
     });
 }
@@ -432,7 +432,7 @@ export async function addRetellKBSources(
     if (params.knowledge_base_urls) {
         form.append('knowledge_base_urls', JSON.stringify(params.knowledge_base_urls.map(u => u.url)));
     }
-    return retellMultipartPost<RetellKnowledgeBase>(apiKey, `/add-knowledge-base-sources/${kbId}`, form);
+    return retellMultipartPost<RetellKnowledgeBase>(apiKey, `/add-knowledge-base-sources/${encodeURIComponent(kbId)}`, form);
 }
 
 export async function deleteRetellKBSource(
@@ -440,7 +440,7 @@ export async function deleteRetellKBSource(
     kbId: string,
     sourceId: string
 ): Promise<void> {
-    await retellFetch(apiKey, `/delete-knowledge-base-source/${kbId}/${sourceId}`, {
+    await retellFetch(apiKey, `/delete-knowledge-base-source/${encodeURIComponent(kbId)}/${encodeURIComponent(sourceId)}`, {
         method: 'DELETE',
     });
 }

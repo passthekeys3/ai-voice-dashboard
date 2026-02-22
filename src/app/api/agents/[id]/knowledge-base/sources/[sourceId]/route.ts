@@ -52,7 +52,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ message: 'Source deleted' });
     } catch (error) {
-        console.error('Error deleting source:', error);
+        console.error('Error deleting source:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Failed to delete source' }, { status: 500 });
     }
 }

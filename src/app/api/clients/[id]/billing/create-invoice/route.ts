@@ -142,7 +142,7 @@ export const POST = withErrorHandling(async (
             status: finalizedInvoice.status,
         });
     } catch (err) {
-        console.error(`Failed to create one-time invoice for client ${client.name}:`, err);
+        console.error(`Failed to create one-time invoice for client ${client.name}:`, err instanceof Error ? err.message : 'Unknown error');
         if (err instanceof Stripe.errors.StripeError) {
             return externalServiceError('Stripe', 'Failed to create invoice');
         }

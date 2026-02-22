@@ -43,7 +43,7 @@ async function verifyDomain(domain: string, verificationToken: string): Promise<
         if (dnsError.code === 'ENOTFOUND' || dnsError.code === 'ENODATA') {
             result.errors.push(`TXT record "${txtRecordName}" not found`);
         } else {
-            result.errors.push(`Error checking TXT record: ${dnsError.message}`);
+            result.errors.push('Error checking TXT record: DNS lookup failed');
         }
     }
 
@@ -67,7 +67,7 @@ async function verifyDomain(domain: string, verificationToken: string): Promise<
         if (dnsError.code === 'ENOTFOUND' || dnsError.code === 'ENODATA') {
             result.errors.push(`CNAME record for "${domain}" not found. Add a CNAME pointing to ${PLATFORM_HOSTNAME}`);
         } else {
-            result.errors.push(`Error checking CNAME record: ${dnsError.message}`);
+            result.errors.push('Error checking CNAME record: DNS lookup failed');
         }
     }
 
@@ -100,7 +100,7 @@ export async function POST() {
             .single();
 
         if (fetchError) {
-            console.error('Error fetching agency:', fetchError);
+            console.error('Error fetching agency:', fetchError.code);
             return NextResponse.json({ error: 'Failed to fetch agency' }, { status: 500 });
         }
 
@@ -145,7 +145,7 @@ export async function POST() {
                 .eq('id', user.agency.id);
 
             if (updateError) {
-                console.error('Error updating verification status:', updateError);
+                console.error('Error updating verification status:', updateError.code);
                 return NextResponse.json({ error: 'Failed to update verification status' }, { status: 500 });
             }
 
@@ -191,7 +191,7 @@ export async function POST() {
             },
         });
     } catch (error) {
-        console.error('Error in POST /api/domains/verify:', error);
+        console.error('Error in POST /api/domains/verify:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -218,7 +218,7 @@ export async function GET() {
             .single();
 
         if (error) {
-            console.error('Error fetching agency:', error);
+            console.error('Error fetching agency:', error.code);
             return NextResponse.json({ error: 'Failed to fetch agency' }, { status: 500 });
         }
 
@@ -254,7 +254,7 @@ export async function GET() {
             },
         });
     } catch (error) {
-        console.error('Error in GET /api/domains/verify:', error);
+        console.error('Error in GET /api/domains/verify:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

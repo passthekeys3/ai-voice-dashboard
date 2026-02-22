@@ -124,7 +124,7 @@ ${transcriptText}`;
             outputTokens: response.usage.output_tokens,
         };
     } catch (error) {
-        console.error('Evaluation failed:', error instanceof Error ? error.message : error);
+        console.error('Evaluation failed:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }

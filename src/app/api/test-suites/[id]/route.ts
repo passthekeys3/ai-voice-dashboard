@@ -46,7 +46,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ data: suite });
     } catch (error) {
-        console.error('Error fetching test suite:', error);
+        console.error('Error fetching test suite:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -83,7 +83,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             .single();
 
         if (error) {
-            console.error('Error updating test suite:', error);
+            console.error('Error updating test suite:', error.code);
             return NextResponse.json({ error: 'Failed to update test suite' }, { status: 500 });
         }
 
@@ -93,7 +93,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ data: suite });
     } catch (error) {
-        console.error('Error updating test suite:', error);
+        console.error('Error updating test suite:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -135,13 +135,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             .eq('agency_id', user.agency.id);
 
         if (error) {
-            console.error('Error deleting test suite:', error);
+            console.error('Error deleting test suite:', error.code);
             return NextResponse.json({ error: 'Failed to delete test suite' }, { status: 500 });
         }
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Error deleting test suite:', error);
+        console.error('Error deleting test suite:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

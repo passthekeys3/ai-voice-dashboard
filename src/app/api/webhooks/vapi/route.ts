@@ -45,7 +45,7 @@ async function forwardToWebhook(webhookUrl: string, callData: Record<string, unk
             body: JSON.stringify(callData),
         });
     } catch (err) {
-        console.error('Failed to forward Vapi webhook:', err);
+        console.error('Failed to forward Vapi webhook:', err instanceof Error ? err.message : 'Unknown error');
     }
 }
 
@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
                     _agencyId: agent.agency_id,
                     callId: call.id,
                     transcript: updatedTranscript,
-                }).catch(err => console.error('Failed to broadcast Vapi transcript update:', err))
+                }).catch(err => console.error('Failed to broadcast Vapi transcript update:', err instanceof Error ? err.message : 'Unknown error'))
             );
 
             return NextResponse.json({ received: true });
@@ -302,7 +302,7 @@ export async function POST(request: NextRequest) {
             );
 
         if (error) {
-            console.error('Error saving Vapi call:', error);
+            console.error('Error saving Vapi call:', error.code);
             // Return 200 to prevent webhook retry storms — log for internal investigation
             return NextResponse.json({ received: true, warning: 'Failed to save call data' });
         }
@@ -350,14 +350,14 @@ export async function POST(request: NextRequest) {
                             .eq('external_id', call.id);
 
                         if (updateError) {
-                            console.error('Failed to update Vapi call with AI analysis:', updateError);
+                            console.error('Failed to update Vapi call with AI analysis:', updateError.code);
                         }
 
                         // Increment agency AI analysis counter for usage tracking
                         await supabase.rpc('increment_ai_analysis_count', { agency_id_input: agent.agency_id });
                     }
                 } catch (err) {
-                    console.error('AI call analysis error (Vapi):', err);
+                    console.error('AI call analysis error (Vapi):', err instanceof Error ? err.message : 'Unknown error');
                 }
             })());
         }
@@ -388,7 +388,7 @@ export async function POST(request: NextRequest) {
                 summary: call.analysis?.summary || call.summary,
                 sentiment: inferredSentiment,
             },
-        }).catch(err => console.error('Failed to broadcast Vapi call update:', err)));
+        }).catch(err => console.error('Failed to broadcast Vapi call update:', err instanceof Error ? err.message : 'Unknown error')));
 
         // Forward to agent's webhook if configured and call ended
         if (agent.webhook_url && isCallEnded) {
@@ -433,7 +433,7 @@ export async function POST(request: NextRequest) {
                         });
                     }
                 } catch (err) {
-                    console.error('Failed to accumulate usage for Vapi call:', err);
+                    console.error('Failed to accumulate usage for Vapi call:', err instanceof Error ? err.message : 'Unknown error');
                 }
             })());
         }
@@ -578,7 +578,7 @@ export async function POST(request: NextRequest) {
                         }
                     }
                 } catch (err) {
-                    console.error('Vapi inbound call_started processing error:', err);
+                    console.error('Vapi inbound call_started processing error:', err instanceof Error ? err.message : 'Unknown error');
                 }
             })());
         }
@@ -738,13 +738,13 @@ export async function POST(request: NextRequest) {
                     }
                 }
             } catch (err) {
-                console.error('Vapi workflow processing error:', err);
+                console.error('Vapi workflow processing error:', err instanceof Error ? err.message : 'Unknown error');
             }
         })());
 
         return NextResponse.json({ received: true });
     } catch (error) {
-        console.error('Vapi webhook error:', error);
+        console.error('Vapi webhook error:', error instanceof Error ? error.message : 'Unknown error');
         // Return 200 to prevent webhook retry storms — log for internal investigation
         return NextResponse.json({ received: true, warning: 'Internal error occurred' });
     }

@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
             skipVerification,
         });
     } catch (error) {
-        console.error('Signup error:', error);
+        console.error('Signup error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

@@ -72,7 +72,7 @@ export async function GET(_request: NextRequest) {
                 });
             } catch (stripeError) {
                 // If Stripe fails, return database data
-                console.warn('Could not fetch subscription from Stripe:', stripeError);
+                console.warn('Could not fetch subscription from Stripe:', stripeError instanceof Error ? stripeError.message : 'Unknown error');
             }
         }
 
@@ -94,7 +94,7 @@ export async function GET(_request: NextRequest) {
             },
         });
     } catch (error) {
-        console.error('Error fetching subscription:', error);
+        console.error('Error fetching subscription:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -153,7 +153,7 @@ export async function DELETE(request: NextRequest) {
             });
         }
     } catch (error) {
-        console.error('Error canceling subscription:', error);
+        console.error('Error canceling subscription:', error instanceof Error ? error.message : 'Unknown error');
         if (error instanceof Stripe.errors.StripeError) {
             return NextResponse.json({ error: 'Payment processing error' }, { status: 400 });
         }
@@ -239,7 +239,7 @@ export async function PATCH(request: NextRequest) {
             status: subscription.status,
         });
     } catch (error) {
-        console.error('Error updating subscription:', error);
+        console.error('Error updating subscription:', error instanceof Error ? error.message : 'Unknown error');
         if (error instanceof Stripe.errors.StripeError) {
             return NextResponse.json({ error: 'Payment processing error' }, { status: 400 });
         }

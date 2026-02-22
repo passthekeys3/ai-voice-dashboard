@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         results.push({
             table: 'api_trigger_log',
             deleted: apiTriggerCount || 0,
-            ...(apiTriggerErr && { error: apiTriggerErr.message }),
+            ...(apiTriggerErr && { error: apiTriggerErr.code }),
         });
 
         // Clean up GHL trigger logs (90 days)
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         results.push({
             table: 'ghl_trigger_log',
             deleted: ghlCount || 0,
-            ...(ghlErr && { error: ghlErr.message }),
+            ...(ghlErr && { error: ghlErr.code }),
         });
 
         // Clean up HubSpot trigger logs (90 days)
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         results.push({
             table: 'hubspot_trigger_log',
             deleted: hubspotCount || 0,
-            ...(hubspotErr && { error: hubspotErr.message }),
+            ...(hubspotErr && { error: hubspotErr.code }),
         });
 
         // Clean up workflow execution logs (90 days)
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
         results.push({
             table: 'workflow_execution_log',
             deleted: workflowCount || 0,
-            ...(workflowErr && { error: workflowErr.message }),
+            ...(workflowErr && { error: workflowErr.code }),
         });
 
         // Clean up completed/failed scheduled calls (30 days)
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         results.push({
             table: 'scheduled_calls (completed/failed)',
             deleted: scheduledCount || 0,
-            ...(scheduledErr && { error: scheduledErr.message }),
+            ...(scheduledErr && { error: scheduledErr.code }),
         });
 
         const totalDeleted = results.reduce((sum, r) => sum + r.deleted, 0);
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
             results,
         });
     } catch (error) {
-        console.error('Data cleanup cron error:', error);
+        console.error('Data cleanup cron error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

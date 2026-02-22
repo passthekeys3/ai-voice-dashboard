@@ -21,13 +21,13 @@ export async function GET(_request: NextRequest) {
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error('Error fetching phone numbers:', error);
+            console.error('Error fetching phone numbers:', error.code);
             return NextResponse.json({ error: 'Failed to fetch phone numbers' }, { status: 500 });
         }
 
         return NextResponse.json({ data: phoneNumbers });
     } catch (error) {
-        console.error('Error fetching phone numbers:', error);
+        console.error('Error fetching phone numbers:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -96,8 +96,7 @@ export async function POST(request: NextRequest) {
             });
 
             if (!retellResponse.ok) {
-                const errorData = await retellResponse.json().catch(() => ({}));
-                console.error('Retell phone number error:', errorData);
+                console.error('Retell phone number error:', retellResponse.status);
                 return NextResponse.json({ error: 'Failed to purchase phone number from provider' }, { status: 500 });
             }
 
@@ -118,7 +117,7 @@ export async function POST(request: NextRequest) {
                 .single();
 
             if (error) {
-                console.error('Error saving phone number:', error);
+                console.error('Error saving phone number:', error.code);
                 return NextResponse.json({ error: 'Failed to import phone number' }, { status: 500 });
             }
 
@@ -139,8 +138,7 @@ export async function POST(request: NextRequest) {
             });
 
             if (!vapiResponse.ok) {
-                const errorData = await vapiResponse.json().catch(() => ({}));
-                console.error('Vapi phone number error:', errorData);
+                console.error('Vapi phone number error:', vapiResponse.status);
                 return NextResponse.json({ error: 'Failed to purchase phone number from provider' }, { status: 500 });
             }
 
@@ -161,7 +159,7 @@ export async function POST(request: NextRequest) {
                 .single();
 
             if (error) {
-                console.error('Error saving Vapi phone number:', error);
+                console.error('Error saving Vapi phone number:', error.code);
                 return NextResponse.json({ error: 'Failed to import phone number' }, { status: 500 });
             }
 
@@ -185,7 +183,7 @@ export async function POST(request: NextRequest) {
                 .single();
 
             if (error) {
-                console.error('Error saving Bland phone number:', error);
+                console.error('Error saving Bland phone number:', error.code);
                 return NextResponse.json({ error: 'Failed to import phone number' }, { status: 500 });
             }
 
@@ -194,7 +192,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'No voice provider API key configured for phone number purchase' }, { status: 400 });
         }
     } catch (error) {
-        console.error('Error purchasing phone number:', error);
+        console.error('Error purchasing phone number:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

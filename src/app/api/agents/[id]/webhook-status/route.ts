@@ -87,7 +87,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
                         : 'OK — published version has correct webhook config',
         });
     } catch (error) {
-        console.error('Webhook status error:', error);
+        console.error('Webhook status error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

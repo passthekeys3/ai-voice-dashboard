@@ -58,7 +58,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ data: run });
     } catch (error) {
-        console.error('Error fetching test run:', error);
+        console.error('Error fetching test run:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -109,7 +109,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                 .single();
 
             if (error) {
-                console.error('Error cancelling test run:', error);
+                console.error('Error cancelling test run:', error.code);
                 return NextResponse.json({ error: 'Failed to cancel test run' }, { status: 500 });
             }
 
@@ -118,7 +118,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ error: 'Invalid update' }, { status: 400 });
     } catch (error) {
-        console.error('Error updating test run:', error);
+        console.error('Error updating test run:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

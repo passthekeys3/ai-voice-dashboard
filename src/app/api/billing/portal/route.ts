@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
             url: session.url,
         });
     } catch (error) {
-        console.error('Error creating billing portal session:', error);
+        console.error('Error creating billing portal session:', error instanceof Error ? error.message : 'Unknown error');
         if (error instanceof Stripe.errors.StripeError) {
             return NextResponse.json({ error: 'Payment processing error' }, { status: 400 });
         }
@@ -175,7 +175,7 @@ export async function GET(_request: NextRequest) {
             },
         });
     } catch (error) {
-        console.error('Error fetching billing info:', error);
+        console.error('Error fetching billing info:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

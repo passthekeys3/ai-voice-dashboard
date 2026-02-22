@@ -32,13 +32,13 @@ export async function GET(request: NextRequest) {
         const { data: workflows, error } = await query;
 
         if (error) {
-            console.error('Error fetching workflows:', error);
+            console.error('Error fetching workflows:', error.code);
             return NextResponse.json({ error: 'Failed to fetch workflows' }, { status: 500 });
         }
 
         return NextResponse.json({ data: workflows });
     } catch (error) {
-        console.error('Error fetching workflows:', error);
+        console.error('Error fetching workflows:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -164,13 +164,13 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (error) {
-            console.error('Error creating workflow:', error);
+            console.error('Error creating workflow:', error.code);
             return NextResponse.json({ error: 'Failed to create workflow' }, { status: 500 });
         }
 
         return NextResponse.json({ data: workflow }, { status: 201 });
     } catch (error) {
-        console.error('Error creating workflow:', error);
+        console.error('Error creating workflow:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

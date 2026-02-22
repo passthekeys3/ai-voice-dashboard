@@ -1638,7 +1638,7 @@ export async function executeWorkflows(
                         action_results: [],
                     });
                 } catch (e) {
-                    console.error('Failed to log skipped workflow execution:', e);
+                    console.error('Failed to log skipped workflow execution:', e instanceof Error ? e.message : 'Unknown error');
                 }
             }
 
@@ -1658,7 +1658,7 @@ export async function executeWorkflows(
                 }).select('id').single();
                 logId = data?.id || null;
             } catch (e) {
-                console.error('Failed to create workflow execution log:', e);
+                console.error('Failed to create workflow execution log:', e instanceof Error ? e.message : 'Unknown error');
             }
         }
 
@@ -1728,7 +1728,7 @@ export async function executeWorkflows(
                     error_summary: result.errors.length > 0 ? result.errors.join('; ') : null,
                 }).eq('id', logId);
             } catch (e) {
-                console.error('Failed to update workflow execution log:', e);
+                console.error('Failed to update workflow execution log:', e instanceof Error ? e.message : 'Unknown error');
             }
         }
 

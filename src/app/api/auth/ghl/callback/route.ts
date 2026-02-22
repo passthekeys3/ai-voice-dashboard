@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
             .eq('id', agencyId);
 
         if (updateError) {
-            console.error('Failed to store GHL tokens:', updateError);
+            console.error('Failed to store GHL tokens:', updateError.code);
             return NextResponse.redirect(
                 new URL('/settings?ghl=error&message=Failed+to+save+tokens', request.url)
             );
@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
             new URL('/settings?ghl=connected', request.url)
         );
     } catch (error) {
-        console.error('GHL OAuth callback error:', error);
+        console.error('GHL OAuth callback error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.redirect(
             new URL('/settings?ghl=error&message=Internal+error', request.url)
         );

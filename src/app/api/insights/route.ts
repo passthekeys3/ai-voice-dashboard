@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
         const { data: calls, error } = await callsQuery;
 
         if (error) {
-            console.error('Error fetching calls for insights:', error);
+            console.error('Error fetching calls for insights:', error.code);
             return NextResponse.json({ error: 'Failed to fetch insights' }, { status: 500 });
         }
 
@@ -252,7 +252,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: insightsData });
     } catch (error) {
-        console.error('Error fetching insights:', error);
+        console.error('Error fetching insights:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
                     .is('agent_id', null);  // Only update if still unassigned
 
                 if (updateError) {
-                    console.warn(`Failed to assign phone number: ${updateError.message}`);
+                    console.warn('Failed to assign phone number:', updateError.code);
                 }
             }
         }

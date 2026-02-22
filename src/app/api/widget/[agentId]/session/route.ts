@@ -77,8 +77,7 @@ export async function POST(
             });
 
             if (!retellResponse.ok) {
-                const errorText = await retellResponse.text();
-                console.error('Retell web call creation failed:', errorText);
+                console.error('Retell web call creation failed:', retellResponse.status);
                 return NextResponse.json({ error: 'Failed to create call session' }, { status: 500 });
             }
 
@@ -117,7 +116,7 @@ export async function POST(
             widget_config: widgetConfig,
         });
     } catch (error) {
-        console.error('Widget session error:', error);
+        console.error('Widget session error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

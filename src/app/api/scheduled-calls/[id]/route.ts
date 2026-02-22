@@ -30,7 +30,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ data: scheduledCall });
     } catch (error) {
-        console.error('Error fetching scheduled call:', error);
+        console.error('Error fetching scheduled call:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -99,13 +99,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             .single();
 
         if (error) {
-            console.error('Error updating scheduled call:', error);
+            console.error('Error updating scheduled call:', error.code);
             return NextResponse.json({ error: 'Failed to update scheduled call' }, { status: 500 });
         }
 
         return NextResponse.json({ data: scheduledCall });
     } catch (error) {
-        console.error('Error updating scheduled call:', error);
+        console.error('Error updating scheduled call:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -152,13 +152,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             .eq('agency_id', user.agency.id);
 
         if (error) {
-            console.error('Error cancelling scheduled call:', error);
+            console.error('Error cancelling scheduled call:', error.code);
             return NextResponse.json({ error: 'Failed to delete scheduled call' }, { status: 500 });
         }
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Error cancelling scheduled call:', error);
+        console.error('Error cancelling scheduled call:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

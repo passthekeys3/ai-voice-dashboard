@@ -30,7 +30,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ data: phoneNumber });
     } catch (error) {
-        console.error('Error fetching phone number:', error);
+        console.error('Error fetching phone number:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -147,7 +147,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
                 // Update phone number in Retell
                 if (Object.keys(retellUpdate).length > 0) {
-                    const retellRes = await fetch(`https://api.retellai.com/update-phone-number/${existing.external_id}`, {
+                    const retellRes = await fetch(`https://api.retellai.com/update-phone-number/${encodeURIComponent(existing.external_id)}`, {
                         method: 'PATCH',
                         headers: {
                             'Authorization': `Bearer ${agency.retell_api_key}`,
@@ -176,13 +176,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             .single();
 
         if (error) {
-            console.error('Error updating phone number:', error);
+            console.error('Error updating phone number:', error.code);
             return NextResponse.json({ error: 'Failed to update phone number' }, { status: 500 });
         }
 
         return NextResponse.json({ data: phoneNumber });
     } catch (error) {
-        console.error('Error updating phone number:', error);
+        console.error('Error updating phone number:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -222,12 +222,15 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             .single();
 
         if (agency?.retell_api_key && phoneNumber.external_id) {
-            await fetch(`https://api.retellai.com/v2/delete-phone-number/${phoneNumber.external_id}`, {
+            const deleteRes = await fetch(`https://api.retellai.com/v2/delete-phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${agency.retell_api_key}`,
                 },
             });
+            if (!deleteRes.ok) {
+                console.error('Retell phone delete failed:', deleteRes.status);
+            }
         }
 
         // Mark as released in our DB (agency_id check for defense-in-depth)
@@ -242,7 +245,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Error releasing phone number:', error);
+        console.error('Error releasing phone number:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

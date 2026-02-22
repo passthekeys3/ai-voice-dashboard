@@ -93,7 +93,7 @@ export async function GET() {
             });
         }
     } catch (error) {
-        console.error('Stripe Connect status error:', error);
+        console.error('Stripe Connect status error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ url: accountLink.url });
     } catch (error) {
-        console.error('Stripe Connect onboarding error:', error);
+        console.error('Stripe Connect onboarding error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Failed to start Stripe Connect onboarding' }, { status: 500 });
     }
 }
@@ -209,13 +209,13 @@ export async function PATCH(request: NextRequest) {
             .eq('id', user.agency.id);
 
         if (error) {
-            console.error('Failed to update platform fee:', error);
+            console.error('Failed to update platform fee:', error.code);
             return NextResponse.json({ error: 'Failed to update platform fee' }, { status: 500 });
         }
 
         return NextResponse.json({ success: true, platform_fee_percent });
     } catch (error) {
-        console.error('Stripe Connect PATCH error:', error);
+        console.error('Stripe Connect PATCH error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -248,7 +248,7 @@ export async function DELETE() {
             await stripe.accounts.del(agency.stripe_connect_account_id);
         } catch (err) {
             // Account may already be deleted — continue with cleanup
-            console.warn('Failed to delete Stripe Connect account (may already be removed):', err);
+            console.warn('Failed to delete Stripe Connect account (may already be removed):', err instanceof Error ? err.message : 'Unknown error');
         }
 
         // Clear Connect fields on agency
@@ -272,7 +272,7 @@ export async function DELETE() {
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Stripe Connect disconnect error:', error);
+        console.error('Stripe Connect disconnect error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Failed to disconnect Stripe account' }, { status: 500 });
     }
 }

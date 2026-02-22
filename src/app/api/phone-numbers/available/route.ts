@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
             note: 'Numbers are provisioned on demand. Purchase to get your number.',
         });
     } catch (error) {
-        console.error('Error searching phone numbers:', error);
+        console.error('Error searching phone numbers:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

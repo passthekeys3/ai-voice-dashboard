@@ -61,14 +61,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             const kb = await retell.getRetellKnowledgeBase(agency.retell_api_key, kbId);
             return NextResponse.json({ data: kb });
         } catch (err) {
-            console.error('Error fetching KB:', err);
+            console.error('Error fetching KB:', err instanceof Error ? err.message : 'Unknown error');
             return NextResponse.json({
                 data: null,
                 message: 'Knowledge base not found in Retell'
             });
         }
     } catch (error) {
-        console.error('Error in KB GET:', error);
+        console.error('Error in KB GET:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             .eq('agency_id', user.agency.id);
 
         if (updateError) {
-            console.error('Error saving KB config:', updateError);
+            console.error('Error saving KB config:', updateError.code);
             return NextResponse.json({ error: 'Failed to save knowledge base configuration' }, { status: 500 });
         }
 
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             message: 'Knowledge base created successfully'
         });
     } catch (error: unknown) {
-        console.error('Error creating KB:', error);
+        console.error('Error creating KB:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Failed to create knowledge base' }, { status: 500 });
     }
 }
@@ -189,7 +189,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         try {
             await retell.deleteRetellKnowledgeBase(agency.retell_api_key, kbId);
         } catch (err) {
-            console.error('Error deleting KB from Retell:', err);
+            console.error('Error deleting KB from Retell:', err instanceof Error ? err.message : 'Unknown error');
         }
 
         // Remove KB ID from agent config
@@ -203,13 +203,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             .eq('agency_id', user.agency.id);
 
         if (updateError) {
-            console.error('Error removing KB config:', updateError);
+            console.error('Error removing KB config:', updateError.code);
             return NextResponse.json({ error: 'Failed to remove knowledge base configuration' }, { status: 500 });
         }
 
         return NextResponse.json({ message: 'Knowledge base deleted' });
     } catch (error) {
-        console.error('Error deleting KB:', error);
+        console.error('Error deleting KB:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

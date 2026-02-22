@@ -93,7 +93,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             },
         });
     } catch (error) {
-        console.error('Error generating test scenarios:', error);
+        console.error('Error generating test scenarios:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

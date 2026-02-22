@@ -57,13 +57,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             .single();
 
         if (error) {
-            console.error('Error creating variant:', error);
+            console.error('Error creating variant:', error.code);
             return NextResponse.json({ error: 'Failed to create variant' }, { status: 500 });
         }
 
         return NextResponse.json({ data: variant }, { status: 201 });
     } catch (error) {
-        console.error('Error creating variant:', error);
+        console.error('Error creating variant:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -140,7 +140,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ data: updatedVariants });
     } catch (error) {
-        console.error('Error updating variants:', error);
+        console.error('Error updating variants:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

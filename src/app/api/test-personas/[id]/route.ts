@@ -82,13 +82,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             .single();
 
         if (error) {
-            console.error('Error updating persona:', error);
+            console.error('Error updating persona:', error.code);
             return NextResponse.json({ error: 'Failed to update persona' }, { status: 500 });
         }
 
         return NextResponse.json({ data: persona });
     } catch (error) {
-        console.error('Error updating persona:', error);
+        console.error('Error updating persona:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -147,13 +147,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             .eq('agency_id', user.agency.id);
 
         if (error) {
-            console.error('Error deleting persona:', error);
+            console.error('Error deleting persona:', error.code);
             return NextResponse.json({ error: 'Failed to delete persona' }, { status: 500 });
         }
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Error deleting persona:', error);
+        console.error('Error deleting persona:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

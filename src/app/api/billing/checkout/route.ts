@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
             session_id: session.id,
         });
     } catch (error) {
-        console.error('Error creating checkout session:', error);
+        console.error('Error creating checkout session:', error instanceof Error ? error.message : 'Unknown error');
         if (error instanceof Stripe.errors.StripeError) {
             return NextResponse.json({ error: 'Payment processing error' }, { status: 400 });
         }
@@ -193,7 +193,7 @@ export async function GET(request: NextRequest) {
                 : session.subscription?.id,
         });
     } catch (error) {
-        console.error('Error retrieving checkout session:', error);
+        console.error('Error retrieving checkout session:', error instanceof Error ? error.message : 'Unknown error');
         if (error instanceof Stripe.errors.StripeError) {
             return NextResponse.json({ error: 'Payment processing error' }, { status: 400 });
         }

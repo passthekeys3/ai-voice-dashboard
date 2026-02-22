@@ -54,7 +54,7 @@ export async function GET(
                         const llm = await getRetellLLM(apiKey, llmId);
                         llmPrompt = llm.general_prompt || '';
                     } catch (err) {
-                        console.error('Error fetching LLM:', err);
+                        console.error('Error fetching LLM:', err instanceof Error ? err.message : 'Unknown error');
                     }
                 }
 
@@ -69,7 +69,7 @@ export async function GET(
                     }
                 });
             } catch (err) {
-                console.error('Error fetching Retell agent:', err);
+                console.error('Error fetching Retell agent:', err instanceof Error ? err.message : 'Unknown error');
                 return NextResponse.json({ error: 'Failed to fetch from provider' }, { status: 500 });
             }
         } else if (agent.provider === 'vapi') {
@@ -89,7 +89,7 @@ export async function GET(
                     }
                 });
             } catch (err) {
-                console.error('Error fetching Vapi assistant:', err);
+                console.error('Error fetching Vapi assistant:', err instanceof Error ? err.message : 'Unknown error');
                 return NextResponse.json({ error: 'Failed to fetch from provider' }, { status: 500 });
             }
         } else if (agent.provider === 'bland') {
@@ -103,14 +103,14 @@ export async function GET(
                     }
                 });
             } catch (err) {
-                console.error('Error fetching Bland pathway:', err);
+                console.error('Error fetching Bland pathway:', err instanceof Error ? err.message : 'Unknown error');
                 return NextResponse.json({ error: 'Failed to fetch from provider' }, { status: 500 });
             }
         }
 
         return NextResponse.json({ error: 'No API key configured for this provider' }, { status: 400 });
     } catch (error) {
-        console.error('Error fetching agent provider data:', error);
+        console.error('Error fetching agent provider data:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -196,7 +196,7 @@ export async function PATCH(
                     .eq('id', id);
 
             } catch (err) {
-                console.error('Error updating Retell agent:', err);
+                console.error('Error updating Retell agent:', err instanceof Error ? err.message : 'Unknown error');
                 return NextResponse.json(
                     { error: 'Failed to update agent on provider' },
                     { status: 500 }
@@ -270,7 +270,7 @@ export async function PATCH(
                     .eq('id', id);
 
             } catch (err) {
-                console.error('Error updating Vapi assistant:', err);
+                console.error('Error updating Vapi assistant:', err instanceof Error ? err.message : 'Unknown error');
                 return NextResponse.json(
                     { error: 'Failed to update agent on provider' },
                     { status: 500 }
@@ -303,7 +303,7 @@ export async function PATCH(
                     .eq('id', id);
 
             } catch (err) {
-                console.error('Error updating Bland pathway:', err);
+                console.error('Error updating Bland pathway:', err instanceof Error ? err.message : 'Unknown error');
                 return NextResponse.json(
                     { error: 'Failed to update agent on provider' },
                     { status: 500 }
@@ -315,7 +315,7 @@ export async function PATCH(
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Error updating agent on provider:', error);
+        console.error('Error updating agent on provider:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

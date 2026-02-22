@@ -54,13 +54,13 @@ export async function GET(request: NextRequest) {
         const { data: suites, error } = await query;
 
         if (error) {
-            console.error('Error fetching test suites:', error);
+            console.error('Error fetching test suites:', error.code);
             return NextResponse.json({ error: 'Failed to fetch test suites' }, { status: 500 });
         }
 
         return NextResponse.json({ data: suites });
     } catch (error) {
-        console.error('Error fetching test suites:', error);
+        console.error('Error fetching test suites:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
                 promptSnapshot = config.prompt || config.llm_prompt || config.system_prompt || null;
             }
         } catch (err) {
-            console.warn('Could not snapshot agent prompt:', err);
+            console.warn('Could not snapshot agent prompt:', err instanceof Error ? err.message : 'Unknown error');
             // Continue without snapshot — not a fatal error
         }
 
@@ -151,13 +151,13 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (error) {
-            console.error('Error creating test suite:', error);
+            console.error('Error creating test suite:', error.code);
             return NextResponse.json({ error: 'Failed to create test suite' }, { status: 500 });
         }
 
         return NextResponse.json({ data: suite }, { status: 201 });
     } catch (error) {
-        console.error('Error creating test suite:', error);
+        console.error('Error creating test suite:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

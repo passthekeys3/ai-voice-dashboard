@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
             .eq('id', agencyId);
 
         if (updateError) {
-            console.error('Failed to store Google Calendar tokens:', updateError);
+            console.error('Failed to store Google Calendar tokens:', updateError.code);
             return NextResponse.redirect(
                 new URL('/settings?google_calendar=error&message=Failed+to+save+tokens', request.url)
             );
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
             new URL('/settings?google_calendar=connected', request.url)
         );
     } catch (error) {
-        console.error('Google Calendar OAuth callback error:', error);
+        console.error('Google Calendar OAuth callback error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.redirect(
             new URL('/settings?google_calendar=error&message=Internal+error', request.url)
         );

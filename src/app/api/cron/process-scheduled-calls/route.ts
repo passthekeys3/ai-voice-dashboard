@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
             .limit(50); // Process up to 50 at a time (fits within Vercel Pro 60s timeout)
 
         if (fetchError) {
-            console.error('Error fetching due calls:', fetchError);
+            console.error('Error fetching due calls:', fetchError.code);
             return NextResponse.json({ error: 'Failed to fetch scheduled calls' }, { status: 500 });
         }
 
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
             results,
         });
     } catch (error) {
-        console.error('Error processing scheduled calls:', error);
+        console.error('Error processing scheduled calls:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

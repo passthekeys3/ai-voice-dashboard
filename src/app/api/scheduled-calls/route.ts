@@ -55,13 +55,13 @@ export async function GET(request: NextRequest) {
         const { data: scheduledCalls, error } = await query;
 
         if (error) {
-            console.error('Error fetching scheduled calls:', error);
+            console.error('Error fetching scheduled calls:', error.code);
             return NextResponse.json({ error: 'Failed to fetch scheduled calls' }, { status: 500 });
         }
 
         return NextResponse.json({ data: scheduledCalls });
     } catch (error) {
-        console.error('Error fetching scheduled calls:', error);
+        console.error('Error fetching scheduled calls:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (error) {
-            console.error('Error creating scheduled call:', error);
+            console.error('Error creating scheduled call:', error.code);
             return NextResponse.json({ error: 'Failed to create scheduled call' }, { status: 500 });
         }
 
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
             } : {}),
         }, { status: 201 });
     } catch (error) {
-        console.error('Error creating scheduled call:', error);
+        console.error('Error creating scheduled call:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

@@ -107,7 +107,7 @@ export async function GET(_request: NextRequest) {
                     }
                 }
             } catch (err) {
-                console.error('Error fetching Retell active calls:', err);
+                console.error('Error fetching Retell active calls:', err instanceof Error ? err.message : 'Unknown error');
             }
         }
 
@@ -137,7 +137,7 @@ export async function GET(_request: NextRequest) {
                     }
                 }
             } catch (err) {
-                console.error('Error fetching Bland active calls:', err);
+                console.error('Error fetching Bland active calls:', err instanceof Error ? err.message : 'Unknown error');
             }
         }
 
@@ -175,13 +175,13 @@ export async function GET(_request: NextRequest) {
                     }
                 }
             } catch (err) {
-                console.error('Error fetching Vapi active calls:', err);
+                console.error('Error fetching Vapi active calls:', err instanceof Error ? err.message : 'Unknown error');
             }
         }
 
         return NextResponse.json({ data: allActiveCalls });
     } catch (error) {
-        console.error('Error fetching active calls:', error);
+        console.error('Error fetching active calls:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

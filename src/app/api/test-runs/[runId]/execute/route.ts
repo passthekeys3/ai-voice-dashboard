@@ -91,7 +91,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                         controller.close();
                     })
                     .catch((err) => {
-                        console.error('Test run execution error:', err);
+                        console.error('Test run execution error:', err instanceof Error ? err.message : 'Unknown error');
                         sendEvent({
                             type: 'error',
                             message: err instanceof Error ? err.message : 'Execution failed',
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             },
         });
     } catch (error) {
-        console.error('Error starting test run execution:', error);
+        console.error('Error starting test run execution:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

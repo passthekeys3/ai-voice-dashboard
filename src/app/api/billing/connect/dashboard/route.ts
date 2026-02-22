@@ -46,7 +46,7 @@ export async function POST() {
 
         return NextResponse.json({ url: loginLink.url });
     } catch (error) {
-        console.error('Stripe Connect dashboard link error:', error);
+        console.error('Stripe Connect dashboard link error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Failed to generate dashboard link' }, { status: 500 });
     }
 }

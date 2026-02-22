@@ -36,11 +36,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         // Fetch call metrics per variant
         if (experiment.variants && experiment.variants.length > 0) {
+            // Get agent IDs for this experiment to scope calls query
+            const variantAgentIds = experiment.variants
+                .map((v: { agent_id?: string }) => v.agent_id)
+                .filter(Boolean) as string[];
+
             for (const variant of experiment.variants) {
-                const { data: calls } = await supabase
+                const query = supabase
                     .from('calls')
                     .select('duration_seconds, sentiment, status')
                     .eq('variant_id', variant.id);
+
+                // Defense-in-depth: scope calls to agents owned by this agency
+                if (variantAgentIds.length > 0) {
+                    query.in('agent_id', variantAgentIds);
+                }
+
+                const { data: calls } = await query;
 
                 if (calls && calls.length > 0) {
                     variant.call_count = calls.length;
@@ -72,7 +84,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ data: experiment });
     } catch (error) {
-        console.error('Error fetching experiment:', error);
+        console.error('Error fetching experiment:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -124,13 +136,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             .single();
 
         if (error) {
-            console.error('Error updating experiment:', error);
+            console.error('Error updating experiment:', error.code);
             return NextResponse.json({ error: 'Failed to update experiment' }, { status: 500 });
         }
 
         return NextResponse.json({ data: experiment });
     } catch (error) {
-        console.error('Error updating experiment:', error);
+        console.error('Error updating experiment:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -173,13 +185,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             .eq('agency_id', user.agency.id);
 
         if (error) {
-            console.error('Error deleting experiment:', error);
+            console.error('Error deleting experiment:', error.code);
             return NextResponse.json({ error: 'Failed to delete experiment' }, { status: 500 });
         }
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Error deleting experiment:', error);
+        console.error('Error deleting experiment:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

@@ -25,13 +25,13 @@ export async function GET() {
             .order('name', { ascending: true });
 
         if (error) {
-            console.error('Error fetching personas:', error);
+            console.error('Error fetching personas:', error.code);
             return NextResponse.json({ error: 'Failed to fetch personas' }, { status: 500 });
         }
 
         return NextResponse.json({ data: personas });
     } catch (error) {
-        console.error('Error fetching personas:', error);
+        console.error('Error fetching personas:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -93,13 +93,13 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (error) {
-            console.error('Error creating persona:', error);
+            console.error('Error creating persona:', error.code);
             return NextResponse.json({ error: 'Failed to create persona' }, { status: 500 });
         }
 
         return NextResponse.json({ data: persona }, { status: 201 });
     } catch (error) {
-        console.error('Error creating persona:', error);
+        console.error('Error creating persona:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

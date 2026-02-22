@@ -122,7 +122,7 @@ export async function getVapiAssistant(
     apiKey: string,
     assistantId: string
 ): Promise<VapiAssistant> {
-    return vapiFetch<VapiAssistant>(apiKey, `/assistant/${assistantId}`);
+    return vapiFetch<VapiAssistant>(apiKey, `/assistant/${encodeURIComponent(assistantId)}`);
 }
 
 export async function createVapiAssistant(
@@ -154,7 +154,7 @@ export async function updateVapiAssistant(
         serverUrl: string;
     }>
 ): Promise<VapiAssistant> {
-    return vapiFetch<VapiAssistant>(apiKey, `/assistant/${assistantId}`, {
+    return vapiFetch<VapiAssistant>(apiKey, `/assistant/${encodeURIComponent(assistantId)}`, {
         method: 'PATCH',
         body: JSON.stringify(config),
     });
@@ -164,7 +164,7 @@ export async function deleteVapiAssistant(
     apiKey: string,
     assistantId: string
 ): Promise<void> {
-    await vapiFetch<void>(apiKey, `/assistant/${assistantId}`, {
+    await vapiFetch<void>(apiKey, `/assistant/${encodeURIComponent(assistantId)}`, {
         method: 'DELETE',
     });
 }
@@ -189,7 +189,7 @@ export async function getVapiCall(
     apiKey: string,
     callId: string
 ): Promise<VapiCall> {
-    return vapiFetch<VapiCall>(apiKey, `/call/${callId}`);
+    return vapiFetch<VapiCall>(apiKey, `/call/${encodeURIComponent(callId)}`);
 }
 
 // Phone Number types and functions
@@ -214,7 +214,7 @@ export async function getVapiPhoneNumber(
     apiKey: string,
     phoneNumberId: string
 ): Promise<VapiPhoneNumber> {
-    return vapiFetch<VapiPhoneNumber>(apiKey, `/phone-number/${phoneNumberId}`);
+    return vapiFetch<VapiPhoneNumber>(apiKey, `/phone-number/${encodeURIComponent(phoneNumberId)}`);
 }
 
 export async function updateVapiPhoneNumber(
@@ -226,7 +226,7 @@ export async function updateVapiPhoneNumber(
         serverUrl: string;
     }>
 ): Promise<VapiPhoneNumber> {
-    return vapiFetch<VapiPhoneNumber>(apiKey, `/phone-number/${phoneNumberId}`, {
+    return vapiFetch<VapiPhoneNumber>(apiKey, `/phone-number/${encodeURIComponent(phoneNumberId)}`, {
         method: 'PATCH',
         body: JSON.stringify(config),
     });

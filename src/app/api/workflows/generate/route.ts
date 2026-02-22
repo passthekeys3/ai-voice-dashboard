@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
             },
         });
     } catch (error) {
-        console.error('Error in workflow generate:', error instanceof Error ? error.message : error);
+        console.error('Error in workflow generate:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }

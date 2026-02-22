@@ -108,7 +108,7 @@ export async function POST(_request: NextRequest) {
                     console.error('Retell API error:', retellResponse.status);
                 }
             } catch (error) {
-                console.error('Error syncing Retell phone numbers:', error);
+                console.error('Error syncing Retell phone numbers:', error instanceof Error ? error.message : 'Unknown error');
             }
         }
 
@@ -162,7 +162,7 @@ export async function POST(_request: NextRequest) {
                     }
                 }
             } catch (error) {
-                console.error('Error syncing VAPI phone numbers:', error);
+                console.error('Error syncing VAPI phone numbers:', error instanceof Error ? error.message : 'Unknown error');
             }
         }
 
@@ -212,7 +212,7 @@ export async function POST(_request: NextRequest) {
                     }
                 }
             } catch (error) {
-                console.error('Error syncing Bland phone numbers:', error);
+                console.error('Error syncing Bland phone numbers:', error instanceof Error ? error.message : 'Unknown error');
             }
         }
 
@@ -223,7 +223,7 @@ export async function POST(_request: NextRequest) {
             total,
         });
     } catch (error) {
-        console.error('Error syncing phone numbers:', error);
+        console.error('Error syncing phone numbers:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

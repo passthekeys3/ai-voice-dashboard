@@ -107,7 +107,7 @@ export async function POST(
             stripe_account_id: agency.stripe_connect_account_id,
         });
     } catch (error) {
-        console.error('SetupIntent creation error:', error);
+        console.error('SetupIntent creation error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Failed to create setup intent' }, { status: 500 });
     }
 }

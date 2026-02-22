@@ -248,7 +248,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                     },
                 });
             } catch (err) {
-                console.error('Error fetching Bland call:', err);
+                console.error('Error fetching Bland call:', err instanceof Error ? err.message : 'Unknown error');
                 if ((err as Error).message?.includes('404')) {
                     return NextResponse.json({ error: 'Call not found or has ended' }, { status: 404 });
                 }
@@ -258,7 +258,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ error: 'Call not found' }, { status: 404 });
     } catch (error) {
-        console.error('Error fetching live call:', error);
+        console.error('Error fetching live call:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

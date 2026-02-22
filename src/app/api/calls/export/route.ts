@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
         const { data: calls, error } = await query;
 
         if (error) {
-            console.error('Error fetching calls for export:', error);
+            console.error('Error fetching calls for export:', error.code);
             return NextResponse.json({ error: 'Failed to export calls' }, { status: 500 });
         }
 
@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
             },
         });
     } catch (error) {
-        console.error('Error exporting calls:', error);
+        console.error('Error exporting calls:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

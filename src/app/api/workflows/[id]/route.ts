@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ data: workflow });
     } catch (error) {
-        console.error('Error fetching workflow:', error);
+        console.error('Error fetching workflow:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -146,13 +146,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             .single();
 
         if (error) {
-            console.error('Error updating workflow:', error);
+            console.error('Error updating workflow:', error.code);
             return NextResponse.json({ error: 'Failed to update workflow' }, { status: 500 });
         }
 
         return NextResponse.json({ data: workflow });
     } catch (error) {
-        console.error('Error updating workflow:', error);
+        console.error('Error updating workflow:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -179,13 +179,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             .eq('agency_id', user.agency.id);
 
         if (error) {
-            console.error('Error deleting workflow:', error);
+            console.error('Error deleting workflow:', error.code);
             return NextResponse.json({ error: 'Failed to delete workflow' }, { status: 500 });
         }
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Error deleting workflow:', error);
+        console.error('Error deleting workflow:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

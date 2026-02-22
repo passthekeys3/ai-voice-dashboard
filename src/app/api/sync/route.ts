@@ -24,7 +24,7 @@ export async function POST() {
             .single();
 
         if (agencyError || !agency) {
-            console.error('Agency fetch error:', agencyError);
+            console.error('Agency fetch error:', agencyError.code);
             return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
         }
 
@@ -69,7 +69,7 @@ export async function POST() {
                     .eq('provider', provider);
 
                 if (fetchError) {
-                    console.error('[SYNC] Error fetching existing agents:', fetchError);
+                    console.error('[SYNC] Error fetching existing agents:', fetchError.code);
                     results.agents.errors += externalAgents.length;
                     continue;
                 }
@@ -111,7 +111,7 @@ export async function POST() {
                         .select('id');
 
                     if (upsertError) {
-                        console.error('[SYNC] Batch upsert error:', upsertError);
+                        console.error('[SYNC] Batch upsert error:', upsertError.code);
                         results.agents.errors += toUpsert.length;
                     } else {
                         results.agents.synced += toUpsert.length;
@@ -139,18 +139,18 @@ export async function POST() {
                                 );
                                 if (patched) patchedCount++;
                             } catch (err) {
-                                console.error(`[SYNC] Failed to patch+publish agent ${extAgent.externalId}:`, err);
+                                console.error(`[SYNC] Failed to patch+publish agent ${extAgent.externalId}:`, err instanceof Error ? err.message : 'Unknown error');
                             }
                         }
                         if (patchedCount > 0) {
                             console.log(`[SYNC] Patched & published webhook config on ${patchedCount} agents (events=${REQUIRED_WEBHOOK_EVENTS.join(',')})`);
                         }
                     } catch (err) {
-                        console.error('[SYNC] Failed to ensure agent webhook configs:', err);
+                        console.error('[SYNC] Failed to ensure agent webhook configs:', err instanceof Error ? err.message : 'Unknown error');
                     }
                 }
             } catch (err) {
-                console.error(`Error syncing agents from ${provider}:`, err);
+                console.error(`Error syncing agents from ${provider}:`, err instanceof Error ? err.message : 'Unknown error');
             }
 
             // Sync Calls (separate try/catch so failures don't affect agent sync)
@@ -201,7 +201,7 @@ export async function POST() {
                     .in('external_id', callExternalIds);
 
                 if (callsFetchError) {
-                    console.error('[SYNC] Error fetching existing calls:', callsFetchError);
+                    console.error('[SYNC] Error fetching existing calls:', callsFetchError.code);
                     results.calls.errors += callsWithAgents.length;
                     results.calls.errorDetails = 'Failed to fetch existing calls';
                     continue;
@@ -245,7 +245,7 @@ export async function POST() {
                         });
 
                     if (callUpsertError) {
-                        console.error('[SYNC] Batch call upsert error:', callUpsertError);
+                        console.error('[SYNC] Batch call upsert error:', callUpsertError.code);
                         results.calls.errors += callsToUpsert.length;
                         results.calls.errorDetails = 'Failed to upsert calls';
                     } else {
@@ -263,7 +263,7 @@ export async function POST() {
             results,
         });
     } catch (error) {
-        console.error('Error during sync:', error);
+        console.error('Error during sync:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

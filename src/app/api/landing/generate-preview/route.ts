@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error(
             'Landing preview error:',
-            error instanceof Error ? error.message : error
+            error instanceof Error ? error.message : 'Unknown error'
         );
         return NextResponse.json(
             { error: 'Something went wrong. Please try again.' },

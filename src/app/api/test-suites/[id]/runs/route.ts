@@ -42,13 +42,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error('Error fetching test runs:', error);
+            console.error('Error fetching test runs:', error.code);
             return NextResponse.json({ error: 'Failed to fetch test runs' }, { status: 500 });
         }
 
         return NextResponse.json({ data: runs });
     } catch (error) {
-        console.error('Error fetching test runs:', error);
+        console.error('Error fetching test runs:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -194,7 +194,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             .single();
 
         if (runError) {
-            console.error('Error creating test run:', runError);
+            console.error('Error creating test run:', runError.code);
             return NextResponse.json({ error: 'Failed to create test run' }, { status: 500 });
         }
 
@@ -211,7 +211,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             .insert(resultData);
 
         if (resultsError) {
-            console.error('Error creating test result records:', resultsError);
+            console.error('Error creating test result records:', resultsError.code);
             // Clean up the run
             await supabase.from('test_runs').delete().eq('id', run.id);
             return NextResponse.json({ error: 'Failed to create test run' }, { status: 500 });
@@ -219,7 +219,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ data: run }, { status: 201 });
     } catch (error) {
-        console.error('Error creating test run:', error);
+        console.error('Error creating test run:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

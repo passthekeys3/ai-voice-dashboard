@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.redirect(authUrl.toString());
     } catch (error) {
-        console.error('Google Calendar OAuth initiation error:', error);
+        console.error('Google Calendar OAuth initiation error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

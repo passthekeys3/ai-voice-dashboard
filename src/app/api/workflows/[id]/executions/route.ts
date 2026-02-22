@@ -54,7 +54,7 @@ export async function GET(
         const { data, error, count } = await query;
 
         if (error) {
-            console.error('Failed to fetch workflow executions:', error);
+            console.error('Failed to fetch workflow executions:', error.code);
             return NextResponse.json({ error: 'Failed to fetch executions' }, { status: 500 });
         }
 
@@ -65,7 +65,7 @@ export async function GET(
             offset,
         });
     } catch (error) {
-        console.error('Workflow executions API error:', error);
+        console.error('Workflow executions API error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

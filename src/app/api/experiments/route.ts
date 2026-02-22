@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: experiments });
     } catch (error) {
-        console.error('Error fetching experiments:', error);
+        console.error('Error fetching experiments:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (expError) {
-            console.error('Error creating experiment:', expError);
+            console.error('Error creating experiment:', expError.code);
             return NextResponse.json({ error: 'Failed to create experiment' }, { status: 500 });
         }
 
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
             .insert(variantData);
 
         if (varError) {
-            console.error('Error creating variants:', varError);
+            console.error('Error creating variants:', varError.code);
             // Rollback experiment
             await supabase.from('experiments').delete().eq('id', experiment.id);
             return NextResponse.json({ error: 'Failed to create experiment variants' }, { status: 500 });
@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ data: fullExperiment }, { status: 201 });
     } catch (error) {
-        console.error('Error creating experiment:', error);
+        console.error('Error creating experiment:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

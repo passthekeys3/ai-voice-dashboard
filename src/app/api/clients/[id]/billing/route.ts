@@ -165,7 +165,7 @@ export const PATCH = withErrorHandling(async (
             }
         } catch (err) {
             // Don't fail the billing update if Stripe Customer creation fails
-            console.error('Auto-create Stripe Customer failed:', err);
+            console.error('Auto-create Stripe Customer failed:', err instanceof Error ? err.message : 'Unknown error');
         }
     }
 

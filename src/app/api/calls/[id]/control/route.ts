@@ -159,7 +159,6 @@ async function sendControlCommand(controlUrl: string, action: ControlAction, mes
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
             console.error(`Vapi control command failed: ${action}`, response.status);
             return externalServiceError('Vapi', `Failed to execute ${action} command`);
         }

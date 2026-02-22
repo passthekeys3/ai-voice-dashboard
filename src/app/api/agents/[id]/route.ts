@@ -34,7 +34,7 @@ export async function GET(
 
         return NextResponse.json({ data: agent });
     } catch (error) {
-        console.error('Error fetching agent:', error);
+        console.error('Error fetching agent:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -128,7 +128,7 @@ export async function PATCH(
 
         return NextResponse.json({ data: agent });
     } catch (error) {
-        console.error('Error updating agent:', error);
+        console.error('Error updating agent:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -184,7 +184,7 @@ export async function DELETE(
                 }
             } catch (providerErr) {
                 // Log but don't fail — the DB record should still be removed
-                console.error('Provider cleanup failed during agent deletion:', providerErr);
+                console.error('Provider cleanup failed during agent deletion:', providerErr instanceof Error ? providerErr.message : 'Unknown error');
             }
         }
 
@@ -200,7 +200,7 @@ export async function DELETE(
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Error deleting agent:', error);
+        console.error('Error deleting agent:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

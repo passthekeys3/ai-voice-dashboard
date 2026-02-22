@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
             .eq('id', agencyId);
 
         if (updateError) {
-            console.error('Failed to store HubSpot tokens:', updateError);
+            console.error('Failed to store HubSpot tokens:', updateError.code);
             return NextResponse.redirect(
                 new URL('/settings?hubspot=error&message=Failed+to+save+tokens', request.url)
             );
@@ -168,7 +168,7 @@ export async function GET(request: NextRequest) {
             new URL('/settings?hubspot=connected', request.url)
         );
     } catch (error) {
-        console.error('HubSpot OAuth callback error:', error);
+        console.error('HubSpot OAuth callback error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.redirect(
             new URL('/settings?hubspot=error&message=Internal+error', request.url)
         );

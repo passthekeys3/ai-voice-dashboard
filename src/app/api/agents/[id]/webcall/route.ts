@@ -61,8 +61,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         });
 
         if (!retellResponse.ok) {
-            const error = await retellResponse.text();
-            console.error('Retell web call error:', error);
+            console.error('Retell web call error:', retellResponse.status);
             return NextResponse.json({ error: 'Failed to create web call' }, { status: 500 });
         }
 
@@ -75,7 +74,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             }
         });
     } catch (error) {
-        console.error('Error creating web call:', error);
+        console.error('Error creating web call:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

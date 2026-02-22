@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
             .not('stripe_customer_id', 'is', null);
 
         if (clientsError) {
-            console.error('Failed to fetch clients for invoicing:', clientsError);
+            console.error('Failed to fetch clients for invoicing:', clientsError.code);
             return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 });
         }
 
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
             .not('stripe_customer_id', 'is', null);
 
         if (subClientsError) {
-            console.error('Failed to fetch subscription clients for invoicing:', subClientsError);
+            console.error('Failed to fetch subscription clients for invoicing:', subClientsError.code);
         }
 
         if (subClients && subClients.length > 0) {
@@ -245,7 +245,7 @@ export async function POST(request: NextRequest) {
             .in('subscription_status', ['active', 'trialing']);
 
         if (agenciesError) {
-            console.error('Failed to fetch agencies for overage billing:', agenciesError);
+            console.error('Failed to fetch agencies for overage billing:', agenciesError.code);
         }
 
         if (agencies && agencies.length > 0) {

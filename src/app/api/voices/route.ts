@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
                     }
                 }
             } catch (err) {
-                console.error('Error fetching Retell voices:', err);
+                console.error('Error fetching Retell voices:', err instanceof Error ? err.message : 'Unknown error');
             }
         }
 
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
                     });
                 }
             } catch (err) {
-                console.error('Error fetching Bland voices:', err);
+                console.error('Error fetching Bland voices:', err instanceof Error ? err.message : 'Unknown error');
             }
         }
 
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: allVoices });
     } catch (error) {
-        console.error('Error fetching voices:', error);
+        console.error('Error fetching voices:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

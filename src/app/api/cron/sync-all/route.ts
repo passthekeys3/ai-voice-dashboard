@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
             .or('retell_api_key.neq.null,vapi_api_key.neq.null,bland_api_key.neq.null');
 
         if (agenciesError) {
-            console.error('Error fetching agencies:', agenciesError);
+            console.error('Error fetching agencies:', agenciesError.code);
             return NextResponse.json({ error: 'Database error' }, { status: 500 });
         }
 
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
                                 results.total_agents += upsertedAgents?.length || agentsToUpsert.length;
                                 console.log(`[CRON SYNC] Agency ${agency.name}: upserted ${agentsToUpsert.length} agents from ${provider}`);
                             } else {
-                                console.error(`[CRON SYNC] Agent upsert error for ${agency.name}:`, agentUpsertError);
+                                console.error(`[CRON SYNC] Agent upsert error for ${agency.name}:`, agentUpsertError.code);
                             }
                         }
 
@@ -107,14 +107,14 @@ export async function POST(request: NextRequest) {
                                         const patched = await ensureAgentWebhookConfig(agency.retell_api_key, retellAgent);
                                         if (patched) patchedCount++;
                                     } catch (err) {
-                                        console.error(`[CRON SYNC] Failed to patch+publish agent ${extAgent.externalId}:`, err);
+                                        console.error(`[CRON SYNC] Failed to patch+publish agent ${extAgent.externalId}:`, err instanceof Error ? err.message : 'Unknown error');
                                     }
                                 }
                                 if (patchedCount > 0) {
                                     console.log(`[CRON SYNC] Agency ${agency.name}: patched & published webhook config on ${patchedCount} agents (events=${REQUIRED_WEBHOOK_EVENTS.join(',')})`);
                                 }
                             } catch (err) {
-                                console.error(`[CRON SYNC] Failed to ensure webhook configs for agency ${agency.name}:`, err);
+                                console.error(`[CRON SYNC] Failed to ensure webhook configs for agency ${agency.name}:`, err instanceof Error ? err.message : 'Unknown error');
                             }
                         }
 
@@ -137,14 +137,14 @@ export async function POST(request: NextRequest) {
                                         });
                                         patchedCount++;
                                     } catch (err) {
-                                        console.error(`[CRON SYNC] Failed to patch Vapi serverUrl for assistant ${assistant.id}:`, err);
+                                        console.error(`[CRON SYNC] Failed to patch Vapi serverUrl for assistant ${assistant.id}:`, err instanceof Error ? err.message : 'Unknown error');
                                     }
                                 }
                                 if (patchedCount > 0) {
                                     console.log(`[CRON SYNC] Agency ${agency.name}: patched serverUrl on ${patchedCount} Vapi assistants`);
                                 }
                             } catch (err) {
-                                console.error(`[CRON SYNC] Failed to ensure Vapi serverUrl for agency ${agency.name}:`, err);
+                                console.error(`[CRON SYNC] Failed to ensure Vapi serverUrl for agency ${agency.name}:`, err instanceof Error ? err.message : 'Unknown error');
                             }
                         }
 
@@ -204,12 +204,12 @@ export async function POST(request: NextRequest) {
                                             results.total_phone_numbers += upsertedPhones?.length || phonesToUpsert.length;
                                             console.log(`[CRON SYNC] Agency ${agency.name}: upserted ${phonesToUpsert.length} phone numbers`);
                                         } else {
-                                            console.error(`[CRON SYNC] Phone upsert error for ${agency.name}:`, phoneUpsertError);
+                                            console.error(`[CRON SYNC] Phone upsert error for ${agency.name}:`, phoneUpsertError.code);
                                         }
                                     }
                                 }
                             } catch (phoneErr) {
-                                console.error(`Phone sync error for agency ${agency.id}:`, phoneErr);
+                                console.error(`Phone sync error for agency ${agency.id}:`, phoneErr instanceof Error ? phoneErr.message : 'Unknown error');
                             }
                         }
 
@@ -253,11 +253,11 @@ export async function POST(request: NextRequest) {
                                         results.total_phone_numbers += upsertedPhones?.length || phonesToUpsert.length;
                                         console.log(`[CRON SYNC] Agency ${agency.name}: upserted ${phonesToUpsert.length} Vapi phone numbers`);
                                     } else {
-                                        console.error(`[CRON SYNC] Vapi phone upsert error for ${agency.name}:`, phoneUpsertError);
+                                        console.error(`[CRON SYNC] Vapi phone upsert error for ${agency.name}:`, phoneUpsertError.code);
                                     }
                                 }
                             } catch (phoneErr) {
-                                console.error(`Vapi phone sync error for agency ${agency.id}:`, phoneErr);
+                                console.error(`Vapi phone sync error for agency ${agency.id}:`, phoneErr instanceof Error ? phoneErr.message : 'Unknown error');
                             }
                         }
 
@@ -301,22 +301,22 @@ export async function POST(request: NextRequest) {
                                         results.total_phone_numbers += upsertedPhones?.length || phonesToUpsert.length;
                                         console.log(`[CRON SYNC] Agency ${agency.name}: upserted ${phonesToUpsert.length} Bland phone numbers`);
                                     } else {
-                                        console.error(`[CRON SYNC] Bland phone upsert error for ${agency.name}:`, phoneUpsertError);
+                                        console.error(`[CRON SYNC] Bland phone upsert error for ${agency.name}:`, phoneUpsertError.code);
                                     }
                                 }
                             } catch (phoneErr) {
-                                console.error(`Bland phone sync error for agency ${agency.id}:`, phoneErr);
+                                console.error(`Bland phone sync error for agency ${agency.id}:`, phoneErr instanceof Error ? phoneErr.message : 'Unknown error');
                             }
                         }
                     } catch (providerErr) {
-                        console.error(`Provider ${provider} sync error:`, providerErr);
+                        console.error(`Provider ${provider} sync error:`, providerErr instanceof Error ? providerErr.message : 'Unknown error');
                         results.errors.push(`${agency.name}: ${provider} sync failed`);
                     }
                 }
 
                 results.agencies_synced++;
             } catch (agencyErr) {
-                console.error(`Agency ${agency.id} sync error:`, agencyErr);
+                console.error(`Agency ${agency.id} sync error:`, agencyErr instanceof Error ? agencyErr.message : 'Unknown error');
                 results.errors.push(`Agency ${agency.name} sync failed`);
             }
         }
@@ -334,7 +334,7 @@ export async function POST(request: NextRequest) {
             ...results,
         });
     } catch (error) {
-        console.error('[CRON SYNC] Fatal error:', error);
+        console.error('[CRON SYNC] Fatal error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

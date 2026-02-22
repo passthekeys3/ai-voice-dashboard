@@ -122,7 +122,7 @@ export async function getBlandPathway(
     apiKey: string,
     pathwayId: string
 ): Promise<BlandPathway> {
-    return blandFetch<BlandPathway>(apiKey, `/pathway/${pathwayId}`);
+    return blandFetch<BlandPathway>(apiKey, `/pathway/${encodeURIComponent(pathwayId)}`);
 }
 
 export async function createBlandPathway(
@@ -157,7 +157,7 @@ export async function updateBlandPathway(
         description: string;
     }>
 ): Promise<BlandPathway> {
-    await blandFetch(apiKey, `/pathway/${pathwayId}`, {
+    await blandFetch(apiKey, `/pathway/${encodeURIComponent(pathwayId)}`, {
         method: 'POST',
         body: JSON.stringify(config),
     });
@@ -169,7 +169,7 @@ export async function deleteBlandPathway(
     apiKey: string,
     pathwayId: string
 ): Promise<void> {
-    await blandFetch<void>(apiKey, `/pathway/${pathwayId}`, {
+    await blandFetch<void>(apiKey, `/pathway/${encodeURIComponent(pathwayId)}`, {
         method: 'DELETE',
     });
 }
@@ -184,9 +184,9 @@ export async function listBlandCalls(
 ): Promise<BlandCall[]> {
     const queryParts: string[] = [];
     if (params?.limit) queryParts.push(`limit=${params.limit}`);
-    if (params?.start_date) queryParts.push(`start_date=${params.start_date}`);
-    if (params?.end_date) queryParts.push(`end_date=${params.end_date}`);
-    if (params?.status) queryParts.push(`status=${params.status}`);
+    if (params?.start_date) queryParts.push(`start_date=${encodeURIComponent(params.start_date)}`);
+    if (params?.end_date) queryParts.push(`end_date=${encodeURIComponent(params.end_date)}`);
+    if (params?.status) queryParts.push(`status=${encodeURIComponent(params.status)}`);
     const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
 
     const result = await blandFetch<BlandCall[] | { calls: BlandCall[] }>(apiKey, `/calls${query}`);
@@ -197,7 +197,7 @@ export async function getBlandCall(
     apiKey: string,
     callId: string
 ): Promise<BlandCall> {
-    return blandFetch<BlandCall>(apiKey, `/calls/${callId}`);
+    return blandFetch<BlandCall>(apiKey, `/calls/${encodeURIComponent(callId)}`);
 }
 
 export async function listBlandActiveCalls(apiKey: string): Promise<BlandCall[]> {
@@ -209,7 +209,7 @@ export async function stopBlandCall(
     apiKey: string,
     callId: string
 ): Promise<void> {
-    await blandFetch<void>(apiKey, `/calls/${callId}/stop`, {
+    await blandFetch<void>(apiKey, `/calls/${encodeURIComponent(callId)}/stop`, {
         method: 'POST',
     });
 }

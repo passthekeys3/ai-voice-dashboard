@@ -27,7 +27,7 @@ export async function GET() {
             .single();
 
         if (error) {
-            console.error('Error fetching domain config:', error);
+            console.error('Error fetching domain config:', error.code);
             return NextResponse.json({ error: 'Failed to fetch domain configuration' }, { status: 500 });
         }
 
@@ -54,7 +54,7 @@ export async function GET() {
             },
         });
     } catch (error) {
-        console.error('Error in GET /api/domains:', error);
+        console.error('Error in GET /api/domains:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
                 .eq('id', user.agency.id);
 
             if (updateError) {
-                console.error('Error updating custom domain:', updateError);
+                console.error('Error updating custom domain:', updateError.code);
                 return NextResponse.json({ error: 'Failed to update domain' }, { status: 500 });
             }
 
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
                 .eq('id', user.agency.id);
 
             if (updateError) {
-                console.error('Error updating slug:', updateError);
+                console.error('Error updating slug:', updateError.code);
                 return NextResponse.json({ error: 'Failed to update slug' }, { status: 500 });
             }
 
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
     } catch (error) {
-        console.error('Error in POST /api/domains:', error);
+        console.error('Error in POST /api/domains:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -231,7 +231,7 @@ export async function DELETE() {
             .eq('id', user.agency.id);
 
         if (error) {
-            console.error('Error removing custom domain:', error);
+            console.error('Error removing custom domain:', error.code);
             return NextResponse.json({ error: 'Failed to remove domain' }, { status: 500 });
         }
 
@@ -249,7 +249,7 @@ export async function DELETE() {
             message: 'Custom domain removed successfully.',
         });
     } catch (error) {
-        console.error('Error in DELETE /api/domains:', error);
+        console.error('Error in DELETE /api/domains:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

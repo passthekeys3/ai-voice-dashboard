@@ -41,13 +41,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             .order('created_at', { ascending: true });
 
         if (error) {
-            console.error('Error fetching test cases:', error);
+            console.error('Error fetching test cases:', error.code);
             return NextResponse.json({ error: 'Failed to fetch test cases' }, { status: 500 });
         }
 
         return NextResponse.json({ data: cases });
     } catch (error) {
-        console.error('Error fetching test cases:', error);
+        console.error('Error fetching test cases:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -165,13 +165,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             .select('*, persona:test_personas(*)');
 
         if (error) {
-            console.error('Error creating test cases:', error);
+            console.error('Error creating test cases:', error.code);
             return NextResponse.json({ error: 'Failed to create test cases' }, { status: 500 });
         }
 
         return NextResponse.json({ data: cases }, { status: 201 });
     } catch (error) {
-        console.error('Error creating test cases:', error);
+        console.error('Error creating test cases:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

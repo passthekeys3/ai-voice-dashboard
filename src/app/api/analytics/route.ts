@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
         const { data: calls, error: callsError } = await callsQuery;
 
         if (callsError) {
-            console.error('Analytics calls query error:', callsError);
+            console.error('Analytics calls query error:', callsError.code);
             return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 });
         }
 
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
             },
         });
     } catch (error) {
-        console.error('Error fetching analytics:', error);
+        console.error('Error fetching analytics:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

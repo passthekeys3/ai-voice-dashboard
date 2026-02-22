@@ -77,7 +77,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
             .eq('id', agencyId);
 
         if (updateError) {
-            console.error('Error updating agency subscription:', updateError);
+            console.error('Error updating agency subscription:', updateError.code);
         } else {
             console.log(`Updated subscription for agency ${agencyId}: ${subscription.status}`);
         }
@@ -98,7 +98,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
         .eq('id', agency.id);
 
     if (updateError) {
-        console.error('Error updating agency subscription:', updateError);
+        console.error('Error updating agency subscription:', updateError.code);
     } else {
         console.log(`Updated subscription for agency ${agency.id}: ${subscription.status}`);
     }
@@ -134,7 +134,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
         .eq('id', agency.id);
 
     if (updateError) {
-        console.error('Error clearing agency subscription:', updateError);
+        console.error('Error clearing agency subscription:', updateError.code);
     } else {
         console.log(`Subscription deleted for agency ${agency.id}`);
     }
@@ -232,7 +232,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
                 );
                 await sendSlackMessage(slackConfig.webhook_url, payload);
             } catch (err) {
-                console.error('Failed to send Slack payment failure notification:', err);
+                console.error('Failed to send Slack payment failure notification:', err instanceof Error ? err.message : 'Unknown error');
             }
         }
     }
@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
         try {
             event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
         } catch (err) {
-            console.error('Stripe webhook signature verification failed:', err);
+            console.error('Stripe webhook signature verification failed:', err instanceof Error ? err.message : 'Unknown error');
             return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
         }
 
@@ -324,12 +324,12 @@ export async function POST(request: NextRequest) {
         };
 
         waitUntil(handleEvent().catch(err => {
-            console.error(`Error handling Stripe event ${event.type}:`, err);
+            console.error(`Error handling Stripe event ${event.type}:`, err instanceof Error ? err.message : 'Unknown error');
         }));
 
         return NextResponse.json({ received: true });
     } catch (error) {
-        console.error('Stripe webhook error:', error);
+        console.error('Stripe webhook error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ received: true, warning: 'Processing error' }, { status: 200 });
     }
 }
