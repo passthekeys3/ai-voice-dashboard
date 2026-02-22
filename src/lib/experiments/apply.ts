@@ -75,7 +75,7 @@ export async function applyExperiment({
         };
     } catch (err) {
         // Experiment resolution failure should never block call initiation
-        console.error('[EXPERIMENT] Failed to resolve experiment, proceeding without:', err);
+        console.error('[EXPERIMENT] Failed to resolve experiment, proceeding without:', err instanceof Error ? err.message : 'Unknown error');
         return { callParams, experimentApplied: false };
     }
 }

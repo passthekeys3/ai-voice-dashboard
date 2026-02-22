@@ -111,7 +111,7 @@ export async function generateScenariosStream(
 
                 controller.close();
             } catch (err) {
-                console.error('Scenario generation error:', err);
+                console.error('Scenario generation error:', err instanceof Error ? err.message : 'Unknown error');
                 controller.enqueue(
                     encoder.encode(
                         JSON.stringify({

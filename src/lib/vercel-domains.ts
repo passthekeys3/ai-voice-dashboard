@@ -91,7 +91,7 @@ export async function addDomainToVercel(
 
         return { success: true, domain: data };
     } catch (err) {
-        console.error('[vercel-domains] addDomain error:', err);
+        console.error('[vercel-domains] addDomain error:', err instanceof Error ? err.message : 'Unknown error');
         return { success: false, error: 'Failed to communicate with Vercel API' };
     }
 }
@@ -130,7 +130,7 @@ export async function removeDomainFromVercel(
 
         return { success: true };
     } catch (err) {
-        console.error('[vercel-domains] removeDomain error:', err);
+        console.error('[vercel-domains] removeDomain error:', err instanceof Error ? err.message : 'Unknown error');
         return { success: false, error: 'Failed to communicate with Vercel API' };
     }
 }
@@ -166,7 +166,7 @@ export async function getDomainFromVercel(
         const data = await res.json() as VercelDomain;
         return { success: true, domain: data };
     } catch (err) {
-        console.error('[vercel-domains] getDomain error:', err);
+        console.error('[vercel-domains] getDomain error:', err instanceof Error ? err.message : 'Unknown error');
         return { success: false, error: 'Failed to communicate with Vercel API' };
     }
 }
@@ -202,7 +202,7 @@ export async function verifyDomainOnVercel(
         const data = await res.json() as VercelDomain;
         return { success: true, domain: data };
     } catch (err) {
-        console.error('[vercel-domains] verifyDomain error:', err);
+        console.error('[vercel-domains] verifyDomain error:', err instanceof Error ? err.message : 'Unknown error');
         return { success: false, error: 'Failed to communicate with Vercel API' };
     }
 }

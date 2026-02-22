@@ -124,7 +124,7 @@ async function checkRateLimitRedis(
             source: 'redis',
         };
     } catch (err) {
-        console.error('Redis rate limit error:', err);
+        console.error('Redis rate limit error:', err instanceof Error ? err.message : 'Unknown error');
         return null; // Fall back to in-memory
     }
 }
@@ -227,7 +227,7 @@ export async function clearRateLimit(identifier: string): Promise<void> {
         try {
             await redis.del(`ratelimit:${identifier}`);
         } catch (err) {
-            console.error('Failed to clear Redis rate limit:', err);
+            console.error('Failed to clear Redis rate limit:', err instanceof Error ? err.message : 'Unknown error');
         }
     }
 }
@@ -257,7 +257,7 @@ export async function getRateLimitStatus(
                 };
             }
         } catch (err) {
-            console.error('Redis get status error:', err);
+            console.error('Redis get status error:', err instanceof Error ? err.message : 'Unknown error');
         }
     }
 

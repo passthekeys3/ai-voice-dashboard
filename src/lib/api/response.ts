@@ -207,7 +207,7 @@ export function databaseError(error: { code?: string; message?: string }): NextR
   }
 
   // Log the actual error for debugging (server-side only)
-  console.error('Database error:', error);
+  console.error('Database error:', error.code || 'unknown');
 
   // Return generic message to client
   return apiError('DATABASE_ERROR', 'A database error occurred');
@@ -422,7 +422,7 @@ export function withErrorHandling<
     try {
       return await handler(request, context);
     } catch (error) {
-      console.error('Unhandled API error:', error);
+      console.error('Unhandled API error:', error instanceof Error ? error.message : 'Unknown error');
 
       // Check for specific error types
       if (error instanceof SyntaxError) {

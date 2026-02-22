@@ -78,7 +78,7 @@ export async function getRedisClient(): Promise<RedisClient | null> {
       });
 
     } catch (err) {
-      console.error('Failed to create Redis client:', err);
+      console.error('Failed to create Redis client:', err instanceof Error ? err.message : 'Unknown error');
       connectionFailed = true;
       connectionFailedAt = Date.now();
       redis = null;

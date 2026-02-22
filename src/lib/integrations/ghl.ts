@@ -45,7 +45,7 @@ async function refreshAccessToken(
             expiresIn: data.expires_in,
         };
     } catch (error) {
-        console.error('GHL token refresh error:', error);
+        console.error('GHL token refresh error:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }
@@ -103,7 +103,7 @@ export async function getValidAccessToken(
 
             return refreshed.accessToken;
         } catch (error) {
-            console.error('GHL token refresh error:', error);
+            console.error('GHL token refresh error:', error instanceof Error ? error.message : 'Unknown error');
             return null;
         }
     })().finally(() => {
@@ -169,7 +169,7 @@ export async function searchContactByPhone(
         );
 
         if (!response.ok) {
-            console.error('GHL search contact error:', await response.text());
+            console.error('GHL search contact error:', response.status);
             return null;
         }
 
@@ -182,7 +182,7 @@ export async function searchContactByPhone(
 
         return null;
     } catch (error) {
-        console.error('GHL searchContactByPhone error:', error);
+        console.error('GHL searchContactByPhone error:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }
@@ -224,14 +224,14 @@ export async function createContact(
         );
 
         if (!response.ok) {
-            console.error('GHL create contact error:', await response.text());
+            console.error('GHL create contact error:', response.status);
             return null;
         }
 
         const data = await response.json();
         return data.contact;
     } catch (error) {
-        console.error('GHL createContact error:', error);
+        console.error('GHL createContact error:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }
@@ -261,13 +261,13 @@ export async function addNoteToContact(
         );
 
         if (!response.ok) {
-            console.error('GHL add note error:', await response.text());
+            console.error('GHL add note error:', response.status);
             return null;
         }
 
         return await response.json();
     } catch (error) {
-        console.error('GHL addNoteToContact error:', error);
+        console.error('GHL addNoteToContact error:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }
@@ -355,7 +355,7 @@ export async function logCallToGHL(
 
         return { success: true, contactId: contact.id };
     } catch (error) {
-        console.error('logCallToGHL error:', error);
+        console.error('logCallToGHL error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to log call to GHL' };
     }
 }
@@ -411,14 +411,13 @@ export async function updateContactTags(
         );
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('GHL update tags error:', errorText);
+            console.error('GHL update tags error:', response.status);
             return { success: false, error: 'Failed to update contact tags' };
         }
 
         return { success: true };
     } catch (error) {
-        console.error('GHL updateContactTags error:', error);
+        console.error('GHL updateContactTags error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to update contact tags' };
     }
 }
@@ -446,14 +445,14 @@ export async function getPipelines(
         );
 
         if (!response.ok) {
-            console.error('GHL get pipelines error:', await response.text());
+            console.error('GHL get pipelines error:', response.status);
             return [];
         }
 
         const data = await response.json();
         return data.pipelines || [];
     } catch (error) {
-        console.error('GHL getPipelines error:', error);
+        console.error('GHL getPipelines error:', error instanceof Error ? error.message : 'Unknown error');
         return [];
     }
 }
@@ -513,8 +512,7 @@ export async function updateContactPipeline(
             );
 
             if (!updateResponse.ok) {
-                const errorText = await updateResponse.text();
-                console.error('GHL update opportunity error:', errorText);
+                console.error('GHL update opportunity error:', updateResponse.status);
                 return { success: false, error: 'Failed to update pipeline' };
             }
 
@@ -542,8 +540,7 @@ export async function updateContactPipeline(
             );
 
             if (!createResponse.ok) {
-                const errorText = await createResponse.text();
-                console.error('GHL create opportunity error:', errorText);
+                console.error('GHL create opportunity error:', createResponse.status);
                 return { success: false, error: 'Failed to update pipeline' };
             }
 
@@ -551,7 +548,7 @@ export async function updateContactPipeline(
             return { success: true, opportunityId: data.opportunity?.id };
         }
     } catch (error) {
-        console.error('GHL updateContactPipeline error:', error);
+        console.error('GHL updateContactPipeline error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to update pipeline' };
     }
 }
@@ -587,14 +584,13 @@ export async function updateContactCustomField(
         );
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('GHL update custom field error:', errorText);
+            console.error('GHL update custom field error:', response.status);
             return { success: false, error: 'Failed to update custom field' };
         }
 
         return { success: true };
     } catch (error) {
-        console.error('GHL updateContactCustomField error:', error);
+        console.error('GHL updateContactCustomField error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to update custom field' };
     }
 }
@@ -655,14 +651,14 @@ export async function getCalendars(
         );
 
         if (!response.ok) {
-            console.error('GHL get calendars error:', await response.text());
+            console.error('GHL get calendars error:', response.status);
             return [];
         }
 
         const data = await response.json();
         return data.calendars || [];
     } catch (error) {
-        console.error('GHL getCalendars error:', error);
+        console.error('GHL getCalendars error:', error instanceof Error ? error.message : 'Unknown error');
         return [];
     }
 }
@@ -699,7 +695,7 @@ export async function getCalendarFreeSlots(
         });
 
         if (!response.ok) {
-            console.error('GHL get free slots error:', await response.text());
+            console.error('GHL get free slots error:', response.status);
             return {};
         }
 
@@ -707,7 +703,7 @@ export async function getCalendarFreeSlots(
         // Response format: { "2024-01-15": [{ startTime, endTime }, ...], ... }
         return data || {};
     } catch (error) {
-        console.error('GHL getCalendarFreeSlots error:', error);
+        console.error('GHL getCalendarFreeSlots error:', error instanceof Error ? error.message : 'Unknown error');
         return {};
     }
 }
@@ -740,7 +736,7 @@ export async function getNextAvailableSlot(
 
         return null;
     } catch (error) {
-        console.error('GHL getNextAvailableSlot error:', error);
+        console.error('GHL getNextAvailableSlot error:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }
@@ -798,15 +794,14 @@ export async function createAppointment(
         );
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('GHL create appointment error:', errorText);
+            console.error('GHL create appointment error:', response.status);
             return { success: false, error: 'Failed to create appointment' };
         }
 
         const data = await response.json();
         return { success: true, appointmentId: data.id || data.appointment?.id };
     } catch (error) {
-        console.error('GHL createAppointment error:', error);
+        console.error('GHL createAppointment error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to create appointment' };
     }
 }
@@ -841,14 +836,13 @@ export async function updateAppointment(
         );
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('GHL update appointment error:', errorText);
+            console.error('GHL update appointment error:', response.status);
             return { success: false, error: 'Failed to update appointment' };
         }
 
         return { success: true };
     } catch (error) {
-        console.error('GHL updateAppointment error:', error);
+        console.error('GHL updateAppointment error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to update appointment' };
     }
 }
@@ -884,13 +878,13 @@ export async function getAppointment(
         );
 
         if (!response.ok) {
-            console.error('GHL get appointment error:', await response.text());
+            console.error('GHL get appointment error:', response.status);
             return null;
         }
 
         return await response.json();
     } catch (error) {
-        console.error('GHL getAppointment error:', error);
+        console.error('GHL getAppointment error:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }
@@ -970,7 +964,7 @@ export async function bookNextAvailableAppointment(
             startTime: nextSlot.startTime,
         };
     } catch (error) {
-        console.error('GHL bookNextAvailableAppointment error:', error);
+        console.error('GHL bookNextAvailableAppointment error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to book appointment' };
     }
 }
@@ -1053,7 +1047,7 @@ export async function upsertContact(
                     }
                 );
                 if (!updateRes.ok) {
-                    console.error('GHL update contact error:', await updateRes.text());
+                    console.error('GHL update contact error:', updateRes.status);
                     return { success: false, error: 'Failed to update contact' };
                 }
             }
@@ -1061,7 +1055,7 @@ export async function upsertContact(
 
         return { success: true, contactId: contact.id, isNew };
     } catch (error) {
-        console.error('GHL upsertContact error:', error);
+        console.error('GHL upsertContact error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to upsert contact' };
     }
 }
@@ -1108,14 +1102,13 @@ export async function updateContact(
         );
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('GHL update contact error:', errorText);
+            console.error('GHL update contact error:', response.status);
             return { success: false, error: 'Failed to update contact' };
         }
 
         return { success: true };
     } catch (error) {
-        console.error('GHL updateContact error:', error);
+        console.error('GHL updateContact error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to update contact' };
     }
 }
@@ -1144,14 +1137,13 @@ export async function triggerContactWorkflow(
         );
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('GHL trigger workflow error:', errorText);
+            console.error('GHL trigger workflow error:', response.status);
             return { success: false, error: 'Failed to trigger workflow' };
         }
 
         return { success: true };
     } catch (error) {
-        console.error('GHL triggerContactWorkflow error:', error);
+        console.error('GHL triggerContactWorkflow error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to trigger workflow' };
     }
 }
@@ -1227,7 +1219,7 @@ export async function addCallNoteToContact(
             ? { success: true }
             : { success: false, error: 'Failed to add note' };
     } catch (error) {
-        console.error('GHL addCallNoteToContact error:', error);
+        console.error('GHL addCallNoteToContact error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to add call note' };
     }
 }

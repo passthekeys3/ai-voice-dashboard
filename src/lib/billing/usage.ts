@@ -92,8 +92,8 @@ export async function getCurrentUsage(
         .single();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
-        console.error('Failed to get current usage:', error);
-        return { data: null, error: error.message };
+        console.error('Failed to get current usage:', error.code);
+        return { data: null, error: 'Failed to retrieve usage data' };
     }
 
     return {

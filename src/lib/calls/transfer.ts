@@ -99,7 +99,7 @@ export async function logTransferEvent(
                 );
             }
         } catch (err) {
-            console.error('Failed to update GHL contact after transfer:', err);
+            console.error('Failed to update GHL contact after transfer:', err instanceof Error ? err.message : 'Unknown error');
         }
     }
 
@@ -125,7 +125,7 @@ export async function logTransferEvent(
                 await updateContactTags(hubspotConfig, contact.id, ['call-transferred']);
             }
         } catch (err) {
-            console.error('Failed to update HubSpot contact after transfer:', err);
+            console.error('Failed to update HubSpot contact after transfer:', err instanceof Error ? err.message : 'Unknown error');
         }
     }
 }

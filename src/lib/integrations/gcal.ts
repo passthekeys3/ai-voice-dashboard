@@ -81,7 +81,7 @@ async function refreshAccessToken(
             expiresIn: data.expires_in,
         };
     } catch (error) {
-        console.error('Google Calendar token refresh error:', error);
+        console.error('Google Calendar token refresh error:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }
@@ -128,7 +128,7 @@ export async function getValidAccessToken(
                 expiresAt: Date.now() + result.expiresIn * 1000,
             });
         } catch (error) {
-            console.error('Failed to persist refreshed Google Calendar tokens:', error);
+            console.error('Failed to persist refreshed Google Calendar tokens:', error instanceof Error ? error.message : 'Unknown error');
         }
     }
 
@@ -162,7 +162,7 @@ export async function listCalendars(
             primary: item.primary as boolean | undefined,
         }));
     } catch (error) {
-        console.error('GCal listCalendars error:', error);
+        console.error('GCal listCalendars error:', error instanceof Error ? error.message : 'Unknown error');
         return [];
     }
 }
@@ -209,7 +209,7 @@ export async function getFreeBusy(
 
         return result;
     } catch (error) {
-        console.error('GCal getFreeBusy error:', error);
+        console.error('GCal getFreeBusy error:', error instanceof Error ? error.message : 'Unknown error');
         return {};
     }
 }
@@ -356,7 +356,7 @@ export async function createEvent(
             htmlLink: event.htmlLink,
         };
     } catch (error) {
-        console.error('GCal createEvent error:', error);
+        console.error('GCal createEvent error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to create calendar event' };
     }
 }
@@ -387,7 +387,7 @@ export async function cancelEvent(
 
         return { success: true };
     } catch (error) {
-        console.error('GCal cancelEvent error:', error);
+        console.error('GCal cancelEvent error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to cancel calendar event' };
     }
 }
@@ -415,7 +415,7 @@ export async function getEvent(
 
         return await response.json();
     } catch (error) {
-        console.error('GCal getEvent error:', error);
+        console.error('GCal getEvent error:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }
@@ -478,7 +478,7 @@ export async function bookEventWithAvailabilityCheck(
             htmlLink: result.htmlLink,
         };
     } catch (error) {
-        console.error('GCal bookEventWithAvailabilityCheck error:', error);
+        console.error('GCal bookEventWithAvailabilityCheck error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to book calendar event' };
     }
 }

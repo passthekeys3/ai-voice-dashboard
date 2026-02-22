@@ -93,7 +93,7 @@ export async function getAgencyFromDomain(
         // No agency-specific domain found
         return null;
     } catch (error) {
-        console.error('Error fetching agency from domain:', error);
+        console.error('Error fetching agency from domain:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }

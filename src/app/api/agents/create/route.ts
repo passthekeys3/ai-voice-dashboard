@@ -76,7 +76,6 @@ export async function POST(request: NextRequest) {
         });
 
         if (!llmResponse.ok) {
-            const errorData = await llmResponse.text();
             console.error('Retell create LLM error:', llmResponse.status);
             return NextResponse.json({
                 error: 'Failed to create agent on provider'
@@ -106,7 +105,6 @@ export async function POST(request: NextRequest) {
         });
 
         if (!retellResponse.ok) {
-            const errorData = await retellResponse.text();
             console.error('Retell create agent error:', retellResponse.status);
             return NextResponse.json({
                 error: 'Failed to create agent on provider'
@@ -145,7 +143,7 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (dbError) {
-            console.error('Error saving agent to DB:', dbError);
+            console.error('Error saving agent to DB:', dbError.code);
             return NextResponse.json({ error: 'Failed to save agent' }, { status: 500 });
         }
 

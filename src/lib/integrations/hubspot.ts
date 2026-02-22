@@ -67,7 +67,7 @@ export async function searchContactByPhone(
         );
 
         if (!response.ok) {
-            console.error('HubSpot search contact error:', await response.text());
+            console.error('HubSpot search contact error:', response.status);
             return null;
         }
 
@@ -79,7 +79,7 @@ export async function searchContactByPhone(
 
         return null;
     } catch (error) {
-        console.error('HubSpot searchContactByPhone error:', error);
+        console.error('HubSpot searchContactByPhone error:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }
@@ -115,7 +115,7 @@ export async function searchContactByEmail(
         );
 
         if (!response.ok) {
-            console.error('HubSpot search by email error:', await response.text());
+            console.error('HubSpot search by email error:', response.status);
             return null;
         }
 
@@ -127,7 +127,7 @@ export async function searchContactByEmail(
 
         return null;
     } catch (error) {
-        console.error('HubSpot searchContactByEmail error:', error);
+        console.error('HubSpot searchContactByEmail error:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }
@@ -167,7 +167,7 @@ export async function createContact(
         );
 
         if (!response.ok) {
-            console.error('HubSpot create contact error:', await response.text());
+            console.error('HubSpot create contact error:', response.status);
             return null;
         }
 
@@ -177,7 +177,7 @@ export async function createContact(
             properties: data.properties,
         };
     } catch (error) {
-        console.error('HubSpot createContact error:', error);
+        console.error('HubSpot createContact error:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }
@@ -204,14 +204,13 @@ export async function updateContact(
         );
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('HubSpot update contact error:', errorText);
+            console.error('HubSpot update contact error:', response.status);
             return { success: false, error: 'Failed to update HubSpot contact' };
         }
 
         return { success: true };
     } catch (error) {
-        console.error('HubSpot updateContact error:', error);
+        console.error('HubSpot updateContact error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to update HubSpot contact' };
     }
 }
@@ -265,15 +264,14 @@ export async function createCallEngagement(
         );
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('HubSpot create call error:', errorText);
+            console.error('HubSpot create call error:', response.status);
             return { success: false, error: 'Failed to create call engagement' };
         }
 
         const data = await response.json();
         return { success: true, callId: data.id };
     } catch (error) {
-        console.error('HubSpot createCallEngagement error:', error);
+        console.error('HubSpot createCallEngagement error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to create call engagement' };
     }
 }
@@ -374,7 +372,7 @@ export async function logCallToHubSpot(
 
         return { success: true, contactId: contact.id };
     } catch (error) {
-        console.error('logCallToHubSpot error:', error);
+        console.error('logCallToHubSpot error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to log call to HubSpot' };
     }
 }
@@ -405,7 +403,7 @@ export async function refreshAccessToken(
         );
 
         if (!response.ok) {
-            console.error('HubSpot refresh token error:', await response.text());
+            console.error('HubSpot refresh token error:', response.status);
             return null;
         }
 
@@ -416,7 +414,7 @@ export async function refreshAccessToken(
             expiresIn: data.expires_in,
         };
     } catch (error) {
-        console.error('HubSpot refreshAccessToken error:', error);
+        console.error('HubSpot refreshAccessToken error:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }
@@ -512,7 +510,7 @@ export async function upsertContact(
 
         return { success: true, contactId: contact.id, isNew };
     } catch (error) {
-        console.error('HubSpot upsertContact error:', error);
+        console.error('HubSpot upsertContact error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to upsert HubSpot contact' };
     }
 }
@@ -552,15 +550,14 @@ export async function addNoteToContact(
         );
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('HubSpot add note error:', errorText);
+            console.error('HubSpot add note error:', response.status);
             return { success: false, error: 'Failed to add note to contact' };
         }
 
         const data = await response.json();
         return { success: true, noteId: data.id };
     } catch (error) {
-        console.error('HubSpot addNoteToContact error:', error);
+        console.error('HubSpot addNoteToContact error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to add note to contact' };
     }
 }
@@ -633,7 +630,7 @@ export async function addCallNoteToContact(
 
         return await addNoteToContact(config, contactId, lines.join('\n'));
     } catch (error) {
-        console.error('HubSpot addCallNoteToContact error:', error);
+        console.error('HubSpot addCallNoteToContact error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to add call note' };
     }
 }
@@ -704,7 +701,7 @@ export async function getPipelines(
         );
 
         if (!response.ok) {
-            console.error('HubSpot get pipelines error:', await response.text());
+            console.error('HubSpot get pipelines error:', response.status);
             return [];
         }
 
@@ -715,7 +712,7 @@ export async function getPipelines(
             stages: (p.stages || []).map((s: { id: string; label: string }) => ({ id: s.id, label: s.label })),
         }));
     } catch (error) {
-        console.error('HubSpot getPipelines error:', error);
+        console.error('HubSpot getPipelines error:', error instanceof Error ? error.message : 'Unknown error');
         return [];
     }
 }
@@ -781,7 +778,7 @@ export async function updateContactPipeline(
             );
 
             if (!updateResponse.ok) {
-                console.error('HubSpot update deal error:', await updateResponse.text());
+                console.error('HubSpot update deal error:', updateResponse.status);
                 return { success: false, error: 'Failed to update pipeline' };
             }
             return { success: true, dealId: existingDealId };
@@ -814,14 +811,14 @@ export async function updateContactPipeline(
         );
 
         if (!createResponse.ok) {
-            console.error('HubSpot create deal error:', await createResponse.text());
+            console.error('HubSpot create deal error:', createResponse.status);
             return { success: false, error: 'Failed to update pipeline' };
         }
 
         const dealData = await createResponse.json();
         return { success: true, dealId: dealData.id };
     } catch (error) {
-        console.error('HubSpot updateContactPipeline error:', error);
+        console.error('HubSpot updateContactPipeline error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to update pipeline' };
     }
 }
@@ -874,15 +871,14 @@ export async function createMeeting(
         );
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('HubSpot create meeting error:', errorText);
+            console.error('HubSpot create meeting error:', response.status);
             return { success: false, error: 'Failed to create meeting' };
         }
 
         const data = await response.json();
         return { success: true, meetingId: data.id };
     } catch (error) {
-        console.error('HubSpot createMeeting error:', error);
+        console.error('HubSpot createMeeting error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to create meeting' };
     }
 }
@@ -912,14 +908,13 @@ export async function cancelMeeting(
         );
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('HubSpot cancel meeting error:', errorText);
+            console.error('HubSpot cancel meeting error:', response.status);
             return { success: false, error: 'Failed to cancel meeting' };
         }
 
         return { success: true };
     } catch (error) {
-        console.error('HubSpot cancelMeeting error:', error);
+        console.error('HubSpot cancelMeeting error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to cancel meeting' };
     }
 }
@@ -969,7 +964,7 @@ export async function getMeetingsByContact(
         const batchData = await batchResponse.json();
         return (batchData.results || []) as HubSpotMeeting[];
     } catch (error) {
-        console.error('HubSpot getMeetingsByContact error:', error);
+        console.error('HubSpot getMeetingsByContact error:', error instanceof Error ? error.message : 'Unknown error');
         return [];
     }
 }
@@ -1019,7 +1014,7 @@ export async function bookNextAvailableMeeting(
             contactId: upsertResult.contactId,
         };
     } catch (error) {
-        console.error('HubSpot bookNextAvailableMeeting error:', error);
+        console.error('HubSpot bookNextAvailableMeeting error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to book meeting' };
     }
 }
@@ -1053,14 +1048,13 @@ export async function triggerWorkflow(
         );
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('HubSpot trigger workflow error:', errorText);
+            console.error('HubSpot trigger workflow error:', response.status);
             return { success: false, error: 'Failed to trigger workflow' };
         }
 
         return { success: true };
     } catch (error) {
-        console.error('HubSpot triggerWorkflow error:', error);
+        console.error('HubSpot triggerWorkflow error:', error instanceof Error ? error.message : 'Unknown error');
         return { success: false, error: 'Failed to trigger workflow' };
     }
 }
@@ -1126,7 +1120,7 @@ export async function getValidAccessToken(
 
             return refreshed.accessToken;
         } catch (error) {
-            console.error('HubSpot token refresh error:', error);
+            console.error('HubSpot token refresh error:', error instanceof Error ? error.message : 'Unknown error');
             return null;
         } finally {
             _refreshPromise = null;

@@ -61,12 +61,13 @@ export function useRealtimeCalls({
   const fetchActiveCalls = useCallback(async () => {
     try {
       const response = await fetch('/api/calls/active');
+      if (!response.ok) return;
       const result = await response.json();
       if (result.data) {
         setActiveCalls(result.data);
       }
     } catch (err) {
-      console.error('Failed to fetch active calls:', err);
+      console.error('Failed to fetch active calls');
     }
   }, []);
 
@@ -79,12 +80,13 @@ export function useRealtimeCalls({
     const doInitialFetch = async () => {
       try {
         const response = await fetch('/api/calls/active');
+        if (!response.ok) return;
         const result = await response.json();
         if (result.data) {
           setActiveCalls(result.data);
         }
       } catch (err) {
-        console.error('Failed to fetch active calls:', err);
+        console.error('Failed to fetch active calls');
       }
     };
     doInitialFetch();
@@ -286,7 +288,7 @@ export function useRealtimeLiveCall({
       });
       setError(null);
     } catch (err) {
-      console.error('Failed to fetch call:', err);
+      console.error('Failed to fetch call details');
       setError('Failed to load call data');
     } finally {
       setLoading(false);
@@ -329,7 +331,7 @@ export function useRealtimeLiveCall({
         });
         setError(null);
       } catch (err) {
-        console.error('Failed to fetch call:', err);
+        console.error('Failed to fetch call details');
         setError('Failed to load call data');
       } finally {
         setLoading(false);
