@@ -15,7 +15,11 @@ export async function GET(_request: NextRequest) {
 
         const { data: phoneNumbers, error } = await supabase
             .from('phone_numbers')
-            .select('*, agent:agents(id, name)')
+            .select(`
+                *,
+                inbound_agent:agents!phone_numbers_inbound_agent_id_fkey(id, name),
+                outbound_agent:agents!phone_numbers_outbound_agent_id_fkey(id, name)
+            `)
             .eq('agency_id', user.agency.id)
             .eq('status', 'active')
             .order('created_at', { ascending: false });
