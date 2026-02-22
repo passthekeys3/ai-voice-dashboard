@@ -129,20 +129,30 @@ export async function POST(_request: NextRequest) {
                         ? agentMap.get(vapiNumber.assistantId)
                         : null;
 
-                    // VAPI uses 'number' field, normalize to E.164
                     const phoneNumber = vapiNumber.number;
+                    if (!phoneNumber) continue; // Skip numbers without a phone number
 
-                    const { data: existing } = await supabase
+                    // Check by external_id first (unique constraint), then by phone_number
+                    const { data: existingById } = await supabase
+                        .from('phone_numbers')
+                        .select('id')
+                        .eq('external_id', vapiNumber.id)
+                        .eq('agency_id', user.agency.id)
+                        .maybeSingle();
+
+                    const existing = existingById || (await supabase
                         .from('phone_numbers')
                         .select('id')
                         .eq('phone_number', phoneNumber)
                         .eq('agency_id', user.agency.id)
-                        .maybeSingle();
+                        .maybeSingle()).data;
 
                     if (existing) {
                         await supabase
                             .from('phone_numbers')
                             .update({
+                                phone_number: phoneNumber,
+                                external_id: vapiNumber.id,
                                 inbound_agent_id: inboundAgentId,
                                 agent_id: inboundAgentId,
                                 updated_at: new Date().toISOString(),
@@ -163,7 +173,7 @@ export async function POST(_request: NextRequest) {
                                 purchased_at: new Date().toISOString(),
                             });
                         if (insertErr) {
-                            console.error('Vapi phone insert error:', insertErr.code, 'for number:', phoneNumber);
+                            console.error('Vapi phone insert error:', insertErr.code);
                         } else {
                             synced++;
                         }
