@@ -131,10 +131,15 @@ export async function POST(_request: NextRequest) {
                         : null;
 
                     const phoneNumber = vapiNumber.number;
+                    const rawNumber = vapiNumber as unknown as Record<string, unknown>;
                     const debugEntry: Record<string, unknown> = {
                         vapiId: vapiNumber.id,
                         number: phoneNumber,
                         keys: Object.keys(vapiNumber),
+                        name: rawNumber.name,
+                        provider: rawNumber.provider,
+                        status: rawNumber.status,
+                        sipUri: rawNumber.sipUri,
                     };
 
                     if (!phoneNumber) {
