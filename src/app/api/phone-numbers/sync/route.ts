@@ -42,6 +42,7 @@ export async function POST(_request: NextRequest) {
         let synced = 0;
         let updated = 0;
         let total = 0;
+        const _debug: Record<string, unknown>[] = [];
 
         // Sync Retell phone numbers
         if (agency.retell_api_key) {
@@ -129,13 +130,16 @@ export async function POST(_request: NextRequest) {
                         ? agentMap.get(vapiNumber.assistantId)
                         : null;
 
-                    // Debug: log Vapi phone number fields to diagnose sync issues
-                    const vapiKeys = Object.keys(vapiNumber);
-                    console.log('Vapi phone number keys:', vapiKeys.join(','), 'number:', vapiNumber.number, 'id:', vapiNumber.id);
-
                     const phoneNumber = vapiNumber.number;
+                    const debugEntry: Record<string, unknown> = {
+                        vapiId: vapiNumber.id,
+                        number: phoneNumber,
+                        keys: Object.keys(vapiNumber),
+                    };
+
                     if (!phoneNumber) {
-                        console.warn('Vapi phone number missing number field, skipping. id:', vapiNumber.id);
+                        debugEntry.skipped = 'missing number';
+                        _debug.push(debugEntry);
                         continue;
                     }
 
@@ -154,6 +158,9 @@ export async function POST(_request: NextRequest) {
                         .eq('agency_id', user.agency.id)
                         .maybeSingle()).data;
 
+                    debugEntry.existingById = existingById?.id || null;
+                    debugEntry.existing = existing?.id || null;
+
                     if (existing) {
                         await supabase
                             .from('phone_numbers')
@@ -165,6 +172,7 @@ export async function POST(_request: NextRequest) {
                                 updated_at: new Date().toISOString(),
                             })
                             .eq('id', existing.id);
+                        debugEntry.action = 'updated';
                         updated++;
                     } else {
                         const { error: insertErr } = await supabase
@@ -180,11 +188,14 @@ export async function POST(_request: NextRequest) {
                                 purchased_at: new Date().toISOString(),
                             });
                         if (insertErr) {
-                            console.error('Vapi phone insert error:', insertErr.code);
+                            debugEntry.action = 'insert_failed';
+                            debugEntry.errorCode = insertErr.code;
                         } else {
+                            debugEntry.action = 'inserted';
                             synced++;
                         }
                     }
+                    _debug.push(debugEntry);
                 }
             } catch (error) {
                 console.error('Error syncing VAPI phone numbers:', error instanceof Error ? error.message : 'Unknown error');
@@ -250,6 +261,7 @@ export async function POST(_request: NextRequest) {
             synced,
             updated,
             total,
+            _debug,
         });
     } catch (error) {
         console.error('Error syncing phone numbers:', error instanceof Error ? error.message : 'Unknown error');
