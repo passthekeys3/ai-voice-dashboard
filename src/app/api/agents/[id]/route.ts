@@ -74,6 +74,12 @@ export async function PATCH(
                 if (blockedHosts.includes(hostname)) {
                     return NextResponse.json({ error: 'Webhook URL cannot use localhost or loopback addresses' }, { status: 400 });
                 }
+                // Block IPv6 addresses (brackets indicate IPv6 literal in URLs)
+                // This prevents bypasses via IPv4-mapped IPv6 (::ffff:10.0.0.1),
+                // link-local (fe80::), and unique-local (fc00::/fd00::) addresses
+                if (hostname.startsWith('[') || hostname.includes(':')) {
+                    return NextResponse.json({ error: 'Webhook URL cannot use IPv6 addresses' }, { status: 400 });
+                }
                 // Block private IP ranges (basic check for IPv4)
                 const ipv4Match = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
                 if (ipv4Match) {

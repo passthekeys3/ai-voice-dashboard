@@ -110,7 +110,7 @@ export const POST = withErrorHandling(async (
         });
 
         if (authError) {
-            console.error('Auth error:', authError.message);
+            console.error('Auth error:', authError.status);
             return badRequest('Failed to create user account');
         }
 
@@ -126,7 +126,7 @@ export const POST = withErrorHandling(async (
         });
 
         if (resetError) {
-            console.error('Failed to send invite email:', resetError.message);
+            console.error('Failed to send invite email:', resetError.status || 'Unknown error');
             inviteEmailFailed = true;
         }
     }

@@ -88,9 +88,9 @@ export async function POST(request: NextRequest) {
 
                             if (!agentUpsertError) {
                                 results.total_agents += upsertedAgents?.length || agentsToUpsert.length;
-                                console.log(`[CRON SYNC] Agency ${agency.name}: upserted ${agentsToUpsert.length} agents from ${provider}`);
+                                console.log(`[CRON SYNC] Agency ${agency.id}: upserted ${agentsToUpsert.length} agents from ${provider}`);
                             } else {
-                                console.error(`[CRON SYNC] Agent upsert error for ${agency.name}:`, agentUpsertError.code);
+                                console.error(`[CRON SYNC] Agent upsert error for ${agency.id}:`, agentUpsertError.code);
                             }
                         }
 
@@ -111,10 +111,10 @@ export async function POST(request: NextRequest) {
                                     }
                                 }
                                 if (patchedCount > 0) {
-                                    console.log(`[CRON SYNC] Agency ${agency.name}: patched & published webhook config on ${patchedCount} agents (events=${REQUIRED_WEBHOOK_EVENTS.join(',')})`);
+                                    console.log(`[CRON SYNC] Agency ${agency.id}: patched & published webhook config on ${patchedCount} agents (events=${REQUIRED_WEBHOOK_EVENTS.join(',')})`);
                                 }
                             } catch (err) {
-                                console.error(`[CRON SYNC] Failed to ensure webhook configs for agency ${agency.name}:`, err instanceof Error ? err.message : 'Unknown error');
+                                console.error(`[CRON SYNC] Failed to ensure webhook configs for agency ${agency.id}:`, err instanceof Error ? err.message : 'Unknown error');
                             }
                         }
 
@@ -141,10 +141,10 @@ export async function POST(request: NextRequest) {
                                     }
                                 }
                                 if (patchedCount > 0) {
-                                    console.log(`[CRON SYNC] Agency ${agency.name}: patched serverUrl on ${patchedCount} Vapi assistants`);
+                                    console.log(`[CRON SYNC] Agency ${agency.id}: patched serverUrl on ${patchedCount} Vapi assistants`);
                                 }
                             } catch (err) {
-                                console.error(`[CRON SYNC] Failed to ensure Vapi serverUrl for agency ${agency.name}:`, err instanceof Error ? err.message : 'Unknown error');
+                                console.error(`[CRON SYNC] Failed to ensure Vapi serverUrl for agency ${agency.id}:`, err instanceof Error ? err.message : 'Unknown error');
                             }
                         }
 
@@ -202,9 +202,9 @@ export async function POST(request: NextRequest) {
 
                                         if (!phoneUpsertError) {
                                             results.total_phone_numbers += upsertedPhones?.length || phonesToUpsert.length;
-                                            console.log(`[CRON SYNC] Agency ${agency.name}: upserted ${phonesToUpsert.length} phone numbers`);
+                                            console.log(`[CRON SYNC] Agency ${agency.id}: upserted ${phonesToUpsert.length} phone numbers`);
                                         } else {
-                                            console.error(`[CRON SYNC] Phone upsert error for ${agency.name}:`, phoneUpsertError.code);
+                                            console.error(`[CRON SYNC] Phone upsert error for ${agency.id}:`, phoneUpsertError.code);
                                         }
                                     }
                                 }
@@ -251,9 +251,9 @@ export async function POST(request: NextRequest) {
 
                                     if (!phoneUpsertError) {
                                         results.total_phone_numbers += upsertedPhones?.length || phonesToUpsert.length;
-                                        console.log(`[CRON SYNC] Agency ${agency.name}: upserted ${phonesToUpsert.length} Vapi phone numbers`);
+                                        console.log(`[CRON SYNC] Agency ${agency.id}: upserted ${phonesToUpsert.length} Vapi phone numbers`);
                                     } else {
-                                        console.error(`[CRON SYNC] Vapi phone upsert error for ${agency.name}:`, phoneUpsertError.code);
+                                        console.error(`[CRON SYNC] Vapi phone upsert error for ${agency.id}:`, phoneUpsertError.code);
                                     }
                                 }
                             } catch (phoneErr) {
@@ -299,9 +299,9 @@ export async function POST(request: NextRequest) {
 
                                     if (!phoneUpsertError) {
                                         results.total_phone_numbers += upsertedPhones?.length || phonesToUpsert.length;
-                                        console.log(`[CRON SYNC] Agency ${agency.name}: upserted ${phonesToUpsert.length} Bland phone numbers`);
+                                        console.log(`[CRON SYNC] Agency ${agency.id}: upserted ${phonesToUpsert.length} Bland phone numbers`);
                                     } else {
-                                        console.error(`[CRON SYNC] Bland phone upsert error for ${agency.name}:`, phoneUpsertError.code);
+                                        console.error(`[CRON SYNC] Bland phone upsert error for ${agency.id}:`, phoneUpsertError.code);
                                     }
                                 }
                             } catch (phoneErr) {
@@ -310,14 +310,14 @@ export async function POST(request: NextRequest) {
                         }
                     } catch (providerErr) {
                         console.error(`Provider ${provider} sync error:`, providerErr instanceof Error ? providerErr.message : 'Unknown error');
-                        results.errors.push(`${agency.name}: ${provider} sync failed`);
+                        results.errors.push(`${agency.id}: ${provider} sync failed`);
                     }
                 }
 
                 results.agencies_synced++;
             } catch (agencyErr) {
                 console.error(`Agency ${agency.id} sync error:`, agencyErr instanceof Error ? agencyErr.message : 'Unknown error');
-                results.errors.push(`Agency ${agency.name} sync failed`);
+                results.errors.push(`Agency ${agency.id} sync failed`);
             }
         }
 

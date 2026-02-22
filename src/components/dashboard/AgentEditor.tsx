@@ -261,7 +261,6 @@ export function AgentEditor({
                     <AlertDescription className="text-yellow-700 dark:text-yellow-300">
                         Some features are not yet available for VAPI agents:
                         <ul className="list-disc list-inside mt-2 space-y-1">
-                            <li>A/B experiment winner promotion</li>
                             <li>Voice & language selection from this dashboard</li>
                             <li>Knowledge base management</li>
                         </ul>

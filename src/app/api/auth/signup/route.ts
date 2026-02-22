@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (authError) {
-            console.error('Signup auth error:', authError.message);
+            console.error('Signup auth error:', authError.status);
             // Surface duplicate email errors clearly
             if (authError.message?.includes('already been registered') || authError.message?.includes('already exists')) {
                 return NextResponse.json({ error: 'An account with this email already exists' }, { status: 400 });

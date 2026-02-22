@@ -82,7 +82,7 @@ export function TestCall({ agentId, agentName }: TestCallProps) {
                 throw new Error('No access token received from server');
             }
 
-            console.log('[TestCall] Got access token, call_id:', callId);
+            console.log('[TestCall] Call started, call_id:', callId);
 
             const client = retellClientRef.current;
             if (!client) {

@@ -100,7 +100,7 @@ export const POST = withErrorHandling(async (
             return badRequest('Vapi API key not configured');
         }
 
-        const vapiResponse = await fetch(`https://api.vapi.ai/call/${callId}`, {
+        const vapiResponse = await fetch(`https://api.vapi.ai/call/${encodeURIComponent(callId)}`, {
             headers: { 'Authorization': `Bearer ${vapiKey}` },
         });
 
