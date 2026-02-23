@@ -54,8 +54,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 experiment_id: experimentId,
                 name,
                 prompt,
-                traffic_weight: traffic_weight || 50,
-                is_control: is_control || false,
+                traffic_weight: traffic_weight ?? 50,
+                is_control: !!is_control,
             })
             .select()
             .single();
@@ -92,6 +92,22 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Variants array is required' }, { status: 400 });
         }
 
+        // Validate individual variant fields
+        for (const variant of variants) {
+            if (variant.name !== undefined && typeof variant.name !== 'string') {
+                return NextResponse.json({ error: 'Variant name must be a string' }, { status: 400 });
+            }
+            if (variant.prompt !== undefined && typeof variant.prompt !== 'string') {
+                return NextResponse.json({ error: 'Variant prompt must be a string' }, { status: 400 });
+            }
+            if (variant.prompt && variant.prompt.length > 50000) {
+                return NextResponse.json({ error: 'Variant prompt is too long' }, { status: 400 });
+            }
+            if (variant.traffic_weight !== undefined && (typeof variant.traffic_weight !== 'number' || variant.traffic_weight < 0 || variant.traffic_weight > 100)) {
+                return NextResponse.json({ error: 'Traffic weight must be 0-100' }, { status: 400 });
+            }
+        }
+
         const supabase = await createClient();
 
         // Verify experiment belongs to this agency
@@ -123,23 +139,25 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // Update each variant
+        const errors: string[] = [];
         for (const variant of variants) {
             if (variant.id) {
-                // Update existing
-                await supabase
+                const updateFields: Record<string, unknown> = {
+                    updated_at: new Date().toISOString(),
+                };
+                if (variant.name !== undefined) updateFields.name = variant.name;
+                if (variant.prompt !== undefined) updateFields.prompt = variant.prompt;
+                if (variant.traffic_weight !== undefined) updateFields.traffic_weight = variant.traffic_weight;
+                if (variant.is_control !== undefined) updateFields.is_control = variant.is_control;
+
+                const { error: updateErr } = await supabase
                     .from('experiment_variants')
-                    .update({
-                        name: variant.name,
-                        prompt: variant.prompt,
-                        traffic_weight: variant.traffic_weight,
-                        is_control: variant.is_control,
-                        updated_at: new Date().toISOString(),
-                    })
+                    .update(updateFields)
                     .eq('id', variant.id)
                     .eq('experiment_id', experimentId);
+                if (updateErr) errors.push(updateErr.code);
             } else {
-                // Create new
-                await supabase
+                const { error: insertErr } = await supabase
                     .from('experiment_variants')
                     .insert({
                         experiment_id: experimentId,
@@ -148,7 +166,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                         traffic_weight: variant.traffic_weight,
                         is_control: variant.is_control,
                     });
+                if (insertErr) errors.push(insertErr.code);
             }
+        }
+
+        if (errors.length > 0) {
+            console.error('Variant update errors:', errors);
+            return NextResponse.json({ error: 'Some variants failed to update' }, { status: 500 });
         }
 
         // Fetch updated variants

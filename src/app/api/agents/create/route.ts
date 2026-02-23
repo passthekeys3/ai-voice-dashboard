@@ -32,6 +32,16 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Agent name is required' }, { status: 400 });
         }
 
+        if (name.length > 200) {
+            return NextResponse.json({ error: 'Agent name is too long (max 200 characters)' }, { status: 400 });
+        }
+
+        // Validate provider if explicitly requested
+        const VALID_PROVIDERS = ['retell', 'vapi', 'bland'];
+        if (requestedProvider && !VALID_PROVIDERS.includes(requestedProvider)) {
+            return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
+        }
+
         if (system_prompt && system_prompt.length > 50000) {
             return NextResponse.json({ error: 'System prompt is too long' }, { status: 400 });
         }

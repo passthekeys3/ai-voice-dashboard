@@ -134,7 +134,7 @@ export function AgentEditor({
     );
     const [promptFetchFailed, setPromptFetchFailed] = useState(false);
     const [responsiveness, setResponsiveness] = useState(
-        (config as { responsiveness?: number }).responsiveness || 0.8
+        (config as { responsiveness?: number }).responsiveness ?? 0.8
     );
 
     // Dynamic voice list (fetched from API for Retell, from known lists for Vapi)
@@ -219,7 +219,7 @@ export function AgentEditor({
                         if (data.data.voice_id) setVoiceId(data.data.voice_id);
                         if (data.data.voice_provider) setVoiceProvider(data.data.voice_provider);
                         if (data.data.language) setLanguage(data.data.language);
-                        if (data.data.responsiveness) setResponsiveness(data.data.responsiveness);
+                        if (data.data.responsiveness !== undefined) setResponsiveness(data.data.responsiveness);
                         setPromptFetchFailed(false);
                     }
                 } else {

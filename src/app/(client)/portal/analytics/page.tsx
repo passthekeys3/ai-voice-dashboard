@@ -30,7 +30,7 @@ export default async function ClientAnalyticsPage({ searchParams }: Props) {
 
     const params = await searchParams;
     const daysParam = params.days || '30';
-    const days = daysParam === 'all' ? null : parseInt(daysParam);
+    const days = daysParam === 'all' ? null : (parseInt(daysParam) || 30);
 
     const supabase = await createClient();
 

@@ -29,8 +29,9 @@ export default async function ClientCallDetailPage({
 
     const { data: call, error } = await supabase
         .from('calls')
-        .select('*, agents(name, provider, agency_id)')
+        .select('*, agents!inner(name, provider, agency_id)')
         .eq('id', id)
+        .eq('agents.agency_id', user.agency.id)
         .single();
 
     if (error || !call) {
@@ -105,12 +106,12 @@ export default async function ClientCallDetailPage({
                                 </div>
                                 <div>
                                     <p className="text-sm text-muted-foreground">Duration</p>
-                                    <p className="font-medium">{formatDuration(call.duration_seconds)}</p>
+                                    <p className="font-medium">{formatDuration(call.duration_seconds || 0)}</p>
                                 </div>
                                 {showCosts && (
                                     <div>
                                         <p className="text-sm text-muted-foreground">Cost</p>
-                                        <p className="font-medium">${(call.cost_cents / 100).toFixed(2)}</p>
+                                        <p className="font-medium">${((call.cost_cents || 0) / 100).toFixed(2)}</p>
                                     </div>
                                 )}
                                 <div>

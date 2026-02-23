@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getRetellAgent, updateRetellLLM } from '@/lib/providers/retell';
-import { updateVapiAssistant } from '@/lib/providers/vapi';
+import { updateVapiAssistant, getVapiAssistant, usesVapiMessagesFormat } from '@/lib/providers/vapi';
+import type { VapiAssistant } from '@/lib/providers/vapi';
+import { updateBlandPathway } from '@/lib/providers/bland';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 import type { VoiceProvider } from '@/types';
 
@@ -94,13 +96,26 @@ export async function POST(
                 general_prompt: winnerVariant.prompt,
             });
         } else if (agent.provider === 'vapi') {
-            // Update the assistant's model.systemPrompt via PATCH
-            await updateVapiAssistant(apiKey, agent.external_id, {
-                model: {
-                    provider: 'openai',
-                    model: 'gpt-4o',
-                    systemPrompt: winnerVariant.prompt,
-                },
+            const vapiAssistant = await getVapiAssistant(apiKey, agent.external_id);
+            const useMessages = usesVapiMessagesFormat(vapiAssistant.model);
+            const modelUpdate: Record<string, unknown> = {
+                provider: vapiAssistant.model?.provider || 'openai',
+                model: vapiAssistant.model?.model || 'gpt-4o',
+                ...(vapiAssistant.model?.temperature !== undefined ? { temperature: vapiAssistant.model.temperature } : {}),
+            };
+            if (useMessages) {
+                const existingMessages = vapiAssistant.model?.messages || [];
+                const hasSystemMsg = existingMessages.some(m => m.role === 'system');
+                modelUpdate.messages = hasSystemMsg
+                    ? existingMessages.map(m => m.role === 'system' ? { ...m, content: winnerVariant.prompt } : m)
+                    : [{ role: 'system', content: winnerVariant.prompt }, ...existingMessages];
+            } else {
+                modelUpdate.systemPrompt = winnerVariant.prompt;
+            }
+            await updateVapiAssistant(apiKey, agent.external_id, { model: modelUpdate as VapiAssistant['model'] });
+        } else if (agent.provider === 'bland') {
+            await updateBlandPathway(apiKey, agent.external_id, {
+                description: winnerVariant.prompt,
             });
         }
 

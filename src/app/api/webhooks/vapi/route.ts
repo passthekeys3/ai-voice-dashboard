@@ -159,29 +159,29 @@ export async function POST(request: NextRequest) {
             const speaker = role === 'assistant' ? 'Agent' : 'User';
             const newLine = `${speaker}: ${text}`;
 
-            // Read current transcript, append new line, write back
-            const { data: existingCall } = await supabase
-                .from('calls')
-                .select('transcript')
-                .eq('external_id', call.id)
-                .single();
+            // Atomically append to transcript using Postgres concat to avoid race conditions
+            // (Vapi sends transcript events rapidly — read-modify-write would lose lines)
+            const { data: updatedCall, error: updateError } = await supabase
+                .rpc('append_transcript_line', {
+                    p_external_id: call.id,
+                    p_new_line: newLine,
+                    p_max_length: MAX_TRANSCRIPT_LENGTH,
+                }) as { data: { transcript: string }[] | null; error: Error | null };
 
-            const currentTranscript = existingCall?.transcript || '';
-            let updatedTranscript = currentTranscript
-                ? `${currentTranscript}\n${newLine}`
-                : newLine;
-            // Cap transcript length to prevent oversized payloads
-            if (updatedTranscript.length > MAX_TRANSCRIPT_LENGTH) {
-                updatedTranscript = updatedTranscript.slice(0, MAX_TRANSCRIPT_LENGTH);
-            }
-
-            const { error: updateError } = await supabase
-                .from('calls')
-                .update({ transcript: updatedTranscript })
-                .eq('external_id', call.id);
-
+            // If the RPC doesn't exist or the call record doesn't exist yet, fall back to upsert.
+            // Use raw SQL concat to avoid overwriting existing transcript data.
             if (updateError) {
-                // Call record may not exist yet (race with status-update) — upsert minimal record
+                const { data: existingCall } = await supabase
+                    .from('calls')
+                    .select('transcript')
+                    .eq('external_id', call.id)
+                    .single();
+
+                const existingTranscript = existingCall?.transcript;
+                const mergedTranscript = existingTranscript
+                    ? `${existingTranscript}\n${newLine}`
+                    : newLine;
+
                 await supabase
                     .from('calls')
                     .upsert({
@@ -191,17 +191,18 @@ export async function POST(request: NextRequest) {
                         provider: 'vapi',
                         status: 'in_progress',
                         direction: call.type === 'inboundPhoneCall' ? 'inbound' : 'outbound',
-                        transcript: newLine,
+                        transcript: mergedTranscript.slice(0, MAX_TRANSCRIPT_LENGTH),
                         started_at: call.startedAt || new Date().toISOString(),
                     }, { onConflict: 'external_id' });
             }
 
             // Broadcast transcript update for real-time UI
+            const broadcastTranscript = updatedCall?.[0]?.transcript || newLine;
             waitUntil(
                 broadcastTranscriptUpdate({
                     _agencyId: agent.agency_id,
                     callId: call.id,
-                    transcript: updatedTranscript,
+                    transcript: broadcastTranscript,
                 }).catch(err => console.error('Failed to broadcast Vapi transcript update:', err instanceof Error ? err.message : 'Unknown error'))
             );
 
@@ -328,6 +329,13 @@ export async function POST(request: NextRequest) {
 
                     const analysis = await analyzeCallTranscript(callTranscript, agent.name);
                     if (analysis) {
+                        // Fetch current metadata to avoid overwriting enriched fields
+                        const { data: currentCall } = await supabase
+                            .from('calls')
+                            .select('metadata')
+                            .eq('external_id', call.id)
+                            .single();
+
                         const { error: updateError } = await supabase
                             .from('calls')
                             .update({
@@ -337,7 +345,7 @@ export async function POST(request: NextRequest) {
                                 topics: analysis.topics,
                                 objections: analysis.objections,
                                 metadata: {
-                                    ...(call.metadata || {}),
+                                    ...((currentCall?.metadata as Record<string, unknown>) || {}),
                                     ai_analysis: {
                                         sentiment_score: analysis.sentiment_score,
                                         action_items: analysis.action_items,

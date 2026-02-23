@@ -199,7 +199,8 @@ export async function PATCH(
                         ...(body.agent_name !== undefined ? { name: body.agent_name } : {}),
                         updated_at: new Date().toISOString(),
                     })
-                    .eq('id', id);
+                    .eq('id', id)
+                    .eq('agency_id', user.agency.id);
 
             } catch (err) {
                 console.error('Error updating Retell agent:', err instanceof Error ? err.message : 'Unknown error');
@@ -279,7 +280,11 @@ export async function PATCH(
                     agent_name: body.agent_name !== undefined ? body.agent_name : agent.config?.agent_name,
                     prompt: body.prompt !== undefined ? body.prompt : agent.config?.prompt,
                     voice_id: body.voice_id !== undefined ? body.voice_id : agent.config?.voice_id,
+                    voice_provider: body.voice_provider !== undefined ? body.voice_provider : agent.config?.voice_provider,
                     language: body.language !== undefined ? body.language : agent.config?.language,
+                    model_provider: body.model_provider !== undefined ? body.model_provider : agent.config?.model_provider,
+                    model: body.model !== undefined ? body.model : agent.config?.model,
+                    first_message: body.first_message !== undefined ? body.first_message : agent.config?.first_message,
                 };
 
                 await supabase
@@ -289,7 +294,8 @@ export async function PATCH(
                         ...(body.agent_name !== undefined ? { name: body.agent_name } : {}),
                         updated_at: new Date().toISOString(),
                     })
-                    .eq('id', id);
+                    .eq('id', id)
+                    .eq('agency_id', user.agency.id);
 
             } catch (err) {
                 console.error('Error updating Vapi assistant:', err instanceof Error ? err.message : 'Unknown error');
@@ -323,7 +329,8 @@ export async function PATCH(
                         ...(body.agent_name !== undefined ? { name: body.agent_name } : {}),
                         updated_at: new Date().toISOString(),
                     })
-                    .eq('id', id);
+                    .eq('id', id)
+                    .eq('agency_id', user.agency.id);
 
             } catch (err) {
                 console.error('Error updating Bland pathway:', err instanceof Error ? err.message : 'Unknown error');

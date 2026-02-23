@@ -53,7 +53,7 @@ export default function SignupPage() {
 
             // If email verification was skipped, redirect to login immediately
             if (data.skipVerification) {
-                router.push('/login?message=' + encodeURIComponent('Account created. Please sign in.'));
+                router.push('/login?message=account_created');
                 return;
             }
 

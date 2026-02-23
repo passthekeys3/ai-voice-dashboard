@@ -160,6 +160,12 @@ export async function DELETE(
         }
 
         const { id } = await params;
+
+        // Validate UUID format to prevent filter injection
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+            return NextResponse.json({ error: 'Invalid agent ID format' }, { status: 400 });
+        }
+
         const supabase = await createClient();
 
         // Fetch agent so we can clean up on the provider

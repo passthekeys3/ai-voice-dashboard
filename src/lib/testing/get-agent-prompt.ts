@@ -4,7 +4,7 @@
  */
 
 import { getRetellAgent, getRetellLLM } from '@/lib/providers/retell';
-import { getVapiAssistant } from '@/lib/providers/vapi';
+import { getVapiAssistant, extractVapiSystemPrompt } from '@/lib/providers/vapi';
 import { getBlandPathway } from '@/lib/providers/bland';
 import type { AgentConfig } from '@/types';
 
@@ -38,9 +38,10 @@ export async function getAgentPrompt(params: {
             }
         } else if (provider === 'vapi') {
             const assistant = await getVapiAssistant(apiKey, externalId);
-            if (assistant.model?.systemPrompt) {
+            const vapiPrompt = extractVapiSystemPrompt(assistant.model);
+            if (vapiPrompt) {
                 return {
-                    prompt: assistant.model.systemPrompt,
+                    prompt: vapiPrompt,
                     firstMessage: assistant.firstMessage || undefined,
                 };
             }

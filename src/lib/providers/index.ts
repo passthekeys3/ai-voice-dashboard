@@ -155,7 +155,7 @@ function createVapiClient(apiKey: string): VoiceProviderClient {
         voiceId: assistant.voice?.voiceId,
         config: {
             voice_id: assistant.voice?.voiceId,
-            prompt: assistant.model?.systemPrompt,
+            prompt: vapi.extractVapiSystemPrompt(assistant.model),
             webhook_url: assistant.serverUrl,
             metadata: assistant.metadata,
         },
@@ -222,13 +222,34 @@ function createVapiClient(apiKey: string): VoiceProviderClient {
             return normalizeAgent(assistant);
         },
         async updateAgent(agentId, config) {
+            const currentAssistant = await vapi.getVapiAssistant(apiKey, agentId);
             const updateData: Record<string, unknown> = {};
             if (config.name !== undefined) updateData.name = config.name;
             if (config.prompt !== undefined) {
-                updateData.model = { provider: 'openai', model: 'gpt-4o', systemPrompt: config.prompt };
+                const useMessages = vapi.usesVapiMessagesFormat(currentAssistant.model);
+                const modelBase = {
+                    provider: currentAssistant.model?.provider || 'openai',
+                    model: currentAssistant.model?.model || 'gpt-4o',
+                    ...(currentAssistant.model?.temperature !== undefined ? { temperature: currentAssistant.model.temperature } : {}),
+                };
+                if (useMessages) {
+                    const existingMessages = currentAssistant.model?.messages || [];
+                    const hasSystemMsg = existingMessages.some(m => m.role === 'system');
+                    updateData.model = {
+                        ...modelBase,
+                        messages: hasSystemMsg
+                            ? existingMessages.map(m => m.role === 'system' ? { ...m, content: config.prompt } : m)
+                            : [{ role: 'system', content: config.prompt! }, ...existingMessages],
+                    };
+                } else {
+                    updateData.model = { ...modelBase, systemPrompt: config.prompt };
+                }
             }
             if (config.voiceId !== undefined) {
-                updateData.voice = { provider: 'openai', voiceId: config.voiceId };
+                updateData.voice = {
+                    provider: currentAssistant.voice?.provider || 'openai',
+                    voiceId: config.voiceId,
+                };
             }
             const assistant = await vapi.updateVapiAssistant(apiKey, agentId, updateData);
             return normalizeAgent(assistant);

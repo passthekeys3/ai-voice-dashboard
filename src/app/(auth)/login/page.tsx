@@ -21,7 +21,14 @@ function LoginForm() {
     const rawRedirect = searchParams.get('redirect') || '/';
     // Prevent open redirect: only allow relative paths
     const redirect = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : '/';
-    const message = searchParams.get('message');
+    const messageCode = searchParams.get('message');
+    const MESSAGE_MAP: Record<string, string> = {
+        'password_reset': 'Your password has been reset successfully.',
+        'email_verified': 'Your email has been verified. You can now sign in.',
+        'signed_out': 'You have been signed out.',
+        'account_created': 'Account created successfully. Please sign in.',
+    };
+    const message = messageCode ? MESSAGE_MAP[messageCode] || null : null;
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();

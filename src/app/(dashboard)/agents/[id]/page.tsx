@@ -120,7 +120,7 @@ export default async function AgentDetailPage({
                         <CardContent>
                             <div className="flex items-center gap-4">
                                 {latestTestRun.status === 'completed' ? (
-                                    latestTestRun.failed_cases === 0 && latestTestRun.errored_cases === 0 ? (
+                                    (latestTestRun.failed_cases ?? 0) === 0 && (latestTestRun.errored_cases ?? 0) === 0 ? (
                                         <div className="flex items-center gap-2 text-green-600">
                                             <CheckCircle2 className="h-5 w-5" />
                                             <span className="font-medium">
@@ -131,7 +131,7 @@ export default async function AgentDetailPage({
                                         <div className="flex items-center gap-2 text-red-600">
                                             <XCircle className="h-5 w-5" />
                                             <span className="font-medium">
-                                                {latestTestRun.failed_cases + latestTestRun.errored_cases} of {latestTestRun.total_cases} failed
+                                                {(latestTestRun.failed_cases ?? 0) + (latestTestRun.errored_cases ?? 0)} of {latestTestRun.total_cases ?? 0} failed
                                             </span>
                                         </div>
                                     )

@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
                     // If confirmed within the last 30 seconds, this is a fresh verification
                     if (now.getTime() - confirmedAt.getTime() < 30000) {
                         return NextResponse.redirect(
-                            `${origin}/login?message=${encodeURIComponent('Email verified. Please sign in.')}`
+                            `${origin}/login?message=email_verified`
                         );
                     }
                 }
