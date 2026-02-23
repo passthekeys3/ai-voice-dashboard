@@ -41,6 +41,7 @@ export default async function ClientDashboardPage() {
     }
 
     // Date bound: only fetch last 90 days of data
+    // eslint-disable-next-line react-hooks/purity -- server component, not subject to re-renders
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
     // Get agent IDs for this client
