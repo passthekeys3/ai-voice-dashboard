@@ -163,7 +163,7 @@ export default async function SettingsPage() {
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
                     <p className="text-muted-foreground">
-                        Configure your agency branding, integrations, and permissions
+                        Configure your agency branding, API keys, and permissions
                     </p>
                 </div>
 

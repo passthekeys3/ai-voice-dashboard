@@ -19,6 +19,7 @@ import {
     CalendarClock,
     Radio,
     PhoneForwarded,
+    Plug,
     Menu,
     X,
 } from 'lucide-react';
@@ -74,6 +75,7 @@ const adminNavigation = [
     { name: 'Experiments', href: '/experiments', icon: FlaskConical },
     { name: 'Testing', href: '/testing', icon: TestTube2 },
     { name: 'Workflows', href: '/workflows', icon: Zap },
+    { name: 'Integrations', href: '/integrations', icon: Plug },
     { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
