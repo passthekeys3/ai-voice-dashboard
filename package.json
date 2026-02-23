@@ -29,6 +29,7 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",
     "@tanstack/react-query": "^5.90.18",
+    "@vapi-ai/web": "^2.5.2",
     "@vercel/functions": "^3.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

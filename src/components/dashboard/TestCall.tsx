@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Phone, PhoneOff, Mic, MicOff, Loader2 } from 'lucide-react';
@@ -12,51 +12,221 @@ interface RetellWebClient extends BaseRetellWebClient {
     unmuteMicrophone?: () => void;
 }
 
+// Vapi SDK type (dynamically imported)
+interface VapiInstance {
+    start: (assistantId: string) => Promise<unknown>;
+    stop: () => void;
+    setMuted: (muted: boolean) => void;
+    isMuted: () => boolean;
+    on: (event: string, callback: (...args: unknown[]) => void) => void;
+    removeAllListeners: () => void;
+}
+
 interface TestCallProps {
     agentId: string;
     agentName: string;
+    provider: 'retell' | 'vapi' | 'bland';
 }
 
-export function TestCall({ agentId, agentName }: TestCallProps) {
+export function TestCall({ agentId, agentName, provider }: TestCallProps) {
     const retellClientRef = useRef<RetellWebClient | null>(null);
+    const vapiClientRef = useRef<VapiInstance | null>(null);
     const [sdkLoaded, setSdkLoaded] = useState(false);
     const [isCallActive, setIsCallActive] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [transcript, setTranscript] = useState<{ role: string; content: string }[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Load Retell SDK on mount
+    // Load the appropriate SDK on mount
     useEffect(() => {
         const loadSDK = async () => {
             try {
-                const { RetellWebClient } = await import('retell-client-js-sdk');
-                retellClientRef.current = new RetellWebClient();
-                setSdkLoaded(true);
-                console.log('[TestCall] Retell SDK loaded successfully');
+                if (provider === 'retell') {
+                    const { RetellWebClient } = await import('retell-client-js-sdk');
+                    retellClientRef.current = new RetellWebClient();
+                    setSdkLoaded(true);
+                    console.log('[TestCall] Retell SDK loaded successfully');
+                } else if (provider === 'vapi') {
+                    // Vapi SDK is loaded lazily when the call starts
+                    // (it needs the public key which comes from the API)
+                    setSdkLoaded(true);
+                    console.log('[TestCall] Vapi SDK ready (will load on call start)');
+                }
             } catch (err) {
-                console.error('[TestCall] Failed to load Retell SDK:', err);
+                console.error('[TestCall] Failed to load SDK:', err);
                 setSdkLoaded(false);
                 setError('Failed to load call SDK. Please refresh the page.');
             }
         };
         loadSDK();
 
-        // Cleanup: stop call, remove listeners, and clear timeout on unmount
+        // Cleanup on unmount
         return () => {
-            const client = retellClientRef.current;
-            if (client) {
-                client.stopCall();
-                client.removeAllListeners();
+            if (retellClientRef.current) {
+                retellClientRef.current.stopCall();
+                retellClientRef.current.removeAllListeners();
+            }
+            if (vapiClientRef.current) {
+                vapiClientRef.current.stop();
+                vapiClientRef.current.removeAllListeners();
+                vapiClientRef.current = null;
             }
             if (connectionTimeoutRef.current) {
                 clearTimeout(connectionTimeoutRef.current);
                 connectionTimeoutRef.current = null;
             }
         };
-    }, []);
+    }, [provider]);
 
-    const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const startRetellCall = useCallback(async () => {
+        const response = await fetch(`/api/agents/${agentId}/webcall`, { method: 'POST' });
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Failed to create call');
+        }
+
+        const result = await response.json();
+        const accessToken = result.data?.access_token;
+        const callId = result.data?.call_id;
+
+        if (!accessToken) {
+            throw new Error('No access token received from server');
+        }
+
+        console.log('[TestCall] Retell call started, call_id:', callId);
+
+        const client = retellClientRef.current;
+        if (!client) {
+            throw new Error('Retell SDK not loaded. Please refresh the page.');
+        }
+
+        // Remove any previous listeners
+        client.removeAllListeners();
+
+        // Connection timeout
+        if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = setTimeout(() => {
+            if (!retellClientRef.current) return;
+            console.error('[TestCall] Connection timed out after 15 seconds');
+            setError('Connection timed out. Check your microphone permissions and try again.');
+            setIsConnecting(false);
+            try { retellClientRef.current.stopCall(); } catch { /* ignore */ }
+            connectionTimeoutRef.current = null;
+        }, 15000);
+
+        // Event listeners
+        client.on('call_started', () => {
+            console.log('[TestCall] Call started');
+            if (connectionTimeoutRef.current) {
+                clearTimeout(connectionTimeoutRef.current);
+                connectionTimeoutRef.current = null;
+            }
+            setIsCallActive(true);
+            setIsConnecting(false);
+        });
+
+        client.on('call_ended', () => {
+            console.log('[TestCall] Call ended');
+            setIsCallActive(false);
+            setIsConnecting(false);
+        });
+
+        client.on('error', (err: Error) => {
+            console.error('[TestCall] SDK error:', err);
+            setError(err.message || 'Call failed');
+            setIsCallActive(false);
+            setIsConnecting(false);
+        });
+
+        client.on('update', (update: { transcript?: { role: string; content: string }[] }) => {
+            if (update.transcript) {
+                setTranscript(update.transcript);
+            }
+        });
+
+        console.log('[TestCall] Starting call with Retell SDK...');
+        await client.startCall({ accessToken });
+        console.log('[TestCall] startCall() resolved');
+    }, [agentId]);
+
+    const startVapiCall = useCallback(async () => {
+        // Get the public key and assistant ID from our API
+        const response = await fetch(`/api/agents/${agentId}/webcall`, { method: 'POST' });
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Failed to create call');
+        }
+
+        const result = await response.json();
+        const publicKey = result.data?.vapi_public_key;
+        const assistantId = result.data?.assistant_id;
+
+        if (!publicKey || !assistantId) {
+            throw new Error('Missing Vapi public key or assistant ID. Check your Vapi settings.');
+        }
+
+        console.log('[TestCall] Starting Vapi call, assistant:', assistantId);
+
+        // Dynamically import and create Vapi SDK instance
+        const VapiModule = await import('@vapi-ai/web');
+        const VapiClass = VapiModule.default;
+        const vapiClient = new VapiClass(publicKey) as VapiInstance;
+        vapiClientRef.current = vapiClient;
+
+        // Connection timeout
+        if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = setTimeout(() => {
+            console.error('[TestCall] Connection timed out after 15 seconds');
+            setError('Connection timed out. Check your microphone permissions and try again.');
+            setIsConnecting(false);
+            try { vapiClientRef.current?.stop(); } catch { /* ignore */ }
+            connectionTimeoutRef.current = null;
+        }, 15000);
+
+        // Event listeners
+        vapiClient.on('call-start', () => {
+            console.log('[TestCall] Vapi call started');
+            if (connectionTimeoutRef.current) {
+                clearTimeout(connectionTimeoutRef.current);
+                connectionTimeoutRef.current = null;
+            }
+            setIsCallActive(true);
+            setIsConnecting(false);
+        });
+
+        vapiClient.on('call-end', () => {
+            console.log('[TestCall] Vapi call ended');
+            setIsCallActive(false);
+            setIsConnecting(false);
+        });
+
+        vapiClient.on('error', (err: unknown) => {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            console.error('[TestCall] Vapi error:', errorMsg);
+            setError(errorMsg || 'Call failed');
+            setIsCallActive(false);
+            setIsConnecting(false);
+        });
+
+        vapiClient.on('message', (message: unknown) => {
+            const msg = message as { type?: string; role?: string; transcript?: string; transcriptType?: string };
+            if (msg.type === 'transcript' && msg.transcriptType === 'final') {
+                setTranscript(prev => [
+                    ...prev,
+                    {
+                        role: msg.role === 'assistant' ? 'agent' : 'user',
+                        content: msg.transcript || '',
+                    }
+                ]);
+            }
+        });
+
+        // Start the call
+        await vapiClient.start(assistantId);
+        console.log('[TestCall] Vapi start() resolved');
+    }, [agentId]);
 
     const startCall = async () => {
         setIsConnecting(true);
@@ -64,83 +234,11 @@ export function TestCall({ agentId, agentName }: TestCallProps) {
         setTranscript([]);
 
         try {
-            // Get access token from our API
-            const response = await fetch(`/api/agents/${agentId}/webcall`, {
-                method: 'POST',
-            });
-
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error || 'Failed to create call');
+            if (provider === 'retell') {
+                await startRetellCall();
+            } else if (provider === 'vapi') {
+                await startVapiCall();
             }
-
-            const result = await response.json();
-            const accessToken = result.data?.access_token || result.access_token;
-            const callId = result.data?.call_id || result.call_id;
-
-            if (!accessToken) {
-                throw new Error('No access token received from server');
-            }
-
-            console.log('[TestCall] Call started, call_id:', callId);
-
-            const client = retellClientRef.current;
-            if (!client) {
-                setError('Retell SDK not loaded. Please refresh the page.');
-                setIsConnecting(false);
-                return;
-            }
-
-            // Remove any previous listeners to avoid duplicates
-            client.removeAllListeners();
-
-            // Start connection timeout — if call_started doesn't fire within 15s, something is wrong
-            if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
-            connectionTimeoutRef.current = setTimeout(() => {
-                if (!retellClientRef.current) return;
-                console.error('[TestCall] Connection timed out after 15 seconds');
-                setError('Connection timed out. Check your microphone permissions and try again.');
-                setIsConnecting(false);
-                try { retellClientRef.current.stopCall(); } catch { /* ignore */ }
-                connectionTimeoutRef.current = null;
-            }, 15000);
-
-            // Set up event listeners (single call_started handler that also clears timeout)
-            client.on('call_started', () => {
-                console.log('[TestCall] Call started');
-                if (connectionTimeoutRef.current) {
-                    clearTimeout(connectionTimeoutRef.current);
-                    connectionTimeoutRef.current = null;
-                }
-                setIsCallActive(true);
-                setIsConnecting(false);
-            });
-
-            client.on('call_ended', () => {
-                console.log('[TestCall] Call ended');
-                setIsCallActive(false);
-                setIsConnecting(false);
-            });
-
-            client.on('error', (err: Error) => {
-                console.error('[TestCall] SDK error:', err);
-                setError(err.message || 'Call failed');
-                setIsCallActive(false);
-                setIsConnecting(false);
-            });
-
-            client.on('update', (update: { transcript?: { role: string; content: string }[] }) => {
-                if (update.transcript) {
-                    setTranscript(update.transcript);
-                }
-            });
-
-            console.log('[TestCall] Starting call with Retell SDK...');
-            await client.startCall({
-                accessToken,
-            });
-            console.log('[TestCall] startCall() resolved');
-
         } catch (err) {
             console.error('[TestCall] Error:', err);
             setError(err instanceof Error ? err.message : 'Failed to start call');
@@ -149,23 +247,34 @@ export function TestCall({ agentId, agentName }: TestCallProps) {
     };
 
     const endCall = () => {
-        const client = retellClientRef.current;
-        if (client) {
-            client.stopCall();
+        if (provider === 'retell') {
+            retellClientRef.current?.stopCall();
+        } else if (provider === 'vapi') {
+            vapiClientRef.current?.stop();
+            vapiClientRef.current?.removeAllListeners();
+            vapiClientRef.current = null;
         }
         setIsCallActive(false);
         setIsConnecting(false);
     };
 
     const toggleMute = () => {
-        const client = retellClientRef.current;
-        if (client) {
-            if (isMuted) {
-                client.unmuteMicrophone?.();
-            } else {
-                client.muteMicrophone?.();
+        if (provider === 'retell') {
+            const client = retellClientRef.current;
+            if (client) {
+                if (isMuted) {
+                    client.unmuteMicrophone?.();
+                } else {
+                    client.muteMicrophone?.();
+                }
+                setIsMuted(!isMuted);
             }
-            setIsMuted(!isMuted);
+        } else if (provider === 'vapi') {
+            const client = vapiClientRef.current;
+            if (client) {
+                client.setMuted(!isMuted);
+                setIsMuted(!isMuted);
+            }
         }
     };
 

@@ -59,6 +59,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
     const [hadMasked] = useState(() => ({
         retellApiKey: isMasked(agency.retell_api_key),
         vapiApiKey: isMasked(agency.vapi_api_key),
+        vapiPublicKey: isMasked(agency.vapi_public_key),
         blandApiKey: isMasked(agency.bland_api_key),
         ghlApiKey: isMasked(agency.integrations?.ghl?.api_key),
         ghlTriggerSecret: isMasked(agency.integrations?.ghl?.trigger_config?.webhook_secret),
@@ -84,6 +85,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
         supportPhone: agency.branding?.support_phone || '',
         retellApiKey: initSecret(agency.retell_api_key),
         vapiApiKey: initSecret(agency.vapi_api_key),
+        vapiPublicKey: initSecret(agency.vapi_public_key),
         blandApiKey: initSecret(agency.bland_api_key),
         // CRM Integrations
         ghlApiKey: initSecret(agency.integrations?.ghl?.api_key),
@@ -135,6 +137,8 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
             else if (!hadMasked.retellApiKey) payload.retell_api_key = null;
             if (formData.vapiApiKey) payload.vapi_api_key = formData.vapiApiKey;
             else if (!hadMasked.vapiApiKey) payload.vapi_api_key = null;
+            if (formData.vapiPublicKey) payload.vapi_public_key = formData.vapiPublicKey;
+            else if (!hadMasked.vapiPublicKey) payload.vapi_public_key = null;
             if (formData.blandApiKey) payload.bland_api_key = formData.blandApiKey;
             else if (!hadMasked.blandApiKey) payload.bland_api_key = null;
 
@@ -840,6 +844,26 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                             Find your API key at{' '}
                             <a href="https://dashboard.vapi.ai" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                                 dashboard.vapi.ai
+                            </a>
+                        </p>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="vapiPublicKey">Vapi Public Key</Label>
+                        <Input
+                            id="vapiPublicKey"
+                            type="password"
+                            value={formData.vapiPublicKey}
+                            onChange={(e) => {
+                                setFormData({ ...formData, vapiPublicKey: e.target.value });
+                                setKeysSaved(false);
+                                setSyncResult(null);
+                            }}
+                            placeholder={hadMasked.vapiPublicKey ? `Key set (${agency.vapi_public_key}) — type to replace` : 'Enter your Vapi Public key'}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Required for test calls. Find under &quot;Public Key&quot; in your{' '}
+                            <a href="https://dashboard.vapi.ai" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                Vapi Dashboard
                             </a>
                         </p>
                     </div>

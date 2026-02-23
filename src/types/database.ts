@@ -17,6 +17,7 @@ export interface Agency {
     default_client_permissions?: ClientPermissions;
     retell_api_key?: string;
     vapi_api_key?: string;
+    vapi_public_key?: string;
     bland_api_key?: string;
     stripe_customer_id?: string;
     // Custom domain support

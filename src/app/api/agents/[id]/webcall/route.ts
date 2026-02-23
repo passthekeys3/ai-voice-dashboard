@@ -33,46 +33,65 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
         }
 
-        if (agent.provider !== 'retell') {
-            return NextResponse.json({ error: 'Web calls only supported for Retell agents' }, { status: 400 });
-        }
-
-        // Get agency API key
+        // Get agency API keys
         const { data: agency } = await supabase
             .from('agencies')
-            .select('retell_api_key')
+            .select('retell_api_key, vapi_api_key, vapi_public_key')
             .eq('id', user.agency.id)
             .single();
 
-        if (!agency?.retell_api_key) {
-            return NextResponse.json({ error: 'No Retell API key configured' }, { status: 400 });
-        }
-
-        // Create web call with Retell API
-        const retellResponse = await fetch('https://api.retellai.com/v2/create-web-call', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${agency.retell_api_key}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                agent_id: agent.external_id,
-            }),
-        });
-
-        if (!retellResponse.ok) {
-            console.error('Retell web call error:', retellResponse.status);
-            return NextResponse.json({ error: 'Failed to create web call' }, { status: 500 });
-        }
-
-        const webCall = await retellResponse.json();
-
-        return NextResponse.json({
-            data: {
-                access_token: webCall.access_token,
-                call_id: webCall.call_id,
+        if (agent.provider === 'retell') {
+            if (!agency?.retell_api_key) {
+                return NextResponse.json({ error: 'No Retell API key configured' }, { status: 400 });
             }
-        });
+
+            // Create web call with Retell API
+            const retellResponse = await fetch('https://api.retellai.com/v2/create-web-call', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${agency.retell_api_key}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    agent_id: agent.external_id,
+                }),
+            });
+
+            if (!retellResponse.ok) {
+                console.error('Retell web call error:', retellResponse.status);
+                return NextResponse.json({ error: 'Failed to create web call' }, { status: 500 });
+            }
+
+            const webCall = await retellResponse.json();
+
+            return NextResponse.json({
+                data: {
+                    provider: 'retell',
+                    access_token: webCall.access_token,
+                    call_id: webCall.call_id,
+                }
+            });
+        } else if (agent.provider === 'vapi') {
+            if (!agency?.vapi_public_key) {
+                return NextResponse.json({
+                    error: 'Vapi Public Key is required for test calls. Add it in Settings under "Vapi Public Key".'
+                }, { status: 400 });
+            }
+
+            // For Vapi, the web SDK handles call creation client-side using the public key.
+            // We just return the public key and assistant ID so the client can connect.
+            return NextResponse.json({
+                data: {
+                    provider: 'vapi',
+                    vapi_public_key: agency.vapi_public_key,
+                    assistant_id: agent.external_id,
+                }
+            });
+        } else {
+            return NextResponse.json({
+                error: `Web calls are not yet supported for ${agent.provider} agents`
+            }, { status: 400 });
+        }
     } catch (error) {
         console.error('Error creating web call:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

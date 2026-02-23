@@ -163,12 +163,16 @@ export default async function AgentDetailPage({
                             webhookUrl={agent.webhook_url}
                         />
 
+                        {isAdmin && (agent.provider === 'retell' || agent.provider === 'vapi') && (
+                            <TestCall
+                                agentId={agent.id}
+                                agentName={agent.name}
+                                provider={agent.provider as 'retell' | 'vapi'}
+                            />
+                        )}
+
                         {isAdmin && agent.provider === 'retell' && (
                             <>
-                                <TestCall
-                                    agentId={agent.id}
-                                    agentName={agent.name}
-                                />
                                 <KnowledgeBaseEditor
                                     agentId={agent.id}
                                 />
