@@ -25,7 +25,7 @@ interface VapiInstance {
 interface TestCallProps {
     agentId: string;
     agentName: string;
-    provider: 'retell' | 'vapi' | 'bland';
+    provider: 'retell' | 'vapi';
 }
 
 export function TestCall({ agentId, agentName, provider }: TestCallProps) {
@@ -181,7 +181,11 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
             console.error('[TestCall] Connection timed out after 15 seconds');
             setError('Connection timed out. Check your microphone permissions and try again.');
             setIsConnecting(false);
-            try { vapiClientRef.current?.stop(); } catch { /* ignore */ }
+            try {
+                vapiClientRef.current?.stop();
+                vapiClientRef.current?.removeAllListeners();
+                vapiClientRef.current = null;
+            } catch { /* ignore */ }
             connectionTimeoutRef.current = null;
         }, 15000);
 
@@ -232,6 +236,7 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
         setIsConnecting(true);
         setError(null);
         setTranscript([]);
+        setIsMuted(false);
 
         try {
             if (provider === 'retell') {

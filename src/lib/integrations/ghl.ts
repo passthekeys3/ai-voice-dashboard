@@ -246,7 +246,7 @@ export async function addNoteToContact(
 ): Promise<GHLCreateNoteResponse | null> {
     try {
         const response = await fetch(
-            `${GHL_API_BASE}/contacts/${contactId}/notes`,
+            `${GHL_API_BASE}/contacts/${encodeURIComponent(contactId)}/notes`,
             {
                 method: 'POST',
                 headers: {
@@ -372,7 +372,7 @@ export async function updateContactTags(
     try {
         // Fetch existing contact to get current tags
         const getResponse = await fetch(
-            `${GHL_API_BASE}/contacts/${contactId}`,
+            `${GHL_API_BASE}/contacts/${encodeURIComponent(contactId)}`,
             {
                 method: 'GET',
                 headers: {
@@ -396,7 +396,7 @@ export async function updateContactTags(
             : mergedTags;
 
         const response = await fetch(
-            `${GHL_API_BASE}/contacts/${contactId}`,
+            `${GHL_API_BASE}/contacts/${encodeURIComponent(contactId)}`,
             {
                 method: 'PUT',
                 headers: {
@@ -564,7 +564,7 @@ export async function updateContactCustomField(
 ): Promise<{ success: boolean; error?: string }> {
     try {
         const response = await fetch(
-            `${GHL_API_BASE}/contacts/${contactId}`,
+            `${GHL_API_BASE}/contacts/${encodeURIComponent(contactId)}`,
             {
                 method: 'PUT',
                 headers: {
@@ -1035,7 +1035,7 @@ export async function upsertContact(
 
             if (Object.keys(updates).length > 0) {
                 const updateRes = await fetch(
-                    `${GHL_API_BASE}/contacts/${contact.id}`,
+                    `${GHL_API_BASE}/contacts/${encodeURIComponent(contact.id)}`,
                     {
                         method: 'PUT',
                         headers: {
@@ -1089,7 +1089,7 @@ export async function updateContact(
         }
 
         const response = await fetch(
-            `${GHL_API_BASE}/contacts/${contactId}`,
+            `${GHL_API_BASE}/contacts/${encodeURIComponent(contactId)}`,
             {
                 method: 'PUT',
                 headers: {
@@ -1124,7 +1124,7 @@ export async function triggerContactWorkflow(
 ): Promise<{ success: boolean; error?: string }> {
     try {
         const response = await fetch(
-            `${GHL_API_BASE}/contacts/${contactId}/workflow/${workflowId}`,
+            `${GHL_API_BASE}/contacts/${encodeURIComponent(contactId)}/workflow/${encodeURIComponent(workflowId)}`,
             {
                 method: 'POST',
                 headers: {

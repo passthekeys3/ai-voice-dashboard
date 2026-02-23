@@ -21,6 +21,11 @@ export async function GET(_request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        // Only agency admins can view subscription details
+        if (!['agency_admin'].includes(user.profile.role)) {
+            return NextResponse.json({ error: 'Only agency admins can view subscription' }, { status: 403 });
+        }
+
         const supabase = createServiceClient();
 
         const { data: agency } = await supabase

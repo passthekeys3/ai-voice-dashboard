@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
                     phone_number: retellNumber.phone_number,
                     provider: 'retell',
                     agent_id: agent_id || null,
+                    inbound_agent_id: agent_id || null,
                     monthly_cost_cents: 200,
                     purchased_at: new Date().toISOString(),
                 })
@@ -128,6 +129,18 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ data: phoneNumber }, { status: 201 });
         } else if (provider === 'vapi' && agency?.vapi_api_key) {
             // Purchase number from Vapi (Vapi uses Twilio under the hood)
+            // Look up the agent's external_id for assistantId assignment
+            let agentExternalId: string | undefined;
+            if (agent_id) {
+                const { data: agentRow } = await supabase
+                    .from('agents')
+                    .select('external_id')
+                    .eq('id', agent_id)
+                    .eq('agency_id', user.agency.id)
+                    .single();
+                agentExternalId = agentRow?.external_id || undefined;
+            }
+
             const vapiResponse = await fetch('https://api.vapi.ai/phone-number', {
                 method: 'POST',
                 headers: {
@@ -137,7 +150,7 @@ export async function POST(request: NextRequest) {
                 body: JSON.stringify({
                     provider: 'vapi',
                     areaCode: area_code,
-                    ...(agent_id ? {} : {}), // assistantId assigned separately
+                    ...(agentExternalId ? { assistantId: agentExternalId } : {}),
                 }),
             });
 
@@ -156,6 +169,7 @@ export async function POST(request: NextRequest) {
                     phone_number: vapiNumber.number,
                     provider: 'vapi',
                     agent_id: agent_id || null,
+                    inbound_agent_id: agent_id || null,
                     monthly_cost_cents: 200,
                     purchased_at: new Date().toISOString(),
                 })
@@ -180,6 +194,7 @@ export async function POST(request: NextRequest) {
                     phone_number: blandResult.phone_number,
                     provider: 'bland',
                     agent_id: agent_id || null,
+                    inbound_agent_id: agent_id || null,
                     monthly_cost_cents: 200,
                     purchased_at: new Date().toISOString(),
                 })

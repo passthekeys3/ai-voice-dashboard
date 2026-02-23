@@ -54,7 +54,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         // Verify ownership
         const { data: existing } = await supabase
             .from('phone_numbers')
-            .select('id, external_id')
+            .select('id, external_id, provider')
             .eq('id', id)
             .eq('agency_id', user.agency.id)
             .single();
@@ -103,63 +103,86 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             updateData.outbound_agent_id = body.outbound_agent_id || null;
         }
 
-        // Update in Retell if external_id exists
-        if (existing.external_id) {
+        // Sync agent assignment to the provider
+        if (existing.external_id && existing.provider) {
             const { data: agency } = await supabase
                 .from('agencies')
-                .select('retell_api_key')
+                .select('retell_api_key, vapi_api_key, bland_api_key')
                 .eq('id', user.agency.id)
                 .single();
 
-            if (agency?.retell_api_key) {
-                const retellUpdate: Record<string, string | null> = {};
+            // Helper: resolve agent's external_id by our internal ID
+            const resolveAgentExternalId = async (agentId: string | null | undefined): Promise<string | null> => {
+                if (!agentId) return null;
+                const { data: agent } = await supabase
+                    .from('agents')
+                    .select('external_id')
+                    .eq('id', agentId)
+                    .eq('agency_id', user.agency.id)
+                    .single();
+                return agent?.external_id || null;
+            };
 
-                // Get inbound agent's external ID
-                if (body.inbound_agent_id !== undefined || body.agent_id !== undefined) {
-                    const agentId = body.inbound_agent_id ?? body.agent_id;
-                    if (agentId) {
-                        const { data: agent } = await supabase
-                            .from('agents')
-                            .select('external_id')
-                            .eq('id', agentId)
-                            .eq('agency_id', user.agency.id)
-                            .single();
-                        retellUpdate.inbound_agent_id = agent?.external_id || null;
-                    } else {
-                        retellUpdate.inbound_agent_id = null;
+            try {
+                if (existing.provider === 'retell' && agency?.retell_api_key) {
+                    const retellUpdate: Record<string, string | null> = {};
+
+                    if (body.inbound_agent_id !== undefined || body.agent_id !== undefined) {
+                        const agentId = body.inbound_agent_id ?? body.agent_id;
+                        retellUpdate.inbound_agent_id = await resolveAgentExternalId(agentId);
+                    }
+                    if (body.outbound_agent_id !== undefined) {
+                        retellUpdate.outbound_agent_id = await resolveAgentExternalId(body.outbound_agent_id);
+                    }
+
+                    if (Object.keys(retellUpdate).length > 0) {
+                        const retellRes = await fetch(`https://api.retellai.com/update-phone-number/${encodeURIComponent(existing.external_id)}`, {
+                            method: 'PATCH',
+                            headers: { 'Authorization': `Bearer ${agency.retell_api_key}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify(retellUpdate),
+                        });
+                        if (!retellRes.ok) {
+                            console.error('Retell phone number update failed:', retellRes.status);
+                            return NextResponse.json({ error: 'Failed to update phone number with provider' }, { status: 502 });
+                        }
+                    }
+                } else if (existing.provider === 'vapi' && agency?.vapi_api_key) {
+                    // Vapi uses assistantId for inbound routing
+                    if (body.inbound_agent_id !== undefined || body.agent_id !== undefined) {
+                        const agentId = body.inbound_agent_id ?? body.agent_id;
+                        const externalAgentId = await resolveAgentExternalId(agentId);
+
+                        const vapiRes = await fetch(`https://api.vapi.ai/phone-number/${encodeURIComponent(existing.external_id)}`, {
+                            method: 'PATCH',
+                            headers: { 'Authorization': `Bearer ${agency.vapi_api_key}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ assistantId: externalAgentId }),
+                        });
+                        if (!vapiRes.ok) {
+                            console.error('Vapi phone number update failed:', vapiRes.status);
+                            return NextResponse.json({ error: 'Failed to update phone number with provider' }, { status: 502 });
+                        }
+                    }
+                } else if (existing.provider === 'bland' && agency?.bland_api_key) {
+                    // Bland inbound routing update
+                    if (body.inbound_agent_id !== undefined || body.agent_id !== undefined) {
+                        const agentId = body.inbound_agent_id ?? body.agent_id;
+                        const externalAgentId = await resolveAgentExternalId(agentId);
+
+                        if (externalAgentId) {
+                            const blandRes = await fetch(`https://api.bland.ai/v1/inbound/${encodeURIComponent(existing.external_id)}`, {
+                                method: 'POST',
+                                headers: { 'Authorization': agency.bland_api_key, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ pathway_id: externalAgentId }),
+                            });
+                            if (!blandRes.ok) {
+                                console.error('Bland phone number update failed:', blandRes.status);
+                            }
+                        }
                     }
                 }
-
-                // Get outbound agent's external ID
-                if (body.outbound_agent_id !== undefined) {
-                    if (body.outbound_agent_id) {
-                        const { data: agent } = await supabase
-                            .from('agents')
-                            .select('external_id')
-                            .eq('id', body.outbound_agent_id)
-                            .eq('agency_id', user.agency.id)
-                            .single();
-                        retellUpdate.outbound_agent_id = agent?.external_id || null;
-                    } else {
-                        retellUpdate.outbound_agent_id = null;
-                    }
-                }
-
-                // Update phone number in Retell
-                if (Object.keys(retellUpdate).length > 0) {
-                    const retellRes = await fetch(`https://api.retellai.com/update-phone-number/${encodeURIComponent(existing.external_id)}`, {
-                        method: 'PATCH',
-                        headers: {
-                            'Authorization': `Bearer ${agency.retell_api_key}`,
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(retellUpdate),
-                    });
-                    if (!retellRes.ok) {
-                        console.error('Retell phone number update failed:', retellRes.status);
-                        return NextResponse.json({ error: 'Failed to update phone number with provider' }, { status: 502 });
-                    }
-                }
+            } catch (providerErr) {
+                console.error('Provider phone update error:', providerErr instanceof Error ? providerErr.message : 'Unknown error');
+                return NextResponse.json({ error: 'Failed to update phone number with provider' }, { status: 502 });
             }
         }
 
@@ -205,7 +228,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         // Get phone number
         const { data: phoneNumber } = await supabase
             .from('phone_numbers')
-            .select('external_id')
+            .select('external_id, provider, phone_number')
             .eq('id', id)
             .eq('agency_id', user.agency.id)
             .single();
@@ -214,22 +237,36 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Phone number not found' }, { status: 404 });
         }
 
-        // Get API key and delete from Retell
+        // Get API keys and release from the appropriate provider
         const { data: agency } = await supabase
             .from('agencies')
-            .select('retell_api_key')
+            .select('retell_api_key, vapi_api_key, bland_api_key')
             .eq('id', user.agency.id)
             .single();
 
-        if (agency?.retell_api_key && phoneNumber.external_id) {
-            const deleteRes = await fetch(`https://api.retellai.com/v2/delete-phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${agency.retell_api_key}`,
-                },
-            });
-            if (!deleteRes.ok) {
-                console.error('Retell phone delete failed:', deleteRes.status);
+        if (phoneNumber.external_id) {
+            try {
+                if (phoneNumber.provider === 'retell' && agency?.retell_api_key) {
+                    const deleteRes = await fetch(`https://api.retellai.com/v2/delete-phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${agency.retell_api_key}` },
+                    });
+                    if (!deleteRes.ok) console.error('Retell phone delete failed:', deleteRes.status);
+                } else if (phoneNumber.provider === 'vapi' && agency?.vapi_api_key) {
+                    const deleteRes = await fetch(`https://api.vapi.ai/phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${agency.vapi_api_key}` },
+                    });
+                    if (!deleteRes.ok) console.error('Vapi phone delete failed:', deleteRes.status);
+                } else if (phoneNumber.provider === 'bland' && agency?.bland_api_key) {
+                    const deleteRes = await fetch(`https://api.bland.ai/v1/inbound/${encodeURIComponent(phoneNumber.phone_number)}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': agency.bland_api_key, 'Content-Type': 'application/json' },
+                    });
+                    if (!deleteRes.ok) console.error('Bland phone delete failed:', deleteRes.status);
+                }
+            } catch (providerErr) {
+                console.error('Provider phone delete error:', providerErr instanceof Error ? providerErr.message : 'Unknown error');
             }
         }
 

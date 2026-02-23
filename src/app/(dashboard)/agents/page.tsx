@@ -30,7 +30,10 @@ export default async function AgentsPage() {
         query = query.eq('client_id', user.client.id);
     }
 
-    const { data: agents } = await query;
+    const { data: agents, error: agentsError } = await query;
+    if (agentsError) {
+        console.error('Error fetching agents:', agentsError.code);
+    }
 
     // Fetch phone numbers to show which number is assigned to which agent
     const { data: phoneNumbers } = await supabase

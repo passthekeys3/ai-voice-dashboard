@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { requireAuth, isAgencyAdmin } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
 import { CallsPageClient } from '@/components/dashboard/CallsPageClient';

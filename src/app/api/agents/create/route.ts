@@ -32,6 +32,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Agent name is required' }, { status: 400 });
         }
 
+        if (system_prompt && system_prompt.length > 50000) {
+            return NextResponse.json({ error: 'System prompt is too long' }, { status: 400 });
+        }
+
         const supabase = await createClient();
 
         // Validate client_id belongs to this agency if provided
@@ -133,6 +137,15 @@ export async function POST(request: NextRequest) {
 
             if (!retellResponse.ok) {
                 console.error('Retell create agent error:', retellResponse.status);
+                // Clean up the orphaned LLM
+                try {
+                    await fetch(`https://api.retellai.com/delete-retell-llm/${retellLlm.llm_id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${apiKey}` },
+                    });
+                } catch (cleanupErr) {
+                    console.error('Failed to clean up orphaned LLM:', cleanupErr instanceof Error ? cleanupErr.message : 'Unknown error');
+                }
                 return NextResponse.json({
                     error: 'Failed to create agent on provider'
                 }, { status: 500 });
@@ -236,7 +249,7 @@ export async function POST(request: NextRequest) {
             if (!phoneNumber) {
                 console.warn(`Phone number ${phone_number_id} not found or already assigned`);
             } else if (phoneNumber.external_id) {
-                // Update phone number on the provider (Retell only for now)
+                // Update phone number on the provider
                 if (provider === 'retell') {
                     const phoneUpdateResponse = await fetch(`https://api.retellai.com/update-phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
                         method: 'PATCH',
@@ -252,12 +265,38 @@ export async function POST(request: NextRequest) {
                     if (!phoneUpdateResponse.ok) {
                         console.warn('Failed to update phone number in Retell:', phoneUpdateResponse.status);
                     }
+                } else if (provider === 'vapi') {
+                    const vapiPhoneRes = await fetch(`https://api.vapi.ai/phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ assistantId: externalId }),
+                    });
+
+                    if (!vapiPhoneRes.ok) {
+                        console.warn('Failed to update phone number in Vapi:', vapiPhoneRes.status);
+                    }
+                } else if (provider === 'bland') {
+                    const blandPhoneRes = await fetch(`https://api.bland.ai/v1/inbound/${encodeURIComponent(phoneNumber.external_id)}`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': apiKey,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ pathway_id: externalId }),
+                    });
+
+                    if (!blandPhoneRes.ok) {
+                        console.warn('Failed to update phone number in Bland:', blandPhoneRes.status);
+                    }
                 }
 
                 // Update in our DB with optimistic lock + agency scoping
                 const { error: updateError } = await supabase
                     .from('phone_numbers')
-                    .update({ agent_id: agent.id, updated_at: new Date().toISOString() })
+                    .update({ agent_id: agent.id, inbound_agent_id: agent.id, updated_at: new Date().toISOString() })
                     .eq('id', phone_number_id)
                     .eq('agency_id', user.agency.id)
                     .is('agent_id', null);

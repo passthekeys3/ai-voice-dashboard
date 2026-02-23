@@ -55,9 +55,13 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         client = clientData || undefined;
     }
 
+    if (!user.email) {
+        return null;
+    }
+
     return {
         id: user.id,
-        email: user.email!,
+        email: user.email,
         profile: profile as Profile,
         agency: agency as Agency,
         client,

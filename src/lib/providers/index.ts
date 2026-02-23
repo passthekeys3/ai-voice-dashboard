@@ -91,8 +91,8 @@ function createRetellClient(apiKey: string): VoiceProviderClient {
             status,
             direction: call.direction || 'outbound',
             durationSeconds,
-            // Retell combined_cost is already in cents
-            costCents: Math.round(call.call_cost?.combined_cost || 0),
+            // Retell combined_cost is in dollars — convert to cents
+            costCents: Math.round((call.call_cost?.combined_cost || 0) * 100),
             fromNumber: call.from_number,
             toNumber: call.to_number,
             transcript: call.transcript,
@@ -222,9 +222,15 @@ function createVapiClient(apiKey: string): VoiceProviderClient {
             return normalizeAgent(assistant);
         },
         async updateAgent(agentId, config) {
-            const assistant = await vapi.updateVapiAssistant(apiKey, agentId, {
-                name: config.name,
-            });
+            const updateData: Record<string, unknown> = {};
+            if (config.name !== undefined) updateData.name = config.name;
+            if (config.prompt !== undefined) {
+                updateData.model = { provider: 'openai', model: 'gpt-4o', systemPrompt: config.prompt };
+            }
+            if (config.voiceId !== undefined) {
+                updateData.voice = { provider: 'openai', voiceId: config.voiceId };
+            }
+            const assistant = await vapi.updateVapiAssistant(apiKey, agentId, updateData);
             return normalizeAgent(assistant);
         },
         async deleteAgent(agentId) {
@@ -305,9 +311,10 @@ function createBlandClient(apiKey: string): VoiceProviderClient {
             return normalizeAgent(pathway);
         },
         async updateAgent(agentId, config) {
-            const pathway = await bland.updateBlandPathway(apiKey, agentId, {
-                name: config.name,
-            });
+            const updateData: Record<string, unknown> = {};
+            if (config.name !== undefined) updateData.name = config.name;
+            if (config.prompt !== undefined) updateData.description = config.prompt;
+            const pathway = await bland.updateBlandPathway(apiKey, agentId, updateData);
             return normalizeAgent(pathway);
         },
         async deleteAgent(agentId) {

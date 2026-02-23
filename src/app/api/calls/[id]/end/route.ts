@@ -73,7 +73,7 @@ export const POST = withErrorHandling(async (
     }
 
     if (provider === 'retell') {
-        const endResponse = await fetch(`https://api.retellai.com/v2/end-call/${externalCallId}`, {
+        const endResponse = await fetch(`https://api.retellai.com/v2/end-call/${encodeURIComponent(externalCallId)}`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
@@ -85,7 +85,7 @@ export const POST = withErrorHandling(async (
             return externalServiceError('Retell', 'Failed to end call');
         }
     } else if (provider === 'vapi') {
-        const endResponse = await fetch(`https://api.vapi.ai/call/${externalCallId}/hang`, {
+        const endResponse = await fetch(`https://api.vapi.ai/call/${encodeURIComponent(externalCallId)}/hang`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
@@ -97,7 +97,7 @@ export const POST = withErrorHandling(async (
             return externalServiceError('Vapi', 'Failed to end call');
         }
     } else if (provider === 'bland') {
-        const endResponse = await fetch(`https://api.bland.ai/v1/calls/${externalCallId}/stop`, {
+        const endResponse = await fetch(`https://api.bland.ai/v1/calls/${encodeURIComponent(externalCallId)}/stop`, {
             method: 'POST',
             headers: {
                 'authorization': apiKey,

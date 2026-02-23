@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,23 +11,11 @@ import { Loader2, Lock, CheckCircle } from 'lucide-react';
 
 function ResetPasswordContent() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
-
-    // Check for access token in URL (Supabase magic link)
-    useEffect(() => {
-        const accessToken = searchParams.get('access_token');
-        const type = searchParams.get('type');
-
-        if (accessToken && type === 'recovery') {
-            // Supabase will handle the session automatically
-            console.log('Recovery token detected');
-        }
-    }, [searchParams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,7 +42,12 @@ function ResetPasswordContent() {
             });
 
             if (error) {
-                setError(error.message);
+                // Map Supabase errors to user-friendly messages
+                if (error.message?.includes('JWT expired') || error.message?.includes('Session not found')) {
+                    setError('Your reset link has expired. Please request a new one.');
+                } else {
+                    setError('Unable to update password. Please try again or request a new reset link.');
+                }
             } else {
                 setSuccess(true);
                 setTimeout(() => {

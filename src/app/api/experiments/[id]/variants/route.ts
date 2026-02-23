@@ -26,6 +26,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Name and prompt are required' }, { status: 400 });
         }
 
+        if (prompt && prompt.length > 50000) {
+            return NextResponse.json({ error: 'Prompt is too long' }, { status: 400 });
+        }
+
         const supabase = await createClient();
 
         // Verify experiment belongs to this agency and is not running
@@ -100,6 +104,22 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         if (!experiment) {
             return NextResponse.json({ error: 'Experiment not found' }, { status: 404 });
+        }
+
+        // Check variant count limit: existing (in DB) + new variants <= 10
+        const newVariants = variants.filter((v: { id?: string }) => !v.id);
+        if (newVariants.length > 0) {
+            const { count: existingCount } = await supabase
+                .from('experiment_variants')
+                .select('id', { count: 'exact', head: true })
+                .eq('experiment_id', experimentId);
+
+            if ((existingCount || 0) + newVariants.length > 10) {
+                return NextResponse.json(
+                    { error: 'Maximum 10 variants per experiment' },
+                    { status: 400 }
+                );
+            }
         }
 
         // Update each variant

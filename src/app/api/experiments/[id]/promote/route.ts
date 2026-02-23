@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getRetellAgent, updateRetellLLM } from '@/lib/providers/retell';
 import { updateVapiAssistant } from '@/lib/providers/vapi';
+import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
+import type { VoiceProvider } from '@/types';
 
 interface PromoteRequestBody {
     variant_id: string;
@@ -32,7 +34,7 @@ export async function POST(
             .select(`
                 *,
                 variants:experiment_variants(*),
-                agents(id, external_id, provider, config)
+                agents(id, external_id, provider, config, client_id)
             `)
             .eq('id', id)
             .eq('agency_id', user.agency.id)
@@ -51,33 +53,30 @@ export async function POST(
             return NextResponse.json({ error: 'Variant not found' }, { status: 404 });
         }
 
-        // Get agency credentials
-        const { data: agency, error: agencyError } = await supabase
-            .from('agencies')
-            .select('retell_api_key, vapi_api_key')
-            .eq('id', user.agency.id)
-            .single();
-
-        if (agencyError || !agency) {
-            return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
-        }
-
         const agent = experiment.agents;
         if (!agent) {
             return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
         }
 
+        // Resolve API keys with client-level override
+        const resolvedKeys = await resolveProviderApiKeys(
+            supabase,
+            user.agency.id,
+            agent.client_id
+        );
+        const apiKey = getProviderKey(resolvedKeys, agent.provider as VoiceProvider);
+
+        if (!apiKey) {
+            return NextResponse.json(
+                { error: `${agent.provider} API key not configured` },
+                { status: 400 }
+            );
+        }
+
         // Update the agent's prompt based on provider
         if (agent.provider === 'retell') {
-            if (!agency.retell_api_key) {
-                return NextResponse.json(
-                    { error: 'Retell API key not configured' },
-                    { status: 400 }
-                );
-            }
-
             // Get the agent to find its LLM ID
-            const retellAgent = await getRetellAgent(agency.retell_api_key, agent.external_id);
+            const retellAgent = await getRetellAgent(apiKey, agent.external_id);
 
             // Check for LLM ID in different possible locations
             const llmId = retellAgent.llm_id ||
@@ -91,19 +90,12 @@ export async function POST(
             }
 
             // Update the LLM's prompt
-            await updateRetellLLM(agency.retell_api_key, llmId, {
+            await updateRetellLLM(apiKey, llmId, {
                 general_prompt: winnerVariant.prompt,
             });
         } else if (agent.provider === 'vapi') {
-            if (!agency.vapi_api_key) {
-                return NextResponse.json(
-                    { error: 'Vapi API key not configured' },
-                    { status: 400 }
-                );
-            }
-
             // Update the assistant's model.systemPrompt via PATCH
-            await updateVapiAssistant(agency.vapi_api_key, agent.external_id, {
+            await updateVapiAssistant(apiKey, agent.external_id, {
                 model: {
                     provider: 'openai',
                     model: 'gpt-4o',

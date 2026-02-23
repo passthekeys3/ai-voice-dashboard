@@ -45,6 +45,18 @@ interface CallData {
 }
 
 /**
+ * HTML-escape a string to prevent injection when used in email HTML bodies
+ */
+function escapeHtml(str: string): string {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+/**
  * Resolve template variables in a string (e.g., {{from_number}}, {{summary}})
  */
 function resolveTemplate(template: string, callData: CallData): string {
@@ -1405,7 +1417,26 @@ async function executeAction(
                 // Sanitize resolved values to prevent header injection
                 const to = resolveTemplate(rawConfig.to || '', callData).replace(/[\r\n]/g, '').trim();
                 const subject = resolveTemplate(rawConfig.subject || '', callData).replace(/[\r\n]/g, '').trim();
-                const body = resolveTemplate(rawConfig.body || '', callData);
+                // HTML-escape template variable values before injecting into the email body
+                // to prevent HTML/script injection from call data (e.g., transcript, summary)
+                const emailBodyTemplate = rawConfig.body || '';
+                const emailVars: Record<string, string> = {
+                    '{{call_id}}': escapeHtml(callData.call_id || ''),
+                    '{{agent_name}}': escapeHtml(callData.agent_name || ''),
+                    '{{status}}': escapeHtml(callData.status || ''),
+                    '{{direction}}': escapeHtml(callData.direction || ''),
+                    '{{duration}}': escapeHtml(String(callData.duration_seconds || 0)),
+                    '{{duration_minutes}}': escapeHtml(String(Math.round((callData.duration_seconds || 0) / 60))),
+                    '{{from_number}}': escapeHtml(callData.from_number || ''),
+                    '{{to_number}}': escapeHtml(callData.to_number || ''),
+                    '{{summary}}': escapeHtml(callData.summary || ''),
+                    '{{sentiment}}': escapeHtml(callData.sentiment || ''),
+                    '{{recording_url}}': escapeHtml(callData.recording_url || ''),
+                };
+                let body = emailBodyTemplate;
+                for (const [key, value] of Object.entries(emailVars)) {
+                    body = body.replaceAll(key, value);
+                }
 
                 if (!to || !subject) {
                     return { success: false, error: 'Email recipient or subject not configured' };

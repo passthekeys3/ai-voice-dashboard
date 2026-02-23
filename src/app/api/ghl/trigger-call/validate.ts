@@ -16,7 +16,7 @@ export const ghlTriggerSchema = z.object({
     phone_number: z.string().min(1, 'phone_number is required'),
     contact_id: z.string().optional(),
     contact_name: z.string().optional(),
-    agent_id: z.string().uuid().optional(),
+    agent_id: z.string().optional(),
     from_number: z.string().regex(/^\+?[0-9\s\-()]{7,20}$/, 'Invalid from_number format').optional(),
     metadata: z.record(z.string(), z.unknown()).optional().refine(
         (val) => !val || JSON.stringify(val).length <= 10000,

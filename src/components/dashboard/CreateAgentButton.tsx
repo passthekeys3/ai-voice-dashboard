@@ -51,9 +51,10 @@ interface CreateAgentButtonProps {
     clients: { id: string; name: string }[];
     phoneNumbers: PhoneNumber[];
     availableProviders: string[];
+    basePath?: string;
 }
 
-export function CreateAgentButton({ clients, phoneNumbers, availableProviders }: CreateAgentButtonProps) {
+export function CreateAgentButton({ clients, phoneNumbers, availableProviders, basePath = '' }: CreateAgentButtonProps) {
     const router = useRouter();
     const [open, setOpen] = useState(false);
     const [creating, setCreating] = useState(false);
@@ -208,7 +209,7 @@ export function CreateAgentButton({ clients, phoneNumbers, availableProviders }:
 
             // Navigate to the new agent
             if (data.data?.id) {
-                router.push(`/agents/${data.data.id}`);
+                router.push(`${basePath}/agents/${data.data.id}`);
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
@@ -233,10 +234,17 @@ export function CreateAgentButton({ clients, phoneNumbers, availableProviders }:
             }
         }}>
             <DialogTrigger asChild>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Agent
-                </Button>
+                {availableProviders.length === 0 ? (
+                    <Button disabled title="Configure an API key in Settings first">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Agent
+                    </Button>
+                ) : (
+                    <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Agent
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>

@@ -277,9 +277,9 @@ export async function POST(request: NextRequest) {
                     status,
                     direction,
                     duration_seconds: durationSeconds,
-                    cost_cents: call.cost ? Math.round(call.cost * 100) : 0,
-                    from_number: call.customer?.number,
-                    to_number: call.phoneNumber?.number,
+                    cost_cents: call.cost ? Math.max(0, Math.min(Math.round(call.cost * 100), 1_000_000)) : 0,
+                    from_number: direction === 'inbound' ? call.customer?.number : call.phoneNumber?.number,
+                    to_number: direction === 'inbound' ? call.phoneNumber?.number : call.customer?.number,
                     transcript: callTranscript,
                     audio_url: call.recordingUrl,
                     summary: call.analysis?.summary || call.summary,
@@ -363,7 +363,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Broadcast real-time update to connected clients
-        const costCents = call.cost ? Math.round(call.cost * 100) : 0;
+        const costCents = call.cost ? Math.max(0, Math.min(Math.round(call.cost * 100), 1_000_000)) : 0;
         const isCallStarted = messageType === 'status-update' && status === 'in_progress';
         const isCallEnded = status === 'completed' || status === 'failed';
         waitUntil(broadcastCallUpdate({
@@ -378,8 +378,8 @@ export async function POST(request: NextRequest) {
                 agent_name: agent.name,
                 status: status as 'queued' | 'in_progress' | 'completed' | 'failed',
                 direction: direction as 'inbound' | 'outbound',
-                from_number: call.customer?.number,
-                to_number: call.phoneNumber?.number,
+                from_number: direction === 'inbound' ? call.customer?.number : call.phoneNumber?.number,
+                to_number: direction === 'inbound' ? call.phoneNumber?.number : call.customer?.number,
                 started_at: startedAt,
                 ended_at: endedAt,
                 duration_seconds: durationSeconds,
@@ -400,8 +400,8 @@ export async function POST(request: NextRequest) {
                 direction,
                 duration_seconds: durationSeconds,
                 cost_cents: costCents,
-                from_number: call.customer?.number,
-                to_number: call.phoneNumber?.number,
+                from_number: direction === 'inbound' ? call.customer?.number : call.phoneNumber?.number,
+                to_number: direction === 'inbound' ? call.phoneNumber?.number : call.customer?.number,
                 transcript: callTranscript,
                 recording_url: call.recordingUrl,
                 summary: call.analysis?.summary || call.summary,
@@ -530,8 +530,8 @@ export async function POST(request: NextRequest) {
                             direction,
                             duration_seconds: 0,
                             cost_cents: 0,
-                            from_number: call.customer?.number,
-                            to_number: call.phoneNumber?.number,
+                            from_number: direction === 'inbound' ? call.customer?.number : call.phoneNumber?.number,
+                            to_number: direction === 'inbound' ? call.phoneNumber?.number : call.customer?.number,
                             started_at: startedAt,
                             metadata: call.metadata as Record<string, unknown> | undefined,
                         };
@@ -685,8 +685,8 @@ export async function POST(request: NextRequest) {
                         direction,
                         duration_seconds: durationSeconds,
                         cost_cents: costCents,
-                        from_number: call.customer?.number,
-                        to_number: call.phoneNumber?.number,
+                        from_number: direction === 'inbound' ? call.customer?.number : call.phoneNumber?.number,
+                        to_number: direction === 'inbound' ? call.phoneNumber?.number : call.customer?.number,
                         transcript: callTranscript,
                         recording_url: call.recordingUrl,
                         summary: call.analysis?.summary || call.summary,

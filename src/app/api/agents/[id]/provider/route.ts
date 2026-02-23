@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { updateRetellAgent, getRetellAgent, getRetellLLM, updateRetellLLM } from '@/lib/providers/retell';
 import { getVapiAssistant, updateVapiAssistant } from '@/lib/providers/vapi';
@@ -17,7 +17,7 @@ export async function GET(
         }
 
         const { id } = await params;
-        const supabase = createServiceClient();
+        const supabase = await createClient();
 
         // Get the agent
         const { data: agent, error: agentError } = await supabase
@@ -29,6 +29,11 @@ export async function GET(
 
         if (agentError || !agent) {
             return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+        }
+
+        // Client users can only access their own agents
+        if (!isAgencyAdmin(user) && agent.client_id !== user.client?.id) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
         // Resolve API keys (client key → agency key fallback)
@@ -132,7 +137,7 @@ export async function PATCH(
         const { id } = await params;
         const body = await request.json();
 
-        const supabase = createServiceClient();
+        const supabase = await createClient();
 
         // Get the agent
         const { data: agent, error: agentError } = await supabase
@@ -162,28 +167,28 @@ export async function PATCH(
 
                 // Update agent settings (name, voice, language, responsiveness)
                 const updateData: Record<string, unknown> = {};
-                if (body.agent_name) updateData.agent_name = body.agent_name;
-                if (body.voice_id) updateData.voice_id = body.voice_id;
-                if (body.language) updateData.language = body.language;
+                if (body.agent_name !== undefined) updateData.agent_name = body.agent_name;
+                if (body.voice_id !== undefined) updateData.voice_id = body.voice_id;
+                if (body.language !== undefined) updateData.language = body.language;
                 if (body.responsiveness !== undefined) updateData.responsiveness = body.responsiveness;
 
                 if (Object.keys(updateData).length > 0) {
                     await updateRetellAgent(apiKey, agent.external_id, updateData);
                 }
 
-                // Update LLM prompt if provided
-                if (body.prompt && retellAgent.response_engine?.llm_id) {
+                // Update LLM prompt if provided (allow clearing with empty string)
+                if (body.prompt !== undefined && retellAgent.response_engine?.llm_id) {
                     await updateRetellLLM(apiKey, retellAgent.response_engine.llm_id, { general_prompt: body.prompt });
                 }
 
-                // Store in local config
+                // Store in local config (use !== undefined checks to allow clearing values)
                 const newConfig = {
                     ...agent.config,
-                    agent_name: body.agent_name || agent.config?.agent_name,
-                    voice_id: body.voice_id || agent.config?.voice_id,
-                    language: body.language || agent.config?.language,
-                    responsiveness: body.responsiveness ?? agent.config?.responsiveness,
-                    llm_prompt: body.prompt || agent.config?.llm_prompt,
+                    agent_name: body.agent_name !== undefined ? body.agent_name : agent.config?.agent_name,
+                    voice_id: body.voice_id !== undefined ? body.voice_id : agent.config?.voice_id,
+                    language: body.language !== undefined ? body.language : agent.config?.language,
+                    responsiveness: body.responsiveness !== undefined ? body.responsiveness : agent.config?.responsiveness,
+                    llm_prompt: body.prompt !== undefined ? body.prompt : agent.config?.llm_prompt,
                     llm_id: retellAgent.response_engine?.llm_id,
                 };
 
@@ -191,6 +196,7 @@ export async function PATCH(
                     .from('agents')
                     .update({
                         config: newConfig,
+                        ...(body.agent_name !== undefined ? { name: body.agent_name } : {}),
                         updated_at: new Date().toISOString(),
                     })
                     .eq('id', id);
@@ -215,30 +221,30 @@ export async function PATCH(
                     firstMessage: string;
                 }> = {};
 
-                if (body.agent_name) updateData.name = body.agent_name;
+                if (body.agent_name !== undefined) updateData.name = body.agent_name;
 
                 // Update model config (prompt, model selection, or both)
-                if (body.prompt || body.model || body.model_provider) {
+                if (body.prompt !== undefined || body.model !== undefined || body.model_provider !== undefined) {
                     updateData.model = {
-                        provider: body.model_provider || vapiAssistant.model?.provider || 'openai',
-                        model: body.model || vapiAssistant.model?.model || 'gpt-4o',
-                        systemPrompt: body.prompt || vapiAssistant.model?.systemPrompt,
+                        provider: body.model_provider !== undefined ? body.model_provider : (vapiAssistant.model?.provider || 'openai'),
+                        model: body.model !== undefined ? body.model : (vapiAssistant.model?.model || 'gpt-4o'),
+                        systemPrompt: body.prompt !== undefined ? body.prompt : vapiAssistant.model?.systemPrompt,
                         ...(vapiAssistant.model?.temperature !== undefined ? { temperature: vapiAssistant.model.temperature } : {}),
                     };
                 }
 
                 // Update voice config
-                if (body.voice_id || body.voice_provider) {
+                if (body.voice_id !== undefined || body.voice_provider !== undefined) {
                     updateData.voice = {
-                        provider: body.voice_provider || vapiAssistant.voice?.provider || 'openai',
-                        voiceId: body.voice_id || vapiAssistant.voice?.voiceId || '',
+                        provider: body.voice_provider !== undefined ? body.voice_provider : (vapiAssistant.voice?.provider || 'openai'),
+                        voiceId: body.voice_id !== undefined ? body.voice_id : (vapiAssistant.voice?.voiceId || ''),
                         ...(vapiAssistant.voice?.speed !== undefined ? { speed: vapiAssistant.voice.speed } : {}),
                         ...(vapiAssistant.voice?.stability !== undefined ? { stability: vapiAssistant.voice.stability } : {}),
                     };
                 }
 
                 // Update transcriber language
-                if (body.language) {
+                if (body.language !== undefined) {
                     updateData.transcriber = {
                         provider: vapiAssistant.transcriber?.provider || 'deepgram',
                         model: vapiAssistant.transcriber?.model,
@@ -246,25 +252,26 @@ export async function PATCH(
                     };
                 }
 
-                if (body.first_message) updateData.firstMessage = body.first_message;
+                if (body.first_message !== undefined) updateData.firstMessage = body.first_message;
 
                 if (Object.keys(updateData).length > 0) {
                     await updateVapiAssistant(apiKey, agent.external_id, updateData);
                 }
 
-                // Store in local config
+                // Store in local config (use !== undefined checks to allow clearing values)
                 const newConfig = {
                     ...agent.config,
-                    agent_name: body.agent_name || agent.config?.agent_name,
-                    prompt: body.prompt || agent.config?.prompt,
-                    voice_id: body.voice_id || agent.config?.voice_id,
-                    language: body.language || agent.config?.language,
+                    agent_name: body.agent_name !== undefined ? body.agent_name : agent.config?.agent_name,
+                    prompt: body.prompt !== undefined ? body.prompt : agent.config?.prompt,
+                    voice_id: body.voice_id !== undefined ? body.voice_id : agent.config?.voice_id,
+                    language: body.language !== undefined ? body.language : agent.config?.language,
                 };
 
                 await supabase
                     .from('agents')
                     .update({
                         config: newConfig,
+                        ...(body.agent_name !== undefined ? { name: body.agent_name } : {}),
                         updated_at: new Date().toISOString(),
                     })
                     .eq('id', id);
@@ -280,24 +287,25 @@ export async function PATCH(
             try {
                 const updateData: Partial<{ name: string; description: string }> = {};
 
-                if (body.agent_name) updateData.name = body.agent_name;
-                if (body.prompt) updateData.description = body.prompt;
+                if (body.agent_name !== undefined) updateData.name = body.agent_name;
+                if (body.prompt !== undefined) updateData.description = body.prompt;
 
                 if (Object.keys(updateData).length > 0) {
                     await updateBlandPathway(apiKey, agent.external_id, updateData);
                 }
 
-                // Store in local config
+                // Store in local config (use !== undefined checks to allow clearing values)
                 const newConfig = {
                     ...agent.config,
-                    agent_name: body.agent_name || agent.config?.agent_name,
-                    prompt: body.prompt || agent.config?.prompt,
+                    agent_name: body.agent_name !== undefined ? body.agent_name : agent.config?.agent_name,
+                    prompt: body.prompt !== undefined ? body.prompt : agent.config?.prompt,
                 };
 
                 await supabase
                     .from('agents')
                     .update({
                         config: newConfig,
+                        ...(body.agent_name !== undefined ? { name: body.agent_name } : {}),
                         updated_at: new Date().toISOString(),
                     })
                     .eq('id', id);

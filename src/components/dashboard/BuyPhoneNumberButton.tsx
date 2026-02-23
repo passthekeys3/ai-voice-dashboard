@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,6 +46,7 @@ export function BuyPhoneNumberButton({ agents, onPurchaseComplete }: BuyPhoneNum
     const [open, setOpen] = useState(false);
     const [purchasing, setPurchasing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const purchaseInProgress = useRef(false);
 
     const [areaCode, setAreaCode] = useState('');
     const [customAreaCode, setCustomAreaCode] = useState('');
@@ -59,10 +60,14 @@ export function BuyPhoneNumberButton({ agents, onPurchaseComplete }: BuyPhoneNum
     };
 
     const handlePurchase = async () => {
+        if (purchaseInProgress.current) return;
+        purchaseInProgress.current = true;
+
         const finalAreaCode = areaCode === 'custom' ? customAreaCode : areaCode;
 
         if (!finalAreaCode || finalAreaCode.length !== 3) {
             setError('Please enter a valid 3-digit area code');
+            purchaseInProgress.current = false;
             return;
         }
 
@@ -91,6 +96,7 @@ export function BuyPhoneNumberButton({ agents, onPurchaseComplete }: BuyPhoneNum
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
             setPurchasing(false);
+            purchaseInProgress.current = false;
         }
     };
 

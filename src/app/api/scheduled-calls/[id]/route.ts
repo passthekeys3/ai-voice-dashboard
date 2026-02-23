@@ -71,7 +71,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             updated_at: new Date().toISOString(),
         };
 
-        if (body.to_number !== undefined) updateData.to_number = body.to_number;
+        if (body.to_number !== undefined) {
+            const cleanedNumber = body.to_number.replace(/[\s\-\(\)]/g, '');
+            const phoneRegex = /^\+[1-9]\d{6,14}$/;
+            if (!phoneRegex.test(cleanedNumber)) {
+                return NextResponse.json({ error: 'Invalid phone number format. Use E.164 format (e.g. +14155551234)' }, { status: 400 });
+            }
+            updateData.to_number = cleanedNumber;
+        }
         if (body.contact_name !== undefined) updateData.contact_name = body.contact_name;
         if (body.scheduled_at !== undefined) {
             const scheduledDate = new Date(body.scheduled_at);

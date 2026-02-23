@@ -47,21 +47,22 @@ export async function GET(request: NextRequest) {
             .order('started_at', { ascending: false });
 
         // Agency scope
-        if (isAgencyAdmin(user)) {
-            // Admin sees all calls for the agency's agents
-            const { data: agentIds } = await supabase
-                .from('agents')
-                .select('id')
-                .eq('agency_id', user.agency.id);
+        // Fetch agent IDs for the agency (used for scoping and validation)
+        const { data: agentIdsData } = await supabase
+            .from('agents')
+            .select('id')
+            .eq('agency_id', user.agency.id);
+        const agentIds = agentIdsData?.map(a => a.id) || [];
 
+        if (isAgencyAdmin(user)) {
             // SECURITY: If no agents exist, return empty CSV to prevent unscoped query
-            if (!agentIds || agentIds.length === 0) {
+            if (agentIds.length === 0) {
                 const emptyHeaders = 'Date,Agent,Direction,Status,Duration,Phone,Summary\n';
                 return new Response(emptyHeaders, {
                     headers: { 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename="calls-export.csv"' },
                 });
             }
-            query = query.in('agent_id', agentIds.map(a => a.id));
+            query = query.in('agent_id', agentIds);
         } else if (user.client) {
             // Client sees only their calls
             query = query.eq('client_id', user.client.id);
@@ -81,6 +82,9 @@ export async function GET(request: NextRequest) {
             query = query.lte('started_at', endDate);
         }
         if (agentId) {
+            if (!agentIds.includes(agentId)) {
+                return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+            }
             query = query.eq('agent_id', agentId);
         }
 

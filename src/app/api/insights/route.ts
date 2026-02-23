@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
         // Build base query
         let callsQuery = supabase
             .from('calls')
-            .select('*, agent:agents!inner(name, agency_id)')
+            .select('id, duration_seconds, cost_cents, status, started_at, agent_id, client_id, sentiment, conversion_score, call_score, topics, objections, agent:agents!inner(name, agency_id)')
             .eq('agent.agency_id', user.agency.id)
             .gte('started_at', startDate.toISOString());
 
@@ -198,7 +198,8 @@ export async function GET(request: NextRequest) {
 
         calls.forEach(c => {
             const agentId = c.agent_id;
-            const agentName = c.agent?.name || 'Unknown';
+            const agentData = c.agent as unknown as { name: string; agency_id: string } | null;
+            const agentName = agentData?.name || 'Unknown';
 
             if (!agentMap.has(agentId)) {
                 agentMap.set(agentId, {

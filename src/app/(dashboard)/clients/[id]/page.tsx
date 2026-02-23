@@ -51,12 +51,14 @@ export default async function ClientDetailPage({
     const { count: agentsCount } = await supabase
         .from('agents')
         .select('*', { count: 'exact', head: true })
-        .eq('client_id', id);
+        .eq('client_id', id)
+        .eq('agency_id', user.agency.id);
 
     const { count: callsCount } = await supabase
         .from('calls')
-        .select('*', { count: 'exact', head: true })
-        .eq('client_id', id);
+        .select('*, agents!inner(agency_id)', { count: 'exact', head: true })
+        .eq('client_id', id)
+        .eq('agents.agency_id', user.agency.id);
 
     // Get users with access to this client
     const { data: clientUsers } = await supabase

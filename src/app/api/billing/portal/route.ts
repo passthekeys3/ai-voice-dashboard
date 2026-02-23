@@ -86,6 +86,11 @@ export async function GET(_request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        // Only agency admins can view billing details
+        if (!['agency_admin'].includes(user.profile.role)) {
+            return NextResponse.json({ error: 'Only agency admins can access billing' }, { status: 403 });
+        }
+
         const supabase = createServiceClient();
 
         // Get agency subscription info

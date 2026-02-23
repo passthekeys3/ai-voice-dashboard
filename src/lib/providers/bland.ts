@@ -187,6 +187,7 @@ export async function listBlandCalls(
     if (params?.start_date) queryParts.push(`start_date=${encodeURIComponent(params.start_date)}`);
     if (params?.end_date) queryParts.push(`end_date=${encodeURIComponent(params.end_date)}`);
     if (params?.status) queryParts.push(`status=${encodeURIComponent(params.status)}`);
+    if (params?.pathway_id) queryParts.push(`pathway_id=${encodeURIComponent(params.pathway_id)}`);
     const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
 
     const result = await blandFetch<BlandCall[] | { calls: BlandCall[] }>(apiKey, `/calls${query}`);

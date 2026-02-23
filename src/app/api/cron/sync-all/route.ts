@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
         const { data: agencies, error: agenciesError } = await supabase
             .from('agencies')
             .select('id, name, retell_api_key, vapi_api_key, bland_api_key')
-            .or('retell_api_key.neq.null,vapi_api_key.neq.null,bland_api_key.neq.null');
+            .or('retell_api_key.neq.null,vapi_api_key.neq.null,bland_api_key.neq.null')
+            .limit(10000);
 
         if (agenciesError) {
             console.error('Error fetching agencies:', agenciesError.code);
@@ -53,6 +54,8 @@ export async function POST(request: NextRequest) {
             total_phone_numbers: 0,
             errors: [] as string[],
         };
+
+        const successfulAgencyIds: string[] = [];
 
         for (const agency of agencies) {
             try {
@@ -315,17 +318,20 @@ export async function POST(request: NextRequest) {
                 }
 
                 results.agencies_synced++;
+                successfulAgencyIds.push(agency.id);
             } catch (agencyErr) {
                 console.error(`Agency ${agency.id} sync error:`, agencyErr instanceof Error ? agencyErr.message : 'Unknown error');
                 results.errors.push(`Agency ${agency.id} sync failed`);
             }
         }
 
-        // Update last sync timestamp for all agencies
-        await supabase
-            .from('agencies')
-            .update({ updated_at: new Date().toISOString() })
-            .in('id', agencies.map(a => a.id));
+        // Update last sync timestamp only for successfully synced agencies
+        if (successfulAgencyIds.length > 0) {
+            await supabase
+                .from('agencies')
+                .update({ updated_at: new Date().toISOString() })
+                .in('id', successfulAgencyIds);
+        }
 
         console.log(`[CRON SYNC] Complete:`, results);
 

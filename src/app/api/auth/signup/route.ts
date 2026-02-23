@@ -36,9 +36,26 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Agency name is too long' }, { status: 400 });
         }
 
+        // Sanitize names: strip HTML-sensitive chars and control characters
+        const sanitizedName = fullName.replace(/[<>&]/g, '').replace(/[\x00-\x1f]/g, '').trim();
+        const sanitizedAgencyName = agencyName.replace(/[<>&]/g, '').replace(/[\x00-\x1f]/g, '').trim();
+
+        if (!sanitizedName || !sanitizedAgencyName) {
+            return NextResponse.json(
+                { error: 'Name contains invalid characters' },
+                { status: 400 }
+            );
+        }
+
         if (password.length < 8) {
             return NextResponse.json(
                 { error: 'Password must be at least 8 characters' },
+                { status: 400 }
+            );
+        }
+        if (password.length > 128) {
+            return NextResponse.json(
+                { error: 'Password must be less than 128 characters' },
                 { status: 400 }
             );
         }
@@ -52,8 +69,8 @@ export async function POST(request: NextRequest) {
             password,
             email_confirm: skipVerification,
             user_metadata: {
-                full_name: fullName,
-                agency_name: agencyName,
+                full_name: sanitizedName,
+                agency_name: sanitizedAgencyName,
                 role: 'agency_admin',
             },
         });
@@ -72,7 +89,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Create agency with a 14-day free trial so users can access the dashboard immediately
-        const baseSlug = agencyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        const baseSlug = sanitizedAgencyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
         const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 8)}`;
         const trialDays = parseInt(process.env.TRIAL_DAYS || '14', 10);
         const trialEnd = new Date();
@@ -80,13 +97,13 @@ export async function POST(request: NextRequest) {
         const { data: agency, error: agencyError } = await supabaseAdmin
             .from('agencies')
             .insert({
-                name: agencyName,
+                name: sanitizedAgencyName,
                 slug,
                 branding: {
                     primary_color: '#0f172a',
                     secondary_color: '#1e293b',
                     accent_color: '#3b82f6',
-                    company_name: agencyName,
+                    company_name: sanitizedAgencyName,
                 },
                 subscription_status: 'trialing',
                 subscription_current_period_end: trialEnd.toISOString(),
@@ -107,7 +124,7 @@ export async function POST(request: NextRequest) {
         const { error: profileError } = await supabaseAdmin.from('profiles').insert({
             id: authData.user.id,
             email,
-            full_name: fullName,
+            full_name: sanitizedName,
             agency_id: agency.id,
             role: 'agency_admin',
         });
@@ -125,7 +142,7 @@ export async function POST(request: NextRequest) {
         // Send welcome email (fire-and-forget — don't block signup response)
         sendEmail({
             to: email,
-            ...welcomeEmail({ userName: fullName, agencyName, trialDays }),
+            ...welcomeEmail({ userName: sanitizedName, agencyName: sanitizedAgencyName, trialDays }),
         }).catch(() => { /* logged inside sendEmail */ });
 
         return NextResponse.json({

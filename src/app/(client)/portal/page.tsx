@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { requireAuth, isAgencyAdmin } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
 import { AnalyticsCards } from '@/components/dashboard/AnalyticsCards';
@@ -15,28 +15,49 @@ export const metadata: Metadata = { title: 'Dashboard' };
 export default async function ClientDashboardPage() {
     const user = await requireAuth();
     const supabase = await createClient();
-    const isAdmin = isAgencyAdmin(user);
     const permissions = getUserPermissions(user);
 
     const clientId = user.client?.id;
 
-    // Get agent IDs for this client
-    let agentsQuery = supabase
-        .from('agents')
-        .select('id, name')
-        .eq('agency_id', user.agency.id);
-
-    if (clientId) {
-        agentsQuery = agentsQuery.eq('client_id', clientId);
+    // Client users must have a client_id to see any data
+    if (!clientId) {
+        return (
+            <div className="flex flex-col h-full">
+                <Header
+                    userName={user.profile.full_name}
+                    userEmail={user.email}
+                    userAvatar={user.profile.avatar_url}
+                />
+                <div className="flex-1 p-4 sm:p-6 flex items-center justify-center">
+                    <div className="text-center">
+                        <h2 className="text-xl font-semibold">No client account linked</h2>
+                        <p className="text-muted-foreground mt-2">
+                            Please contact your agency administrator to set up your account.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
-    const { data: agents } = await agentsQuery;
+    // Date bound: only fetch last 90 days of data
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Get agent IDs for this client
+    const { data: agents } = await supabase
+        .from('agents')
+        .select('id, name')
+        .eq('agency_id', user.agency.id)
+        .eq('client_id', clientId);
+
     const agentIds = agents?.map(a => a.id) || [];
 
     // Get recent calls
     let callsQuery = supabase
         .from('calls')
         .select('*, agents(name, provider)')
+        .eq('client_id', clientId)
+        .gte('started_at', ninetyDaysAgo)
         .order('started_at', { ascending: false })
         .limit(5);
 
@@ -44,23 +65,17 @@ export default async function ClientDashboardPage() {
         callsQuery = callsQuery.in('agent_id', agentIds);
     }
 
-    if (clientId) {
-        callsQuery = callsQuery.eq('client_id', clientId);
-    }
-
     const { data: recentCalls } = await callsQuery;
 
-    // Calculate stats
+    // Calculate stats (bounded to last 90 days)
     let statsQuery = supabase
         .from('calls')
-        .select('duration_seconds, cost_cents, status, started_at');
+        .select('duration_seconds, cost_cents, status, started_at')
+        .eq('client_id', clientId)
+        .gte('started_at', ninetyDaysAgo);
 
     if (agentIds.length > 0) {
         statsQuery = statsQuery.in('agent_id', agentIds);
-    }
-
-    if (clientId) {
-        statsQuery = statsQuery.eq('client_id', clientId);
     }
 
     const { data: callStats } = await statsQuery;

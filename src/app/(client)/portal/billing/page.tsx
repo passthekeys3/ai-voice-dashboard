@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 
 import { requireAuth } from '@/lib/auth';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
-import { BillingUsage } from '@/components/dashboard/BillingUsage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { getUserPermissions } from '@/lib/permissions';
 import { redirect } from 'next/navigation';
@@ -19,7 +18,7 @@ export default async function ClientBillingPage() {
         redirect('/portal');
     }
 
-    const supabase = createServiceClient();
+    const supabase = await createClient();
 
     // Get current month stats
     const now = new Date();
@@ -102,8 +101,7 @@ export default async function ClientBillingPage() {
                     </CardContent>
                 </Card>
 
-                {/* Payment Method Management */}
-                <BillingUsage />
+                {/* Payment method management is available in the agency dashboard */}
             </div>
         </div>
     );

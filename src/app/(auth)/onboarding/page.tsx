@@ -18,7 +18,7 @@ export default async function OnboardingPage() {
             <div className="hero-glow fixed inset-0 pointer-events-none" aria-hidden="true" />
             <div className="relative z-10 animate-fade-up" style={{ animationDelay: '80ms', animationFillMode: 'both' }}>
                 <OnboardingWizard
-                    agency={user.agency}
+                    agency={{ name: user.agency.name }}
                     userName={user.profile.full_name}
                     isOnboarded={isOnboarded}
                 />

@@ -72,13 +72,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
-        // Reject stale timestamps to prevent replay attacks (5-minute window)
-        if (timestamp) {
-            const timestampMs = parseInt(timestamp, 10);
-            if (!isNaN(timestampMs) && Math.abs(Date.now() - timestampMs) > 5 * 60 * 1000) {
-                return NextResponse.json({ error: 'Request timestamp too old' }, { status: 401 });
-            }
-        }
+        // Timestamp staleness is already enforced inside verifyHubSpotTriggerSignature
+        // (5-minute window check), so no additional check is needed here.
 
         // Resolve which agent to use
         let agentId = data.agent_id;

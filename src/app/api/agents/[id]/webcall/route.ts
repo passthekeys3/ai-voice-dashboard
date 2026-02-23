@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         // Get agent details
         const { data: agent, error: agentError } = await supabase
             .from('agents')
-            .select('external_id, provider, agency_id')
+            .select('external_id, provider, agency_id, client_id')
             .eq('id', agentId)
             .eq('agency_id', user.agency.id)
             .single();
@@ -33,15 +34,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
         }
 
-        // Get agency API keys
-        const { data: agency } = await supabase
-            .from('agencies')
-            .select('retell_api_key, vapi_api_key, vapi_public_key')
-            .eq('id', user.agency.id)
-            .single();
+        // Resolve API keys (client-level override when applicable)
+        const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, agent.client_id);
+        const providerKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
 
         if (agent.provider === 'retell') {
-            if (!agency?.retell_api_key) {
+            if (!providerKey) {
                 return NextResponse.json({ error: 'No Retell API key configured' }, { status: 400 });
             }
 
@@ -49,7 +47,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             const retellResponse = await fetch('https://api.retellai.com/v2/create-web-call', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${agency.retell_api_key}`,
+                    'Authorization': `Bearer ${providerKey}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
@@ -72,6 +70,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 }
             });
         } else if (agent.provider === 'vapi') {
+            // Vapi public key is not part of resolve-keys; fetch from agency directly
+            const { data: agency } = await supabase
+                .from('agencies')
+                .select('vapi_public_key')
+                .eq('id', user.agency.id)
+                .single();
+
             if (!agency?.vapi_public_key) {
                 return NextResponse.json({
                     error: 'Vapi Public Key is required for test calls. Add it in Settings under "Vapi Public Key".'

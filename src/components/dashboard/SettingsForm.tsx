@@ -851,7 +851,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                         <Label htmlFor="vapiPublicKey">Vapi Public Key</Label>
                         <Input
                             id="vapiPublicKey"
-                            type="password"
+                            type="text"
                             value={formData.vapiPublicKey}
                             onChange={(e) => {
                                 setFormData({ ...formData, vapiPublicKey: e.target.value });
@@ -905,7 +905,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                     <div className="flex gap-3">
                         <Button
                             onClick={handleSaveApiKeys}
-                            disabled={savingKeys || (!hasKey('retellApiKey', formData.retellApiKey) && !hasKey('vapiApiKey', formData.vapiApiKey) && !hasKey('blandApiKey', formData.blandApiKey))}
+                            disabled={savingKeys || (!hasKey('retellApiKey', formData.retellApiKey) && !hasKey('vapiApiKey', formData.vapiApiKey) && !hasKey('vapiPublicKey', formData.vapiPublicKey) && !hasKey('blandApiKey', formData.blandApiKey))}
                             variant={keysSaved ? 'outline' : 'default'}
                         >
                             {savingKeys ? (
@@ -925,7 +925,7 @@ export function SettingsForm({ agency, agents }: SettingsFormProps) {
                         <Button
                             variant="outline"
                             onClick={handleSyncAgents}
-                            disabled={syncing || (!hasKey('retellApiKey', formData.retellApiKey) && !hasKey('vapiApiKey', formData.vapiApiKey) && !hasKey('blandApiKey', formData.blandApiKey))}
+                            disabled={syncing || (!hasKey('retellApiKey', formData.retellApiKey) && !hasKey('vapiApiKey', formData.vapiApiKey) && !hasKey('vapiPublicKey', formData.vapiPublicKey) && !hasKey('blandApiKey', formData.blandApiKey))}
                         >
                             {syncing ? (
                                 <>

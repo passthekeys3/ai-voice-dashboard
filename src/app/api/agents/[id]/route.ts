@@ -112,7 +112,13 @@ export async function PATCH(
 
         // Build update payload — only include fields that are present in the request
         const updatePayload: Record<string, unknown> = {};
-        if (body.name !== undefined) updatePayload.name = body.name;
+        if (body.name !== undefined) {
+            const trimmedName = typeof body.name === 'string' ? body.name.trim() : '';
+            if (!trimmedName) {
+                return NextResponse.json({ error: 'Agent name cannot be empty' }, { status: 400 });
+            }
+            updatePayload.name = trimmedName;
+        }
         if (body.client_id !== undefined) updatePayload.client_id = body.client_id;
         if (body.config !== undefined) updatePayload.config = body.config;
         if (body.is_active !== undefined) updatePayload.is_active = body.is_active;
@@ -193,6 +199,18 @@ export async function DELETE(
                 console.error('Provider cleanup failed during agent deletion:', providerErr instanceof Error ? providerErr.message : 'Unknown error');
             }
         }
+
+        // Unassign phone numbers that reference this agent
+        await supabase
+            .from('phone_numbers')
+            .update({
+                agent_id: null,
+                inbound_agent_id: null,
+                outbound_agent_id: null,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('agency_id', user.agency.id)
+            .or(`agent_id.eq.${id},inbound_agent_id.eq.${id},outbound_agent_id.eq.${id}`);
 
         const { error } = await supabase
             .from('agents')

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
-import { requireAuth, isAgencyAdmin } from '@/lib/auth';
-import { createServiceClient } from '@/lib/supabase/server';
+import { requireAuth } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
 import { AnalyticsCards } from '@/components/dashboard/AnalyticsCards';
 import { AnalyticsFilters } from '@/components/dashboard/AnalyticsFilters';
@@ -32,7 +32,7 @@ export default async function ClientAnalyticsPage({ searchParams }: Props) {
     const daysParam = params.days || '30';
     const days = daysParam === 'all' ? null : parseInt(daysParam);
 
-    const supabase = createServiceClient();
+    const supabase = await createClient();
 
     const endDate = new Date();
     const startDate = days ? new Date() : null;
@@ -40,10 +40,17 @@ export default async function ClientAnalyticsPage({ searchParams }: Props) {
         startDate.setDate(startDate.getDate() - days);
     }
 
-    const { data: agents } = await supabase
+    // Scope agents to client to prevent leaking other clients' agent names
+    let agentsQuery = supabase
         .from('agents')
         .select('id, name')
         .eq('agency_id', user.agency.id);
+
+    if (clientId) {
+        agentsQuery = agentsQuery.eq('client_id', clientId);
+    }
+
+    const { data: agents } = await agentsQuery;
 
     const agentIds = agents?.map(a => a.id) || [];
 

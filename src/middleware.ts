@@ -205,7 +205,7 @@ export async function middleware(request: NextRequest) {
             }
 
             // Client users on non-portal, non-API paths → redirect to portal
-            if (!pathname.startsWith('/portal') && !pathname.startsWith('/api/') && pathname !== '/onboarding') {
+            if (!pathname.startsWith('/portal') && !pathname.startsWith('/api/')) {
                 const url = request.nextUrl.clone();
                 url.pathname = '/portal';
                 return NextResponse.redirect(url);

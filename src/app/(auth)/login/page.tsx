@@ -22,7 +22,6 @@ function LoginForm() {
     // Prevent open redirect: only allow relative paths
     const redirect = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : '/';
     const message = searchParams.get('message');
-    const urlError = searchParams.get('error');
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -43,7 +42,7 @@ function LoginForm() {
                 } else if (authError.message?.includes('Invalid login credentials')) {
                     setError('Invalid email or password. Please try again.');
                 } else {
-                    setError(authError.message);
+                    setError('Unable to sign in. Please try again later.');
                 }
                 return;
             }
@@ -73,9 +72,9 @@ function LoginForm() {
                 )}
 
                 <form onSubmit={handleLogin} className="space-y-5">
-                    {(error || urlError) && (
+                    {error && (
                         <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-md">
-                            {error || urlError}
+                            {error}
                         </div>
                     )}
                     <div className="space-y-2">

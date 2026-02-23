@@ -64,7 +64,7 @@ export default async function AgentDetailPage({
         .eq('agency_id', user.agency.id)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
     const providerStyles = {
         retell: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
@@ -113,7 +113,7 @@ export default async function AgentDetailPage({
                                 Latest Test Run
                             </CardTitle>
                             <CardDescription>
-                                {((latestTestRun.test_suite as unknown as { name: string }[] | null)?.[0]?.name) || 'Test Suite'} &mdash;{' '}
+                                {((latestTestRun.test_suite as unknown as { name: string } | null)?.name) || 'Test Suite'} &mdash;{' '}
                                 {new Date(latestTestRun.created_at).toLocaleDateString()}
                             </CardDescription>
                         </CardHeader>

@@ -86,6 +86,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Name must be 255 characters or less' }, { status: 400 });
         }
 
+        if (description && description.length > 5000) {
+            return NextResponse.json({ error: 'Description is too long' }, { status: 400 });
+        }
+        if (goal && goal.length > 2000) {
+            return NextResponse.json({ error: 'Goal is too long' }, { status: 400 });
+        }
+
         if (!agent_id) {
             return NextResponse.json({ error: 'Agent is required' }, { status: 400 });
         }

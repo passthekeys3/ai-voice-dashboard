@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import {
@@ -36,20 +36,20 @@ export const PATCH = withErrorHandling(async (
     // Validate permissions object structure if provided
     if (permissions !== null && permissions !== undefined) {
         if (typeof permissions !== 'object' || Array.isArray(permissions)) {
-            return forbidden('Permissions must be an object or null');
+            return NextResponse.json({ error: 'Permissions must be an object or null' }, { status: 400 });
         }
 
         // Whitelist of valid permission keys
         const VALID_PERMISSION_KEYS = ['show_costs', 'show_transcripts', 'show_analytics', 'allow_playback', 'can_edit_agents', 'can_create_agents', 'can_export_calls'];
         const invalidKeys = Object.keys(permissions).filter(k => !VALID_PERMISSION_KEYS.includes(k));
         if (invalidKeys.length > 0) {
-            return forbidden(`Invalid permission keys: ${invalidKeys.join(', ')}`);
+            return NextResponse.json({ error: `Invalid permission keys: ${invalidKeys.join(', ')}` }, { status: 400 });
         }
 
         // Validate all values are booleans
         const invalidValues = Object.entries(permissions).filter(([, v]) => typeof v !== 'boolean');
         if (invalidValues.length > 0) {
-            return forbidden('Permission values must be booleans');
+            return NextResponse.json({ error: 'Permission values must be booleans' }, { status: 400 });
         }
     }
 

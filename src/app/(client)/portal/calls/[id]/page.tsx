@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { requireAuth, isAgencyAdmin } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { getUserPermissions } from '@/lib/permissions';
 import { Header } from '@/components/dashboard/Header';
@@ -24,6 +24,8 @@ export default async function ClientCallDetailPage({
     const supabase = await createClient();
     const permissions = getUserPermissions(user);
     const showCosts = permissions.show_costs;
+    const showTranscripts = permissions.show_transcripts;
+    const allowPlayback = permissions.allow_playback;
 
     const { data: call, error } = await supabase
         .from('calls')
@@ -156,9 +158,9 @@ export default async function ClientCallDetailPage({
                     </Card>
 
                     <CallPlayer
-                        audioUrl={call.audio_url}
-                        transcript={call.transcript}
-                        summary={call.summary}
+                        audioUrl={allowPlayback ? call.audio_url : undefined}
+                        transcript={showTranscripts ? call.transcript : undefined}
+                        summary={showTranscripts ? call.summary : undefined}
                     />
                 </div>
             </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
+import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 
 /**
  * POST /api/widget/[agentId]/session
@@ -29,7 +30,7 @@ export async function POST(
         // Look up agent with widget enabled
         const { data: agent, error: agentError } = await supabase
             .from('agents')
-            .select('id, name, provider, external_id, agency_id, is_active, widget_enabled, widget_config, config')
+            .select('id, name, provider, external_id, agency_id, client_id, is_active, widget_enabled, widget_config, config')
             .eq('id', agentId)
             .single();
 
@@ -45,10 +46,14 @@ export async function POST(
             return NextResponse.json({ error: 'Widget is not enabled for this agent' }, { status: 403 });
         }
 
-        // Get agency API key and branding
+        // Resolve API keys (client-level override when applicable)
+        const resolvedKeys = await resolveProviderApiKeys(supabase, agent.agency_id, agent.client_id);
+        const providerKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
+
+        // Get agency branding (always from agency level)
         const { data: agency, error: agencyError } = await supabase
             .from('agencies')
-            .select('retell_api_key, vapi_api_key, bland_api_key, branding')
+            .select('branding')
             .eq('id', agent.agency_id)
             .single();
 
@@ -60,7 +65,7 @@ export async function POST(
         let callId: string;
 
         if (agent.provider === 'retell') {
-            if (!agency.retell_api_key) {
+            if (!providerKey) {
                 return NextResponse.json({ error: 'Voice provider not configured' }, { status: 500 });
             }
 
@@ -68,7 +73,7 @@ export async function POST(
             const retellResponse = await fetch('https://api.retellai.com/v2/create-web-call', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${agency.retell_api_key}`,
+                    'Authorization': `Bearer ${providerKey}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({

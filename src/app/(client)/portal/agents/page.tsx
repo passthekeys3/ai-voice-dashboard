@@ -1,13 +1,11 @@
 import type { Metadata } from 'next';
 
-import { requireAuth, isAgencyAdmin } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { getUserPermissions } from '@/lib/permissions';
 import { Header } from '@/components/dashboard/Header';
 import { FilterableAgentGrid } from '@/components/dashboard/FilterableAgentGrid';
 import { CreateAgentButton } from '@/components/dashboard/CreateAgentButton';
-import { Sparkles } from 'lucide-react';
-import Link from 'next/link';
 import type { Agent } from '@/types';
 
 export const metadata: Metadata = { title: 'Agents' };
@@ -30,29 +28,30 @@ export default async function ClientAgentsPage() {
 
     const { data: agents } = await query;
 
-    // Fetch phone numbers for agent display
-    const { data: phoneNumbers } = await supabase
-        .from('phone_numbers')
-        .select('id, phone_number, agent_id')
-        .eq('agency_id', user.agency.id)
-        .eq('status', 'active');
+    // Fetch phone numbers scoped to this client's agents only
+    const clientAgentIds = (agents || []).map(a => a.id);
+    let phoneNumbers: { id: string; phone_number: string; agent_id: string | null }[] = [];
+    if (clientAgentIds.length > 0) {
+        const { data: pnData } = await supabase
+            .from('phone_numbers')
+            .select('id, phone_number, agent_id')
+            .eq('agency_id', user.agency.id)
+            .eq('status', 'active')
+            .in('agent_id', clientAgentIds);
+        phoneNumbers = pnData || [];
+    }
 
     const agentPhoneMap: Record<string, string> = {};
-    phoneNumbers?.forEach(pn => {
+    phoneNumbers.forEach(pn => {
         if (pn.agent_id) {
             agentPhoneMap[pn.agent_id] = pn.phone_number;
         }
     });
 
-    // Fetch clients for agent creation (if permitted)
+    // For client users, restrict the clients list to their own client only
     let clients: { id: string; name: string }[] = [];
-    if (canCreate) {
-        const { data: clientList } = await supabase
-            .from('clients')
-            .select('id, name')
-            .eq('agency_id', user.agency.id)
-            .order('name');
-        clients = clientList || [];
+    if (canCreate && user.client) {
+        clients = [{ id: user.client.id, name: user.client.name }];
     }
 
     // Determine which providers the agency has configured
@@ -81,17 +80,11 @@ export default async function ClientAgentsPage() {
                     </div>
                     {canCreate && (
                         <div className="flex flex-wrap gap-2">
-                            <Link
-                                href="/agent-builder"
-                                className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-gradient-to-r from-violet-500 to-purple-600 text-white hover:from-violet-600 hover:to-purple-700 transition-all shadow-sm"
-                            >
-                                <Sparkles className="h-4 w-4" />
-                                Build with AI
-                            </Link>
                             <CreateAgentButton
                                 clients={clients}
-                                phoneNumbers={phoneNumbers || []}
+                                phoneNumbers={phoneNumbers.map(pn => ({ ...pn, agent_id: pn.agent_id ?? undefined }))}
                                 availableProviders={availableProviders}
+                                basePath="/portal"
                             />
                         </div>
                     )}

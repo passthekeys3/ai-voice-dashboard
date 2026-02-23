@@ -118,7 +118,7 @@ export async function GET(_request: NextRequest) {
                 for (const call of blandCalls) {
                     const agentInfo = call.pathway_id ? agentMap.get(call.pathway_id) : undefined;
                     // Only include calls for agents we know about
-                    if (agentInfo || !call.pathway_id) {
+                    if (agentInfo) {
                         allActiveCalls.push({
                             id: call.call_id,
                             external_id: call.call_id,

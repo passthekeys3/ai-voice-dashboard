@@ -12,6 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { createServiceClient } from '@/lib/supabase/server';
 import { bookNextAvailableAppointment, getCalendarFreeSlots, createAppointment, searchContactByPhone, createContact } from '@/lib/integrations/ghl';
 
@@ -24,7 +25,9 @@ export async function POST(
         const apiSecret = process.env.LIVE_CALL_API_SECRET;
         const providedSecret = request.headers.get('x-api-secret');
 
-        if (!apiSecret || !providedSecret || apiSecret !== providedSecret) {
+        if (!apiSecret || !providedSecret ||
+            apiSecret.length !== providedSecret.length ||
+            !crypto.timingSafeEqual(Buffer.from(apiSecret), Buffer.from(providedSecret))) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 

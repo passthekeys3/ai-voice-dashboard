@@ -66,27 +66,37 @@ export async function POST(_request: NextRequest) {
                             ? agentMap.get(retellNumber.outbound_agent_id)
                             : null;
 
-                        const externalId = retellNumber.phone_number;
+                        // Use phone_number_id from Retell as external_id (consistent with purchase route)
+                        const externalId = retellNumber.phone_number_id || retellNumber.phone_number;
 
-                        const { data: existing } = await supabase
+                        // Check by external_id first, then by phone_number (consistent with Vapi sync)
+                        const { data: existingById } = await supabase
                             .from('phone_numbers')
                             .select('id')
-                            .eq('phone_number', externalId)
+                            .eq('external_id', externalId)
                             .eq('agency_id', user.agency.id)
                             .maybeSingle();
 
+                        const existing = existingById || (await supabase
+                            .from('phone_numbers')
+                            .select('id')
+                            .eq('phone_number', retellNumber.phone_number)
+                            .eq('agency_id', user.agency.id)
+                            .maybeSingle()).data;
+
                         if (existing) {
-                            await supabase
+                            const { error: updateErr } = await supabase
                                 .from('phone_numbers')
                                 .update({
                                     phone_number: retellNumber.phone_number,
+                                    external_id: externalId,
                                     inbound_agent_id: inboundAgentId,
                                     outbound_agent_id: outboundAgentId,
                                     agent_id: inboundAgentId,
                                     updated_at: new Date().toISOString(),
                                 })
                                 .eq('id', existing.id);
-                            updated++;
+                            if (!updateErr) updated++;
                         } else {
                             const { error: insertErr } = await supabase
                                 .from('phone_numbers')
@@ -209,14 +219,15 @@ export async function POST(_request: NextRequest) {
                         .maybeSingle();
 
                     if (existing) {
-                        await supabase
+                        const { error: updateErr } = await supabase
                             .from('phone_numbers')
                             .update({
                                 agent_id: inboundAgentId,
+                                inbound_agent_id: inboundAgentId,
                                 updated_at: new Date().toISOString(),
                             })
                             .eq('id', existing.id);
-                        updated++;
+                        if (!updateErr) updated++;
                     } else {
                         const { error: insertErr } = await supabase
                             .from('phone_numbers')
@@ -226,6 +237,7 @@ export async function POST(_request: NextRequest) {
                                 phone_number: phoneNumber,
                                 provider: 'bland',
                                 agent_id: inboundAgentId,
+                                inbound_agent_id: inboundAgentId,
                                 monthly_cost_cents: 200,
                                 purchased_at: new Date().toISOString(),
                             });
