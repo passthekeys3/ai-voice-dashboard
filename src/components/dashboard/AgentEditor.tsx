@@ -125,7 +125,13 @@ export function AgentEditor({
     const [agentName, setAgentName] = useState((config as { agent_name?: string }).agent_name || '');
     const [voiceId, setVoiceId] = useState((config as { voice_id?: string }).voice_id || '');
     const [language, setLanguage] = useState((config as { language?: string }).language || 'en-US');
-    const [prompt, setPrompt] = useState('');
+    const [prompt, setPrompt] = useState(
+        (config as { system_prompt?: string; prompt?: string; llm_prompt?: string }).system_prompt
+        || (config as { prompt?: string }).prompt
+        || (config as { llm_prompt?: string }).llm_prompt
+        || ''
+    );
+    const [promptFetchFailed, setPromptFetchFailed] = useState(false);
     const [responsiveness, setResponsiveness] = useState(
         (config as { responsiveness?: number }).responsiveness || 0.8
     );
@@ -184,10 +190,15 @@ export function AgentEditor({
                         if (data.data.voice_id) setVoiceId(data.data.voice_id);
                         if (data.data.language) setLanguage(data.data.language);
                         if (data.data.responsiveness) setResponsiveness(data.data.responsiveness);
+                        setPromptFetchFailed(false);
                     }
+                } else {
+                    console.error('Provider data fetch failed:', response.status);
+                    setPromptFetchFailed(true);
                 }
             } catch (err) {
                 console.error('Error fetching provider data:', err);
+                setPromptFetchFailed(true);
             } finally {
                 setLoadingPrompt(false);
             }
@@ -422,10 +433,21 @@ export function AgentEditor({
                         <CardHeader>
                             <CardTitle>Agent Prompt</CardTitle>
                             <CardDescription>
-                                {loadingPrompt ? 'Loading from provider...' : 'Define your agent&apos;s personality and behavior'}
+                                {loadingPrompt ? 'Loading from provider...' : "Define your agent's personality and behavior"}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            {promptFetchFailed && (
+                                <Alert variant="destructive">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    <AlertTitle>Could not load prompt from provider</AlertTitle>
+                                    <AlertDescription>
+                                        {prompt
+                                            ? 'Showing locally cached prompt. Changes will still be saved to the provider.'
+                                            : 'The provider API returned an error. Enter your prompt below and save to update the provider.'}
+                                    </AlertDescription>
+                                </Alert>
+                            )}
                             <div className="space-y-2">
                                 <Label htmlFor="prompt">System Prompt</Label>
                                 {loadingPrompt ? (
