@@ -163,8 +163,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                         experiment_id: experimentId,
                         name: variant.name,
                         prompt: variant.prompt,
-                        traffic_weight: variant.traffic_weight,
-                        is_control: variant.is_control,
+                        traffic_weight: variant.traffic_weight ?? 50,
+                        is_control: !!variant.is_control,
                     });
                 if (insertErr) errors.push(insertErr.code);
             }

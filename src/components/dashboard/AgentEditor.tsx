@@ -215,10 +215,10 @@ export function AgentEditor({
                     const data = await response.json();
                     if (data.data) {
                         setPrompt(data.data.prompt || '');
-                        if (data.data.agent_name) setAgentName(data.data.agent_name);
-                        if (data.data.voice_id) setVoiceId(data.data.voice_id);
-                        if (data.data.voice_provider) setVoiceProvider(data.data.voice_provider);
-                        if (data.data.language) setLanguage(data.data.language);
+                        if (data.data.agent_name !== undefined) setAgentName(data.data.agent_name);
+                        if (data.data.voice_id !== undefined) setVoiceId(data.data.voice_id);
+                        if (data.data.voice_provider !== undefined) setVoiceProvider(data.data.voice_provider);
+                        if (data.data.language !== undefined) setLanguage(data.data.language);
                         if (data.data.responsiveness !== undefined) setResponsiveness(data.data.responsiveness);
                         setPromptFetchFailed(false);
                     }

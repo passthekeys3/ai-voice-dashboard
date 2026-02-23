@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, Fragment, memo, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, Fragment, memo } from 'react';
 import Link from 'next/link';
 import { format, formatDistanceToNow } from 'date-fns';
 import {
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     Play,
+    Pause,
     ExternalLink,
     ArrowUpDown,
     ArrowUp,
@@ -259,12 +260,16 @@ const MobileCallCard = memo(function MobileCallCard({
     call,
     showCosts,
     allowPlayback,
+    isPlaying,
+    onTogglePlayback,
     formatDuration,
     formatDateTime,
 }: {
     call: Call & { agents?: { name: string; provider: string } };
     showCosts: boolean;
     allowPlayback: boolean;
+    isPlaying: boolean;
+    onTogglePlayback: (callId: string, audioUrl: string) => void;
     formatDuration: (seconds: number) => string;
     formatDateTime: (date: string) => { relative: string; absolute: string };
 }) {
@@ -290,16 +295,17 @@ const MobileCallCard = memo(function MobileCallCard({
 
             <div className="flex gap-2">
                 {allowPlayback && call.audio_url && (
-                    <Button variant="outline" size="sm" asChild>
-                        <a
-                            href={call.audio_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label="Play audio"
-                        >
-                            <Play className="h-4 w-4 mr-1" />
-                            Play
-                        </a>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onTogglePlayback(call.id, call.audio_url!)}
+                        aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
+                    >
+                        {isPlaying ? (
+                            <><Pause className="h-4 w-4 mr-1" /> Pause</>
+                        ) : (
+                            <><Play className="h-4 w-4 mr-1" /> Play</>
+                        )}
                     </Button>
                 )}
                 <Button variant="outline" size="sm" asChild>
@@ -323,6 +329,9 @@ export function CallsTable({
     const [sortField, setSortField] = useState<SortField | null>('time');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+    const [playingCallId, setPlayingCallId] = useState<string | null>(null);
+    const playingCallIdRef = useRef<string | null>(null);
+    const audioRef = useRef<HTMLAudioElement>(null);
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
@@ -351,6 +360,29 @@ export function CallsTable({
             toggleRow(callId);
         }
     }, [toggleRow]);
+
+    const togglePlayback = useCallback((callId: string, audioUrl: string) => {
+        if (playingCallIdRef.current === callId) {
+            audioRef.current?.pause();
+            playingCallIdRef.current = null;
+            setPlayingCallId(null);
+        } else {
+            audioRef.current?.pause();
+            if (audioRef.current) {
+                audioRef.current.src = audioUrl;
+                audioRef.current.play().then(
+                    () => {
+                        playingCallIdRef.current = callId;
+                        setPlayingCallId(callId);
+                    },
+                    () => {
+                        playingCallIdRef.current = null;
+                        setPlayingCallId(null);
+                    }
+                );
+            }
+        }
+    }, []);
 
     const sortedCalls = useMemo(() => {
         if (!sortField) return calls;
@@ -419,6 +451,8 @@ export function CallsTable({
                         call={call}
                         showCosts={showCosts}
                         allowPlayback={allowPlayback}
+                        isPlaying={playingCallId === call.id}
+                        onTogglePlayback={togglePlayback}
                         formatDuration={formatDuration}
                         formatDateTime={formatDateTime}
                     />
@@ -561,17 +595,15 @@ export function CallsTable({
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    asChild
                                                     className="opacity-70 hover:opacity-100 transition-opacity"
+                                                    onClick={() => togglePlayback(call.id, call.audio_url!)}
+                                                    aria-label={playingCallId === call.id ? 'Pause audio' : 'Play audio'}
                                                 >
-                                                    <a
-                                                        href={call.audio_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        aria-label="Play audio"
-                                                    >
+                                                    {playingCallId === call.id ? (
+                                                        <Pause className="h-4 w-4" />
+                                                    ) : (
                                                         <Play className="h-4 w-4" />
-                                                    </a>
+                                                    )}
                                                 </Button>
                                             )}
                                             <Button
@@ -662,6 +694,16 @@ export function CallsTable({
                     })}
                 </TableBody>
             </Table>
+
+            {/* Shared audio element for inline playback */}
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            <audio
+                ref={audioRef}
+                onEnded={() => { playingCallIdRef.current = null; setPlayingCallId(null); }}
+                onError={() => { playingCallIdRef.current = null; setPlayingCallId(null); }}
+                preload="none"
+                className="hidden"
+            />
         </div>
     );
 }
