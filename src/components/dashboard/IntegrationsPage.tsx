@@ -1,18 +1,65 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarCheck, Hash, Key, Calendar, Clock } from 'lucide-react';
+import { Key, Clock, CheckCircle2 } from 'lucide-react';
+
+/* ── Brand SVG logos ─────────────────────────────────────────────── */
+
+function GoHighLevelLogo() {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+            <path d="M13.5 2L4 13.5h7L8.5 22 20 10.5h-7z" />
+        </svg>
+    );
+}
+
+function HubSpotLogo() {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+            <path d="M18.164 7.931V5.085a2.198 2.198 0 0 0 1.266-1.978V3.05a2.199 2.199 0 0 0-2.196-2.196h-.058a2.199 2.199 0 0 0-2.196 2.196v.057a2.2 2.2 0 0 0 1.267 1.978v2.846a6.235 6.235 0 0 0-2.969 1.31L5.2 3.226a2.378 2.378 0 0 0 .079-.593 2.39 2.39 0 1 0-2.39 2.39c.421 0 .814-.11 1.155-.302l7.998 5.855a6.263 6.263 0 0 0-.976 3.388c0 1.292.393 2.492 1.064 3.493l-2.44 2.44a1.875 1.875 0 0 0-.548-.084 1.9 1.9 0 1 0 1.9 1.9 1.876 1.876 0 0 0-.084-.548l2.41-2.41a6.297 6.297 0 0 0 3.85 1.306c3.478 0 6.3-2.822 6.3-6.3a6.3 6.3 0 0 0-4.354-5.99zm-1.988 9.44a3.076 3.076 0 1 1 0-6.151 3.076 3.076 0 0 1 0 6.152z" />
+        </svg>
+    );
+}
+
+function GoogleCalendarLogo() {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8" fill="none" />
+            <path d="M3 9h18" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M8 2v4M16 2v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            <rect x="7" y="12" width="3" height="2.5" rx="0.5" fill="currentColor" />
+            <rect x="10.5" y="12" width="3" height="2.5" rx="0.5" fill="currentColor" />
+            <rect x="14" y="12" width="3" height="2.5" rx="0.5" fill="currentColor" />
+            <rect x="7" y="15.5" width="3" height="2.5" rx="0.5" fill="currentColor" />
+            <rect x="10.5" y="15.5" width="3" height="2.5" rx="0.5" fill="currentColor" />
+        </svg>
+    );
+}
+
+function CalendlyLogo() {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+            <path d="M12 2a10 10 0 1 0 5.196 18.535l-1.602-2.77A7 7 0 1 1 12 5a6.97 6.97 0 0 1 4.243 1.428l1.722-2.67A9.953 9.953 0 0 0 12 2z" />
+        </svg>
+    );
+}
+
+function SlackLogo() {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+            <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.122 2.521a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zm-1.268 0a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zm-2.523 10.122a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zm0-1.268a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
+        </svg>
+    );
+}
+
+/* ── Integration data ────────────────────────────────────────────── */
 
 interface Integration {
     name: string;
     description: string;
-    badge: {
-        text: string;
-        className: string;
-    } | {
-        icon: React.ElementType;
-        className: string;
-    };
+    logo: React.ReactNode;
+    bgClassName: string;
+    comingSoon: boolean;
     features: string[];
 }
 
@@ -20,7 +67,9 @@ const integrations: Integration[] = [
     {
         name: 'GoHighLevel',
         description: 'Full CRM automation for your AI voice agents',
-        badge: { text: 'GHL', className: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' },
+        logo: <GoHighLevelLogo />,
+        bgClassName: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
+        comingSoon: true,
         features: [
             'Auto-log calls to contacts',
             'Update pipeline stages',
@@ -32,7 +81,9 @@ const integrations: Integration[] = [
     {
         name: 'HubSpot',
         description: 'Sync AI call data with your HubSpot CRM',
-        badge: { text: 'HS', className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400' },
+        logo: <HubSpotLogo />,
+        bgClassName: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400',
+        comingSoon: true,
         features: [
             'Create call engagements',
             'Manage deals & pipeline',
@@ -44,7 +95,9 @@ const integrations: Integration[] = [
     {
         name: 'Google Calendar',
         description: 'Check availability and book events automatically',
-        badge: { icon: Calendar, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' },
+        logo: <GoogleCalendarLogo />,
+        bgClassName: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
+        comingSoon: true,
         features: [
             'Check free/busy slots',
             'Create calendar events',
@@ -55,7 +108,9 @@ const integrations: Integration[] = [
     {
         name: 'Calendly',
         description: 'Generate scheduling links and manage bookings',
-        badge: { icon: CalendarCheck, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' },
+        logo: <CalendlyLogo />,
+        bgClassName: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
+        comingSoon: true,
         features: [
             'Create one-time booking links',
             'Check availability',
@@ -66,7 +121,9 @@ const integrations: Integration[] = [
     {
         name: 'Slack',
         description: 'Get real-time call notifications in your channels',
-        badge: { icon: Hash, className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400' },
+        logo: <SlackLogo />,
+        bgClassName: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400',
+        comingSoon: true,
         features: [
             'Call summary notifications',
             'Sentiment & score alerts',
@@ -77,7 +134,9 @@ const integrations: Integration[] = [
     {
         name: 'API / Webhooks',
         description: 'Connect Zapier, Make.com, n8n, or any HTTP client',
-        badge: { icon: Key, className: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400' },
+        logo: <Key className="h-5 w-5" aria-hidden="true" />,
+        bgClassName: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400',
+        comingSoon: false,
         features: [
             'Trigger outbound calls via API',
             'Webhook-based automation',
@@ -87,6 +146,8 @@ const integrations: Integration[] = [
     },
 ];
 
+/* ── Component ───────────────────────────────────────────────────── */
+
 export function IntegrationsPage() {
     return (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" role="list" aria-label="Available integrations">
@@ -95,21 +156,26 @@ export function IntegrationsPage() {
                     <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                {'text' in integration.badge ? (
-                                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg text-xs font-bold ${integration.badge.className}`} role="img" aria-label={integration.name}>
-                                        {integration.badge.text}
-                                    </div>
-                                ) : (
-                                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${integration.badge.className}`} role="img" aria-label={integration.name}>
-                                        <integration.badge.icon className="h-5 w-5" aria-hidden="true" />
-                                    </div>
-                                )}
+                                <div
+                                    className={`flex h-10 w-10 items-center justify-center rounded-lg ${integration.bgClassName}`}
+                                    role="img"
+                                    aria-label={integration.name}
+                                >
+                                    {integration.logo}
+                                </div>
                                 <CardTitle className="text-base">{integration.name}</CardTitle>
                             </div>
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                                <Clock className="h-3 w-3" />
-                                Coming Soon
-                            </span>
+                            {integration.comingSoon ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                                    <Clock className="h-3 w-3" />
+                                    Coming Soon
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    Active
+                                </span>
+                            )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
                             {integration.description}
