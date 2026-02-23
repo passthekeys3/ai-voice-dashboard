@@ -21,6 +21,7 @@ export interface VapiAssistant {
         provider: string;
         model: string;
         systemPrompt?: string;
+        messages?: Array<{ role: string; content: string }>;
         temperature?: number;
     };
     transcriber?: {
@@ -140,6 +141,23 @@ export async function createVapiAssistant(
         method: 'POST',
         body: JSON.stringify(config),
     });
+}
+
+/** Extract the system prompt from a Vapi assistant model, supporting both formats */
+export function extractVapiSystemPrompt(model?: VapiAssistant['model']): string {
+    if (!model) return '';
+    // Prefer messages array (newer format takes precedence in Vapi API)
+    if (model.messages && model.messages.length > 0) {
+        const systemMsg = model.messages.find(m => m.role === 'system');
+        if (systemMsg?.content) return systemMsg.content;
+    }
+    // Fall back to legacy systemPrompt field
+    return model.systemPrompt || '';
+}
+
+/** Check whether the assistant uses the messages array format */
+export function usesVapiMessagesFormat(model?: VapiAssistant['model']): boolean {
+    return !!(model?.messages && model.messages.length > 0);
 }
 
 export async function updateVapiAssistant(

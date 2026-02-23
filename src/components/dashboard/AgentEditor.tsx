@@ -37,47 +37,47 @@ interface AgentEditorProps {
     webhookUrl?: string;
 }
 
-// Common voice options for Retell (comprehensive list)
-const RETELL_VOICES = [
-    // ElevenLabs voices
-    { id: '11labs-Adrian', name: 'Adrian (Male)' },
-    { id: '11labs-Aria', name: 'Aria (Female)' },
-    { id: '11labs-Brian', name: 'Brian (Male)' },
-    { id: '11labs-Callum', name: 'Callum (Male)' },
-    { id: '11labs-Charlotte', name: 'Charlotte (Female)' },
-    { id: '11labs-Chris', name: 'Chris (Male)' },
-    { id: '11labs-Cimo', name: 'Cimo (Male)' },
-    { id: '11labs-Daniel', name: 'Daniel (Male)' },
-    { id: '11labs-Drew', name: 'Drew (Male)' },
-    { id: '11labs-Emily', name: 'Emily (Female)' },
-    { id: '11labs-Eric', name: 'Eric (Male)' },
-    { id: '11labs-George', name: 'George (Male)' },
-    { id: '11labs-Jason', name: 'Jason (Male)' },
-    { id: '11labs-Jessica', name: 'Jessica (Female)' },
-    { id: '11labs-Josh', name: 'Josh (Male)' },
-    { id: '11labs-Julia', name: 'Julia (Female)' },
-    { id: '11labs-Laura', name: 'Laura (Female)' },
-    { id: '11labs-Lily', name: 'Lily (Female)' },
-    { id: '11labs-Marissa', name: 'Marissa (Female)' },
-    { id: '11labs-Matilda', name: 'Matilda (Female)' },
-    { id: '11labs-Myra', name: 'Myra (Female)' },
-    { id: '11labs-Nyla', name: 'Nyla (Female)' },
-    { id: '11labs-Paul', name: 'Paul (Male)' },
-    { id: '11labs-Rachel', name: 'Rachel (Female)' },
-    { id: '11labs-River', name: 'River (Non-binary)' },
-    { id: '11labs-Roger', name: 'Roger (Male)' },
-    { id: '11labs-Sarah', name: 'Sarah (Female)' },
-    { id: '11labs-Susan', name: 'Susan (Female)' },
-    { id: '11labs-Will', name: 'Will (Male)' },
-    // OpenAI voices
-    { id: 'openai-Alloy', name: 'OpenAI Alloy' },
-    { id: 'openai-Coral', name: 'OpenAI Coral' },
-    { id: 'openai-Echo', name: 'OpenAI Echo' },
-    { id: 'openai-Fable', name: 'OpenAI Fable' },
-    { id: 'openai-Nova', name: 'OpenAI Nova' },
-    { id: 'openai-Onyx', name: 'OpenAI Onyx' },
-    { id: 'openai-Shimmer', name: 'OpenAI Shimmer' },
+// Well-known Vapi voice providers and their voices
+const VAPI_VOICE_PROVIDERS = [
+    { id: 'openai', name: 'OpenAI' },
+    { id: '11labs', name: 'ElevenLabs' },
+    { id: 'playht', name: 'PlayHT' },
+    { id: 'deepgram', name: 'Deepgram' },
+    { id: 'azure', name: 'Azure' },
+    { id: 'lmnt', name: 'LMNT' },
+    { id: 'rime-ai', name: 'Rime AI' },
 ];
+
+// Known voices for Vapi TTS providers that have a fixed set
+const VAPI_KNOWN_VOICES: Record<string, { id: string; name: string }[]> = {
+    openai: [
+        { id: 'alloy', name: 'Alloy' },
+        { id: 'ash', name: 'Ash' },
+        { id: 'ballad', name: 'Ballad' },
+        { id: 'coral', name: 'Coral' },
+        { id: 'echo', name: 'Echo' },
+        { id: 'fable', name: 'Fable' },
+        { id: 'nova', name: 'Nova' },
+        { id: 'onyx', name: 'Onyx' },
+        { id: 'sage', name: 'Sage' },
+        { id: 'shimmer', name: 'Shimmer' },
+        { id: 'verse', name: 'Verse' },
+    ],
+    deepgram: [
+        { id: 'asteria', name: 'Asteria (Female)' },
+        { id: 'luna', name: 'Luna (Female)' },
+        { id: 'stella', name: 'Stella (Female)' },
+        { id: 'athena', name: 'Athena (Female)' },
+        { id: 'hera', name: 'Hera (Female)' },
+        { id: 'orion', name: 'Orion (Male)' },
+        { id: 'arcas', name: 'Arcas (Male)' },
+        { id: 'perseus', name: 'Perseus (Male)' },
+        { id: 'angus', name: 'Angus (Male)' },
+        { id: 'orpheus', name: 'Orpheus (Male)' },
+        { id: 'helios', name: 'Helios (Male)' },
+        { id: 'zeus', name: 'Zeus (Male)' },
+    ],
+};
 
 function formatTimeAgo(isoDate: string): string {
     const diffMs = Date.now() - new Date(isoDate).getTime();
@@ -121,9 +121,10 @@ export function AgentEditor({
     const [active, setActive] = useState(isActive);
     const [selectedClient, setSelectedClient] = useState(clientId || '');
 
-    // Agent config state (for Retell)
+    // Agent config state
     const [agentName, setAgentName] = useState((config as { agent_name?: string }).agent_name || '');
     const [voiceId, setVoiceId] = useState((config as { voice_id?: string }).voice_id || '');
+    const [voiceProvider, setVoiceProvider] = useState((config as { voice_provider?: string }).voice_provider || '');
     const [language, setLanguage] = useState((config as { language?: string }).language || 'en-US');
     const [prompt, setPrompt] = useState(
         (config as { system_prompt?: string; prompt?: string; llm_prompt?: string }).system_prompt
@@ -135,6 +136,34 @@ export function AgentEditor({
     const [responsiveness, setResponsiveness] = useState(
         (config as { responsiveness?: number }).responsiveness || 0.8
     );
+
+    // Dynamic voice list (fetched from API for Retell, from known lists for Vapi)
+    const [voices, setVoices] = useState<{ id: string; name: string; provider?: string }[]>([]);
+    const [loadingVoices, setLoadingVoices] = useState(false);
+
+    // Fetch voices dynamically
+    useEffect(() => {
+        if (provider === 'retell') {
+            setLoadingVoices(true);
+            fetch('/api/voices?provider=retell')
+                .then(res => res.ok ? res.json() : null)
+                .then(data => {
+                    if (data?.data) {
+                        setVoices(data.data.map((v: { id: string; name: string; provider?: string }) => ({
+                            id: v.id,
+                            name: v.name,
+                            provider: v.provider,
+                        })));
+                    }
+                })
+                .catch(err => console.error('Error fetching voices:', err))
+                .finally(() => setLoadingVoices(false));
+        } else if (provider === 'vapi') {
+            // Use known voice lists based on the selected TTS provider
+            const knownVoices = VAPI_KNOWN_VOICES[voiceProvider] || [];
+            setVoices(knownVoices);
+        }
+    }, [provider, voiceProvider]);
 
     // AI Suggestions state
     const [suggestions, setSuggestions] = useState<PromptSuggestion[]>([]);
@@ -188,6 +217,7 @@ export function AgentEditor({
                         setPrompt(data.data.prompt || '');
                         if (data.data.agent_name) setAgentName(data.data.agent_name);
                         if (data.data.voice_id) setVoiceId(data.data.voice_id);
+                        if (data.data.voice_provider) setVoiceProvider(data.data.voice_provider);
                         if (data.data.language) setLanguage(data.data.language);
                         if (data.data.responsiveness) setResponsiveness(data.data.responsiveness);
                         setPromptFetchFailed(false);
@@ -234,11 +264,15 @@ export function AgentEditor({
                 prompt,
             };
 
-            // Retell-specific fields
+            // Provider-specific fields
             if (provider === 'retell') {
                 providerPayload.voice_id = voiceId;
                 providerPayload.language = language;
                 providerPayload.responsiveness = responsiveness;
+            } else if (provider === 'vapi') {
+                providerPayload.voice_id = voiceId;
+                providerPayload.voice_provider = voiceProvider;
+                providerPayload.language = language;
             }
 
             const providerResponse = await fetch(`/api/agents/${agentId}/provider`, {
@@ -264,19 +298,22 @@ export function AgentEditor({
 
     return (
         <div className="space-y-6">
-            {/* VAPI Limitations Warning */}
+            {/* VAPI Feature Note */}
             {provider === 'vapi' && (
                 <Alert variant="default" className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
                     <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                    <AlertTitle className="text-yellow-800 dark:text-yellow-200">Limited VAPI Support</AlertTitle>
+                    <AlertTitle className="text-yellow-800 dark:text-yellow-200">VAPI Feature Note</AlertTitle>
                     <AlertDescription className="text-yellow-700 dark:text-yellow-300">
                         Some features are not yet available for VAPI agents:
                         <ul className="list-disc list-inside mt-2 space-y-1">
-                            <li>Voice & language selection from this dashboard</li>
                             <li>Knowledge base management</li>
+                            <li>Embeddable voice widget</li>
                         </ul>
                         <p className="mt-2">
-                            Please manage these features directly in your VAPI dashboard.
+                            Please manage these features directly in your{' '}
+                            <a href="https://dashboard.vapi.ai" target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                                VAPI dashboard
+                            </a>.
                         </p>
                     </AlertDescription>
                 </Alert>
@@ -307,7 +344,7 @@ export function AgentEditor({
             <Tabs defaultValue="general" className="w-full">
                 <TabsList className="w-full mb-4">
                     <TabsTrigger value="general" className="flex-1">General</TabsTrigger>
-                    {provider === 'retell' && (
+                    {(provider === 'retell' || provider === 'vapi') && (
                         <TabsTrigger value="voice" className="flex-1">Voice & Language</TabsTrigger>
                     )}
                     <TabsTrigger value="prompt" className="flex-1">Prompt</TabsTrigger>
@@ -377,23 +414,89 @@ export function AgentEditor({
                             <CardDescription>Configure how your agent sounds</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            {/* Vapi: TTS provider selection */}
+                            {provider === 'vapi' && (
+                                <div className="space-y-2">
+                                    <Label>Voice Provider</Label>
+                                    <Select
+                                        value={voiceProvider || 'select-provider'}
+                                        onValueChange={(v: string) => {
+                                            const newProvider = v === 'select-provider' ? '' : v;
+                                            setVoiceProvider(newProvider);
+                                            setVoiceId('');
+                                        }}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a voice provider" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="select-provider">Select a provider...</SelectItem>
+                                            {VAPI_VOICE_PROVIDERS.map((vp) => (
+                                                <SelectItem key={vp.id} value={vp.id}>
+                                                    {vp.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+
+                            {/* Voice selection */}
                             <div className="space-y-2">
                                 <Label>Voice</Label>
-                                <Select value={voiceId || 'select-voice'} onValueChange={(v: string) => setVoiceId(v === 'select-voice' ? '' : v)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a voice" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="select-voice">Select a voice...</SelectItem>
-                                        {RETELL_VOICES.map((voice) => (
-                                            <SelectItem key={voice.id} value={voice.id}>
-                                                {voice.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                {loadingVoices ? (
+                                    <div className="flex items-center gap-2 h-10 px-3 bg-slate-100 dark:bg-slate-800 rounded-md">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        <span className="text-sm text-muted-foreground">Loading voices...</span>
+                                    </div>
+                                ) : voices.length > 0 ? (
+                                    <Select
+                                        value={voiceId || 'select-voice'}
+                                        onValueChange={(v: string) => setVoiceId(v === 'select-voice' ? '' : v)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a voice" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="select-voice">Select a voice...</SelectItem>
+                                            {voices.map((voice) => (
+                                                <SelectItem key={voice.id} value={voice.id}>
+                                                    {voice.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                ) : provider === 'vapi' && voiceProvider ? (
+                                    <div className="space-y-2">
+                                        <Input
+                                            value={voiceId}
+                                            onChange={(e) => setVoiceId(e.target.value)}
+                                            placeholder="Enter voice ID"
+                                        />
+                                        <p className="text-sm text-muted-foreground">
+                                            Enter the voice ID from your {VAPI_VOICE_PROVIDERS.find(vp => vp.id === voiceProvider)?.name || voiceProvider} account.
+                                        </p>
+                                    </div>
+                                ) : provider === 'vapi' ? (
+                                    <p className="text-sm text-muted-foreground py-2">
+                                        Select a voice provider above to configure the voice.
+                                    </p>
+                                ) : (
+                                    <Select
+                                        value={voiceId || 'select-voice'}
+                                        onValueChange={(v: string) => setVoiceId(v === 'select-voice' ? '' : v)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a voice" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="select-voice">Select a voice...</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )}
                             </div>
 
+                            {/* Language */}
                             <div className="space-y-2">
                                 <Label>Language</Label>
                                 <Select value={language} onValueChange={setLanguage}>
@@ -408,21 +511,29 @@ export function AgentEditor({
                                         ))}
                                     </SelectContent>
                                 </Select>
+                                {provider === 'vapi' && (
+                                    <p className="text-sm text-muted-foreground">
+                                        Sets the transcriber language for speech recognition.
+                                    </p>
+                                )}
                             </div>
 
-                            <div className="space-y-2">
-                                <Label>Responsiveness: {responsiveness.toFixed(1)}</Label>
-                                <Slider
-                                    min={0}
-                                    max={1}
-                                    step={0.1}
-                                    value={[responsiveness]}
-                                    onValueChange={([val]: number[]) => setResponsiveness(val)}
-                                />
-                                <p className="text-sm text-muted-foreground">
-                                    How quickly the agent responds (0 = slow, 1 = fast)
-                                </p>
-                            </div>
+                            {/* Retell-only: Responsiveness */}
+                            {provider === 'retell' && (
+                                <div className="space-y-2">
+                                    <Label>Responsiveness: {responsiveness.toFixed(1)}</Label>
+                                    <Slider
+                                        min={0}
+                                        max={1}
+                                        step={0.1}
+                                        value={[responsiveness]}
+                                        onValueChange={([val]: number[]) => setResponsiveness(val)}
+                                    />
+                                    <p className="text-sm text-muted-foreground">
+                                        How quickly the agent responds (0 = slow, 1 = fast)
+                                    </p>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>

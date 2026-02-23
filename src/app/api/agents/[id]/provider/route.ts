@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { updateRetellAgent, getRetellAgent, getRetellLLM, updateRetellLLM } from '@/lib/providers/retell';
-import { getVapiAssistant, updateVapiAssistant } from '@/lib/providers/vapi';
+import { getVapiAssistant, updateVapiAssistant, extractVapiSystemPrompt, usesVapiMessagesFormat } from '@/lib/providers/vapi';
 import { getBlandPathway, updateBlandPathway } from '@/lib/providers/bland';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 
@@ -87,7 +87,7 @@ export async function GET(
                         voice_id: vapiAssistant.voice?.voiceId || '',
                         voice_provider: vapiAssistant.voice?.provider || '',
                         language: vapiAssistant.transcriber?.language || 'en',
-                        prompt: vapiAssistant.model?.systemPrompt || '',
+                        prompt: extractVapiSystemPrompt(vapiAssistant.model),
                         model_provider: vapiAssistant.model?.provider || '',
                         model: vapiAssistant.model?.model || '',
                         first_message: vapiAssistant.firstMessage || '',
@@ -215,7 +215,7 @@ export async function PATCH(
 
                 const updateData: Partial<{
                     name: string;
-                    model: { provider: string; model: string; systemPrompt?: string; temperature?: number };
+                    model: { provider: string; model: string; systemPrompt?: string; messages?: Array<{ role: string; content: string }>; temperature?: number };
                     voice: { provider: string; voiceId: string; speed?: number; stability?: number };
                     transcriber: { provider: string; model?: string; language?: string };
                     firstMessage: string;
@@ -225,12 +225,27 @@ export async function PATCH(
 
                 // Update model config (prompt, model selection, or both)
                 if (body.prompt !== undefined || body.model !== undefined || body.model_provider !== undefined) {
+                    const useMessages = usesVapiMessagesFormat(vapiAssistant.model);
+                    const currentPrompt = extractVapiSystemPrompt(vapiAssistant.model);
+                    const newPrompt = body.prompt !== undefined ? body.prompt : currentPrompt;
+
                     updateData.model = {
                         provider: body.model_provider !== undefined ? body.model_provider : (vapiAssistant.model?.provider || 'openai'),
                         model: body.model !== undefined ? body.model : (vapiAssistant.model?.model || 'gpt-4o'),
-                        systemPrompt: body.prompt !== undefined ? body.prompt : vapiAssistant.model?.systemPrompt,
                         ...(vapiAssistant.model?.temperature !== undefined ? { temperature: vapiAssistant.model.temperature } : {}),
                     };
+
+                    if (useMessages) {
+                        // Assistant uses messages array format — update system message in place
+                        const existingMessages = vapiAssistant.model?.messages || [];
+                        const hasSystemMsg = existingMessages.some(m => m.role === 'system');
+                        updateData.model.messages = hasSystemMsg
+                            ? existingMessages.map(m => m.role === 'system' ? { ...m, content: newPrompt } : m)
+                            : [{ role: 'system', content: newPrompt }, ...existingMessages];
+                    } else {
+                        // Assistant uses legacy systemPrompt field
+                        updateData.model.systemPrompt = newPrompt;
+                    }
                 }
 
                 // Update voice config
