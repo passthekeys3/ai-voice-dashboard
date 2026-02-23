@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
                     monthly_cost_cents: 200,
                     purchased_at: new Date().toISOString(),
                 })
-                .select('*, agent:agents(id, name)')
+                .select('*, inbound_agent:agents!phone_numbers_inbound_agent_id_fkey(id, name), outbound_agent:agents!phone_numbers_outbound_agent_id_fkey(id, name)')
                 .single();
 
             if (error) {
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
                     monthly_cost_cents: 200,
                     purchased_at: new Date().toISOString(),
                 })
-                .select('*, agent:agents(id, name)')
+                .select('*, inbound_agent:agents!phone_numbers_inbound_agent_id_fkey(id, name), outbound_agent:agents!phone_numbers_outbound_agent_id_fkey(id, name)')
                 .single();
 
             if (error) {
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
                     monthly_cost_cents: 200,
                     purchased_at: new Date().toISOString(),
                 })
-                .select('*, agent:agents(id, name)')
+                .select('*, inbound_agent:agents!phone_numbers_inbound_agent_id_fkey(id, name), outbound_agent:agents!phone_numbers_outbound_agent_id_fkey(id, name)')
                 .single();
 
             if (error) {

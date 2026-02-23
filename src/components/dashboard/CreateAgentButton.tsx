@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Plus, Loader2, Bot, Volume2, Play, Pause } from 'lucide-react';
+import { Plus, Loader2, Bot, Volume2, Play, Pause, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Voice {
@@ -41,16 +41,26 @@ interface PhoneNumber {
     agent_id?: string;
 }
 
+const PROVIDER_LABELS: Record<string, string> = {
+    retell: 'Retell AI',
+    vapi: 'Vapi',
+    bland: 'Bland.ai',
+};
+
 interface CreateAgentButtonProps {
     clients: { id: string; name: string }[];
     phoneNumbers: PhoneNumber[];
+    availableProviders: string[];
 }
 
-export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonProps) {
+export function CreateAgentButton({ clients, phoneNumbers, availableProviders }: CreateAgentButtonProps) {
     const router = useRouter();
     const [open, setOpen] = useState(false);
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Provider selection
+    const [provider, setProvider] = useState(availableProviders[0] || 'retell');
 
     // Voice list
     const [voices, setVoices] = useState<Voice[]>([]);
@@ -66,17 +76,13 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
     const [clientId, setClientId] = useState('');
     const [phoneNumberId, setPhoneNumberId] = useState('');
 
-    // Fetch voices when dialog opens
-    useEffect(() => {
-        if (open && voices.length === 0) {
-            fetchVoices();
-        }
-    }, [open, voices.length]);
+    // Whether the current provider supports voice selection
+    const supportsVoiceSelection = provider === 'retell' || provider === 'bland';
 
-    const fetchVoices = async () => {
+    const fetchVoices = useCallback(async (forProvider: string) => {
         setLoadingVoices(true);
         try {
-            const response = await fetch('/api/voices');
+            const response = await fetch(`/api/voices?provider=${forProvider}`);
             if (!response.ok) {
                 throw new Error('Failed to load voices');
             }
@@ -90,6 +96,27 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
         } finally {
             setLoadingVoices(false);
         }
+    }, []);
+
+    // Fetch voices when dialog opens or provider changes
+    useEffect(() => {
+        if (open && supportsVoiceSelection) {
+            fetchVoices(provider);
+        }
+    }, [open, provider, supportsVoiceSelection, fetchVoices]);
+
+    // Clear voice selection when switching providers
+    const handleProviderChange = (newProvider: string) => {
+        setProvider(newProvider);
+        setVoiceId('');
+        setVoices([]);
+        // Stop any playing audio
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.onended = null;
+            audioRef.current = null;
+        }
+        setPlayingVoice(null);
     };
 
     // Cleanup audio on unmount
@@ -136,6 +163,8 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
         setFirstMessage('');
         setClientId('');
         setPhoneNumberId('');
+        setProvider(availableProviders[0] || 'retell');
+        setVoices([]);
         setError(null);
     };
 
@@ -144,7 +173,8 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
             setError('Please enter an agent name');
             return;
         }
-        if (!voiceId) {
+        // Voice is only required for Retell
+        if (provider === 'retell' && !voiceId) {
             setError('Please select a voice');
             return;
         }
@@ -158,7 +188,8 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: name.trim(),
-                    voice_id: voiceId,
+                    provider,
+                    voice_id: voiceId || undefined,
                     system_prompt: systemPrompt || undefined,
                     first_message: firstMessage || undefined,
                     client_id: clientId || undefined,
@@ -174,7 +205,6 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
 
             setOpen(false);
             resetForm();
-            router.refresh();
 
             // Navigate to the new agent
             if (data.data?.id) {
@@ -220,6 +250,29 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
+                    {/* Provider Selection — only show when multiple providers available */}
+                    {availableProviders.length > 1 && (
+                        <div className="space-y-2">
+                            <Label>Voice Provider *</Label>
+                            <div className="flex gap-1.5">
+                                {availableProviders.map(p => (
+                                    <button
+                                        key={p}
+                                        type="button"
+                                        onClick={() => handleProviderChange(p)}
+                                        className={`flex-1 text-sm px-3 py-2 rounded-md border transition-colors ${
+                                            provider === p
+                                                ? 'border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 font-medium'
+                                                : 'border-input bg-background text-muted-foreground hover:bg-muted'
+                                        }`}
+                                    >
+                                        {PROVIDER_LABELS[p] || p}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Agent Name */}
                     <div className="space-y-2">
                         <Label htmlFor="agent-name">Agent Name *</Label>
@@ -231,60 +284,72 @@ export function CreateAgentButton({ clients, phoneNumbers }: CreateAgentButtonPr
                         />
                     </div>
 
-                    {/* Voice Selection */}
-                    <div className="space-y-2">
-                        <Label>Voice *</Label>
-                        {loadingVoices ? (
-                            <div className="flex items-center gap-2 p-3 border rounded-md">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <span className="text-sm text-muted-foreground">Loading voices...</span>
-                            </div>
-                        ) : (
-                            <Select value={voiceId} onValueChange={setVoiceId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a voice" />
-                                </SelectTrigger>
-                                <SelectContent className="max-h-[300px]">
-                                    {voices.map((voice) => (
-                                        <SelectItem key={voice.id} value={voice.id}>
-                                            <div className="flex items-center gap-2">
-                                                <Volume2 className="h-3 w-3" />
-                                                <span>{voice.name}</span>
-                                                <span className="text-xs text-muted-foreground">
-                                                    ({voice.provider})
-                                                </span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        )}
-                        {/* Voice Preview */}
-                        {voiceId && (
-                            <div className="flex items-center gap-2">
-                                {(() => {
-                                    const selectedVoice = voices.find(v => v.id === voiceId);
-                                    if (selectedVoice?.preview_url) {
-                                        return (
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => playVoicePreview(selectedVoice)}
-                                            >
-                                                {playingVoice === voiceId ? (
-                                                    <><Pause className="h-3 w-3 mr-1" /> Stop</>
-                                                ) : (
-                                                    <><Play className="h-3 w-3 mr-1" /> Preview Voice</>
-                                                )}
-                                            </Button>
-                                        );
-                                    }
-                                    return null;
-                                })()}
-                            </div>
-                        )}
-                    </div>
+                    {/* Voice Selection — shown for Retell and Bland */}
+                    {supportsVoiceSelection && (
+                        <div className="space-y-2">
+                            <Label>Voice {provider === 'retell' ? '*' : '(Optional)'}</Label>
+                            {loadingVoices ? (
+                                <div className="flex items-center gap-2 p-3 border rounded-md">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span className="text-sm text-muted-foreground">Loading voices...</span>
+                                </div>
+                            ) : (
+                                <Select value={voiceId} onValueChange={setVoiceId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a voice" />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-[300px]">
+                                        {voices.map((voice) => (
+                                            <SelectItem key={voice.id} value={voice.id}>
+                                                <div className="flex items-center gap-2">
+                                                    <Volume2 className="h-3 w-3" />
+                                                    <span>{voice.name}</span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        ({voice.provider})
+                                                    </span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                            {/* Voice Preview */}
+                            {voiceId && (
+                                <div className="flex items-center gap-2">
+                                    {(() => {
+                                        const selectedVoice = voices.find(v => v.id === voiceId);
+                                        if (selectedVoice?.preview_url) {
+                                            return (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => playVoicePreview(selectedVoice)}
+                                                >
+                                                    {playingVoice === voiceId ? (
+                                                        <><Pause className="h-3 w-3 mr-1" /> Stop</>
+                                                    ) : (
+                                                        <><Play className="h-3 w-3 mr-1" /> Preview Voice</>
+                                                    )}
+                                                </Button>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Vapi voice info */}
+                    {provider === 'vapi' && (
+                        <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/50">
+                            <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                            <p className="text-sm text-muted-foreground">
+                                Voice can be configured after creation in agent settings. Vapi supports ElevenLabs, PlayHT, and other TTS providers.
+                            </p>
+                        </div>
+                    )}
 
                     {/* First Message */}
                     <div className="space-y-2">

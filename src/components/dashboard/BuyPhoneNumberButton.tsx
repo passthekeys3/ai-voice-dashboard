@@ -181,7 +181,7 @@ export function BuyPhoneNumberButton({ agents, onPurchaseComplete }: BuyPhoneNum
                             </div>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                            Billed to your Retell account
+                            Billed to your voice provider account
                         </p>
                     </div>
 

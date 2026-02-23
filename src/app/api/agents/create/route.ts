@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { publishRetellAgent } from '@/lib/providers/retell';
+import { createVapiAssistant } from '@/lib/providers/vapi';
+import { createBlandPathway } from '@/lib/providers/bland';
 
-// POST /api/agents/create - Create a new agent in Retell
+// POST /api/agents/create - Create a new agent on the selected provider
 export async function POST(request: NextRequest) {
     try {
         const user = await getCurrentUser();
@@ -18,6 +20,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const {
             name,
+            provider: requestedProvider,
             voice_id,
             system_prompt,
             first_message,
@@ -27,10 +30,6 @@ export async function POST(request: NextRequest) {
 
         if (!name?.trim()) {
             return NextResponse.json({ error: 'Agent name is required' }, { status: 400 });
-        }
-
-        if (!voice_id) {
-            return NextResponse.json({ error: 'Voice is required' }, { status: 400 });
         }
 
         const supabase = await createClient();
@@ -49,78 +48,159 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Get Retell API key
+        // Get API keys for all providers
         const { data: agency } = await supabase
             .from('agencies')
-            .select('retell_api_key')
+            .select('retell_api_key, vapi_api_key, bland_api_key')
             .eq('id', user.agency.id)
             .single();
 
-        if (!agency?.retell_api_key) {
-            return NextResponse.json({ error: 'Retell API key not configured' }, { status: 400 });
-        }
+        // Determine which provider to use (requested > auto-select: retell → vapi → bland)
+        const provider = requestedProvider || (
+            agency?.retell_api_key ? 'retell'
+            : agency?.vapi_api_key ? 'vapi'
+            : agency?.bland_api_key ? 'bland'
+            : null
+        );
 
-        // Step 1: Create a Retell LLM with the prompt and first message
-        const llmResponse = await fetch('https://api.retellai.com/create-retell-llm', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${agency.retell_api_key}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                general_prompt: system_prompt || undefined,
-                begin_message: first_message || null,
-                model: 'gpt-4o',
-                start_speaker: 'agent',
-            }),
-        });
+        const apiKeyMap: Record<string, string | undefined> = {
+            retell: agency?.retell_api_key,
+            vapi: agency?.vapi_api_key,
+            bland: agency?.bland_api_key,
+        };
 
-        if (!llmResponse.ok) {
-            console.error('Retell create LLM error:', llmResponse.status);
+        const apiKey = apiKeyMap[provider as string];
+
+        if (!provider || !apiKey) {
             return NextResponse.json({
-                error: 'Failed to create agent on provider'
-            }, { status: 500 });
+                error: 'No voice provider API key configured. Add a Retell, Vapi, or Bland key in Settings.'
+            }, { status: 400 });
         }
 
-        const retellLlm = await llmResponse.json();
+        // Voice is required for Retell
+        if (provider === 'retell' && !voice_id) {
+            return NextResponse.json({ error: 'Voice is required for Retell agents' }, { status: 400 });
+        }
 
-        // Step 2: Create the agent with the LLM ID and voice
-        const retellResponse = await fetch('https://api.retellai.com/create-agent', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${agency.retell_api_key}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                agent_name: name.trim(),
-                voice_id,
-                response_engine: {
-                    type: 'retell-llm',
-                    llm_id: retellLlm.llm_id,
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`;
+        let externalId: string;
+        const agentConfig: Record<string, unknown> = {};
+
+        if (provider === 'retell') {
+            // Step 1: Create a Retell LLM with the prompt and first message
+            const llmResponse = await fetch('https://api.retellai.com/create-retell-llm', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
                 },
-                enable_backchannel: true,
-                webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`}/api/webhooks/retell`,
-                webhook_events: ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'],
-            }),
-        });
+                body: JSON.stringify({
+                    general_prompt: system_prompt || undefined,
+                    begin_message: first_message || null,
+                    model: 'gpt-4o',
+                    start_speaker: 'agent',
+                }),
+            });
 
-        if (!retellResponse.ok) {
-            console.error('Retell create agent error:', retellResponse.status);
-            return NextResponse.json({
-                error: 'Failed to create agent on provider'
-            }, { status: 500 });
-        }
+            if (!llmResponse.ok) {
+                console.error('Retell create LLM error:', llmResponse.status);
+                return NextResponse.json({
+                    error: 'Failed to create agent on provider'
+                }, { status: 500 });
+            }
 
-        const retellAgent = await retellResponse.json();
-        console.log('Retell agent created:', retellAgent.agent_id);
+            const retellLlm = await llmResponse.json();
 
-        // Publish the agent so webhook config takes effect on live calls
-        // (create-agent creates a draft; publish makes it the active version)
-        try {
-            await publishRetellAgent(agency.retell_api_key, retellAgent.agent_id);
-        } catch (pubErr) {
-            console.error('Failed to publish agent after creation:', pubErr instanceof Error ? pubErr.message : 'Unknown error');
-            // Non-fatal: agent exists but webhook config is only on draft
+            // Step 2: Create the agent with the LLM ID and voice
+            const retellResponse = await fetch('https://api.retellai.com/create-agent', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    agent_name: name.trim(),
+                    voice_id,
+                    response_engine: {
+                        type: 'retell-llm',
+                        llm_id: retellLlm.llm_id,
+                    },
+                    enable_backchannel: true,
+                    webhook_url: `${appUrl}/api/webhooks/retell`,
+                    webhook_events: ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'],
+                }),
+            });
+
+            if (!retellResponse.ok) {
+                console.error('Retell create agent error:', retellResponse.status);
+                return NextResponse.json({
+                    error: 'Failed to create agent on provider'
+                }, { status: 500 });
+            }
+
+            const retellAgent = await retellResponse.json();
+            externalId = retellAgent.agent_id;
+            console.log('Retell agent created:', externalId);
+
+            // Publish the agent so webhook config takes effect on live calls
+            try {
+                await publishRetellAgent(apiKey, externalId);
+            } catch (pubErr) {
+                console.error('Failed to publish agent after creation:', pubErr instanceof Error ? pubErr.message : 'Unknown error');
+            }
+
+            agentConfig.voice_id = voice_id;
+            agentConfig.system_prompt = system_prompt;
+            agentConfig.first_message = first_message;
+
+        } else if (provider === 'vapi') {
+            // Create a Vapi assistant
+            try {
+                const vapiAssistant = await createVapiAssistant(apiKey, {
+                    name: name.trim(),
+                    model: {
+                        provider: 'openai',
+                        model: 'gpt-4o',
+                        systemPrompt: system_prompt || undefined,
+                    },
+                    firstMessage: first_message || undefined,
+                    serverUrl: `${appUrl}/api/webhooks/vapi`,
+                });
+
+                externalId = vapiAssistant.id;
+                console.log('Vapi assistant created:', externalId);
+            } catch (err) {
+                console.error('Vapi create assistant error:', err instanceof Error ? err.message : 'Unknown error');
+                return NextResponse.json({
+                    error: 'Failed to create agent on provider'
+                }, { status: 500 });
+            }
+
+            agentConfig.system_prompt = system_prompt;
+            agentConfig.first_message = first_message;
+
+        } else if (provider === 'bland') {
+            // Create a Bland pathway
+            try {
+                const blandPathway = await createBlandPathway(apiKey, {
+                    name: name.trim(),
+                    description: system_prompt || undefined,
+                });
+
+                externalId = blandPathway.id;
+                console.log('Bland pathway created:', externalId);
+            } catch (err) {
+                console.error('Bland create pathway error:', err instanceof Error ? err.message : 'Unknown error');
+                return NextResponse.json({
+                    error: 'Failed to create agent on provider'
+                }, { status: 500 });
+            }
+
+            agentConfig.system_prompt = system_prompt;
+            if (voice_id) agentConfig.voice_id = voice_id;
+
+        } else {
+            return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
         }
 
         // Store in our database
@@ -130,14 +210,10 @@ export async function POST(request: NextRequest) {
                 agency_id: user.agency.id,
                 client_id: client_id || null,
                 name: name.trim(),
-                external_id: retellAgent.agent_id,
-                provider: 'retell',
+                external_id: externalId,
+                provider,
                 is_active: true,
-                config: {
-                    voice_id,
-                    system_prompt,
-                    first_message,
-                },
+                config: agentConfig,
             })
             .select()
             .single();
@@ -149,33 +225,33 @@ export async function POST(request: NextRequest) {
 
         // If phone number specified, assign it (with race condition protection)
         if (phone_number_id) {
-            // Only select phone number if it's unassigned (agent_id is null)
             const { data: phoneNumber } = await supabase
                 .from('phone_numbers')
-                .select('external_id, agent_id')
+                .select('external_id, agent_id, provider')
                 .eq('id', phone_number_id)
                 .eq('agency_id', user.agency.id)
-                .is('agent_id', null)  // Only if currently unassigned
+                .is('agent_id', null)
                 .single();
 
             if (!phoneNumber) {
                 console.warn(`Phone number ${phone_number_id} not found or already assigned`);
-                // Don't fail the agent creation, just skip phone assignment
             } else if (phoneNumber.external_id) {
-                // Update phone number in Retell
-                const phoneUpdateResponse = await fetch(`https://api.retellai.com/update-phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${agency.retell_api_key}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        inbound_agent_id: retellAgent.agent_id,
-                    }),
-                });
+                // Update phone number on the provider (Retell only for now)
+                if (provider === 'retell') {
+                    const phoneUpdateResponse = await fetch(`https://api.retellai.com/update-phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            inbound_agent_id: externalId,
+                        }),
+                    });
 
-                if (!phoneUpdateResponse.ok) {
-                    console.warn('Failed to update phone number in Retell:', phoneUpdateResponse.status);
+                    if (!phoneUpdateResponse.ok) {
+                        console.warn('Failed to update phone number in Retell:', phoneUpdateResponse.status);
+                    }
                 }
 
                 // Update in our DB with optimistic lock + agency scoping
@@ -184,7 +260,7 @@ export async function POST(request: NextRequest) {
                     .update({ agent_id: agent.id, updated_at: new Date().toISOString() })
                     .eq('id', phone_number_id)
                     .eq('agency_id', user.agency.id)
-                    .is('agent_id', null);  // Only update if still unassigned
+                    .is('agent_id', null);
 
                 if (updateError) {
                     console.warn('Failed to assign phone number:', updateError.code);
