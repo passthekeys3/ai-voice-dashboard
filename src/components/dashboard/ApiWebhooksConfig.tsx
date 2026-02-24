@@ -109,8 +109,14 @@ export function ApiWebhooksConfig({
                 body: JSON.stringify({ integrations: { api: updates } }),
             });
             if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || 'Failed to save');
+                let errorMsg = `Failed to save (${res.status})`;
+                try {
+                    const data = await res.json();
+                    if (data.error) errorMsg = data.error;
+                } catch {
+                    // Response was not JSON (e.g. 502 gateway error)
+                }
+                throw new Error(errorMsg);
             }
             setSuccess('Settings saved');
             setTimeout(() => setSuccess(null), 3000);

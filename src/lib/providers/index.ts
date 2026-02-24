@@ -166,12 +166,12 @@ function createVapiClient(apiKey: string): VoiceProviderClient {
         const startedAt = call.startedAt || call.createdAt;
         const endedAt = call.endedAt;
         const durationSeconds = startedAt && endedAt
-            ? Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000)
+            ? Math.max(0, Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000))
             : 0;
 
         let status: NormalizedCall['status'] = 'queued';
         if (call.status === 'ended') status = 'completed';
-        else if (call.status === 'in-progress') status = 'in_progress';
+        else if (call.status === 'in-progress' || call.status === 'forwarding') status = 'in_progress';
         else if (call.status === 'queued' || call.status === 'ringing') status = 'queued';
 
         const direction: 'inbound' | 'outbound' =
@@ -309,7 +309,7 @@ function createBlandClient(apiKey: string): VoiceProviderClient {
             audioUrl: call.recording_url,
             summary: call.summary,
             sentiment: undefined,
-            startedAt: call.started_at || call.created_at,
+            startedAt: call.started_at || call.created_at || new Date().toISOString(),
             endedAt: call.end_at,
             metadata: call.variables || call.metadata,
         };

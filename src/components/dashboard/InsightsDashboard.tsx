@@ -55,26 +55,38 @@ interface InsightsData {
 export function InsightsDashboard() {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<InsightsData | null>(null);
+    const [error, setError] = useState<string | null>(null);
     const [days, setDays] = useState('30');
 
     useEffect(() => {
+        const controller = new AbortController();
+
         async function fetchInsights() {
             setLoading(true);
+            setError(null);
             try {
-                const response = await fetch(`/api/insights?days=${days}`);
+                const response = await fetch(`/api/insights?days=${days}`, {
+                    signal: controller.signal,
+                });
                 if (!response.ok) {
                     throw new Error('Failed to fetch insights');
                 }
                 const result = await response.json();
                 setData(result.data);
             } catch (err) {
+                if (err instanceof DOMException && err.name === 'AbortError') return;
                 console.error('Failed to fetch insights:', err);
+                setError('Failed to load insights data');
                 setData(null);
             } finally {
-                setLoading(false);
+                if (!controller.signal.aborted) {
+                    setLoading(false);
+                }
             }
         }
         fetchInsights();
+
+        return () => controller.abort();
     }, [days]);
 
     if (loading) {
@@ -82,6 +94,17 @@ export function InsightsDashboard() {
             <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                    <AlertTriangle className="h-6 w-6 mx-auto mb-2 text-amber-500" />
+                    {error}
+                </CardContent>
+            </Card>
         );
     }
 
@@ -96,8 +119,9 @@ export function InsightsDashboard() {
     }
 
     const formatDuration = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
+        const rounded = Math.round(seconds);
+        const mins = Math.floor(rounded / 60);
+        const secs = rounded % 60;
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 

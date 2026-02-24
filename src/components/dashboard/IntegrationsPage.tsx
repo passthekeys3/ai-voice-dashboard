@@ -173,10 +173,17 @@ export function IntegrationsPage({ apiConfig, agents = [], appUrl = '' }: Integr
                     <Card
                         key={integration.name}
                         className={`relative overflow-hidden ${
-                            integration.configurable ? 'cursor-pointer hover:border-primary/50 transition-colors' : ''
+                            integration.configurable ? 'cursor-pointer hover:border-primary/50 focus-within:border-primary/50 transition-colors' : ''
                         }`}
                         role="listitem"
+                        tabIndex={integration.configurable ? 0 : undefined}
                         onClick={integration.configurable ? () => setApiDialogOpen(true) : undefined}
+                        onKeyDown={integration.configurable ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setApiDialogOpen(true);
+                            }
+                        } : undefined}
                     >
                         <CardHeader className="pb-3">
                             <div className="flex items-center justify-between">

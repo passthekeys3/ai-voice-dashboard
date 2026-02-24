@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import {
     Area,
     AreaChart,
@@ -61,6 +62,10 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 export function UsageChart({ data }: UsageChartProps) {
     const { resolvedTheme } = useTheme();
     const colors = resolvedTheme === 'dark' ? CHART_COLORS.dark : CHART_COLORS.light;
+    // Unique IDs for SVG gradients to prevent collisions when multiple charts render
+    const id = useId();
+    const fillGradientId = `fillGradient-${id}`;
+    const strokeGradientId = `strokeGradient-${id}`;
 
     // Format dates for display
     const formattedData = data.map((item) => ({
@@ -82,13 +87,13 @@ export function UsageChart({ data }: UsageChartProps) {
                         <AreaChart data={formattedData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                             <defs>
                                 {/* Violet to indigo gradient for the area fill */}
-                                <linearGradient id="colorCallsGradient" x1="0" y1="0" x2="0" y2="1">
+                                <linearGradient id={fillGradientId} x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="0%" stopColor={colors.fill1} stopOpacity={0.4} />
                                     <stop offset="50%" stopColor={colors.fill2} stopOpacity={0.2} />
                                     <stop offset="100%" stopColor={colors.fill2} stopOpacity={0.05} />
                                 </linearGradient>
                                 {/* Stroke gradient for the line */}
-                                <linearGradient id="strokeGradient" x1="0" y1="0" x2="1" y2="0">
+                                <linearGradient id={strokeGradientId} x1="0" y1="0" x2="1" y2="0">
                                     <stop offset="0%" stopColor={colors.stroke1} />
                                     <stop offset="100%" stopColor={colors.stroke2} />
                                 </linearGradient>
@@ -130,10 +135,10 @@ export function UsageChart({ data }: UsageChartProps) {
                             <Area
                                 type="monotone"
                                 dataKey="count"
-                                stroke="url(#strokeGradient)"
+                                stroke={`url(#${strokeGradientId})`}
                                 strokeWidth={2.5}
                                 fillOpacity={1}
-                                fill="url(#colorCallsGradient)"
+                                fill={`url(#${fillGradientId})`}
                                 animationDuration={300}
                                 animationEasing="ease-out"
                             />
