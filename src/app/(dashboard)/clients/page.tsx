@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
 import { CreateClientDialog } from '@/components/dashboard/CreateClientDialog';
 import { FilterableClientGrid } from '@/components/dashboard/FilterableClientGrid';
-import type { Client } from '@/types';
 
 export const metadata: Metadata = { title: 'Clients' };
 
@@ -13,10 +12,10 @@ export default async function ClientsPage() {
     const user = await requireAgencyAdmin();
     const supabase = await createClient();
 
-    // Only select fields needed by the UI — never send API keys to client components
+    // Fetch clients with embedded agent providers + call counts for card summaries
     const { data: clients } = await supabase
         .from('clients')
-        .select('id, name, email, is_active, created_at')
+        .select('id, name, email, is_active, created_at, agents(id, provider), calls(count)')
         .eq('agency_id', user.agency.id)
         .order('created_at', { ascending: false });
 
@@ -40,7 +39,7 @@ export default async function ClientsPage() {
                     <CreateClientDialog />
                 </div>
 
-                <FilterableClientGrid clients={(clients || []) as Client[]} />
+                <FilterableClientGrid clients={clients || []} />
             </div>
         </div>
     );

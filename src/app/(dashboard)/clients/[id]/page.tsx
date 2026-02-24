@@ -10,13 +10,15 @@ import { ClientIntegrationsEditor } from '@/components/dashboard/ClientIntegrati
 import { ClientBillingEditor } from '@/components/dashboard/ClientBillingEditor';
 import { ClientUsageDashboard } from '@/components/dashboard/ClientUsageDashboard';
 import { ClientUsersList, DeleteClientButton } from '@/components/dashboard/ClientUsersList';
+import { AgentCard } from '@/components/dashboard/AgentCard';
+import { CallsTable } from '@/components/dashboard/CallsTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Users } from 'lucide-react';
+import { ArrowLeft, Users, Bot, Phone, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import type { Profile, Client } from '@/types';
+import type { Profile, Client, Agent, Call } from '@/types';
 import { getClientPermissions } from '@/lib/permissions';
 
 export const metadata: Metadata = { title: 'Client Details' };
@@ -49,18 +51,37 @@ export default async function ClientDetailPage({
     // Check if agency has Stripe Connect set up
     const agencyHasConnect = !!(user.agency.stripe_connect_account_id && user.agency.stripe_connect_charges_enabled);
 
-    // Get client stats
-    const { count: agentsCount } = await supabase
+    // Fetch assigned agents (full data for AgentCard)
+    const { data: agents } = await supabase
         .from('agents')
-        .select('*', { count: 'exact', head: true })
+        .select('*, clients(name)')
         .eq('client_id', id)
-        .eq('agency_id', user.agency.id);
+        .eq('agency_id', user.agency.id)
+        .order('name');
 
-    const { count: callsCount } = await supabase
+    // Fetch phone numbers for agent cards
+    const agentIds = (agents || []).map(a => a.id);
+    let agentPhoneMap: Record<string, string> = {};
+    if (agentIds.length > 0) {
+        const { data: phoneNumbers } = await supabase
+            .from('phone_numbers')
+            .select('phone_number, agent_id')
+            .eq('agency_id', user.agency.id)
+            .eq('status', 'active')
+            .in('agent_id', agentIds);
+        phoneNumbers?.forEach(pn => {
+            if (pn.agent_id) agentPhoneMap[pn.agent_id] = pn.phone_number;
+        });
+    }
+
+    // Fetch recent calls + total count (one query, two uses)
+    const { data: recentCalls, count: callsCount } = await supabase
         .from('calls')
-        .select('*, agents!inner(agency_id)', { count: 'exact', head: true })
+        .select('*, agents!inner(name, provider, agency_id)', { count: 'exact' })
         .eq('client_id', id)
-        .eq('agents.agency_id', user.agency.id);
+        .eq('agents.agency_id', user.agency.id)
+        .order('started_at', { ascending: false })
+        .limit(10);
 
     // Get users with access to this client
     const { data: clientUsers } = await supabase
@@ -69,6 +90,8 @@ export default async function ClientDetailPage({
         .eq('client_id', id)
         .eq('agency_id', user.agency.id)
         .order('created_at', { ascending: false });
+
+    const agentsCount = agents?.length || 0;
 
     return (
         <div className="flex flex-col h-full">
@@ -137,6 +160,74 @@ export default async function ClientDetailPage({
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* Assigned Agents */}
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle className="flex items-center gap-2">
+                            <Bot className="h-5 w-5" />
+                            Assigned Agents
+                        </CardTitle>
+                        <Button variant="ghost" size="sm" asChild>
+                            <Link href="/agents">
+                                Manage Agents <ArrowRight className="ml-1 h-4 w-4" />
+                            </Link>
+                        </Button>
+                    </CardHeader>
+                    <CardContent>
+                        {agents && agents.length > 0 ? (
+                            <>
+                                <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                    {(agents as (Agent & { clients?: { name: string } | null })[]).slice(0, 6).map((agent) => (
+                                        <AgentCard
+                                            key={agent.id}
+                                            agent={agent}
+                                            phoneNumber={agentPhoneMap[agent.id]}
+                                            showDelete={false}
+                                        />
+                                    ))}
+                                </div>
+                                {agents.length > 6 && (
+                                    <div className="mt-4 text-center">
+                                        <Button variant="ghost" size="sm" asChild>
+                                            <Link href="/agents">
+                                                View all {agents.length} agents &rarr;
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="text-center py-6">
+                                <Bot className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                                <p className="text-muted-foreground">No agents assigned to this client</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Recent Calls */}
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle className="flex items-center gap-2">
+                            <Phone className="h-5 w-5" />
+                            Recent Calls
+                        </CardTitle>
+                        <Button variant="ghost" size="sm" asChild>
+                            <Link href="/calls">
+                                View All Calls <ArrowRight className="ml-1 h-4 w-4" />
+                            </Link>
+                        </Button>
+                    </CardHeader>
+                    <CardContent>
+                        <CallsTable
+                            calls={(recentCalls || []) as (Call & { agents: { name: string; provider: string } })[]}
+                            showCosts={true}
+                            showTranscripts={false}
+                            allowPlayback={true}
+                        />
+                    </CardContent>
+                </Card>
 
                 {/* Users Section */}
                 <ClientUsersList
