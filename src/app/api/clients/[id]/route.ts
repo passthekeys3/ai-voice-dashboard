@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { createClient as createSupabaseAdmin } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import {
@@ -11,6 +12,12 @@ import {
     noContent,
     withErrorHandling,
 } from '@/lib/api/response';
+
+// Admin client for auth user deletion (same pattern as invite route)
+const supabaseAdmin = createSupabaseAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -145,9 +152,42 @@ export const DELETE = withErrorHandling(async (
     }
 
     const { id } = await context!.params;
-    const supabase = await createClient();
 
-    const { error } = await supabase
+    // Verify client exists and belongs to this agency
+    const { data: client } = await supabaseAdmin
+        .from('clients')
+        .select('id')
+        .eq('id', id)
+        .eq('agency_id', user.agency.id)
+        .single();
+
+    if (!client) {
+        return notFound('Client');
+    }
+
+    // Fetch all user profiles linked to this client
+    const { data: profiles } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('client_id', id)
+        .eq('agency_id', user.agency.id);
+
+    // Delete all associated auth users (profile cascade-deletes automatically)
+    if (profiles && profiles.length > 0) {
+        for (const profile of profiles) {
+            // Skip the current user to prevent self-deletion
+            if (profile.id === user.profile.id) continue;
+
+            const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(profile.id);
+            if (authError) {
+                console.error(`Failed to delete auth user ${profile.id}:`, authError.message);
+                // Continue deleting other users — don't block client deletion
+            }
+        }
+    }
+
+    // Delete the client record (cascades: calls, usage; sets NULL: agents)
+    const { error } = await supabaseAdmin
         .from('clients')
         .delete()
         .eq('id', id)

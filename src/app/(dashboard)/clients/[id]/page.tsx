@@ -9,10 +9,11 @@ import { ClientApiKeysEditor } from '@/components/dashboard/ClientApiKeysEditor'
 import { ClientIntegrationsEditor } from '@/components/dashboard/ClientIntegrationsEditor';
 import { ClientBillingEditor } from '@/components/dashboard/ClientBillingEditor';
 import { ClientUsageDashboard } from '@/components/dashboard/ClientUsageDashboard';
+import { ClientUsersList, DeleteClientButton } from '@/components/dashboard/ClientUsersList';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Users, UserCircle } from 'lucide-react';
+import { ArrowLeft, Users } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Profile, Client } from '@/types';
@@ -137,42 +138,11 @@ export default async function ClientDetailPage({
                 </div>
 
                 {/* Users Section */}
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle>Users with Access</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {clientUsers && clientUsers.length > 0 ? (
-                            <div className="space-y-3">
-                                {(clientUsers as Profile[]).map((profile) => (
-                                    <div
-                                        key={profile.id}
-                                        className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <UserCircle className="h-8 w-8 text-slate-400" />
-                                            <div>
-                                                <p className="font-medium">{profile.full_name}</p>
-                                                <p className="text-sm text-muted-foreground">{profile.email}</p>
-                                            </div>
-                                        </div>
-                                        <Badge variant="outline">
-                                            {profile.role === 'client_admin' ? 'Admin' : 'Member'}
-                                        </Badge>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-6">
-                                <UserCircle className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                                <p className="text-muted-foreground">No users have access yet</p>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    Invite users to give them access to this client&apos;s dashboard
-                                </p>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                <ClientUsersList
+                    clientId={id}
+                    clientName={client.name}
+                    users={(clientUsers || []) as Profile[]}
+                />
 
                 {/* Permissions Section */}
                 <ClientPermissionsEditor
@@ -248,6 +218,13 @@ export default async function ClientDetailPage({
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* Danger Zone */}
+                <DeleteClientButton
+                    clientId={id}
+                    clientName={client.name}
+                    userCount={clientUsers?.length || 0}
+                />
             </div>
         </div>
     );
