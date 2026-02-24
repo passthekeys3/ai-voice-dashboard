@@ -39,19 +39,19 @@ export default async function DashboardLayout({
     const permissions = getUserPermissions(user);
 
     return (
-        <div className="flex h-screen bg-slate-50 dark:bg-slate-950">
-            <Sidebar
-                isAgencyAdmin={isAdmin}
-                agencyName={user.agency.name}
-                branding={user.agency.branding}
-                permissions={permissions}
-            />
-            <main className="flex-1 overflow-auto pt-14 md:pt-0">
-                <BackgroundSync />
-                <ErrorBoundary>
+        <ErrorBoundary>
+            <div className="flex h-screen bg-slate-50 dark:bg-slate-950">
+                <Sidebar
+                    isAgencyAdmin={isAdmin}
+                    agencyName={user.agency.name}
+                    branding={user.agency.branding}
+                    permissions={permissions}
+                />
+                <main className="flex-1 overflow-auto pt-14 md:pt-0">
+                    <BackgroundSync />
                     {children}
-                </ErrorBoundary>
-            </main>
-        </div>
+                </main>
+            </div>
+        </ErrorBoundary>
     );
 }

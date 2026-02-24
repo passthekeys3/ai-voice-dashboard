@@ -151,8 +151,13 @@ export async function PATCH(
             return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
         }
 
-        // Resolve API keys (client key → agency key fallback)
-        const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, agent.client_id);
+        // Resolve API keys (client key → agency key fallback).
+        // When a client assignment is changing, the caller passes _original_client_id
+        // so we resolve keys from the workspace where the agent's external_id exists.
+        const keyResolutionClientId = body._original_client_id !== undefined
+            ? body._original_client_id   // Client assignment is changing — use original keys
+            : agent.client_id;           // Normal update — use current keys
+        const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, keyResolutionClientId);
         const apiKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
 
         if (!apiKey) {

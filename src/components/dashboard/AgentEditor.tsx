@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -112,7 +111,6 @@ export function AgentEditor({
     config,
     webhookUrl: initialWebhookUrl
 }: AgentEditorProps) {
-    const router = useRouter();
     const [saving, setSaving] = useState(false);
     const [loadingPrompt, setLoadingPrompt] = useState(true);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -264,6 +262,12 @@ export function AgentEditor({
                 prompt,
             };
 
+            // If client assignment changed, tell provider route to use the original
+            // client's keys (the external_id belongs to the original workspace)
+            if (selectedClient !== (clientId || '')) {
+                providerPayload._original_client_id = clientId;
+            }
+
             // Provider-specific fields
             if (provider === 'retell') {
                 providerPayload.voice_id = voiceId;
@@ -288,7 +292,9 @@ export function AgentEditor({
             }
 
             setMessage({ type: 'success', text: 'Agent updated successfully!' });
-            router.refresh();
+            // Hard navigate to ensure clean server render (router.refresh can cause
+            // blank page if RSC stream encounters errors during layout re-render)
+            window.location.replace(`/agents/${agentId}`);
         } catch (_err) {
             setMessage({ type: 'error', text: 'An unexpected error occurred' });
         } finally {
