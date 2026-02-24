@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/dashboard/Sidebar';
 import { BackgroundSync } from '@/components/dashboard/BackgroundSync';
 import { getUserPermissions } from '@/lib/permissions';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { FeedbackWidget } from '@/components/dashboard/FeedbackWidget';
 
 // Paths that are accessible without an active subscription
 const UNGATED_PATHS = ['/billing', '/settings'];
@@ -51,6 +52,7 @@ export default async function DashboardLayout({
                     <BackgroundSync />
                     {children}
                 </main>
+                <FeedbackWidget />
             </div>
         </ErrorBoundary>
     );

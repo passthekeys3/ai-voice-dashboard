@@ -620,6 +620,24 @@ export interface GHLTriggerLog {
     agent?: { name: string };
 }
 
+// Feedback Types
+export type FeedbackType = 'bug' | 'feature_request' | 'general';
+export type FeedbackStatus = 'new' | 'reviewed' | 'resolved' | 'dismissed';
+
+export interface Feedback {
+    id: string;
+    agency_id: string;
+    user_id?: string;
+    user_email: string;
+    type: FeedbackType;
+    title: string;
+    description: string;
+    page_url?: string;
+    browser_info?: string;
+    status: FeedbackStatus;
+    created_at: string;
+}
+
 // HubSpot Trigger Log Types
 export type HubSpotTriggerStatus = 'received' | 'initiated' | 'scheduled' | 'failed';
 

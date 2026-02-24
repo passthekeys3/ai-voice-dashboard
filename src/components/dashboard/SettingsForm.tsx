@@ -183,6 +183,8 @@ export function SettingsForm({ agency }: SettingsFormProps) {
 
             setBrandingSaved(true);
             toast.success('Branding saved');
+            // Hard reload so the new theme/branding takes effect immediately
+            window.location.reload();
         } catch {
             setBrandingError('An unexpected error occurred');
         } finally {
