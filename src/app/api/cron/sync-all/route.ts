@@ -45,11 +45,12 @@ export async function POST(request: NextRequest) {
 
         const supabase = createServiceClient();
 
-        // Get all agencies with API keys configured
+        // Get all agencies — we now also sync from client-level keys,
+        // so we can't pre-filter by agency keys alone. The inner loop
+        // skips agencies with zero sync entries (no agency OR client keys).
         const { data: agencies, error: agenciesError } = await supabase
             .from('agencies')
             .select('id, name, retell_api_key, vapi_api_key, bland_api_key')
-            .or('retell_api_key.neq.null,vapi_api_key.neq.null,bland_api_key.neq.null')
             .limit(10000);
 
         if (agenciesError) {
