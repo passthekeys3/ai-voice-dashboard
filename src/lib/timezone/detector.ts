@@ -78,7 +78,8 @@ export function getLocalHour(timezone: string): number {
     hour: 'numeric',
     hour12: false,
   });
-  return parseInt(formatter.format(new Date()), 10);
+  const hour = parseInt(formatter.format(new Date()), 10);
+  return hour === 24 ? 0 : hour; // Intl may format midnight as 24
 }
 
 /**
