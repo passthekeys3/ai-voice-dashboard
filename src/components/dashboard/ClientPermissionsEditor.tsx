@@ -47,6 +47,10 @@ const PERMISSION_LABELS: Record<keyof ClientPermissions, { label: string; descri
         label: 'Export Calls',
         description: 'Allow clients to download call data as CSV exports',
     },
+    can_manage_integrations: {
+        label: 'Manage Integrations',
+        description: 'Allow clients to configure their own CRM, calendar, and messaging integrations',
+    },
 };
 
 export function ClientPermissionsEditor({

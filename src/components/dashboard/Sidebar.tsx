@@ -48,6 +48,7 @@ interface ClientPermissions {
     show_transcripts?: boolean;
     show_analytics?: boolean;
     allow_playback?: boolean;
+    can_manage_integrations?: boolean;
 }
 
 interface SidebarProps {
@@ -122,6 +123,11 @@ function SidebarContent({
             }
             return true;
         });
+
+    // Add Integrations to portal navigation when client has permission
+    if (!isAgencyAdmin && permissions?.can_manage_integrations) {
+        filteredNavigation.push({ name: 'Integrations', href: '/integrations', icon: Plug });
+    }
 
     const combinedNavigation = isAgencyAdmin
         ? [...filteredNavigation, ...adminNavigation]

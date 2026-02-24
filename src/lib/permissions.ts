@@ -33,6 +33,7 @@ export function getUserPermissions(user: AuthUser): ClientPermissions {
             can_edit_agents: true,
             can_create_agents: true,
             can_export_calls: true,
+            can_manage_integrations: true,
         };
     }
 
@@ -87,4 +88,11 @@ export function canCreateAgents(user: AuthUser): boolean {
  */
 export function canExportCalls(user: AuthUser): boolean {
     return getUserPermissions(user).can_export_calls;
+}
+
+/**
+ * Check if user can manage integrations
+ */
+export function canManageIntegrations(user: AuthUser): boolean {
+    return getUserPermissions(user).can_manage_integrations;
 }

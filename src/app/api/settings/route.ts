@@ -1,39 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-
-/** Keys that should never appear in user-supplied objects (prototype pollution). */
-const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
-
-/** Recursively deep-merge source into target. Arrays are replaced, not merged. */
-function deepMerge(
-    target: Record<string, unknown>,
-    source: Record<string, unknown>,
-): Record<string, unknown> {
-    const result = { ...target };
-    for (const [key, value] of Object.entries(source)) {
-        // Prevent prototype pollution attacks
-        if (DANGEROUS_KEYS.has(key)) continue;
-
-        if (
-            typeof value === 'object' && value !== null && !Array.isArray(value) &&
-            typeof target[key] === 'object' && target[key] !== null && !Array.isArray(target[key])
-        ) {
-            result[key] = deepMerge(
-                target[key] as Record<string, unknown>,
-                value as Record<string, unknown>,
-            );
-        } else {
-            result[key] = value;
-        }
-    }
-    return result;
-}
-
-/** Only these top-level integration keys are accepted from the client. */
-const ALLOWED_INTEGRATION_KEYS = new Set([
-    'ghl', 'hubspot', 'google_calendar', 'slack', 'calendly', 'api',
-]);
+import {
+    deepMerge,
+    sanitizeIntegrations,
+    validateIntegrationUpdates,
+} from '@/lib/integrations/validate-integrations';
 
 export async function PATCH(request: NextRequest) {
     try {
@@ -86,157 +58,11 @@ export async function PATCH(request: NextRequest) {
             }
         }
 
-        // Validate GHL integration settings
-        if (integrations?.ghl) {
-            const ghl = integrations.ghl as Record<string, unknown>;
-            if (ghl.api_key) {
-                if (typeof ghl.api_key !== 'string' || (ghl.api_key as string).length > API_KEY_MAX_LENGTH) {
-                    return NextResponse.json({ error: 'Invalid GHL API key: too long' }, { status: 400 });
-                }
-                if (!API_KEY_PATTERN.test(ghl.api_key as string)) {
-                    return NextResponse.json({ error: 'Invalid GHL API key format' }, { status: 400 });
-                }
-            }
-            if (ghl.location_id) {
-                if (typeof ghl.location_id !== 'string' || (ghl.location_id as string).length > 100) {
-                    return NextResponse.json({ error: 'Invalid GHL Location ID' }, { status: 400 });
-                }
-            }
-            // OAuth fields (set via callback, validated here for safety)
-            const TOKEN_MAX_LENGTH = 2048;
-            if (ghl.access_token !== undefined) {
-                if (typeof ghl.access_token !== 'string' || (ghl.access_token as string).length > TOKEN_MAX_LENGTH) {
-                    return NextResponse.json({ error: 'Invalid GHL access token' }, { status: 400 });
-                }
-            }
-            if (ghl.refresh_token !== undefined) {
-                if (typeof ghl.refresh_token !== 'string' || (ghl.refresh_token as string).length > TOKEN_MAX_LENGTH) {
-                    return NextResponse.json({ error: 'Invalid GHL refresh token' }, { status: 400 });
-                }
-            }
-            if (ghl.auth_method !== undefined) {
-                if (ghl.auth_method !== 'api_key' && ghl.auth_method !== 'oauth') {
-                    return NextResponse.json({ error: 'Invalid GHL auth method' }, { status: 400 });
-                }
-            }
-            if (ghl.oauth_location_id !== undefined) {
-                if (typeof ghl.oauth_location_id !== 'string' || (ghl.oauth_location_id as string).length > 100) {
-                    return NextResponse.json({ error: 'Invalid GHL OAuth location ID' }, { status: 400 });
-                }
-            }
-            if (ghl.expires_at !== undefined) {
-                if (typeof ghl.expires_at !== 'number' || (ghl.expires_at as number) < 0) {
-                    return NextResponse.json({ error: 'Invalid GHL token expiry' }, { status: 400 });
-                }
-            }
-        }
-
-        // Validate HubSpot integration settings (OAuth tokens are set via callback, but validate if manually edited)
-        if (integrations?.hubspot) {
-            const hubspot = integrations.hubspot as { access_token?: string; refresh_token?: string; enabled?: boolean };
-            // OAuth tokens can be longer and have different formats than API keys
-            const TOKEN_MAX_LENGTH = 500;
-            if (hubspot.access_token) {
-                if (typeof hubspot.access_token !== 'string' || hubspot.access_token.length > TOKEN_MAX_LENGTH) {
-                    return NextResponse.json({ error: 'Invalid HubSpot access token' }, { status: 400 });
-                }
-            }
-            if (hubspot.refresh_token) {
-                if (typeof hubspot.refresh_token !== 'string' || hubspot.refresh_token.length > TOKEN_MAX_LENGTH) {
-                    return NextResponse.json({ error: 'Invalid HubSpot refresh token' }, { status: 400 });
-                }
-            }
-            if (hubspot.enabled !== undefined && typeof hubspot.enabled !== 'boolean') {
-                return NextResponse.json({ error: 'HubSpot enabled must be a boolean' }, { status: 400 });
-            }
-        }
-
-        // Validate Google Calendar integration settings
-        if (integrations?.google_calendar) {
-            const gcal = integrations.google_calendar as Record<string, unknown>;
-            if (gcal.access_token !== undefined) {
-                if (typeof gcal.access_token !== 'string' || (gcal.access_token as string).length > 2048) {
-                    return NextResponse.json({ error: 'Invalid Google Calendar access token' }, { status: 400 });
-                }
-            }
-            if (gcal.refresh_token !== undefined) {
-                if (typeof gcal.refresh_token !== 'string' || (gcal.refresh_token as string).length > 2048) {
-                    return NextResponse.json({ error: 'Invalid Google Calendar refresh token' }, { status: 400 });
-                }
-            }
-            if (gcal.enabled !== undefined && typeof gcal.enabled !== 'boolean') {
-                return NextResponse.json({ error: 'Google Calendar enabled must be a boolean' }, { status: 400 });
-            }
-            if (gcal.default_calendar_id !== undefined) {
-                if (typeof gcal.default_calendar_id !== 'string' || (gcal.default_calendar_id as string).length > 200) {
-                    return NextResponse.json({ error: 'Invalid calendar ID' }, { status: 400 });
-                }
-            }
-        }
-
-        // Validate Slack integration settings
-        if (integrations?.slack) {
-            const slack = integrations.slack as Record<string, unknown>;
-            if (slack.webhook_url !== undefined && slack.webhook_url !== null && slack.webhook_url !== '') {
-                if (typeof slack.webhook_url !== 'string') {
-                    return NextResponse.json({ error: 'Slack webhook URL must be a string' }, { status: 400 });
-                }
-                const url = slack.webhook_url as string;
-                if (!url.startsWith('https://hooks.slack.com/') && !url.startsWith('https://hooks.slack-gov.com/')) {
-                    return NextResponse.json({ error: 'Invalid Slack webhook URL. Must start with https://hooks.slack.com/' }, { status: 400 });
-                }
-                if (url.length > 500) {
-                    return NextResponse.json({ error: 'Slack webhook URL is too long' }, { status: 400 });
-                }
-            }
-            if (slack.enabled !== undefined && typeof slack.enabled !== 'boolean') {
-                return NextResponse.json({ error: 'Slack enabled must be a boolean' }, { status: 400 });
-            }
-            if (slack.channel_name !== undefined && slack.channel_name !== null) {
-                if (typeof slack.channel_name !== 'string' || (slack.channel_name as string).length > 100) {
-                    return NextResponse.json({ error: 'Invalid Slack channel name' }, { status: 400 });
-                }
-            }
-        }
-
-        // Validate Calendly integration settings
-        if (integrations?.calendly) {
-            const calendly = integrations.calendly as Record<string, unknown>;
-            if (calendly.api_token !== undefined && calendly.api_token !== null && calendly.api_token !== '') {
-                if (typeof calendly.api_token !== 'string' || (calendly.api_token as string).length > 500) {
-                    return NextResponse.json({ error: 'Invalid Calendly API token' }, { status: 400 });
-                }
-            }
-            if (calendly.enabled !== undefined && typeof calendly.enabled !== 'boolean') {
-                return NextResponse.json({ error: 'Calendly enabled must be a boolean' }, { status: 400 });
-            }
-            if (calendly.user_uri !== undefined && calendly.user_uri !== null) {
-                if (typeof calendly.user_uri !== 'string' || (calendly.user_uri as string).length > 500) {
-                    return NextResponse.json({ error: 'Invalid Calendly user URI' }, { status: 400 });
-                }
-            }
-            if (calendly.default_event_type_uri !== undefined && calendly.default_event_type_uri !== null) {
-                if (typeof calendly.default_event_type_uri !== 'string' || (calendly.default_event_type_uri as string).length > 500) {
-                    return NextResponse.json({ error: 'Invalid Calendly event type URI' }, { status: 400 });
-                }
-            }
-        }
-
-        // Validate API trigger settings
-        if (integrations?.api) {
-            const api = integrations.api as Record<string, unknown>;
-            if (api.api_key !== undefined && api.api_key !== null) {
-                if (typeof api.api_key !== 'string' || !/^pdy_sk_[a-f0-9]{64}$/.test(api.api_key as string)) {
-                    return NextResponse.json({ error: 'Invalid API trigger key format' }, { status: 400 });
-                }
-            }
-            if (api.enabled !== undefined && typeof api.enabled !== 'boolean') {
-                return NextResponse.json({ error: 'API trigger enabled must be a boolean' }, { status: 400 });
-            }
-            if (api.default_agent_id !== undefined && api.default_agent_id !== null) {
-                if (typeof api.default_agent_id !== 'string') {
-                    return NextResponse.json({ error: 'Invalid default agent ID' }, { status: 400 });
-                }
+        // Validate integration settings using shared utility
+        if (integrations) {
+            const validationError = validateIntegrationUpdates(integrations as Record<string, unknown>);
+            if (validationError) {
+                return NextResponse.json({ error: validationError }, { status: 400 });
             }
         }
 
@@ -338,15 +164,8 @@ export async function PATCH(request: NextRequest) {
         if (bland_api_key !== undefined) updatePayload.bland_api_key = bland_api_key || null;
 
         // Deep merge integrations to prevent overwriting sibling/nested keys
-        // (e.g., GHL trigger_config.webhook_secret preserved when only updating enabled flag)
         if (integrations !== undefined) {
-            // Strip unknown top-level integration keys to prevent injection
-            const sanitizedIntegrations: Record<string, unknown> = {};
-            for (const [key, value] of Object.entries(integrations as Record<string, unknown>)) {
-                if (ALLOWED_INTEGRATION_KEYS.has(key)) {
-                    sanitizedIntegrations[key] = value;
-                }
-            }
+            const sanitized = sanitizeIntegrations(integrations as Record<string, unknown>);
 
             const { data: current } = await supabase
                 .from('agencies')
@@ -355,7 +174,7 @@ export async function PATCH(request: NextRequest) {
                 .single();
 
             const existingIntegrations = (current?.integrations as Record<string, unknown>) || {};
-            updatePayload.integrations = deepMerge(existingIntegrations, sanitizedIntegrations);
+            updatePayload.integrations = deepMerge(existingIntegrations, sanitized);
         }
 
         const { error } = await supabase

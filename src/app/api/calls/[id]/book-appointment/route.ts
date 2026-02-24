@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createServiceClient } from '@/lib/supabase/server';
 import { bookNextAvailableAppointment, getCalendarFreeSlots, createAppointment, searchContactByPhone, createContact } from '@/lib/integrations/ghl';
+import { resolveIntegrations } from '@/lib/integrations/resolve';
 
 export async function POST(
     request: NextRequest,
@@ -79,7 +80,7 @@ export async function POST(
         // Also try by internal ID if external_id didn't match
         const callRecord = call || (await supabase
             .from('calls')
-            .select('id, agent_id, from_number, to_number, direction, lead_timezone, agents(agency_id, agencies(integrations))')
+            .select('id, agent_id, from_number, to_number, direction, lead_timezone, client_id, agents(agency_id, client_id)')
             .eq('id', callId)
             .single()).data;
 
@@ -87,12 +88,21 @@ export async function POST(
             return NextResponse.json({ error: 'Call not found' }, { status: 404 });
         }
 
-        // Extract agency GHL config
+        // Resolve GHL config with per-client override support
         type CallWithAgent = typeof callRecord & {
-            agents: { agency_id: string; agencies: { integrations: { ghl?: { api_key?: string; location_id?: string; enabled?: boolean } } } };
+            agents: { agency_id: string; client_id?: string | null };
+            client_id?: string | null;
         };
         const callAgent = callRecord as CallWithAgent;
-        const ghlIntegration = callAgent.agents?.agencies?.integrations?.ghl;
+        const agencyId = callAgent.agents?.agency_id;
+        const clientId = callAgent.client_id || callAgent.agents?.client_id;
+
+        if (!agencyId) {
+            return NextResponse.json({ error: 'Agent agency not found' }, { status: 400 });
+        }
+
+        const { integrations: resolvedIntegrations } = await resolveIntegrations(supabase, agencyId, clientId);
+        const ghlIntegration = resolvedIntegrations.ghl;
 
         if (!ghlIntegration?.enabled || !ghlIntegration.api_key) {
             return NextResponse.json(

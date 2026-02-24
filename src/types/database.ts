@@ -53,6 +53,7 @@ export interface ClientPermissions {
     can_edit_agents: boolean;
     can_create_agents: boolean;
     can_export_calls: boolean;
+    can_manage_integrations: boolean;
 }
 
 // Default permissions for new clients
@@ -64,6 +65,7 @@ export const DEFAULT_CLIENT_PERMISSIONS: ClientPermissions = {
     can_edit_agents: false,
     can_create_agents: false,
     can_export_calls: false,
+    can_manage_integrations: false,
 };
 
 export interface AgencyBranding {
@@ -193,6 +195,8 @@ export interface Client {
     retell_api_key?: string;
     vapi_api_key?: string;
     bland_api_key?: string;
+    // Per-client integration overrides (null = use agency defaults)
+    integrations?: AgencyIntegrations;
     is_active: boolean;
     created_at: string;
     updated_at: string;

@@ -45,7 +45,7 @@ export const PATCH = withErrorHandling(async (
     }
 
     // Whitelist of valid permission keys (must match client permissions)
-    const VALID_PERMISSION_KEYS = ['show_costs', 'show_transcripts', 'show_analytics', 'allow_playback', 'can_edit_agents', 'can_create_agents', 'can_export_calls'];
+    const VALID_PERMISSION_KEYS = ['show_costs', 'show_transcripts', 'show_analytics', 'allow_playback', 'can_edit_agents', 'can_create_agents', 'can_export_calls', 'can_manage_integrations'];
     const invalidKeys = Object.keys(permissions).filter(k => !VALID_PERMISSION_KEYS.includes(k));
     if (invalidKeys.length > 0) {
         return badRequest(`Invalid permission keys: ${invalidKeys.join(', ')}`);

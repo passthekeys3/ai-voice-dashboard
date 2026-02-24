@@ -6,6 +6,7 @@ import { Header } from '@/components/dashboard/Header';
 import { InviteClientUserDialog } from '@/components/dashboard/InviteClientUserDialog';
 import { ClientPermissionsEditor } from '@/components/dashboard/ClientPermissionsEditor';
 import { ClientApiKeysEditor } from '@/components/dashboard/ClientApiKeysEditor';
+import { ClientIntegrationsEditor } from '@/components/dashboard/ClientIntegrationsEditor';
 import { ClientBillingEditor } from '@/components/dashboard/ClientBillingEditor';
 import { ClientUsageDashboard } from '@/components/dashboard/ClientUsageDashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -188,6 +189,9 @@ export default async function ClientDetailPage({
                     vapiApiKey={maskKey((client as Client).vapi_api_key)}
                     blandApiKey={maskKey((client as Client).bland_api_key)}
                 />
+
+                {/* Integrations Section */}
+                <ClientIntegrationsEditor clientId={id} />
 
                 {/* Billing Section */}
                 <ClientBillingEditor
