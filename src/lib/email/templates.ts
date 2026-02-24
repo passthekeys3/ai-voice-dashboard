@@ -9,7 +9,7 @@ const APP_NAME = 'BuildVoiceAI';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://buildvoiceai.com';
 
 /** Escape user-supplied strings for safe insertion into HTML email templates. */
-function escapeHtml(text: string): string {
+export function escapeHtml(text: string): string {
     return text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')

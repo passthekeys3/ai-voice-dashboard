@@ -10,6 +10,7 @@ import {
     withErrorHandling,
 } from '@/lib/api/response';
 import { sendEmail } from '@/lib/email/send';
+import { escapeHtml } from '@/lib/email/templates';
 
 const VALID_FEEDBACK_TYPES = ['bug', 'feature_request', 'general'] as const;
 
@@ -69,19 +70,23 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
         : type === 'feature_request' ? 'Feature Request'
         : 'General Feedback';
 
+    const safeTitle = escapeHtml(title.trim());
+    const safeDescription = escapeHtml(description.trim()).replace(/\n/g, '<br />');
+    const safeAgencyName = escapeHtml(user.agency.name);
+
     await sendEmail({
         to: FEEDBACK_NOTIFY_EMAIL,
         subject: `[Feedback] ${typeLabel}: ${title.trim()}`,
         html: `
             <h2>${typeLabel}</h2>
-            <p><strong>From:</strong> ${user.email} (${user.agency.name})</p>
-            <p><strong>Title:</strong> ${title.trim()}</p>
+            <p><strong>From:</strong> ${escapeHtml(user.email)} (${safeAgencyName})</p>
+            <p><strong>Title:</strong> ${safeTitle}</p>
             <hr />
-            <p>${description.trim().replace(/\n/g, '<br />')}</p>
+            <p>${safeDescription}</p>
             <hr />
             <p style="color: #888; font-size: 12px;">
-                Page: ${page_url || 'N/A'}<br />
-                Browser: ${browser_info || 'N/A'}<br />
+                Page: ${escapeHtml(page_url || 'N/A')}<br />
+                Browser: ${escapeHtml(browser_info || 'N/A')}<br />
                 Feedback ID: ${feedback.id}
             </p>
         `,
