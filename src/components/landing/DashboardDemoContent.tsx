@@ -448,9 +448,9 @@ function DemoChart({ isInView }: { isInView: boolean }) {
                                 <stop offset="100%" stopColor="hsl(221, 83%, 53%)" />
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} vertical={false} />
-                        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} tick={{ fill: 'hsl(var(--muted-foreground))' }} interval="preserveStartEnd" />
-                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} tick={{ fill: 'hsl(var(--muted-foreground))' }} width={30} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.3} vertical={false} />
+                        <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={9} tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)' }} interval="preserveStartEnd" />
+                        <YAxis stroke="var(--muted-foreground)" fontSize={9} tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)' }} width={30} />
                         <Area type="monotone" dataKey="count" stroke="url(#demoStrokeGradient)" strokeWidth={2} fillOpacity={1} fill="url(#demoCallsGradient)" animationDuration={1500} animationEasing="ease-out" />
                     </AreaChart>
                 </ResponsiveContainer>
@@ -740,9 +740,9 @@ function DemoChartLarge() {
                                 <stop offset="100%" stopColor="hsl(221, 83%, 53%)" />
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} vertical={false} />
-                        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} tick={{ fill: 'hsl(var(--muted-foreground))' }} interval="preserveStartEnd" />
-                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} tick={{ fill: 'hsl(var(--muted-foreground))' }} width={30} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.3} vertical={false} />
+                        <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={9} tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)' }} interval="preserveStartEnd" />
+                        <YAxis stroke="var(--muted-foreground)" fontSize={9} tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)' }} width={30} />
                         <Area type="monotone" dataKey="count" stroke="url(#analyticsStrokeGradient)" strokeWidth={2} fillOpacity={1} fill="url(#analyticsCallsGradient)" animationDuration={800} animationEasing="ease-out" />
                     </AreaChart>
                 </ResponsiveContainer>

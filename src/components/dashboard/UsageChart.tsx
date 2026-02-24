@@ -9,11 +9,32 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
+import { useTheme } from 'next-themes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface UsageChartProps {
     data: { date: string; count: number }[];
 }
+
+// Theme-aware chart colors (hex values that work reliably in SVG)
+const CHART_COLORS = {
+    light: {
+        stroke1: '#8b5cf6',   // violet-500
+        stroke2: '#6366f1',   // indigo-500
+        fill1: '#8b5cf6',     // violet-500
+        fill2: '#6366f1',     // indigo-500
+        grid: '#e2e8f0',      // slate-200
+        axis: '#64748b',      // slate-500
+    },
+    dark: {
+        stroke1: '#a78bfa',   // violet-400
+        stroke2: '#818cf8',   // indigo-400
+        fill1: '#a78bfa',     // violet-400
+        fill2: '#818cf8',     // indigo-400
+        grid: '#334155',      // slate-700
+        axis: '#94a3b8',      // slate-400
+    },
+};
 
 // Custom tooltip component with enhanced styling
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
@@ -25,7 +46,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
                         {label}
                     </span>
                     <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
+                        <span className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-indigo-500 bg-clip-text text-transparent">
                             {payload[0].value}
                         </span>
                         <span className="text-xs text-muted-foreground">calls</span>
@@ -38,6 +59,9 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 }
 
 export function UsageChart({ data }: UsageChartProps) {
+    const { resolvedTheme } = useTheme();
+    const colors = resolvedTheme === 'dark' ? CHART_COLORS.dark : CHART_COLORS.light;
+
     // Format dates for display
     const formattedData = data.map((item) => ({
         ...item,
@@ -57,47 +81,47 @@ export function UsageChart({ data }: UsageChartProps) {
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={formattedData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                             <defs>
-                                {/* Purple to blue gradient for the area fill */}
+                                {/* Violet to indigo gradient for the area fill */}
                                 <linearGradient id="colorCallsGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="hsl(var(--chart-1, 262 83% 58%))" stopOpacity={0.4} />
-                                    <stop offset="50%" stopColor="hsl(var(--chart-2, 221 83% 53%))" stopOpacity={0.2} />
-                                    <stop offset="100%" stopColor="hsl(var(--chart-2, 221 83% 53%))" stopOpacity={0.05} />
+                                    <stop offset="0%" stopColor={colors.fill1} stopOpacity={0.4} />
+                                    <stop offset="50%" stopColor={colors.fill2} stopOpacity={0.2} />
+                                    <stop offset="100%" stopColor={colors.fill2} stopOpacity={0.05} />
                                 </linearGradient>
                                 {/* Stroke gradient for the line */}
                                 <linearGradient id="strokeGradient" x1="0" y1="0" x2="1" y2="0">
-                                    <stop offset="0%" stopColor="hsl(var(--chart-1, 262 83% 58%))" />
-                                    <stop offset="100%" stopColor="hsl(var(--chart-2, 221 83% 53%))" />
+                                    <stop offset="0%" stopColor={colors.stroke1} />
+                                    <stop offset="100%" stopColor={colors.stroke2} />
                                 </linearGradient>
                             </defs>
                             {/* Subtle grid with theme-aware colors */}
                             <CartesianGrid
                                 strokeDasharray="3 3"
-                                stroke="hsl(var(--border))"
-                                strokeOpacity={0.3}
+                                stroke={colors.grid}
+                                strokeOpacity={0.5}
                                 vertical={false}
                             />
                             <XAxis
                                 dataKey="displayDate"
-                                stroke="hsl(var(--muted-foreground))"
+                                stroke={colors.axis}
                                 fontSize={12}
                                 tickLine={false}
                                 axisLine={false}
-                                tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                                tick={{ fill: colors.axis }}
                                 dy={10}
                             />
                             <YAxis
-                                stroke="hsl(var(--muted-foreground))"
+                                stroke={colors.axis}
                                 fontSize={12}
                                 tickLine={false}
                                 axisLine={false}
-                                tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                                tick={{ fill: colors.axis }}
                                 tickFormatter={(value) => `${value}`}
                                 dx={-10}
                             />
                             <Tooltip
                                 content={<CustomTooltip />}
                                 cursor={{
-                                    stroke: 'hsl(var(--muted-foreground))',
+                                    stroke: colors.axis,
                                     strokeWidth: 1,
                                     strokeDasharray: '4 4',
                                     strokeOpacity: 0.5,

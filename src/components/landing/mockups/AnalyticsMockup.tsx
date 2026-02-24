@@ -171,9 +171,9 @@ function AnalyticsChart({ isInView }: { isInView: boolean }) {
                                 <stop offset="100%" stopColor="hsl(160, 84%, 39%)" />
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} vertical={false} />
-                        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={8} tickLine={false} axisLine={false} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={8} tickLine={false} axisLine={false} tick={{ fill: 'hsl(var(--muted-foreground))' }} width={25} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.3} vertical={false} />
+                        <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={8} tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)' }} />
+                        <YAxis stroke="var(--muted-foreground)" fontSize={8} tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)' }} width={25} />
                         <Area type="monotone" dataKey="count" stroke="url(#mockupAnalyticsStroke)" strokeWidth={2} fillOpacity={1} fill="url(#mockupAnalyticsFill)" animationDuration={1200} animationEasing="ease-out" />
                     </AreaChart>
                 </ResponsiveContainer>

@@ -140,17 +140,29 @@ export default async function DashboardPage() {
                     <UsageChart data={callVolumeData} />
 
                     <Card className="md:col-span-3 min-w-0">
-                        <CardHeader>
-                            <CardTitle>Your Agents</CardTitle>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                            <div className="flex items-center gap-2">
+                                <CardTitle>Your Agents</CardTitle>
+                                {agents && agents.length > 0 && (
+                                    <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+                                        {agents.length}
+                                    </span>
+                                )}
+                            </div>
+                            {agents && agents.length > 0 && (
+                                <Link href="/agents" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                                    View all &rarr;
+                                </Link>
+                            )}
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
+                            <div className="space-y-3 max-h-[300px] overflow-y-auto">
                                 {agents && agents.length > 0 ? (
                                     agents.map((agent) => (
                                         <div key={agent.id} className="flex items-center justify-between">
                                             <Link
                                                 href={`/agents/${agent.id}`}
-                                                className="font-medium truncate hover:underline"
+                                                className="text-sm font-medium truncate hover:underline"
                                             >
                                                 {agent.name}
                                             </Link>

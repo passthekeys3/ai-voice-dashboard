@@ -143,7 +143,7 @@ export function InsightsDashboard() {
                             <Smile className="h-4 w-4 text-green-500" />
                             <span className="text-sm text-muted-foreground">Positive Sentiment</span>
                         </div>
-                        <div className="text-3xl font-bold mt-2 text-green-600">{data.sentimentBreakdown.positive}%</div>
+                        <div className="text-3xl font-bold mt-2 text-green-600 dark:text-green-400">{data.sentimentBreakdown.positive}%</div>
                     </CardContent>
                 </Card>
                 <Card>
@@ -333,7 +333,7 @@ export function InsightsDashboard() {
                                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                                 <span>{agent.call_count} calls</span>
                                                 <span>{formatDuration(agent.avg_duration)} avg</span>
-                                                <span className="text-green-600 font-medium">{agent.avg_sentiment}% positive</span>
+                                                <span className="text-green-600 dark:text-green-400 font-medium">{agent.avg_sentiment}% positive</span>
                                                 {agent.avg_conversion > 0 && (
                                                     <span className="font-medium">Score: {agent.avg_conversion}</span>
                                                 )}
