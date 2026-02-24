@@ -599,7 +599,8 @@ export async function POST(request: NextRequest) {
                         metadata: call.metadata,
                         provider: 'vapi',
                     };
-                    await forwardToWebhook(resolvedIntegrations.api.webhook_url, clientWebhookPayload);
+                    // Fire-and-forget: don't block CRM/workflow processing
+                    void forwardToWebhook(resolvedIntegrations.api.webhook_url, clientWebhookPayload);
                 }
 
                 const ghlInteg = resolvedIntegrations.ghl;
