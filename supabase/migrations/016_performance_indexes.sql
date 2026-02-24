@@ -19,9 +19,8 @@ ON scheduled_calls(status, scheduled_at);
 -- Index for experiment status filtering
 CREATE INDEX IF NOT EXISTS idx_experiments_status ON experiments(status);
 
--- Composite index for multi-tenant call filtering
-CREATE INDEX IF NOT EXISTS idx_calls_agency_client
-ON calls(agency_id, client_id);
+-- REMOVED: idx_calls_agency_client — calls table has no agency_id column
+-- Multi-tenant filtering uses agent_id → agents.agency_id join instead
 
 -- Index for phone number lookups by agent
 CREATE INDEX IF NOT EXISTS idx_phone_numbers_inbound_agent
@@ -52,4 +51,4 @@ COMMENT ON INDEX idx_calls_client_id IS 'Optimizes client-specific call queries'
 COMMENT ON INDEX idx_calls_status IS 'Optimizes status filtering in calls list';
 COMMENT ON INDEX idx_scheduled_calls_status_scheduled_at IS 'Optimizes cron job queries for pending scheduled calls';
 COMMENT ON INDEX idx_experiments_status IS 'Optimizes experiment list filtering by status';
-COMMENT ON INDEX idx_calls_agency_client IS 'Optimizes multi-tenant call filtering';
+-- REMOVED: comment on idx_calls_agency_client (index removed — calls has no agency_id)

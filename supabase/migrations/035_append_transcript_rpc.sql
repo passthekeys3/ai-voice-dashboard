@@ -13,8 +13,7 @@ RETURNS TABLE(transcript TEXT) AS $$
             ELSE calls.transcript || E'\n' || p_new_line
         END,
         p_max_length
-    ),
-    updated_at = NOW()
+    )
     WHERE calls.external_id = p_external_id
     RETURNING calls.transcript;
 $$ LANGUAGE sql;
