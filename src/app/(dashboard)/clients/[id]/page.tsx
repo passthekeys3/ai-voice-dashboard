@@ -61,7 +61,7 @@ export default async function ClientDetailPage({
 
     // Fetch phone numbers for agent cards
     const agentIds = (agents || []).map(a => a.id);
-    let agentPhoneMap: Record<string, string> = {};
+    const agentPhoneMap: Record<string, string> = {};
     if (agentIds.length > 0) {
         const { data: phoneNumbers } = await supabase
             .from('phone_numbers')
