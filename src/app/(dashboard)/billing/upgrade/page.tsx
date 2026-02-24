@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Header } from '@/components/dashboard/Header';
@@ -11,7 +10,6 @@ import type { PlanTier } from '@/types/database';
 type BillingInterval = 'monthly' | 'yearly';
 
 export default function UpgradePage() {
-    const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [loadingTier, setLoadingTier] = useState<PlanTier | null>(null);
     const [error, setError] = useState<string | null>(null);
