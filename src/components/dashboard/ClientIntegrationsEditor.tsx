@@ -374,6 +374,10 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
                                             placeholder={field.placeholder}
                                             className="text-sm"
                                         />
+                                        {/* Show hint when a field has an existing value (was masked) but is now blank */}
+                                        {!editFields[field.name] && isConfigured(editingKey || '') && (
+                                            <p className="text-xs text-muted-foreground">Leave blank to keep existing value</p>
+                                        )}
                                     </div>
                                 )}
                             </div>

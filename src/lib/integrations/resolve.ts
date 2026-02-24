@@ -11,10 +11,10 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AgencyIntegrations } from '@/types';
+import { ALLOWED_INTEGRATION_KEYS } from './validate-integrations';
 
-const INTEGRATION_KEYS: (keyof AgencyIntegrations)[] = [
-    'ghl', 'hubspot', 'google_calendar', 'api', 'slack', 'calendly',
-];
+/** Derived from the canonical ALLOWED_INTEGRATION_KEYS Set in validate-integrations.ts */
+const INTEGRATION_KEYS = [...ALLOWED_INTEGRATION_KEYS] as (keyof AgencyIntegrations)[];
 
 export type IntegrationSource = 'client' | 'agency' | null;
 
@@ -100,4 +100,56 @@ export async function getAgencyIntegrations(
         .single();
 
     return (agency?.integrations as AgencyIntegrations) || {};
+}
+
+/**
+ * Create a callback for writing refreshed OAuth tokens back to the correct table.
+ *
+ * When integration config came from a client override (source === 'client'),
+ * the refreshed token must be written back to `clients.integrations`.
+ * When it came from the agency (source === 'agency'), write to `agencies.integrations`.
+ *
+ * This fetches the current integrations from the source table (not the merged view)
+ * to avoid accidentally copying client data into the agency table or vice versa.
+ */
+export function createTokenRefreshCallback(
+    supabase: SupabaseClient,
+    agencyId: string,
+    clientId: string | null | undefined,
+    integrationKey: string,
+    source: IntegrationSource,
+): (newTokens: { accessToken: string; refreshToken?: string; expiresAt?: number }) => Promise<void> {
+    return async (newTokens) => {
+        const writeToClient = source === 'client' && !!clientId;
+
+        // Fetch current integrations from the source table (not the resolved merged view)
+        const { data: row } = writeToClient
+            ? await supabase.from('clients').select('integrations').eq('id', clientId).eq('agency_id', agencyId).single()
+            : await supabase.from('agencies').select('integrations').eq('id', agencyId).single();
+
+        const existing = (row?.integrations as Record<string, unknown>) || {};
+        const existingKeyConfig = (existing[integrationKey] as Record<string, unknown>) || {};
+
+        const updatedIntegrations = {
+            ...existing,
+            [integrationKey]: {
+                ...existingKeyConfig,
+                access_token: newTokens.accessToken,
+                ...(newTokens.refreshToken !== undefined ? { refresh_token: newTokens.refreshToken } : {}),
+                ...(newTokens.expiresAt !== undefined ? { expires_at: newTokens.expiresAt } : {}),
+            },
+        };
+
+        if (writeToClient) {
+            await supabase.from('clients').update({
+                integrations: updatedIntegrations,
+                updated_at: new Date().toISOString(),
+            }).eq('id', clientId).eq('agency_id', agencyId);
+        } else {
+            await supabase.from('agencies').update({
+                integrations: updatedIntegrations,
+                updated_at: new Date().toISOString(),
+            }).eq('id', agencyId);
+        }
+    };
 }

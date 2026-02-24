@@ -5,7 +5,7 @@ import { broadcastCallUpdate, broadcastTranscriptUpdate } from '@/lib/realtime/b
 import { accumulateUsage } from '@/lib/billing/usage';
 import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-analyzer';
 import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
-import { resolveIntegrations } from '@/lib/integrations/resolve';
+import { resolveIntegrations, createTokenRefreshCallback } from '@/lib/integrations/resolve';
 import { isValidWebhookUrl } from '@/lib/webhooks/validation';
 import { waitUntil } from '@vercel/functions';
 import type { Workflow } from '@/types';
@@ -340,7 +340,7 @@ export async function POST(request: NextRequest) {
             // Use waitUntil to ensure inbound processing completes after response
             waitUntil((async () => {
                 try {
-                    const { integrations: resolvedIntegrations } = await resolveIntegrations(supabase, agent.agency_id, agent.client_id);
+                    const { integrations: resolvedIntegrations, source: integrationSource } = await resolveIntegrations(supabase, agent.agency_id, agent.client_id);
 
                     const ghlInteg = resolvedIntegrations.ghl;
                     const ghlEnabled = ghlInteg?.enabled && (ghlInteg.api_key || ghlInteg.access_token);
@@ -351,15 +351,9 @@ export async function POST(request: NextRequest) {
                     if (ghlEnabled) {
                         if (ghlInteg!.auth_method === 'oauth' && ghlInteg!.access_token) {
                             const { getValidAccessToken: getGHLToken } = await import('@/lib/integrations/ghl');
-                            const validToken = await getGHLToken(ghlInteg!, async (newTokens) => {
-                                await supabase.from('agencies').update({
-                                    integrations: {
-                                        ...resolvedIntegrations,
-                                        ghl: { ...ghlInteg, access_token: newTokens.accessToken, refresh_token: newTokens.refreshToken, expires_at: newTokens.expiresAt },
-                                    },
-                                    updated_at: new Date().toISOString(),
-                                }).eq('id', agent.agency_id);
-                            });
+                            const validToken = await getGHLToken(ghlInteg!, createTokenRefreshCallback(
+                                supabase, agent.agency_id, agent.client_id, 'ghl', integrationSource.ghl ?? 'agency',
+                            ));
                             if (validToken) resolvedGhlConfig = { apiKey: validToken, locationId: ghlInteg!.location_id || '' };
                         } else if (ghlInteg!.api_key) {
                             resolvedGhlConfig = { apiKey: ghlInteg!.api_key, locationId: ghlInteg!.location_id || '' };
@@ -370,15 +364,9 @@ export async function POST(request: NextRequest) {
                     let resolvedHubspotConfig: { accessToken: string } | undefined;
                     if (hubspotEnabled) {
                         const { getValidAccessToken: getHubSpotToken } = await import('@/lib/integrations/hubspot');
-                        const validToken = await getHubSpotToken(resolvedIntegrations.hubspot!, async (newTokens) => {
-                            await supabase.from('agencies').update({
-                                integrations: {
-                                    ...resolvedIntegrations,
-                                    hubspot: { ...resolvedIntegrations.hubspot, access_token: newTokens.accessToken, refresh_token: newTokens.refreshToken, expires_at: newTokens.expiresAt },
-                                },
-                                updated_at: new Date().toISOString(),
-                            }).eq('id', agent.agency_id);
-                        });
+                        const validToken = await getHubSpotToken(resolvedIntegrations.hubspot!, createTokenRefreshCallback(
+                            supabase, agent.agency_id, agent.client_id, 'hubspot', integrationSource.hubspot ?? 'agency',
+                        ));
                         if (validToken) resolvedHubspotConfig = { accessToken: validToken };
                     }
 
@@ -428,15 +416,9 @@ export async function POST(request: NextRequest) {
                         let gcalConfig: { accessToken: string; calendarId: string } | undefined;
                         if (resolvedIntegrations.google_calendar?.enabled && resolvedIntegrations.google_calendar.access_token) {
                             const { getValidAccessToken: getGCalToken } = await import('@/lib/integrations/gcal');
-                            const validToken = await getGCalToken(resolvedIntegrations.google_calendar, async (newTokens) => {
-                                await supabase.from('agencies').update({
-                                    integrations: {
-                                        ...resolvedIntegrations,
-                                        google_calendar: { ...resolvedIntegrations.google_calendar, access_token: newTokens.accessToken, expires_at: newTokens.expiresAt },
-                                    },
-                                    updated_at: new Date().toISOString(),
-                                }).eq('id', agent.agency_id);
-                            });
+                            const validToken = await getGCalToken(resolvedIntegrations.google_calendar, createTokenRefreshCallback(
+                                supabase, agent.agency_id, agent.client_id, 'google_calendar', integrationSource.google_calendar ?? 'agency',
+                            ));
                             if (validToken) {
                                 gcalConfig = {
                                     accessToken: validToken,
@@ -530,7 +512,7 @@ export async function POST(request: NextRequest) {
         // since the response depends on none of these operations failing with an unhandled exception.
         if (payload.event === 'call_ended') {
             // Resolve integrations (client overrides → agency fallback)
-            const { integrations: resolvedIntegrations } = await resolveIntegrations(supabase, agent.agency_id, agent.client_id);
+            const { integrations: resolvedIntegrations, source: integrationSource } = await resolveIntegrations(supabase, agent.agency_id, agent.client_id);
 
             // Fetch matching workflows (both generic call_ended AND direction-specific inbound_call_ended)
             const triggers = ['call_ended'];
@@ -574,15 +556,9 @@ export async function POST(request: NextRequest) {
                 if (ghlInteg?.enabled) {
                     if (ghlInteg.auth_method === 'oauth' && ghlInteg.access_token) {
                         const { getValidAccessToken: getGHLToken } = await import('@/lib/integrations/ghl');
-                        const validToken = await getGHLToken(ghlInteg, async (newTokens) => {
-                            await supabase.from('agencies').update({
-                                integrations: {
-                                    ...resolvedIntegrations,
-                                    ghl: { ...ghlInteg, access_token: newTokens.accessToken, refresh_token: newTokens.refreshToken, expires_at: newTokens.expiresAt },
-                                },
-                                updated_at: new Date().toISOString(),
-                            }).eq('id', agent.agency_id);
-                        });
+                        const validToken = await getGHLToken(ghlInteg, createTokenRefreshCallback(
+                            supabase, agent.agency_id, agent.client_id, 'ghl', integrationSource.ghl ?? 'agency',
+                        ));
                         if (validToken) ghlConfig = { apiKey: validToken, locationId: ghlInteg.location_id || '' };
                     } else if (ghlInteg.api_key) {
                         ghlConfig = { apiKey: ghlInteg.api_key, locationId: ghlInteg.location_id || '' };
@@ -593,15 +569,9 @@ export async function POST(request: NextRequest) {
                 let hubspotConfig: { accessToken: string } | undefined;
                 if (resolvedIntegrations.hubspot?.enabled && resolvedIntegrations.hubspot.access_token) {
                     const { getValidAccessToken: getHubSpotToken } = await import('@/lib/integrations/hubspot');
-                    const validToken = await getHubSpotToken(resolvedIntegrations.hubspot, async (newTokens) => {
-                        await supabase.from('agencies').update({
-                            integrations: {
-                                ...resolvedIntegrations,
-                                hubspot: { ...resolvedIntegrations.hubspot, access_token: newTokens.accessToken, refresh_token: newTokens.refreshToken, expires_at: newTokens.expiresAt },
-                            },
-                            updated_at: new Date().toISOString(),
-                        }).eq('id', agent.agency_id);
-                    });
+                    const validToken = await getHubSpotToken(resolvedIntegrations.hubspot, createTokenRefreshCallback(
+                        supabase, agent.agency_id, agent.client_id, 'hubspot', integrationSource.hubspot ?? 'agency',
+                    ));
                     if (validToken) hubspotConfig = { accessToken: validToken };
                 }
 
@@ -609,15 +579,9 @@ export async function POST(request: NextRequest) {
                 let gcalConfig: { accessToken: string; calendarId: string } | undefined;
                 if (resolvedIntegrations.google_calendar?.enabled && resolvedIntegrations.google_calendar.access_token) {
                     const { getValidAccessToken: getGCalToken } = await import('@/lib/integrations/gcal');
-                    const validToken = await getGCalToken(resolvedIntegrations.google_calendar, async (newTokens) => {
-                        await supabase.from('agencies').update({
-                            integrations: {
-                                ...resolvedIntegrations,
-                                google_calendar: { ...resolvedIntegrations.google_calendar, access_token: newTokens.accessToken, expires_at: newTokens.expiresAt },
-                            },
-                            updated_at: new Date().toISOString(),
-                        }).eq('id', agent.agency_id);
-                    });
+                    const validToken = await getGCalToken(resolvedIntegrations.google_calendar, createTokenRefreshCallback(
+                        supabase, agent.agency_id, agent.client_id, 'google_calendar', integrationSource.google_calendar ?? 'agency',
+                    ));
                     if (validToken) {
                         gcalConfig = {
                             accessToken: validToken,
