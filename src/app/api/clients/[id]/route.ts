@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import Stripe from 'stripe';
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
@@ -156,13 +157,29 @@ export const DELETE = withErrorHandling(async (
     // Verify client exists and belongs to this agency
     const { data: client } = await supabaseAdmin
         .from('clients')
-        .select('id')
+        .select('id, stripe_subscription_id')
         .eq('id', id)
         .eq('agency_id', user.agency.id)
         .single();
 
     if (!client) {
         return notFound('Client');
+    }
+
+    // Cancel Stripe subscription if one exists (clients are billed via agency's Connect account)
+    if (client.stripe_subscription_id && process.env.STRIPE_SECRET_KEY && user.agency.stripe_connect_account_id) {
+        try {
+            const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+                apiVersion: '2026-01-28.clover',
+            });
+            await stripe.subscriptions.cancel(client.stripe_subscription_id, {
+                stripeAccount: user.agency.stripe_connect_account_id,
+            });
+        } catch (stripeErr) {
+            console.error(`Failed to cancel Stripe subscription ${client.stripe_subscription_id}:`,
+                stripeErr instanceof Error ? stripeErr.message : stripeErr);
+            // Continue with deletion — subscription can be manually cleaned up in Stripe dashboard
+        }
     }
 
     // Fetch all user profiles linked to this client

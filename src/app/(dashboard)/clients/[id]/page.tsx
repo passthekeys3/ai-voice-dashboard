@@ -67,6 +67,7 @@ export default async function ClientDetailPage({
         .from('profiles')
         .select('*')
         .eq('client_id', id)
+        .eq('agency_id', user.agency.id)
         .order('created_at', { ascending: false });
 
     return (

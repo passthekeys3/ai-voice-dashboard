@@ -123,12 +123,23 @@ export function ClientUsersList({ clientId, clientName, users }: ClientUsersList
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel disabled={!!deletingUserId}>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                            onClick={() => confirmUser && handleDeleteUser(confirmUser.id)}
+                            onClick={(e: React.MouseEvent) => {
+                                e.preventDefault();
+                                if (confirmUser) handleDeleteUser(confirmUser.id);
+                            }}
                             className="bg-red-600 hover:bg-red-700"
+                            disabled={!!deletingUserId}
                         >
-                            Remove User
+                            {deletingUserId ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Removing...
+                                </>
+                            ) : (
+                                'Remove User'
+                            )}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -157,12 +168,13 @@ export function DeleteClientButton({ clientId, clientName, userCount }: DeleteCl
                 method: 'DELETE',
             });
 
-            if (!response.ok && response.status !== 204) {
+            if (!response.ok) {
                 const data = await response.json();
                 throw new Error(data.error?.message || 'Failed to delete client');
             }
 
             toast.success(`${clientName} has been deleted`);
+            setOpen(false);
             router.push('/clients');
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Failed to delete client');
@@ -225,11 +237,21 @@ export function DeleteClientButton({ clientId, clientName, userCount }: DeleteCl
                     <AlertDialogFooter>
                         <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                            onClick={handleDelete}
+                            onClick={(e: React.MouseEvent) => {
+                                e.preventDefault();
+                                handleDelete();
+                            }}
                             className="bg-red-600 hover:bg-red-700"
                             disabled={deleting}
                         >
-                            {deleting ? 'Deleting...' : 'Delete Client'}
+                            {deleting ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Deleting...
+                                </>
+                            ) : (
+                                'Delete Client'
+                            )}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
