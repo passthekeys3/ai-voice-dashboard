@@ -15,20 +15,13 @@ export const metadata: Metadata = {
         siteName: 'BuildVoiceAI',
         type: 'website',
         url: SITE_URL,
-        images: [
-            {
-                url: `${SITE_URL}/og-image.png`,
-                width: 1200,
-                height: 630,
-                alt: 'BuildVoiceAI - AI Voice Agents Platform',
-            },
-        ],
+        // OG image auto-injected from src/app/opengraph-image.tsx
     },
     twitter: {
         card: 'summary_large_image',
         title: 'BuildVoiceAI - AI Voice Agents for Agencies & Businesses',
         description: 'Build AI voice agents from natural language descriptions. White-label platform for agencies.',
-        images: [`${SITE_URL}/og-image.png`],
+        // Twitter image auto-injected from src/app/opengraph-image.tsx
     },
 };
 

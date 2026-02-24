@@ -146,7 +146,7 @@ export function PhoneNumbersList({ phoneNumbers, agents, onDataChange }: PhoneNu
                                     size="icon-sm"
                                     onClick={() => handleDelete(phone.id)}
                                     disabled={deleting === phone.id}
-                                    className="text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0"
+                                    className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0"
                                 >
                                     {deleting === phone.id ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -344,7 +344,7 @@ export function PhoneNumbersList({ phoneNumbers, agents, onDataChange }: PhoneNu
                                             size="icon"
                                             onClick={() => handleDelete(phone.id)}
                                             disabled={deleting === phone.id}
-                                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                            className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                                             aria-label={`Delete phone number ${formatPhoneNumber(phone.phone_number)}`}
                                         >
                                             {deleting === phone.id ? (

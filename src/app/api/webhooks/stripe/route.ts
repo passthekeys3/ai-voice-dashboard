@@ -250,8 +250,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 export async function POST(request: NextRequest) {
     try {
         if (!webhookSecret) {
-            console.error('Stripe webhook secret not configured');
-            return NextResponse.json({ received: true, warning: 'Webhook not configured' }, { status: 200 });
+            console.error('Stripe webhook secret not configured — returning 503 so Stripe retries');
+            return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 });
         }
 
         const body = await request.text();
@@ -286,6 +286,21 @@ export async function POST(request: NextRequest) {
             // Acknowledge but do not process unknown event types
             return NextResponse.json({ received: true });
         }
+
+        // Deduplicate — skip events we've already processed (prevents duplicate emails on retries)
+        const supabase = createServiceClient();
+        const { data: existingEvent } = await supabase
+            .from('webhook_events')
+            .select('event_id')
+            .eq('event_id', event.id)
+            .single();
+
+        if (existingEvent) {
+            return NextResponse.json({ received: true, duplicate: true });
+        }
+
+        // Record the event ID before processing (at-most-once delivery)
+        await supabase.from('webhook_events').insert({ event_id: event.id });
 
         // Handle the event — use waitUntil to ensure completion in serverless
         const handleEvent = async () => {
