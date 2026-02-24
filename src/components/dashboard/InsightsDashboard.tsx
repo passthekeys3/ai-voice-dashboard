@@ -158,7 +158,7 @@ export function InsightsDashboard() {
                             <Clock className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm text-muted-foreground">Avg Duration</span>
                         </div>
-                        <div className="text-3xl font-bold mt-2">{formatDuration(data.avgDuration)}</div>
+                        <div className="text-3xl font-bold mt-2">{formatDuration(data.avgDuration ?? 0)}</div>
                     </CardContent>
                 </Card>
                 <Card>
@@ -356,7 +356,7 @@ export function InsightsDashboard() {
                                             <span className="font-medium">{agent.agent_name}</span>
                                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                                 <span>{agent.call_count} calls</span>
-                                                <span>{formatDuration(agent.avg_duration)} avg</span>
+                                                <span>{formatDuration(agent.avg_duration ?? 0)} avg</span>
                                                 <span className="text-green-600 dark:text-green-400 font-medium">{agent.avg_sentiment}% positive</span>
                                                 {agent.avg_conversion > 0 && (
                                                     <span className="font-medium">Score: {agent.avg_conversion}</span>

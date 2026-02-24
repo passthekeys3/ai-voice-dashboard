@@ -204,11 +204,11 @@ export function IntegrationsPage({ apiConfig, agents = [], appUrl = '' }: Integr
                                     </span>
                                 ) : (
                                     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                        apiConfig?.enabled
+                                        apiConfig?.enabled && apiConfig?.api_key
                                             ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                                             : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                                     }`}>
-                                        {apiConfig?.enabled ? (
+                                        {apiConfig?.enabled && apiConfig?.api_key ? (
                                             <>
                                                 <CheckCircle2 className="h-3 w-3" />
                                                 Active
