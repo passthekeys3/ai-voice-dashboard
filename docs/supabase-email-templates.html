@@ -1,0 +1,205 @@
+<!--
+  =====================================================================
+  SUPABASE AUTH EMAIL TEMPLATES — BuildVoiceAI
+  =====================================================================
+
+  Paste each template into:
+  Supabase Dashboard → Authentication → Email Templates
+
+  There are 3 templates below, separated by template name comments.
+  For each one, copy the Subject line and the HTML body.
+
+  =====================================================================
+-->
+
+
+<!-- ================================================================
+  TEMPLATE 1: CONFIRM SIGNUP
+
+  Subject: Confirm your BuildVoiceAI account
+================================================================= -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;padding:40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding:32px 32px 0;text-align:center;">
+                            <h1 style="margin:0;font-size:20px;font-weight:700;color:#0f172a;">BuildVoiceAI</h1>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding:24px 32px 32px;">
+                            <h2 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#0f172a;">Confirm your email</h2>
+                            <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.6;">
+                                Thanks for signing up! Click the button below to verify your email address and activate your account.
+                            </p>
+                            <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                                <tr>
+                                    <td style="background-color:#0f172a;border-radius:8px;padding:12px 24px;">
+                                        <a href="{{ .ConfirmationURL }}" style="color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;display:inline-block;">
+                                            Confirm email address &rarr;
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin:0;font-size:14px;color:#64748b;">
+                                If you didn&rsquo;t create an account, you can safely ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding:24px 32px;border-top:1px solid #e2e8f0;text-align:center;">
+                            <p style="margin:0;font-size:13px;color:#94a3b8;">
+                                BuildVoiceAI &mdash; AI Voice Agents for Agencies
+                            </p>
+                            <p style="margin:8px 0 0;font-size:12px;color:#cbd5e1;">
+                                <a href="https://buildvoiceai.com" style="color:#94a3b8;text-decoration:none;">buildvoiceai.com</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+
+
+<!-- ================================================================
+  TEMPLATE 2: RESET PASSWORD
+
+  Subject: Reset your BuildVoiceAI password
+================================================================= -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;padding:40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding:32px 32px 0;text-align:center;">
+                            <h1 style="margin:0;font-size:20px;font-weight:700;color:#0f172a;">BuildVoiceAI</h1>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding:24px 32px 32px;">
+                            <h2 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#0f172a;">Reset your password</h2>
+                            <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.6;">
+                                We received a request to reset the password for your account. Click the button below to choose a new password.
+                            </p>
+                            <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                                <tr>
+                                    <td style="background-color:#0f172a;border-radius:8px;padding:12px 24px;">
+                                        <a href="{{ .ConfirmationURL }}" style="color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;display:inline-block;">
+                                            Reset password &rarr;
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin:0 0 8px;font-size:14px;color:#64748b;">
+                                This link expires in 24 hours.
+                            </p>
+                            <p style="margin:0;font-size:14px;color:#64748b;">
+                                If you didn&rsquo;t request a password reset, you can safely ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding:24px 32px;border-top:1px solid #e2e8f0;text-align:center;">
+                            <p style="margin:0;font-size:13px;color:#94a3b8;">
+                                BuildVoiceAI &mdash; AI Voice Agents for Agencies
+                            </p>
+                            <p style="margin:8px 0 0;font-size:12px;color:#cbd5e1;">
+                                <a href="https://buildvoiceai.com" style="color:#94a3b8;text-decoration:none;">buildvoiceai.com</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+
+
+<!-- ================================================================
+  TEMPLATE 3: INVITE USER
+
+  Subject: You've been invited to BuildVoiceAI
+================================================================= -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;padding:40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding:32px 32px 0;text-align:center;">
+                            <h1 style="margin:0;font-size:20px;font-weight:700;color:#0f172a;">BuildVoiceAI</h1>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding:24px 32px 32px;">
+                            <h2 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#0f172a;">You&rsquo;ve been invited</h2>
+                            <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.6;">
+                                You&rsquo;ve been invited to join BuildVoiceAI. Click the button below to accept the invitation and set up your account.
+                            </p>
+                            <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                                <tr>
+                                    <td style="background-color:#0f172a;border-radius:8px;padding:12px 24px;">
+                                        <a href="{{ .ConfirmationURL }}" style="color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;display:inline-block;">
+                                            Accept invitation &rarr;
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin:0;font-size:14px;color:#64748b;">
+                                If you weren&rsquo;t expecting this invitation, you can safely ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding:24px 32px;border-top:1px solid #e2e8f0;text-align:center;">
+                            <p style="margin:0;font-size:13px;color:#94a3b8;">
+                                BuildVoiceAI &mdash; AI Voice Agents for Agencies
+                            </p>
+                            <p style="margin:8px 0 0;font-size:12px;color:#cbd5e1;">
+                                <a href="https://buildvoiceai.com" style="color:#94a3b8;text-decoration:none;">buildvoiceai.com</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

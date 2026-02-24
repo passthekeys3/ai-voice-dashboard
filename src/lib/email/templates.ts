@@ -5,7 +5,7 @@
  * Uses inline styles for maximum email client compatibility.
  */
 
-const APP_NAME = 'Prosody';
+const APP_NAME = 'BuildVoiceAI';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://buildvoiceai.com';
 
 /** Escape user-supplied strings for safe insertion into HTML email templates. */
