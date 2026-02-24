@@ -255,9 +255,9 @@ export function AgentBuilderChat({
                             ? 'Describe your AI agent... (e.g., "A friendly dental receptionist that books appointments")'
                             : 'Ask for changes or refinements...'
                         }
-                        className="min-h-[44px] max-h-[120px] resize-none"
+                        className="min-h-[56px] max-h-[120px] resize-none"
                         disabled={isStreaming}
-                        rows={1}
+                        rows={2}
                     />
                     <Button
                         size="icon"

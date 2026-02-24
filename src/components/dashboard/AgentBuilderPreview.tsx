@@ -100,6 +100,28 @@ export function AgentBuilderPreview({
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                {/* Voice Provider — always visible so user knows which platform is active */}
+                {availableProviders.length > 0 && (
+                    <div>
+                        <Label className="text-xs text-muted-foreground mb-1.5 block">Voice Provider</Label>
+                        <div className="flex gap-1.5">
+                            {availableProviders.map(p => (
+                                <button
+                                    key={p}
+                                    onClick={() => onDraftUpdate({ provider: p })}
+                                    className={`flex-1 text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                                        draft.provider === p
+                                            ? 'border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 font-medium'
+                                            : 'border-input bg-background text-muted-foreground hover:bg-muted'
+                                    }`}
+                                >
+                                    {PROVIDER_LABELS[p] || p}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {!hasContent ? (
                     <div className="flex flex-col items-center justify-center h-full text-center py-12">
                         <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 mb-3">
@@ -214,28 +236,6 @@ export function AgentBuilderPreview({
             {/* Create Section */}
             {hasContent && (
                 <div className="flex-shrink-0 p-4 border-t border-border bg-white dark:bg-slate-900 space-y-3">
-                    {/* Provider selector — only show when multiple providers available */}
-                    {availableProviders.length > 1 && (
-                        <div>
-                            <Label htmlFor="builder-provider-select" className="text-xs text-muted-foreground mb-1 block">Voice Provider</Label>
-                            <div className="flex gap-1.5">
-                                {availableProviders.map(p => (
-                                    <button
-                                        key={p}
-                                        onClick={() => onDraftUpdate({ provider: p })}
-                                        className={`flex-1 text-xs px-3 py-1.5 rounded-md border transition-colors ${
-                                            draft.provider === p
-                                                ? 'border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 font-medium'
-                                                : 'border-input bg-background text-muted-foreground hover:bg-muted'
-                                        }`}
-                                    >
-                                        {PROVIDER_LABELS[p] || p}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
                     {/* Optional selectors */}
                     <div className="grid grid-cols-2 gap-2">
                         {clients.length > 0 && (
