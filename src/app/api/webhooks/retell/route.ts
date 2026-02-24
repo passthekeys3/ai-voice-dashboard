@@ -514,6 +514,34 @@ export async function POST(request: NextRequest) {
             // Resolve integrations (client overrides → agency fallback)
             const { integrations: resolvedIntegrations, source: integrationSource } = await resolveIntegrations(supabase, agent.agency_id, agent.client_id);
 
+            // Forward to client/agency webhook URL (API integration setting)
+            // Fires independently from the per-agent webhook — both can trigger for the same call.
+            if (resolvedIntegrations.api?.enabled && resolvedIntegrations.api.webhook_url) {
+                const clientWebhookPayload = {
+                    event: 'call_ended',
+                    call_id: payload.call.call_id,
+                    agent_id: agent.id,
+                    agent_name: agent.name,
+                    status,
+                    direction: payload.call.direction || 'outbound',
+                    duration_seconds: durationSeconds,
+                    cost_cents: costCents,
+                    from_number: payload.call.from_number,
+                    to_number: payload.call.to_number,
+                    transcript: callTranscript,
+                    recording_url: payload.call.recording_url,
+                    summary: payload.call.call_analysis?.call_summary,
+                    sentiment: payload.call.call_analysis?.user_sentiment,
+                    started_at: new Date(payload.call.start_timestamp).toISOString(),
+                    ended_at: payload.call.end_timestamp
+                        ? new Date(payload.call.end_timestamp).toISOString()
+                        : null,
+                    metadata: payload.call.metadata,
+                    provider: 'retell',
+                };
+                waitUntil(forwardToWebhook(resolvedIntegrations.api.webhook_url, clientWebhookPayload));
+            }
+
             // Fetch matching workflows (both generic call_ended AND direction-specific inbound_call_ended)
             const triggers = ['call_ended'];
             if (direction === 'inbound') {

@@ -576,6 +576,32 @@ export async function POST(request: NextRequest) {
             try {
                 const { integrations: resolvedIntegrations, source: integrationSource } = await resolveIntegrations(supabase, agent.agency_id, agent.client_id);
 
+                // Forward to client/agency webhook URL (API integration setting)
+                // Fires independently from the per-agent webhook — both can trigger for the same call.
+                if (resolvedIntegrations.api?.enabled && resolvedIntegrations.api.webhook_url) {
+                    const clientWebhookPayload = {
+                        event: 'call_ended',
+                        call_id: call.id,
+                        agent_id: agent.id,
+                        agent_name: agent.name,
+                        status,
+                        direction,
+                        duration_seconds: durationSeconds,
+                        cost_cents: costCents,
+                        from_number: direction === 'inbound' ? call.customer?.number : call.phoneNumber?.number,
+                        to_number: direction === 'inbound' ? call.phoneNumber?.number : call.customer?.number,
+                        transcript: callTranscript,
+                        recording_url: call.recordingUrl,
+                        summary: call.analysis?.summary || call.summary,
+                        sentiment: inferredSentiment,
+                        started_at: startedAt,
+                        ended_at: endedAt,
+                        metadata: call.metadata,
+                        provider: 'vapi',
+                    };
+                    await forwardToWebhook(resolvedIntegrations.api.webhook_url, clientWebhookPayload);
+                }
+
                 const ghlInteg = resolvedIntegrations.ghl;
                 const ghlEnabled = ghlInteg?.enabled && (ghlInteg.api_key || ghlInteg.access_token);
                 const hubspotEnabled = resolvedIntegrations.hubspot?.enabled && resolvedIntegrations.hubspot.access_token;

@@ -55,9 +55,10 @@ const INTEGRATIONS: IntegrationMeta[] = [
     {
         key: 'api',
         name: 'API / Webhooks',
-        description: 'Trigger calls via REST API',
+        description: 'Trigger calls via REST API & receive call data',
         icon: <Key className="h-4 w-4" />,
         fields: [
+            { name: 'webhook_url', label: 'Webhook URL', type: 'url', placeholder: 'https://hook.make.com/...' },
             { name: 'enabled', label: 'Enabled', type: 'toggle' },
             { name: 'default_agent_id', label: 'Default Agent ID', type: 'text', placeholder: 'Agent UUID' },
         ],

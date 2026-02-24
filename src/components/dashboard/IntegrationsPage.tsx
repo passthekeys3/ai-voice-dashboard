@@ -158,6 +158,7 @@ interface IntegrationsPageProps {
         api_key?: string;
         enabled?: boolean;
         default_agent_id?: string;
+        webhook_url?: string;
     };
     agents?: { id: string; name: string; provider: string }[];
     appUrl?: string;

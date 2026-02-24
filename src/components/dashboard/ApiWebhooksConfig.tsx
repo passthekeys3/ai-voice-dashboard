@@ -19,6 +19,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -55,6 +56,7 @@ interface ApiConfig {
     api_key?: string;
     enabled?: boolean;
     default_agent_id?: string;
+    webhook_url?: string;
 }
 
 interface ApiWebhooksConfigProps {
@@ -85,6 +87,7 @@ export function ApiWebhooksConfig({
     const [activeTab, setActiveTab] = useState<'settings' | 'docs'>('settings');
     const [enabled, setEnabled] = useState(apiConfig?.enabled ?? false);
     const [defaultAgentId, setDefaultAgentId] = useState(apiConfig?.default_agent_id ?? '');
+    const [webhookUrl, setWebhookUrl] = useState(apiConfig?.webhook_url ?? '');
     const [maskedKey, setMaskedKey] = useState(apiConfig?.api_key);
     const [newKey, setNewKey] = useState<string | null>(null);
     const [showKey, setShowKey] = useState(false);
@@ -165,6 +168,16 @@ export function ApiWebhooksConfig({
         setDefaultAgentId(actualValue ?? '');
         const saved = await saveSettings({ default_agent_id: actualValue });
         if (!saved) setDefaultAgentId(prev);
+    };
+
+    const handleSaveWebhookUrl = async () => {
+        const trimmed = webhookUrl.trim();
+        if (trimmed && !trimmed.startsWith('https://')) {
+            setError('Webhook URL must start with https://');
+            return;
+        }
+        const saved = await saveSettings({ webhook_url: trimmed || null });
+        if (!saved) return;
     };
 
     const handleCopy = async (text: string, id: string) => {
@@ -397,6 +410,38 @@ Auth: Bearer Token (your API key)`;
                                         ))}
                                     </SelectContent>
                                 </Select>
+                            </div>
+
+                            <Separator />
+
+                            {/* Webhook URL */}
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium">Webhook URL</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Receive call data (call_ended events) at this URL. Works with
+                                    Make, Zapier, n8n, or any HTTPS endpoint.
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        value={webhookUrl}
+                                        onChange={(e) => setWebhookUrl(e.target.value)}
+                                        placeholder="https://hook.make.com/..."
+                                        className="text-sm font-mono"
+                                        disabled={saving}
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleSaveWebhookUrl}
+                                        disabled={saving}
+                                    >
+                                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Clients can override this with their own webhook URL in their integration settings.
+                                    Leave blank to disable.
+                                </p>
                             </div>
                         </div>
                     ) : (

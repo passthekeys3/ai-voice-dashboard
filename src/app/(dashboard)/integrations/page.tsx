@@ -23,12 +23,13 @@ export default async function IntegrationsRoute() {
         .eq('agency_id', user.agency.id)
         .order('name');
 
-    // Sanitize API config — mask the key before passing to client
+    // Sanitize API config — mask secrets before passing to client
     const rawApiConfig = user.agency.integrations?.api;
     const apiConfig = rawApiConfig ? {
         api_key: mask(rawApiConfig.api_key),
         enabled: rawApiConfig.enabled,
         default_agent_id: rawApiConfig.default_agent_id,
+        webhook_url: rawApiConfig.webhook_url,
     } : undefined;
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';

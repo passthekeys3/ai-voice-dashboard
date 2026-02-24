@@ -204,6 +204,18 @@ export function validateIntegrationUpdates(
                 return 'Invalid API trigger key format';
             }
         }
+        if (api.webhook_url !== undefined && api.webhook_url !== null && api.webhook_url !== '') {
+            if (typeof api.webhook_url !== 'string') {
+                return 'API webhook URL must be a string';
+            }
+            const url = api.webhook_url as string;
+            if (!url.startsWith('https://')) {
+                return 'API webhook URL must start with https://';
+            }
+            if (url.length > 500) {
+                return 'API webhook URL is too long';
+            }
+        }
         if (api.enabled !== undefined && typeof api.enabled !== 'boolean') {
             return 'API trigger enabled must be a boolean';
         }
@@ -259,6 +271,7 @@ export function maskIntegrationSecrets(
     if (result.api && typeof result.api === 'object') {
         const api = { ...(result.api as Record<string, unknown>) };
         if (api.api_key) api.api_key = mask(api.api_key);
+        if (api.webhook_url) api.webhook_url = mask(api.webhook_url);
         result.api = api;
     }
 

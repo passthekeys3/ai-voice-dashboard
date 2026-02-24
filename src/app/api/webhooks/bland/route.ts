@@ -369,6 +369,31 @@ export async function POST(request: NextRequest) {
         if (isCallEnded) {
             const { integrations: resolvedIntegrations, source: integrationSource } = await resolveIntegrations(supabase, agent.agency_id, agent.client_id);
 
+            // Forward to client/agency webhook URL (API integration setting)
+            // Fires independently from the per-agent webhook — both can trigger for the same call.
+            if (resolvedIntegrations.api?.enabled && resolvedIntegrations.api.webhook_url) {
+                const clientWebhookPayload = {
+                    event: 'call_ended',
+                    call_id: payload.call_id,
+                    agent_id: agent.id,
+                    agent_name: agent.name,
+                    status,
+                    direction,
+                    duration_seconds: durationSeconds,
+                    cost_cents: costCents,
+                    from_number: payload.from,
+                    to_number: payload.to,
+                    transcript,
+                    recording_url: payload.recording_url,
+                    summary: payload.summary,
+                    started_at: startedAt,
+                    ended_at: endedAt,
+                    metadata: payload.metadata,
+                    provider: 'bland',
+                };
+                waitUntil(forwardToWebhook(resolvedIntegrations.api.webhook_url, clientWebhookPayload));
+            }
+
             const { data: workflows } = await supabase
                 .from('workflows')
                 .select('*')

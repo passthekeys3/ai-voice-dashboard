@@ -162,6 +162,7 @@ export interface AgencyIntegrations {
         api_key?: string;       // pdy_sk_<64 hex chars>
         enabled?: boolean;
         default_agent_id?: string;
+        webhook_url?: string;   // Forwards call data to external systems (Make, Zapier, n8n)
     };
     slack?: {
         webhook_url?: string;
