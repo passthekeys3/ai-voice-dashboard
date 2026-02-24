@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { AgentBuilderChat } from './AgentBuilderChat';
 import { AgentBuilderPreview } from './AgentBuilderPreview';
 import type {
@@ -29,7 +28,6 @@ function generateMessageId(role: string) {
 }
 
 export function AgentBuilder({ clients, phoneNumbers, context, availableProviders }: AgentBuilderProps) {
-    const router = useRouter();
     const defaultProvider = availableProviders[0] || 'retell';
     const [messages, setMessages] = useState<BuilderMessage[]>([]);
     const [draft, setDraft] = useState<AgentDraft>({
@@ -363,8 +361,7 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
             }
 
             const { data } = await response.json();
-            router.push(`/agents`);
-            router.refresh();
+            window.location.href = '/agents';
 
             return data;
         } catch (err) {
@@ -374,7 +371,7 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
         } finally {
             setIsCreating(false);
         }
-    }, [isCreating, router]);
+    }, [isCreating]);
 
     const isReadyToCreate = !!(draft.name && draft.voiceId && draft.systemPrompt);
 

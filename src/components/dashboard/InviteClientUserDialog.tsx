@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,7 +29,6 @@ interface InviteClientUserDialogProps {
 }
 
 export function InviteClientUserDialog({ clientId, clientName }: InviteClientUserDialogProps) {
-    const router = useRouter();
     const [open, setOpen] = useState(false);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -80,7 +78,7 @@ export function InviteClientUserDialog({ clientId, clientName }: InviteClientUse
             setOpen(false);
             resetForm();
             toast.success(`Invitation sent to ${email}`);
-            router.refresh();
+            window.location.reload();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {

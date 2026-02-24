@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +32,7 @@ interface VariantDraft {
 }
 
 export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) {
-    const router = useRouter();
+
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -150,8 +149,7 @@ export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) 
                 }
             }
 
-            router.push('/experiments');
-            router.refresh();
+            window.location.href = '/experiments';
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {

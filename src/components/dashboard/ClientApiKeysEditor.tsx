@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -36,7 +35,6 @@ export function ClientApiKeysEditor({
     vapiApiKey,
     blandApiKey,
 }: ClientApiKeysEditorProps) {
-    const router = useRouter();
     const [saving, setSaving] = useState(false);
 
     // Map props to initial state: masked values are NOT real keys, so start empty
@@ -120,7 +118,7 @@ export function ClientApiKeysEditor({
             }
 
             toast.success('API keys updated');
-            router.refresh();
+            window.location.reload();
         } catch (err) {
             console.error('Failed to save API keys:', err);
             toast.error('Failed to save API keys', {

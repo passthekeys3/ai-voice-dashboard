@@ -50,7 +50,7 @@ export function ClientUsersList({ clientId, clientName, users }: ClientUsersList
 
             toast.success('User removed successfully');
             setConfirmUser(null);
-            router.refresh();
+            window.location.reload();
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Failed to remove user');
         } finally {

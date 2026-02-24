@@ -70,7 +70,7 @@ export function TestSuitesList({ suites }: TestSuitesListProps) {
                 throw new Error(data.error || 'Failed to delete test suite');
             }
             toast.success('Test suite deleted');
-            router.refresh();
+            window.location.reload();
         } catch (err) {
             console.error('Failed to delete suite:', err);
             toast.error(err instanceof Error ? err.message : 'Failed to delete test suite');

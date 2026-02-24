@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,7 +28,6 @@ interface ScheduleCallButtonProps {
 }
 
 export function ScheduleCallButton({ agents }: ScheduleCallButtonProps) {
-    const router = useRouter();
     const [open, setOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -94,7 +92,7 @@ export function ScheduleCallButton({ agents }: ScheduleCallButtonProps) {
 
             setOpen(false);
             resetForm();
-            router.refresh();
+            window.location.reload();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {

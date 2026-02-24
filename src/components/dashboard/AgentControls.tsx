@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -22,7 +21,6 @@ interface AgentControlsProps {
 }
 
 export function AgentControls({ agentId, isActive, clientId, clients }: AgentControlsProps) {
-    const router = useRouter();
     const [active, setActive] = useState(isActive);
     const [selectedClient, setSelectedClient] = useState(clientId || '');
     const [saving, setSaving] = useState(false);
@@ -48,7 +46,7 @@ export function AgentControls({ agentId, isActive, clientId, clients }: AgentCon
             }
 
             setMessage('Agent updated successfully');
-            router.refresh();
+            window.location.reload();
         } catch (_err) {
             setMessage('Failed to update agent');
         } finally {

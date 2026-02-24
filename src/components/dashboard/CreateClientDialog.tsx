@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,7 +25,6 @@ import { toast } from 'sonner';
 import type { BillingType } from '@/types';
 
 export function CreateClientDialog() {
-    const router = useRouter();
     const [open, setOpen] = useState(false);
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -108,7 +106,7 @@ export function CreateClientDialog() {
             setOpen(false);
             resetForm();
             toast.success('Client created successfully');
-            router.refresh();
+            window.location.reload();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {

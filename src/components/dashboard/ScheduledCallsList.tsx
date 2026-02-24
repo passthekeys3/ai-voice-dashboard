@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,7 +63,6 @@ function formatTimeUntil(dateString: string) {
 }
 
 export function ScheduledCallsList({ upcomingCalls, pastCalls }: ScheduledCallsListProps) {
-    const router = useRouter();
     const [cancelling, setCancelling] = useState<string | null>(null);
 
     const handleCancel = async (id: string) => {
@@ -77,7 +75,7 @@ export function ScheduledCallsList({ upcomingCalls, pastCalls }: ScheduledCallsL
                 const errData = await res.json().catch(() => ({}));
                 throw new Error(errData.error || 'Failed to cancel call');
             }
-            router.refresh();
+            window.location.reload();
         } catch (err) {
             console.error('Failed to cancel call:', err);
             alert(err instanceof Error ? err.message : 'Failed to cancel call');

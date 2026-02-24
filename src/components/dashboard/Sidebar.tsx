@@ -26,7 +26,6 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
     Sheet,
@@ -100,13 +99,11 @@ function SidebarContent({
     basePath,
 }: SidebarContentProps) {
     const pathname = usePathname();
-    const router = useRouter();
 
     const handleLogout = async () => {
         const supabase = createClient();
         await supabase.auth.signOut();
-        router.push('/login');
-        router.refresh();
+        window.location.href = '/login';
     };
 
     // Filter navigation based on permissions for non-admin users

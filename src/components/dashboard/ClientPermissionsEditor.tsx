@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -59,7 +58,6 @@ export function ClientPermissionsEditor({
     isAgencyDefault = true,
     clientId,
 }: ClientPermissionsEditorProps) {
-    const router = useRouter();
     const [permissions, setPermissions] = useState<ClientPermissions>(
         initialPermissions || DEFAULT_CLIENT_PERMISSIONS
     );
@@ -94,7 +92,7 @@ export function ClientPermissionsEditor({
 
             toast.success('Permissions saved');
             setHasChanges(false);
-            router.refresh();
+            window.location.reload();
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Failed to save');
         } finally {

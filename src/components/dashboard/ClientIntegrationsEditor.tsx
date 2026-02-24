@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -112,7 +111,6 @@ const INTEGRATIONS: IntegrationMeta[] = [
 /* ── Component ─────────────────────────────────────────────────── */
 
 export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientIntegrationsEditorProps) {
-    const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -198,7 +196,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
             toast.success('Integration settings saved');
             setEditingKey(null);
             await fetchIntegrations();
-            router.refresh();
+            window.location.reload();
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Failed to save');
         } finally {
@@ -215,7 +213,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
             if (!res.ok) throw new Error('Failed to reset');
             toast.success('Reset to agency default');
             await fetchIntegrations();
-            router.refresh();
+            window.location.reload();
         } catch {
             toast.error('Failed to reset integration');
         } finally {

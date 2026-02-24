@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -82,7 +81,6 @@ export function ClientBillingEditor({
     agencyHasConnect,
     aiCallAnalysis: initialAiCallAnalysis,
 }: ClientBillingEditorProps) {
-    const router = useRouter();
     const [billingType, setBillingType] = useState<BillingType | ''>(initialBillingType || '');
     const [amountInput, setAmountInput] = useState(formatCentsToDollars(initialAmountCents));
     const [aiCallAnalysis, setAiCallAnalysis] = useState(initialAiCallAnalysis ?? false);
@@ -138,7 +136,7 @@ export function ClientBillingEditor({
 
             toast.success('Billing settings saved');
             setHasChanges(false);
-            router.refresh();
+            window.location.reload();
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Failed to save');
         } finally {

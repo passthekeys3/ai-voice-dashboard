@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     DropdownMenu,
@@ -28,7 +27,6 @@ interface HeaderProps {
 export function Header({ title = 'Dashboard', userName, userEmail, userAvatar, onSync }: HeaderProps) {
     const [syncing, setSyncing] = useState(false);
     const { theme, setTheme } = useTheme();
-    const router = useRouter();
 
     const handleSync = async () => {
         if (onSync) {
@@ -44,8 +42,7 @@ export function Header({ title = 'Dashboard', userName, userEmail, userAvatar, o
     const handleLogout = async () => {
         const supabase = createClient();
         await supabase.auth.signOut();
-        router.push('/login');
-        router.refresh();
+        window.location.href = '/login';
     };
 
     const initials = userName

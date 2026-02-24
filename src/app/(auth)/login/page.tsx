@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,6 @@ function LoginForm() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const router = useRouter();
     const searchParams = useSearchParams();
     const rawRedirect = searchParams.get('redirect') || '/';
     // Prevent open redirect: only allow relative paths
@@ -54,8 +53,7 @@ function LoginForm() {
                 return;
             }
 
-            router.push(redirect);
-            router.refresh();
+            window.location.href = redirect;
         } catch {
             setError('An unexpected error occurred');
         } finally {

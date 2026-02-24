@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,7 +89,7 @@ const conditionOperators = [
 ];
 
 export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
-    const router = useRouter();
+
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -232,8 +231,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                 throw new Error(data.error || 'Failed to save workflow');
             }
 
-            router.push('/workflows');
-            router.refresh();
+            window.location.href = '/workflows';
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {

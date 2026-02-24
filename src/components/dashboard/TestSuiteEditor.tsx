@@ -291,10 +291,10 @@ export function TestSuiteEditor({ suite, personas }: TestSuiteEditorProps) {
                 }
             }
         } catch {
-            // Fallback to router refresh
-            router.refresh();
+            // Fallback to full page reload
+            window.location.reload();
         }
-    }, [suite.id, router]);
+    }, [suite.id]);
 
     const hasUnsavedCases = cases.some((c) => c.isDirty);
     const activeCount = cases.filter((c) => c.is_active && !c.isNew).length;

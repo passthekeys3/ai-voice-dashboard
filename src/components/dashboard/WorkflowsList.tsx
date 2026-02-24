@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -121,7 +120,6 @@ const triggerLabels: Record<string, string> = {
 };
 
 export function WorkflowsList({ workflows }: WorkflowsListProps) {
-    const router = useRouter();
     const [updatingId, setUpdatingId] = useState<string | null>(null);
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
@@ -135,7 +133,7 @@ export function WorkflowsList({ workflows }: WorkflowsListProps) {
             });
             if (!response.ok) throw new Error('Failed to update');
             toast.success(isActive ? 'Workflow activated' : 'Workflow deactivated');
-            router.refresh();
+            window.location.reload();
         } catch (err) {
             console.error('Failed to update workflow:', err);
             toast.error('Failed to update workflow');
@@ -149,7 +147,7 @@ export function WorkflowsList({ workflows }: WorkflowsListProps) {
             const response = await fetch(`/api/workflows/${workflowId}`, { method: 'DELETE' });
             if (!response.ok) throw new Error('Failed to delete');
             toast.success('Workflow deleted');
-            router.refresh();
+            window.location.reload();
         } catch (err) {
             console.error('Failed to delete workflow:', err);
             toast.error('Failed to delete workflow');
@@ -173,7 +171,7 @@ export function WorkflowsList({ workflows }: WorkflowsListProps) {
             });
             if (response.ok) {
                 toast.success('Workflow duplicated');
-                router.refresh();
+                window.location.reload();
             }
         } catch (err) {
             console.error('Failed to duplicate workflow:', err);

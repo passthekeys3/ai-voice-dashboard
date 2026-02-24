@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,7 +45,6 @@ function formatPhoneNumber(number: string) {
 }
 
 export function AgentCard({ agent, phoneNumber, showDelete = true, configBasePath = '/agents' }: AgentCardProps) {
-    const router = useRouter();
     const [deleting, setDeleting] = useState(false);
     const [deleteFromProvider, setDeleteFromProvider] = useState(false);
 
@@ -73,7 +71,7 @@ export function AgentCard({ agent, phoneNumber, showDelete = true, configBasePat
                         ? `"${agent.name}" has been removed from your dashboard and ${providerDisplayName}`
                         : `"${agent.name}" has been removed from your dashboard. It still exists in ${providerDisplayName}.`,
                 });
-                router.refresh();
+                window.location.reload();
             } else {
                 const data = await response.json().catch(() => ({}));
                 toast.error('Failed to delete agent', {

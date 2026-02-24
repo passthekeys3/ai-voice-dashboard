@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -63,7 +62,6 @@ const goalLabels: Record<string, string> = {
 };
 
 export function ExperimentsList({ experiments }: ExperimentsListProps) {
-    const router = useRouter();
     const [updating, setUpdating] = useState<string | null>(null);
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
@@ -77,7 +75,7 @@ export function ExperimentsList({ experiments }: ExperimentsListProps) {
             });
             if (!response.ok) throw new Error('Failed to update');
             toast.success(newStatus === 'running' ? 'Experiment started' : 'Experiment paused');
-            router.refresh();
+            window.location.reload();
         } catch (err) {
             console.error('Failed to update experiment:', err);
             toast.error('Failed to update experiment');
@@ -91,7 +89,7 @@ export function ExperimentsList({ experiments }: ExperimentsListProps) {
             const response = await fetch(`/api/experiments/${experimentId}`, { method: 'DELETE' });
             if (!response.ok) throw new Error('Failed to delete');
             toast.success('Experiment deleted');
-            router.refresh();
+            window.location.reload();
         } catch (err) {
             console.error('Failed to delete experiment:', err);
             toast.error('Failed to delete experiment');

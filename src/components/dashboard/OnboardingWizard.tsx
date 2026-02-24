@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +42,7 @@ const STEP_BORDERS: Record<Step, string> = {
 };
 
 export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWizardProps) {
-    const router = useRouter();
+
     const [step, setStep] = useState<Step>(isOnboarded ? 'complete' : 'welcome');
     const [provider, setProvider] = useState<'retell' | 'vapi' | 'bland'>('retell');
     const [apiKey, setApiKey] = useState('');
@@ -119,12 +118,11 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
     };
 
     const handleComplete = () => {
-        router.push('/');
-        router.refresh();
+        window.location.href = '/';
     };
 
     const handleSkip = () => {
-        router.push('/');
+        window.location.href = '/';
     };
 
     return (
