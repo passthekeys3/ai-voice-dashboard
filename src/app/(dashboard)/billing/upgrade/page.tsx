@@ -61,7 +61,7 @@ export default function UpgradePage() {
                 <div className="text-center max-w-2xl mx-auto">
                     <h2 className="text-3xl font-bold tracking-tight">Choose Your Plan</h2>
                     <p className="text-muted-foreground mt-2">
-                        Select a plan to get started with Prosody. All plans include core AI voice agent features.
+                        Select a plan to get started with BuildVoiceAI. All plans include core AI voice agent features.
                     </p>
                 </div>
 
