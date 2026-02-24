@@ -7,6 +7,7 @@ import { Header } from '@/components/dashboard/Header';
 import { SettingsForm } from '@/components/dashboard/SettingsForm';
 import { ClientPermissionsEditor } from '@/components/dashboard/ClientPermissionsEditor';
 import { CustomDomainSettings } from '@/components/dashboard/CustomDomainSettings';
+import { DeleteAccountSection } from '@/components/dashboard/DeleteAccountSection';
 import { DEFAULT_CLIENT_PERMISSIONS } from '@/types/database';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -186,6 +187,11 @@ export default async function SettingsPage() {
                     agencyId={user.agency.id}
                     isAgencyDefault={true}
                 />
+
+                {/* Danger Zone — account deletion (agency admins only) */}
+                {user.profile.role === 'agency_admin' && (
+                    <DeleteAccountSection />
+                )}
             </div>
         </div>
     );
