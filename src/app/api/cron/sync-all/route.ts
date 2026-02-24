@@ -1,9 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createServiceClient } from '@/lib/supabase/server';
-import { getAgencyProviders, type NormalizedAgent } from '@/lib/providers';
+import { getProviderClient, type NormalizedAgent } from '@/lib/providers';
 import { listRetellAgents, ensureAgentWebhookConfig, REQUIRED_WEBHOOK_EVENTS } from '@/lib/providers/retell';
 import { listVapiAssistants, updateVapiAssistant } from '@/lib/providers/vapi';
+import type { VoiceProvider } from '@/types';
+
+/** One workspace to sync: a provider + API key + optional client scope */
+interface SyncEntry {
+    provider: VoiceProvider;
+    apiKey: string;
+    clientId: string | null;
+    label: string;
+}
+
+const KEY_FIELDS: { field: 'retell_api_key' | 'vapi_api_key' | 'bland_api_key'; provider: VoiceProvider }[] = [
+    { field: 'retell_api_key', provider: 'retell' },
+    { field: 'vapi_api_key', provider: 'vapi' },
+    { field: 'bland_api_key', provider: 'bland' },
+];
 
 /**
  * Cron endpoint to sync all agencies' agents and phone numbers
@@ -59,19 +74,51 @@ export async function POST(request: NextRequest) {
 
         for (const agency of agencies) {
             try {
-                const providers = getAgencyProviders(agency);
+                // Build sync entries: agency-level + client-level keys (deduped)
+                const syncEntries: SyncEntry[] = [];
+                const seenApiKeys = new Set<string>();
 
-                if (providers.length === 0) continue;
+                // Agency-level keys first
+                for (const { field, provider } of KEY_FIELDS) {
+                    const key = agency[field];
+                    if (key) {
+                        syncEntries.push({ provider, apiKey: key, clientId: null, label: `agency ${agency.id}` });
+                        seenApiKeys.add(key);
+                    }
+                }
 
-                // Sync agents from each provider
-                for (const { provider, client } of providers) {
+                // Client-level keys (skip duplicates of agency keys)
+                const { data: clientsWithKeys } = await supabase
+                    .from('clients')
+                    .select('id, name, retell_api_key, vapi_api_key, bland_api_key')
+                    .eq('agency_id', agency.id)
+                    .or('retell_api_key.neq.null,vapi_api_key.neq.null,bland_api_key.neq.null');
+
+                for (const clientRecord of clientsWithKeys || []) {
+                    for (const { field, provider } of KEY_FIELDS) {
+                        const key = clientRecord[field];
+                        if (key && !seenApiKeys.has(key)) {
+                            syncEntries.push({ provider, apiKey: key, clientId: clientRecord.id, label: `client "${clientRecord.name}"` });
+                            seenApiKeys.add(key);
+                        }
+                    }
+                }
+
+                if (syncEntries.length === 0) continue;
+
+                // Sync agents, webhook configs, and phone numbers from each workspace
+                for (const entry of syncEntries) {
+                    const { provider, apiKey, clientId, label } = entry;
+
                     try {
-                        // Sync Agents
-                        const externalAgents: NormalizedAgent[] = await client.listAgents();
+                        const providerClient = getProviderClient(provider, apiKey);
 
-                        // Prepare batch upsert data for agents
+                        // ─── Sync Agents ───
+                        const externalAgents: NormalizedAgent[] = await providerClient.listAgents();
+
                         const agentsToUpsert = externalAgents.map(extAgent => ({
                             agency_id: agency.id,
+                            ...(clientId ? { client_id: clientId } : {}),
                             name: extAgent.name,
                             provider,
                             external_id: extAgent.externalId,
@@ -79,7 +126,6 @@ export async function POST(request: NextRequest) {
                             updated_at: new Date().toISOString(),
                         }));
 
-                        // Single batch upsert for all agents
                         if (agentsToUpsert.length > 0) {
                             const { error: agentUpsertError, data: upsertedAgents } = await supabase
                                 .from('agents')
@@ -91,91 +137,82 @@ export async function POST(request: NextRequest) {
 
                             if (!agentUpsertError) {
                                 results.total_agents += upsertedAgents?.length || agentsToUpsert.length;
-                                console.log(`[CRON SYNC] Agency ${agency.id}: upserted ${agentsToUpsert.length} agents from ${provider}`);
+                                console.log(`[CRON SYNC] ${label}: upserted ${agentsToUpsert.length} ${provider} agents`);
                             } else {
-                                console.error(`[CRON SYNC] Agent upsert error for ${agency.id}:`, agentUpsertError.code);
+                                console.error(`[CRON SYNC] ${label}: agent upsert error:`, agentUpsertError.code);
                             }
                         }
 
-                        // Ensure webhook_events (including transcript_updated) on all Retell agents
-                        if (provider === 'retell' && agency.retell_api_key) {
+                        // ─── Ensure Retell webhook config ───
+                        if (provider === 'retell') {
                             try {
-                                const retellAgents = await listRetellAgents(agency.retell_api_key);
+                                const retellAgents = await listRetellAgents(apiKey);
                                 const retellMap = new Map(retellAgents.map(a => [a.agent_id, a]));
                                 let patchedCount = 0;
                                 for (const extAgent of externalAgents) {
                                     const retellAgent = retellMap.get(extAgent.externalId);
                                     if (!retellAgent) continue;
                                     try {
-                                        const patched = await ensureAgentWebhookConfig(agency.retell_api_key, retellAgent);
+                                        const patched = await ensureAgentWebhookConfig(apiKey, retellAgent);
                                         if (patched) patchedCount++;
                                     } catch (err) {
-                                        console.error(`[CRON SYNC] Failed to patch+publish agent ${extAgent.externalId}:`, err instanceof Error ? err.message : 'Unknown error');
+                                        console.error(`[CRON SYNC] ${label}: failed to patch agent ${extAgent.externalId}:`, err instanceof Error ? err.message : 'Unknown error');
                                     }
                                 }
                                 if (patchedCount > 0) {
-                                    console.log(`[CRON SYNC] Agency ${agency.id}: patched & published webhook config on ${patchedCount} agents (events=${REQUIRED_WEBHOOK_EVENTS.join(',')})`);
+                                    console.log(`[CRON SYNC] ${label}: patched webhook config on ${patchedCount} agents (events=${REQUIRED_WEBHOOK_EVENTS.join(',')})`);
                                 }
                             } catch (err) {
-                                console.error(`[CRON SYNC] Failed to ensure webhook configs for agency ${agency.id}:`, err instanceof Error ? err.message : 'Unknown error');
+                                console.error(`[CRON SYNC] ${label}: failed to ensure webhook configs:`, err instanceof Error ? err.message : 'Unknown error');
                             }
                         }
 
-                        // Ensure serverUrl points to our webhook handler on all Vapi assistants
-                        if (provider === 'vapi' && agency.vapi_api_key && process.env.NEXT_PUBLIC_APP_URL) {
+                        // ─── Ensure Vapi serverUrl ───
+                        if (provider === 'vapi' && process.env.NEXT_PUBLIC_APP_URL) {
                             try {
                                 const expectedServerUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/vapi`;
-                                const vapiAssistants = await listVapiAssistants(agency.vapi_api_key);
-                                const vapiExternalIds = new Set(
-                                    externalAgents.map(a => a.externalId)
-                                );
+                                const vapiAssistants = await listVapiAssistants(apiKey);
+                                const vapiExternalIds = new Set(externalAgents.map(a => a.externalId));
                                 let patchedCount = 0;
                                 for (const assistant of vapiAssistants) {
-                                    // Only patch assistants that belong to this agency (synced above)
                                     if (!vapiExternalIds.has(assistant.id)) continue;
                                     if (assistant.serverUrl === expectedServerUrl) continue;
                                     try {
-                                        await updateVapiAssistant(agency.vapi_api_key, assistant.id, {
-                                            serverUrl: expectedServerUrl,
-                                        });
+                                        await updateVapiAssistant(apiKey, assistant.id, { serverUrl: expectedServerUrl });
                                         patchedCount++;
                                     } catch (err) {
-                                        console.error(`[CRON SYNC] Failed to patch Vapi serverUrl for assistant ${assistant.id}:`, err instanceof Error ? err.message : 'Unknown error');
+                                        console.error(`[CRON SYNC] ${label}: failed to patch Vapi serverUrl for ${assistant.id}:`, err instanceof Error ? err.message : 'Unknown error');
                                     }
                                 }
                                 if (patchedCount > 0) {
-                                    console.log(`[CRON SYNC] Agency ${agency.id}: patched serverUrl on ${patchedCount} Vapi assistants`);
+                                    console.log(`[CRON SYNC] ${label}: patched serverUrl on ${patchedCount} Vapi assistants`);
                                 }
                             } catch (err) {
-                                console.error(`[CRON SYNC] Failed to ensure Vapi serverUrl for agency ${agency.id}:`, err instanceof Error ? err.message : 'Unknown error');
+                                console.error(`[CRON SYNC] ${label}: failed to ensure Vapi serverUrl:`, err instanceof Error ? err.message : 'Unknown error');
                             }
                         }
 
-                        // Sync Phone Numbers (Retell)
-                        if (provider === 'retell' && agency.retell_api_key) {
+                        // ─── Sync Phone Numbers ───
+                        // Build agent lookup for phone→agent linking
+                        const { data: agencyAgents } = await supabase
+                            .from('agents')
+                            .select('id, external_id')
+                            .eq('agency_id', agency.id);
+
+                        const agentLookupMap = new Map(
+                            agencyAgents?.map(a => [a.external_id, a.id]) || []
+                        );
+
+                        if (provider === 'retell') {
                             try {
                                 const phoneResponse = await fetch('https://api.retellai.com/list-phone-numbers', {
                                     method: 'GET',
-                                    headers: {
-                                        'Authorization': `Bearer ${agency.retell_api_key}`,
-                                    },
+                                    headers: { 'Authorization': `Bearer ${apiKey}` },
                                 });
 
                                 if (phoneResponse.ok) {
                                     const phoneNumbers = await phoneResponse.json();
-
                                     if (phoneNumbers.length > 0) {
-                                        // Fetch all agents for this agency in ONE query to build lookup map
-                                        const { data: agencyAgents } = await supabase
-                                            .from('agents')
-                                            .select('id, external_id')
-                                            .eq('agency_id', agency.id);
-
-                                        const agentLookupMap = new Map(
-                                            agencyAgents?.map(a => [a.external_id, a.id]) || []
-                                        );
-
-                                        // Prepare batch upsert data for phone numbers
                                         const phonesToUpsert = phoneNumbers.map((phone: {
                                             phone_number_id?: string;
                                             phone_number: string;
@@ -194,7 +231,6 @@ export async function POST(request: NextRequest) {
                                             updated_at: new Date().toISOString(),
                                         }));
 
-                                        // Single batch upsert for all phone numbers
                                         const { error: phoneUpsertError, data: upsertedPhones } = await supabase
                                             .from('phone_numbers')
                                             .upsert(phonesToUpsert, {
@@ -205,33 +241,23 @@ export async function POST(request: NextRequest) {
 
                                         if (!phoneUpsertError) {
                                             results.total_phone_numbers += upsertedPhones?.length || phonesToUpsert.length;
-                                            console.log(`[CRON SYNC] Agency ${agency.id}: upserted ${phonesToUpsert.length} phone numbers`);
+                                            console.log(`[CRON SYNC] ${label}: upserted ${phonesToUpsert.length} Retell phone numbers`);
                                         } else {
-                                            console.error(`[CRON SYNC] Phone upsert error for ${agency.id}:`, phoneUpsertError.code);
+                                            console.error(`[CRON SYNC] ${label}: phone upsert error:`, phoneUpsertError.code);
                                         }
                                     }
                                 }
                             } catch (phoneErr) {
-                                console.error(`Phone sync error for agency ${agency.id}:`, phoneErr instanceof Error ? phoneErr.message : 'Unknown error');
+                                console.error(`[CRON SYNC] ${label}: Retell phone sync error:`, phoneErr instanceof Error ? phoneErr.message : 'Unknown error');
                             }
                         }
 
-                        // Sync Phone Numbers (Vapi)
-                        if (provider === 'vapi' && agency.vapi_api_key) {
+                        if (provider === 'vapi') {
                             try {
                                 const { listVapiPhoneNumbers } = await import('@/lib/providers/vapi');
-                                const vapiNumbers = await listVapiPhoneNumbers(agency.vapi_api_key);
+                                const vapiNumbers = await listVapiPhoneNumbers(apiKey);
 
                                 if (vapiNumbers.length > 0) {
-                                    const { data: agencyAgents } = await supabase
-                                        .from('agents')
-                                        .select('id, external_id')
-                                        .eq('agency_id', agency.id);
-
-                                    const agentLookupMap = new Map(
-                                        agencyAgents?.map(a => [a.external_id, a.id]) || []
-                                    );
-
                                     const phonesToUpsert = vapiNumbers.map((phone) => ({
                                         agency_id: agency.id,
                                         external_id: phone.id,
@@ -254,32 +280,22 @@ export async function POST(request: NextRequest) {
 
                                     if (!phoneUpsertError) {
                                         results.total_phone_numbers += upsertedPhones?.length || phonesToUpsert.length;
-                                        console.log(`[CRON SYNC] Agency ${agency.id}: upserted ${phonesToUpsert.length} Vapi phone numbers`);
+                                        console.log(`[CRON SYNC] ${label}: upserted ${phonesToUpsert.length} Vapi phone numbers`);
                                     } else {
-                                        console.error(`[CRON SYNC] Vapi phone upsert error for ${agency.id}:`, phoneUpsertError.code);
+                                        console.error(`[CRON SYNC] ${label}: Vapi phone upsert error:`, phoneUpsertError.code);
                                     }
                                 }
                             } catch (phoneErr) {
-                                console.error(`Vapi phone sync error for agency ${agency.id}:`, phoneErr instanceof Error ? phoneErr.message : 'Unknown error');
+                                console.error(`[CRON SYNC] ${label}: Vapi phone sync error:`, phoneErr instanceof Error ? phoneErr.message : 'Unknown error');
                             }
                         }
 
-                        // Sync Phone Numbers (Bland)
-                        if (provider === 'bland' && agency.bland_api_key) {
+                        if (provider === 'bland') {
                             try {
                                 const { listBlandPhoneNumbers } = await import('@/lib/providers/bland');
-                                const blandNumbers = await listBlandPhoneNumbers(agency.bland_api_key);
+                                const blandNumbers = await listBlandPhoneNumbers(apiKey);
 
                                 if (blandNumbers.length > 0) {
-                                    const { data: agencyAgents } = await supabase
-                                        .from('agents')
-                                        .select('id, external_id')
-                                        .eq('agency_id', agency.id);
-
-                                    const agentLookupMap = new Map(
-                                        agencyAgents?.map(a => [a.external_id, a.id]) || []
-                                    );
-
                                     const phonesToUpsert = blandNumbers.map((phone) => ({
                                         agency_id: agency.id,
                                         external_id: phone.phone_number,
@@ -302,18 +318,18 @@ export async function POST(request: NextRequest) {
 
                                     if (!phoneUpsertError) {
                                         results.total_phone_numbers += upsertedPhones?.length || phonesToUpsert.length;
-                                        console.log(`[CRON SYNC] Agency ${agency.id}: upserted ${phonesToUpsert.length} Bland phone numbers`);
+                                        console.log(`[CRON SYNC] ${label}: upserted ${phonesToUpsert.length} Bland phone numbers`);
                                     } else {
-                                        console.error(`[CRON SYNC] Bland phone upsert error for ${agency.id}:`, phoneUpsertError.code);
+                                        console.error(`[CRON SYNC] ${label}: Bland phone upsert error:`, phoneUpsertError.code);
                                     }
                                 }
                             } catch (phoneErr) {
-                                console.error(`Bland phone sync error for agency ${agency.id}:`, phoneErr instanceof Error ? phoneErr.message : 'Unknown error');
+                                console.error(`[CRON SYNC] ${label}: Bland phone sync error:`, phoneErr instanceof Error ? phoneErr.message : 'Unknown error');
                             }
                         }
                     } catch (providerErr) {
-                        console.error(`Provider ${provider} sync error:`, providerErr instanceof Error ? providerErr.message : 'Unknown error');
-                        results.errors.push(`${agency.id}: ${provider} sync failed`);
+                        console.error(`[CRON SYNC] ${label}: ${provider} sync error:`, providerErr instanceof Error ? providerErr.message : 'Unknown error');
+                        results.errors.push(`${label}: ${provider} sync failed`);
                     }
                 }
 
