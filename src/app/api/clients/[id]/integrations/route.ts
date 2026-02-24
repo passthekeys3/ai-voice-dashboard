@@ -111,6 +111,24 @@ export async function PATCH(
         }
 
         const existingIntegrations = (current.integrations as Record<string, unknown>) || {};
+
+        // When creating a NEW client override for a key that currently uses agency defaults,
+        // seed from the agency's full config to prevent partial overrides.
+        // Without this, per-key resolution (entire block from client OR agency) would lose
+        // the agency's other fields (e.g. webhook_url) when only "enabled" is saved.
+        const { data: agency } = await supabase
+            .from('agencies')
+            .select('integrations')
+            .eq('id', user.agency.id)
+            .single();
+        const agencyIntegrations = (agency?.integrations as Record<string, unknown>) || {};
+
+        for (const key of Object.keys(sanitized)) {
+            if (!existingIntegrations[key] && agencyIntegrations[key]) {
+                existingIntegrations[key] = agencyIntegrations[key];
+            }
+        }
+
         const merged = deepMerge(existingIntegrations, sanitized);
 
         const { error } = await supabase

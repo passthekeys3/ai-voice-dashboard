@@ -262,6 +262,12 @@ export function maskIntegrationSecrets(
         result.api = api;
     }
 
+    if (result.slack && typeof result.slack === 'object') {
+        const slack = { ...(result.slack as Record<string, unknown>) };
+        if (slack.webhook_url) slack.webhook_url = mask(slack.webhook_url);
+        result.slack = slack;
+    }
+
     if (result.calendly && typeof result.calendly === 'object') {
         const cal = { ...(result.calendly as Record<string, unknown>) };
         if (cal.api_token) cal.api_token = mask(cal.api_token);
