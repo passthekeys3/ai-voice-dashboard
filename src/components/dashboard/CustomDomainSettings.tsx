@@ -25,6 +25,7 @@ interface DomainConfig {
     domain_verified_at: string | null;
     verification_token: string | null;
     slug: string | null;
+    vercel_configured?: boolean;
 }
 
 interface VerificationInstructions {
@@ -320,6 +321,16 @@ export function CustomDomainSettings() {
 
                 <Separator />
 
+                {/* Vercel integration warning */}
+                {config && config.vercel_configured === false && (
+                    <div className="p-3 text-sm text-yellow-700 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-300 rounded-lg flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                        <span>
+                            Custom domain hosting is not fully configured. Contact your platform administrator to set up the Vercel integration.
+                        </span>
+                    </div>
+                )}
+
                 {/* Custom Domain */}
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -483,6 +494,9 @@ export function CustomDomainSettings() {
                             >
                                 https://{config.custom_domain}
                             </a>
+                        </p>
+                        <p className="text-xs text-green-600/70 dark:text-green-400/70">
+                            If users encounter login issues on this domain, ensure it is added to your authentication provider&apos;s allowed redirect URLs.
                         </p>
                     </div>
                 )}

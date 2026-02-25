@@ -1,6 +1,6 @@
 import { headers } from 'next/headers';
 import Image from 'next/image';
-import { getAgencyFromDomain } from '@/lib/getAgencyFromDomain';
+import { getAgencyFromDomain, isPlatformDomain } from '@/lib/getAgencyFromDomain';
 import { DEFAULT_AGENCY_BRANDING } from '@/types/database';
 
 export default async function AuthLayout({
@@ -12,6 +12,21 @@ export default async function AuthLayout({
     const headersList = await headers();
     const host = headersList.get('host') || 'localhost';
     const agency = await getAgencyFromDomain(host);
+
+    // If custom domain doesn't match any agency, show an error instead of a login form
+    if (!agency && !isPlatformDomain(host)) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background px-4">
+                <div className="text-center space-y-3 max-w-md">
+                    <h1 className="text-2xl font-semibold tracking-tight">Domain not configured</h1>
+                    <p className="text-muted-foreground text-sm">
+                        This domain is not linked to any account. If you own this domain, check your custom domain settings in the dashboard.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     const branding = agency?.branding;
 
     const isValidColor = (c: string) => /^#[0-9A-Fa-f]{3,8}$/.test(c);

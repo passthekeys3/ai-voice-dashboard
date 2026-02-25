@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/server';
 import type { AgencyBranding } from '@/types';
 
@@ -10,8 +11,8 @@ const PLATFORM_DOMAINS = [
 ];
 
 // Check if a domain is a platform domain (not a custom domain)
-function isPlatformDomain(hostname: string): boolean {
-    const domain = hostname.toLowerCase();
+export function isPlatformDomain(hostname: string): boolean {
+    const domain = hostname.toLowerCase().split(':')[0]; // Strip port
     return PLATFORM_DOMAINS.some(pd =>
         domain === pd || domain.endsWith(`.${pd}`)
     );
@@ -19,13 +20,14 @@ function isPlatformDomain(hostname: string): boolean {
 
 // Extract subdomain from hostname
 function getSubdomain(hostname: string): string | null {
-    const parts = hostname.split('.');
+    const domain = hostname.split(':')[0]; // Strip port
+    const parts = domain.split('.');
 
     // Need at least 3 parts for a subdomain (sub.domain.tld)
     if (parts.length < 3) return null;
 
     // For localhost or IP, no subdomain
-    if (hostname.includes('localhost') || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+    if (domain.includes('localhost') || /^\d+\.\d+\.\d+\.\d+$/.test(domain)) {
         return null;
     }
 
@@ -43,24 +45,21 @@ export interface AgencyFromDomain {
 }
 
 /**
- * Get agency information from a domain/hostname
- * Used by middleware and auth pages to apply correct branding
- *
- * @param hostname - The full hostname (e.g., "agency.example.com" or "dashboard.client.com")
- * @returns Agency info if found, null otherwise
+ * Internal lookup — not called directly, wrapped with unstable_cache below.
  */
-export async function getAgencyFromDomain(
+async function lookupAgencyFromDomain(
     hostname: string
 ): Promise<AgencyFromDomain | null> {
     try {
         const supabase = createServiceClient();
+        const cleanHost = hostname.toLowerCase().split(':')[0]; // Strip port
 
         // First, check if this is a custom domain
-        if (!isPlatformDomain(hostname)) {
+        if (!isPlatformDomain(cleanHost)) {
             const { data: agencyByDomain } = await supabase
                 .from('agencies')
                 .select('id, name, slug, branding, domain_verified')
-                .eq('custom_domain', hostname.toLowerCase())
+                .eq('custom_domain', cleanHost)
                 .single();
 
             if (agencyByDomain) {
@@ -73,7 +72,7 @@ export async function getAgencyFromDomain(
         }
 
         // Check for subdomain match
-        const subdomain = getSubdomain(hostname);
+        const subdomain = getSubdomain(cleanHost);
         if (subdomain) {
             const { data: agencyBySlug } = await supabase
                 .from('agencies')
@@ -99,8 +98,32 @@ export async function getAgencyFromDomain(
 }
 
 /**
- * Get agency branding for a hostname (cached-friendly version)
- * Returns just the branding info needed for rendering
+ * Cached version — revalidates every 5 minutes.
+ * The cache key is derived from the hostname argument.
+ */
+const getCachedAgency = unstable_cache(
+    lookupAgencyFromDomain,
+    ['agency-domain'],
+    { revalidate: 300 }
+);
+
+/**
+ * Get agency information from a domain/hostname.
+ * Results are cached for 5 minutes to reduce DB load.
+ *
+ * @param hostname - The full hostname (e.g., "agency.example.com" or "dashboard.client.com")
+ * @returns Agency info if found, null otherwise
+ */
+export async function getAgencyFromDomain(
+    hostname: string
+): Promise<AgencyFromDomain | null> {
+    const cleanHost = hostname.toLowerCase().split(':')[0];
+    return getCachedAgency(cleanHost);
+}
+
+/**
+ * Get agency branding for a hostname.
+ * Returns just the branding info needed for rendering.
  */
 export async function getAgencyBrandingFromDomain(
     hostname: string

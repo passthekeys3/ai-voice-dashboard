@@ -10,6 +10,8 @@ const resolveCname = promisify(dns.resolveCname);
 
 // The hostname that custom domains should point to
 const PLATFORM_HOSTNAME = process.env.PLATFORM_HOSTNAME || 'buildvoiceai.com';
+// Specific Vercel project domain for CNAME validation (e.g., "my-project.vercel.app")
+const VERCEL_PROJECT_DOMAIN = process.env.VERCEL_PROJECT_DOMAIN || '';
 
 interface VerificationResult {
     dns_configured: boolean;
@@ -55,8 +57,7 @@ async function verifyDomain(domain: string, verificationToken: string): Promise<
             const r = record.toLowerCase().replace(/\.$/, ''); // Remove trailing dot
             return r === platformHost ||
                 r.endsWith('.' + platformHost) ||
-                r.endsWith('.vercel.app') ||
-                r.endsWith('.vercel-dns.com');
+                (VERCEL_PROJECT_DOMAIN && r === VERCEL_PROJECT_DOMAIN.toLowerCase());
         });
 
         if (!result.cname_configured) {

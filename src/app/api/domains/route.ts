@@ -50,6 +50,7 @@ export async function GET() {
                 domain_verified_at: agency.domain_verified_at,
                 verification_token: agency.domain_verification_token,
                 slug: agency.slug,
+                vercel_configured: isVercelConfigured(),
                 vercel_domain_status,
             },
         });
