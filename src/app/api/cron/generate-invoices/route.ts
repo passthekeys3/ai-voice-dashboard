@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
-import { getTierFromPriceId, getTierConfig, type PlanTier } from '@/lib/billing/tiers';
+import { getTierFromPriceId, getTierConfig } from '@/lib/billing/tiers';
 
 /**
  * Monthly Invoice Generation Cron
@@ -255,11 +255,11 @@ export async function POST(request: NextRequest) {
                         continue;
                     }
 
-                    // Determine tier from price ID
-                    const tier = getTierFromPriceId(agency.subscription_price_id);
-                    if (!tier) continue;
+                    // Determine tier and plan type from price ID
+                    const tierInfo = getTierFromPriceId(agency.subscription_price_id);
+                    if (!tierInfo) continue;
 
-                    const tierConfig = getTierConfig(tier);
+                    const tierConfig = getTierConfig(tierInfo.tier, tierInfo.planType);
                     if (!tierConfig) continue;
 
                     const maxClients = tierConfig.limits.maxClients;

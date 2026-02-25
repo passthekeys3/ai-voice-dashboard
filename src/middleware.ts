@@ -63,10 +63,12 @@ export async function middleware(request: NextRequest) {
         request.headers.get('x-real-ip') ||
         'unknown';
 
-    // Apply rate limiting to API routes (except webhooks which have their own limits)
-    if (pathname.startsWith('/api/') && !pathname.startsWith('/api/webhooks')) {
-        // Use stricter limit for auth endpoints
-        const rateLimitConfig = pathname.startsWith('/api/auth')
+    // Apply rate limiting to API routes
+    if (pathname.startsWith('/api/')) {
+        // Use appropriate limit per endpoint category
+        const rateLimitConfig = pathname.startsWith('/api/webhooks')
+            ? RATE_LIMITS.webhook
+            : pathname.startsWith('/api/auth')
             ? RATE_LIMITS.auth
             : RATE_LIMITS.api;
 

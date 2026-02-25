@@ -111,6 +111,23 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
+        // Deduplicate — skip events we've already processed
+        const dedupKey = `retell:${payload.call.call_id}:${payload.event}`;
+        const { data: existingEvent } = await supabase
+            .from('webhook_events')
+            .select('event_id')
+            .eq('event_id', dedupKey)
+            .single();
+
+        if (existingEvent) {
+            return NextResponse.json({ received: true });
+        }
+
+        await supabase.from('webhook_events').upsert(
+            { event_id: dedupKey },
+            { onConflict: 'event_id', ignoreDuplicates: true }
+        );
+
         // Handle transcript_updated event — lightweight: just update DB transcript and return
         if (payload.event === 'transcript_updated') {
             let transcript: string | undefined;
@@ -246,7 +263,7 @@ export async function POST(request: NextRequest) {
         if (error) {
             console.error('Error saving Retell call:', error.code);
             // Return 200 to prevent webhook retry storms — log for internal investigation
-            return NextResponse.json({ received: true, warning: 'Failed to save call data' });
+            return NextResponse.json({ received: true });
         }
 
         // AI-powered call analysis (runs in background, gated behind per-client opt-in)
@@ -480,7 +497,7 @@ export async function POST(request: NextRequest) {
             waitUntil(forwardToWebhook(agent.webhook_url, webhookPayload));
         }
 
-        // Accumulate usage for per-minute billing
+        // Accumulate usage for per-minute billing (client-level)
         if (payload.event === 'call_ended' && status === 'completed' && agent.client_id && durationSeconds > 0) {
             waitUntil((async () => {
                 try {
@@ -501,6 +518,31 @@ export async function POST(request: NextRequest) {
                     }
                 } catch (err) {
                     console.error('Failed to accumulate usage for Retell call:', err instanceof Error ? err.message : 'Unknown error');
+                }
+            })());
+        }
+
+        // Report platform-key metered usage to Stripe (agency-level billing for using our API keys)
+        if (payload.event === 'call_ended' && status === 'completed' && durationSeconds > 0 && resolvedKeys.source.retell === 'platform') {
+            waitUntil((async () => {
+                try {
+                    const { data: agencyRow } = await supabase
+                        .from('agencies')
+                        .select('metered_subscription_item_id')
+                        .eq('id', agent.agency_id)
+                        .single();
+
+                    if (agencyRow?.metered_subscription_item_id) {
+                        const { reportMeteredUsage } = await import('@/lib/billing/metered');
+                        await reportMeteredUsage({
+                            subscriptionItemId: agencyRow.metered_subscription_item_id,
+                            minutes: durationSeconds / 60,
+                            timestamp: Math.floor((payload.call.end_timestamp || Date.now()) / 1000),
+                            idempotencyKey: `retell_call_${payload.call.call_id}`,
+                        });
+                    }
+                } catch (err) {
+                    console.error('Failed to report metered usage for Retell call:', err instanceof Error ? err.message : 'Unknown error');
                 }
             })());
         }
@@ -642,6 +684,6 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error('Retell webhook error:', error instanceof Error ? error.message : 'Unknown error');
         // Return 200 to prevent webhook retry storms — log for internal investigation
-        return NextResponse.json({ received: true, warning: 'Internal error occurred' });
+        return NextResponse.json({ received: true });
     }
 }

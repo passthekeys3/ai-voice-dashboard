@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import {
     unauthorized,
+    badRequest,
     databaseError,
     apiSuccessPaginated,
     withErrorHandling,
@@ -82,6 +83,9 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
     }
 
     if (status) {
+        if (typeof status !== 'string' || status.length > 50) {
+            return badRequest('Invalid status filter');
+        }
         query = query.eq('status', status);
     }
 

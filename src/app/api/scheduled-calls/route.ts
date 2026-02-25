@@ -45,6 +45,10 @@ export async function GET(request: NextRequest) {
         }
 
         if (status) {
+            const VALID_SCHEDULED_STATUSES = ['pending', 'in_progress', 'completed', 'failed', 'cancelled'];
+            if (!VALID_SCHEDULED_STATUSES.includes(status)) {
+                return NextResponse.json({ error: `Invalid status. Must be one of: ${VALID_SCHEDULED_STATUSES.join(', ')}` }, { status: 400 });
+            }
             query = query.eq('status', status);
         }
 
@@ -52,7 +56,7 @@ export async function GET(request: NextRequest) {
             query = query.eq('agent_id', agentId);
         }
 
-        const { data: scheduledCalls, error } = await query;
+        const { data: scheduledCalls, error } = await query.limit(200);
 
         if (error) {
             console.error('Error fetching scheduled calls:', error.code);
@@ -132,7 +136,8 @@ export async function POST(request: NextRequest) {
         const callingWindow = user.agency.calling_window ??
             (user.agency.integrations?.ghl?.calling_window as CallingWindowConfig | undefined);
 
-        if (callingWindow?.enabled && leadTimezone) {
+        if (callingWindow?.enabled) {
+            const tz = callingWindow.timezone_override || leadTimezone || 'America/New_York';
             const windowConfig = {
                 startHour: callingWindow.start_hour,
                 endHour: callingWindow.end_hour,
@@ -141,11 +146,11 @@ export async function POST(request: NextRequest) {
 
             // Check if the requested time falls within the calling window
             // For future-scheduled calls, check what the local time will be at the scheduled moment
-            if (!isWithinCallingWindow(callingWindow.timezone_override || leadTimezone, windowConfig)) {
+            if (!isWithinCallingWindow(tz, windowConfig)) {
                 // Auto-delay to the next valid calling time
                 originalScheduledAt = scheduledDate.toISOString();
                 finalScheduledAt = getNextValidCallTime(
-                    callingWindow.timezone_override || leadTimezone,
+                    tz,
                     windowConfig,
                 );
                 timezoneDelayed = true;

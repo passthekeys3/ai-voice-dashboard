@@ -74,16 +74,17 @@ export async function POST(request: NextRequest) {
                 const callingWindow = call.agent?.agencies?.calling_window;
                 const leadTimezone = call.lead_timezone;
 
-                if (callingWindow?.enabled && leadTimezone) {
+                if (callingWindow?.enabled) {
+                    const tz = leadTimezone || 'America/New_York';
                     const windowConfig = {
                         startHour: callingWindow.start_hour,
                         endHour: callingWindow.end_hour,
                         daysOfWeek: callingWindow.days_of_week,
                     };
 
-                    if (!isWithinCallingWindow(leadTimezone, windowConfig)) {
+                    if (!isWithinCallingWindow(tz, windowConfig)) {
                         // Reschedule to next valid time
-                        const nextValid = getNextValidCallTime(leadTimezone, windowConfig);
+                        const nextValid = getNextValidCallTime(tz, windowConfig);
                         await supabase
                             .from('scheduled_calls')
                             .update({

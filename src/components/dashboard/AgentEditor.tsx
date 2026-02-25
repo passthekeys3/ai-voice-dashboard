@@ -645,9 +645,9 @@ export function AgentEditor({
                                     </div>
                                 ) : suggestions.length > 0 ? (
                                     <div className="space-y-3">
-                                        {suggestions.map((suggestion, i) => (
+                                        {suggestions.map((suggestion) => (
                                             <div
-                                                key={i}
+                                                key={suggestion.title}
                                                 className="p-3 rounded-lg border border-border bg-slate-50/50 dark:bg-slate-800/50"
                                             >
                                                 <div className="flex items-center gap-2 mb-1">

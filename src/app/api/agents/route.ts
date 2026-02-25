@@ -30,7 +30,7 @@ export const GET = withErrorHandling(async () => {
         query = query.eq('client_id', user.client.id);
     }
 
-    const { data: agents, error } = await query;
+    const { data: agents, error } = await query.limit(200);
 
     if (error) {
         return databaseError(error);

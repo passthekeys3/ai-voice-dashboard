@@ -590,8 +590,8 @@ Auth: Bearer Token (your API key)`;
                                         Use the &quot;HTTP / Webhook&quot; module in your automation tool:
                                     </p>
                                     <div className="space-y-1 font-mono text-xs">
-                                        {zapierNote.split('\n').map((line, i) => (
-                                            <p key={i}>{line}</p>
+                                        {zapierNote.split('\n').map((line) => (
+                                            <p key={line}>{line}</p>
                                         ))}
                                     </div>
                                     <Button

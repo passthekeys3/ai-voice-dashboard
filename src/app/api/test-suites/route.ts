@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         // Only get the most recent run per suite
         query = query.order('created_at', { referencedTable: 'test_runs', ascending: false }).limit(1, { referencedTable: 'test_runs' });
 
-        const { data: suites, error } = await query;
+        const { data: suites, error } = await query.limit(200);
 
         if (error) {
             console.error('Error fetching test suites:', error.code);

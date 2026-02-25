@@ -546,7 +546,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                             <>
                                 {call.transcript.map((line, index) => (
                                     <div
-                                        key={index}
+                                        key={`${line.speaker}-${index}`}
                                         className={`flex gap-3 transition-all duration-300 ${line.speaker === 'agent' ? '' : 'flex-row-reverse'
                                             } ${line.isNew ? 'animate-in fade-in slide-in-from-bottom-2' : ''}`}
                                     >

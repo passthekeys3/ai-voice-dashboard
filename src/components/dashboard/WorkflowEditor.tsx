@@ -98,13 +98,15 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
     const [trigger, setTrigger] = useState<WorkflowTrigger>(workflow?.trigger || 'call_ended');
     const [agentId, setAgentId] = useState<string>(workflow?.agent_id || 'all');
     const [isActive, setIsActive] = useState(workflow?.is_active ?? true);
-    const [conditions, setConditions] = useState<WorkflowCondition[]>(workflow?.conditions || []);
-    const [actions, setActions] = useState<WorkflowAction[]>(
-        workflow?.actions || [{ type: 'webhook', config: { url: '' } }]
+    const [conditions, setConditions] = useState(
+        () => (workflow?.conditions || []).map(c => ({ ...c, _key: crypto.randomUUID() }))
+    );
+    const [actions, setActions] = useState(
+        () => (workflow?.actions || [{ type: 'webhook', config: { url: '' } } as WorkflowAction]).map(a => ({ ...a, _key: crypto.randomUUID() }))
     );
 
     const addCondition = () => {
-        setConditions([...conditions, { field: 'duration_seconds', operator: '>', value: 0 }]);
+        setConditions([...conditions, { field: 'duration_seconds', operator: '>' as const, value: 0, _key: crypto.randomUUID() }]);
     };
 
     const removeCondition = (index: number) => {
@@ -116,7 +118,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
     };
 
     const addAction = () => {
-        setActions([...actions, { type: 'webhook', config: { url: '' } }]);
+        setActions([...actions, { type: 'webhook' as const, config: { url: '' }, _key: crypto.randomUUID() }]);
     };
 
     const removeAction = (index: number) => {
@@ -212,8 +214,8 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                 description,
                 trigger,
                 agent_id: agentId === 'all' ? null : agentId,
-                conditions,
-                actions,
+                conditions: conditions.map(({ _key: _, ...c }) => c),
+                actions: actions.map(({ _key: _, ...a }) => a),
                 is_active: isActive,
             };
 
@@ -330,12 +332,12 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {conditions.map((condition, index) => (
-                        <div key={index} className="flex items-center gap-2">
+                        <div key={condition._key} className="flex items-center gap-2">
                             <Select
                                 value={condition.field}
                                 onValueChange={(v: string) => updateCondition(index, { field: v })}
                             >
-                                <SelectTrigger className="w-[180px]">
+                                <SelectTrigger className="min-w-[180px] w-auto">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -350,7 +352,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                                 value={condition.operator}
                                 onValueChange={(v: string) => updateCondition(index, { operator: v as WorkflowCondition['operator'] })}
                             >
-                                <SelectTrigger className="w-[140px]">
+                                <SelectTrigger className="min-w-[140px] w-auto">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -395,7 +397,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {actions.map((action, index) => (
-                        <Card key={index} className="bg-slate-50 dark:bg-slate-900">
+                        <Card key={action._key} className="bg-slate-50 dark:bg-slate-900">
                             <CardContent className="pt-4 space-y-4">
                                 <div className="flex items-center justify-between">
                                     <Select
@@ -405,7 +407,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                                             config: v === 'webhook' ? { url: '' } : {}
                                         })}
                                     >
-                                        <SelectTrigger className="w-[200px]">
+                                        <SelectTrigger className="min-w-[200px] w-auto">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>

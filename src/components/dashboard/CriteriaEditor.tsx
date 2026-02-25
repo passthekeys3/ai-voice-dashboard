@@ -68,7 +68,7 @@ export function CriteriaEditor({ criteria, onChange, disabled }: CriteriaEditorP
                         const config = CRITERION_TYPE_CONFIG[c.type];
                         return (
                             <div
-                                key={index}
+                                key={`${c.criterion}-${c.type}-${index}`}
                                 className="flex items-center gap-2 p-2 rounded-md border bg-muted/30"
                             >
                                 <Badge
@@ -124,6 +124,7 @@ export function CriteriaEditor({ criteria, onChange, disabled }: CriteriaEditorP
                         size="icon"
                         onClick={handleAdd}
                         disabled={!newCriterion.trim()}
+                        aria-label="Add criterion"
                     >
                         <Plus className="h-4 w-4" />
                     </Button>

@@ -46,6 +46,23 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
         }
 
+        // Deduplicate — skip events we've already processed
+        const dedupSupabase = createServiceClient();
+        const { data: existingEvent } = await dedupSupabase
+            .from('webhook_events')
+            .select('event_id')
+            .eq('event_id', event.id)
+            .single();
+
+        if (existingEvent) {
+            return NextResponse.json({ received: true });
+        }
+
+        await dedupSupabase.from('webhook_events').upsert(
+            { event_id: event.id },
+            { onConflict: 'event_id', ignoreDuplicates: true }
+        );
+
         const handleEvent = async () => {
             const supabase = createServiceClient();
 
@@ -194,6 +211,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
     } catch (error) {
         console.error('Stripe Connect webhook error:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json({ received: true, warning: 'Processing error' }, { status: 200 });
+        return NextResponse.json({ received: true }, { status: 200 });
     }
 }

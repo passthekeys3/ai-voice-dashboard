@@ -93,7 +93,8 @@ export async function POST(request: NextRequest) {
                     .from('clients')
                     .select('id, name, retell_api_key, vapi_api_key, bland_api_key')
                     .eq('agency_id', agency.id)
-                    .or('retell_api_key.neq.null,vapi_api_key.neq.null,bland_api_key.neq.null');
+                    .or('retell_api_key.neq.null,vapi_api_key.neq.null,bland_api_key.neq.null')
+                    .limit(500);
 
                 for (const clientRecord of clientsWithKeys || []) {
                     for (const { field, provider } of KEY_FIELDS) {

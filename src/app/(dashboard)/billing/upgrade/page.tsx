@@ -3,9 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { Header } from '@/components/dashboard/Header';
 import { PricingTable } from '@/components/dashboard/PricingTable';
-import type { PlanTier } from '@/types/database';
+import type { PlanTier, PlanType } from '@/types/database';
 
 type BillingInterval = 'monthly' | 'yearly';
 
@@ -14,7 +13,7 @@ export default function UpgradePage() {
     const [loadingTier, setLoadingTier] = useState<PlanTier | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const handleSelectTier = async (tier: PlanTier, interval: BillingInterval = 'monthly') => {
+    const handleSelectTier = async (tier: PlanTier, interval: BillingInterval = 'monthly', planType: PlanType = 'self_service') => {
         setLoading(true);
         setLoadingTier(tier);
         setError(null);
@@ -26,6 +25,7 @@ export default function UpgradePage() {
                 body: JSON.stringify({
                     tier,
                     interval,
+                    planType,
                     return_url: window.location.origin + '/billing',
                 }),
             });

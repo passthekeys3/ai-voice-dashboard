@@ -6,8 +6,8 @@ if (dsn) {
     Sentry.init({
         dsn,
 
-        // Sample 10% of transactions for performance monitoring
-        tracesSampleRate: 0.1,
+        // Sample 100% of transactions for performance monitoring during beta
+        tracesSampleRate: 1.0,
 
         // Capture 100% of errors (default)
         // Session replay is disabled to keep bundle size down

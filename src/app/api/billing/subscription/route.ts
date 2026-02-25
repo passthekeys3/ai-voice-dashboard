@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getTierFromPriceId, getTierDefinition, getPriceId, type PlanTier, type BillingInterval } from '@/lib/billing/tiers';
+import { getTierFromPriceId, getTierDefinition, getPriceId, getMeteredPriceId, getPerMinuteRate, type PlanTier, type BillingInterval } from '@/lib/billing/tiers';
+import type { PlanType } from '@/types/database';
 
 function getStripe() {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -21,7 +22,6 @@ export async function GET(_request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Only agency admins can view subscription details
         if (!['agency_admin'].includes(user.profile.role)) {
             return NextResponse.json({ error: 'Only agency admins can view subscription' }, { status: 403 });
         }
@@ -36,7 +36,8 @@ export async function GET(_request: NextRequest) {
                 subscription_price_id,
                 subscription_current_period_start,
                 subscription_current_period_end,
-                subscription_cancel_at_period_end
+                subscription_cancel_at_period_end,
+                plan_type
             `)
             .eq('id', user.agency.id)
             .single();
@@ -45,44 +46,53 @@ export async function GET(_request: NextRequest) {
             return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
         }
 
-        // If there's a subscription ID, fetch latest from Stripe
+        const agencyPlanType = (agency.plan_type as PlanType) || 'self_service';
+
         if (agency.subscription_id) {
             try {
                 const stripe = getStripe();
                 const subscription = await stripe.subscriptions.retrieve(agency.subscription_id);
-                const firstItem = subscription.items.data[0];
 
-                const tier = getTierFromPriceId(firstItem?.price?.id || '');
-                const tierDef = tier ? getTierDefinition(tier) : null;
+                const baseItem = subscription.items.data.find(item =>
+                    !item.price.recurring || item.price.recurring.usage_type !== 'metered'
+                ) || subscription.items.data[0];
+
+                const tierInfo = getTierFromPriceId(baseItem?.price?.id || '');
+                const tier = tierInfo?.tier || null;
+                const planType = tierInfo?.planType || agencyPlanType;
+                const tierDef = tier ? getTierDefinition(tier, planType) : null;
 
                 return NextResponse.json({
                     data: {
                         id: subscription.id,
                         status: subscription.status,
-                        price_id: firstItem?.price?.id,
-                        current_period_start: firstItem?.current_period_start
-                            ? new Date(firstItem.current_period_start * 1000).toISOString()
+                        price_id: baseItem?.price?.id,
+                        current_period_start: baseItem?.current_period_start
+                            ? new Date(baseItem.current_period_start * 1000).toISOString()
                             : null,
-                        current_period_end: firstItem?.current_period_end
-                            ? new Date(firstItem.current_period_end * 1000).toISOString()
+                        current_period_end: baseItem?.current_period_end
+                            ? new Date(baseItem.current_period_end * 1000).toISOString()
                             : null,
                         cancel_at_period_end: subscription.cancel_at_period_end,
                         canceled_at: subscription.canceled_at
                             ? new Date(subscription.canceled_at * 1000).toISOString()
                             : null,
                         plan_tier: tier,
+                        plan_type: planType,
                         plan_name: tierDef?.name || null,
                         limits: tierDef?.limits || null,
+                        per_minute_rate: getPerMinuteRate(),
                     },
                 });
             } catch (stripeError) {
-                // If Stripe fails, return database data
                 console.warn('Could not fetch subscription from Stripe:', stripeError instanceof Error ? stripeError.message : 'Unknown error');
             }
         }
 
-        const dbTier = getTierFromPriceId(agency.subscription_price_id || '');
-        const dbTierDef = dbTier ? getTierDefinition(dbTier) : null;
+        const tierInfo = getTierFromPriceId(agency.subscription_price_id || '');
+        const dbTier = tierInfo?.tier || null;
+        const dbPlanType = tierInfo?.planType || agencyPlanType;
+        const dbTierDef = dbTier ? getTierDefinition(dbTier, dbPlanType) : null;
 
         return NextResponse.json({
             data: {
@@ -94,8 +104,10 @@ export async function GET(_request: NextRequest) {
                 cancel_at_period_end: agency.subscription_cancel_at_period_end,
                 canceled_at: null,
                 plan_tier: dbTier,
+                plan_type: dbPlanType,
                 plan_name: dbTierDef?.name || null,
                 limits: dbTierDef?.limits || null,
+                per_minute_rate: getPerMinuteRate(),
             },
         });
     } catch (error) {
@@ -112,7 +124,6 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Only agency admins can cancel subscription
         if (!['agency_admin'].includes(user.profile.role)) {
             return NextResponse.json({ error: 'Only agency admins can cancel subscription' }, { status: 403 });
         }
@@ -131,29 +142,28 @@ export async function DELETE(request: NextRequest) {
 
         const stripe = getStripe();
 
-        // Get body to check if immediate cancellation is requested
         const body = await request.json().catch(() => ({}));
         const cancelImmediately = body.immediately === true;
 
         if (cancelImmediately) {
-            // Cancel immediately
             const subscription = await stripe.subscriptions.cancel(agency.subscription_id);
             return NextResponse.json({
                 message: 'Subscription canceled immediately',
                 status: subscription.status,
             });
         } else {
-            // Cancel at period end (default)
             const subscription = await stripe.subscriptions.update(agency.subscription_id, {
                 cancel_at_period_end: true,
             });
 
-            const firstItem = subscription.items.data[0];
+            const baseItem = subscription.items.data.find(item =>
+                !item.price.recurring || item.price.recurring.usage_type !== 'metered'
+            ) || subscription.items.data[0];
 
             return NextResponse.json({
                 message: 'Subscription will be canceled at the end of the billing period',
-                cancel_at: firstItem?.current_period_end
-                    ? new Date(firstItem.current_period_end * 1000).toISOString()
+                cancel_at: baseItem?.current_period_end
+                    ? new Date(baseItem.current_period_end * 1000).toISOString()
                     : null,
             });
         }
@@ -166,7 +176,8 @@ export async function DELETE(request: NextRequest) {
     }
 }
 
-const VALID_TIERS: PlanTier[] = ['starter', 'growth', 'scale'];
+const VALID_TIERS: PlanTier[] = ['starter', 'growth', 'agency'];
+const VALID_PLAN_TYPES: PlanType[] = ['self_service', 'managed'];
 
 // PATCH /api/billing/subscription - Resume canceled subscription or change plan tier
 export async function PATCH(request: NextRequest) {
@@ -176,7 +187,6 @@ export async function PATCH(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Only agency admins can manage subscription
         if (!['agency_admin'].includes(user.profile.role)) {
             return NextResponse.json({ error: 'Only agency admins can manage subscription' }, { status: 403 });
         }
@@ -185,7 +195,7 @@ export async function PATCH(request: NextRequest) {
 
         const { data: agency } = await supabase
             .from('agencies')
-            .select('subscription_id')
+            .select('subscription_id, plan_type')
             .eq('id', user.agency.id)
             .single();
 
@@ -196,45 +206,62 @@ export async function PATCH(request: NextRequest) {
         const stripe = getStripe();
         const body = await request.json().catch(() => ({}));
 
-        // If a tier is provided, change the plan
         if (body.tier && VALID_TIERS.includes(body.tier)) {
-            const tierDef = getTierDefinition(body.tier);
+            const planType: PlanType = VALID_PLAN_TYPES.includes(body.planType)
+                ? body.planType
+                : (agency.plan_type as PlanType) || 'self_service';
+
+            const tierDef = getTierDefinition(body.tier, planType);
             if (!tierDef) {
-                return NextResponse.json({ error: `Tier "${body.tier}" is not configured` }, { status: 400 });
+                return NextResponse.json({ error: `Tier "${body.tier}" (${planType}) is not configured` }, { status: 400 });
             }
 
-            // Resolve interval — default to monthly if not provided
             const billingInterval: BillingInterval = body.interval === 'yearly' ? 'yearly' : 'monthly';
-            const newPriceId = getPriceId(body.tier, billingInterval) || tierDef.priceId;
+            const newBasePriceId = getPriceId(body.tier, planType, billingInterval) || tierDef.priceId;
+            const newMeteredPriceId = getMeteredPriceId();
 
-            // Get current subscription to find the item to update
             const currentSub = await stripe.subscriptions.retrieve(agency.subscription_id);
-            const currentItem = currentSub.items.data[0];
+            const currentBaseItem = currentSub.items.data.find(item =>
+                !item.price.recurring || item.price.recurring.usage_type !== 'metered'
+            ) || currentSub.items.data[0];
+            const currentMeteredItem = currentSub.items.data.find(item =>
+                item.price.recurring?.usage_type === 'metered'
+            );
 
-            if (!currentItem) {
+            if (!currentBaseItem) {
                 return NextResponse.json({ error: 'Subscription has no items' }, { status: 400 });
             }
 
-            // Update the subscription item to the new price (Stripe handles proration)
+            const items: Stripe.SubscriptionUpdateParams.Item[] = [
+                { id: currentBaseItem.id, price: newBasePriceId },
+            ];
+            if (currentMeteredItem && newMeteredPriceId) {
+                items.push({ id: currentMeteredItem.id, price: newMeteredPriceId });
+            } else if (!currentMeteredItem && newMeteredPriceId) {
+                items.push({ price: newMeteredPriceId });
+            }
+
             const subscription = await stripe.subscriptions.update(agency.subscription_id, {
-                items: [{ id: currentItem.id, price: newPriceId }],
-                metadata: { plan_tier: body.tier, billing_interval: billingInterval },
+                items,
+                metadata: { plan_tier: body.tier, plan_type: planType, billing_interval: billingInterval },
                 proration_behavior: 'create_prorations',
             });
 
-            const updatedItem = subscription.items.data[0];
-            const newTier = getTierFromPriceId(updatedItem?.price?.id || '');
-            const newTierDef = newTier ? getTierDefinition(newTier) : null;
+            const updatedBaseItem = subscription.items.data.find(item =>
+                !item.price.recurring || item.price.recurring.usage_type !== 'metered'
+            ) || subscription.items.data[0];
+            const tierInfo = getTierFromPriceId(updatedBaseItem?.price?.id || '');
+            const newTierDef = tierInfo ? getTierDefinition(tierInfo.tier, tierInfo.planType) : null;
 
             return NextResponse.json({
                 message: `Plan changed to ${newTierDef?.name || body.tier}`,
                 status: subscription.status,
-                plan_tier: newTier,
+                plan_tier: tierInfo?.tier || null,
+                plan_type: tierInfo?.planType || planType,
                 plan_name: newTierDef?.name || null,
             });
         }
 
-        // Default: Resume subscription by removing cancel_at_period_end
         const subscription = await stripe.subscriptions.update(agency.subscription_id, {
             cancel_at_period_end: false,
         });

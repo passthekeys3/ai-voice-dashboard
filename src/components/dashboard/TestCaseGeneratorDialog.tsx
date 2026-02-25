@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
 
 interface GeneratedCase {
+    id?: string;
     name: string;
     scenario: string;
     success_criteria: { criterion: string; type: 'must_pass' | 'should_pass' | 'must_not_fail' }[];
@@ -80,7 +81,7 @@ export function TestCaseGeneratorDialog({
                             setStreamText((prev) => prev + event.text);
                         } else if (event.type === 'result' && event.cases) {
                             setCases(
-                                event.cases.map((c: GeneratedCase) => ({ ...c, selected: true }))
+                                event.cases.map((c: GeneratedCase) => ({ ...c, id: crypto.randomUUID(), selected: true }))
                             );
                         } else if (event.type === 'error') {
                             setError(event.message);
@@ -227,7 +228,7 @@ export function TestCaseGeneratorDialog({
 
                             {cases.map((tc, index) => (
                                 <div
-                                    key={index}
+                                    key={tc.id || index}
                                     className={`p-4 rounded-lg border transition-colors ${
                                         tc.selected
                                             ? 'border-purple-200 bg-purple-50/50 dark:border-purple-800 dark:bg-purple-950/20'
@@ -258,9 +259,9 @@ export function TestCaseGeneratorDialog({
                                                 {tc.scenario}
                                             </p>
                                             <div className="flex flex-wrap gap-1.5 mt-2">
-                                                {tc.success_criteria?.map((c, ci) => (
+                                                {tc.success_criteria?.map((c) => (
                                                     <Badge
-                                                        key={ci}
+                                                        key={`${c.criterion}-${c.type}`}
                                                         variant={
                                                             c.type === 'must_pass'
                                                                 ? 'default'

@@ -51,9 +51,9 @@ export function TestTranscript({ transcript }: TestTranscriptProps) {
             </div>
 
             <div className="space-y-3 max-h-[500px] overflow-auto">
-                {transcript.map((message, index) => (
+                {transcript.map((message) => (
                     <div
-                        key={index}
+                        key={message.turn}
                         className={`flex gap-3 ${
                             message.role === 'agent' ? '' : 'flex-row-reverse'
                         }`}

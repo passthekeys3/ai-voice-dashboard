@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
             query = query.eq('status', status);
         }
 
-        const { data: experiments, error } = await query;
+        const { data: experiments, error } = await query.limit(200);
 
         if (error) {
             return NextResponse.json({ error: 'Failed to fetch experiments' }, { status: 500 });

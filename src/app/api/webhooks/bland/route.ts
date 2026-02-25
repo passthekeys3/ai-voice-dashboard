@@ -128,6 +128,23 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
+        // Deduplicate — skip events we've already processed
+        const dedupKey = `bland:${payload.call_id}`;
+        const { data: existingEvent } = await supabase
+            .from('webhook_events')
+            .select('event_id')
+            .eq('event_id', dedupKey)
+            .single();
+
+        if (existingEvent) {
+            return NextResponse.json({ received: true });
+        }
+
+        await supabase.from('webhook_events').upsert(
+            { event_id: dedupKey },
+            { onConflict: 'event_id', ignoreDuplicates: true }
+        );
+
         // Convert Bland units
         const durationSeconds = payload.call_length
             ? Math.round(payload.call_length * 60)
@@ -229,7 +246,7 @@ export async function POST(request: NextRequest) {
 
         if (error) {
             console.error('Error saving Bland call:', error.code);
-            return NextResponse.json({ received: true, warning: 'Failed to save call data' });
+            return NextResponse.json({ received: true });
         }
 
         // AI-powered call analysis (runs in background)
@@ -340,7 +357,7 @@ export async function POST(request: NextRequest) {
             waitUntil(forwardToWebhook(agent.webhook_url, webhookPayload));
         }
 
-        // Accumulate usage for per-minute billing
+        // Accumulate usage for per-minute billing (client-level)
         if (isCallEnded && status === 'completed' && agent.client_id && durationSeconds > 0) {
             waitUntil((async () => {
                 try {
@@ -361,6 +378,31 @@ export async function POST(request: NextRequest) {
                     }
                 } catch (err) {
                     console.error('Failed to accumulate usage for Bland call:', err instanceof Error ? err.message : 'Unknown error');
+                }
+            })());
+        }
+
+        // Report platform-key metered usage to Stripe (agency-level billing for using our API keys)
+        if (isCallEnded && status === 'completed' && durationSeconds > 0 && resolvedKeys.source.bland === 'platform') {
+            waitUntil((async () => {
+                try {
+                    const { data: agencyRow } = await supabase
+                        .from('agencies')
+                        .select('metered_subscription_item_id')
+                        .eq('id', agent.agency_id)
+                        .single();
+
+                    if (agencyRow?.metered_subscription_item_id) {
+                        const { reportMeteredUsage } = await import('@/lib/billing/metered');
+                        await reportMeteredUsage({
+                            subscriptionItemId: agencyRow.metered_subscription_item_id,
+                            minutes: durationSeconds / 60,
+                            timestamp: Math.floor(new Date(endedAt || new Date().toISOString()).getTime() / 1000),
+                            idempotencyKey: `bland_call_${payload.call_id}`,
+                        });
+                    }
+                } catch (err) {
+                    console.error('Failed to report metered usage for Bland call:', err instanceof Error ? err.message : 'Unknown error');
                 }
             })());
         }
@@ -484,6 +526,6 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error('Bland webhook error:', error instanceof Error ? error.message : 'Unknown error');
         // Return 200 to prevent webhook retry storms
-        return NextResponse.json({ received: true, warning: 'Internal error occurred' });
+        return NextResponse.json({ received: true });
     }
 }

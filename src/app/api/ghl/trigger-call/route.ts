@@ -53,6 +53,14 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        if (agencies.length > 1) {
+            console.error(`SECURITY: Multiple agencies matched GHL location_id ${data.location_id}: ${agencies.map(a => a.id).join(', ')}`);
+            return NextResponse.json(
+                { error: 'Configuration error — contact support' },
+                { status: 500 },
+            );
+        }
+
         const agency = agencies[0];
         const ghlConfig = agency.integrations?.ghl;
         const triggerConfig = ghlConfig?.trigger_config;
@@ -145,16 +153,17 @@ export async function POST(request: NextRequest) {
             // Explicit schedule time provided
             scheduledAt = new Date(data.scheduled_at);
             shouldSchedule = true;
-        } else if (callingWindow?.enabled && leadTimezone) {
-            // Check if we're within the calling window
+        } else if (callingWindow?.enabled) {
+            // Check if we're within the calling window (fallback to ET if timezone unknown)
+            const tz = leadTimezone || 'America/New_York';
             const windowConfig = {
                 startHour: callingWindow.start_hour,
                 endHour: callingWindow.end_hour,
                 daysOfWeek: callingWindow.days_of_week,
             };
 
-            if (!isWithinCallingWindow(leadTimezone, windowConfig)) {
-                scheduledAt = getNextValidCallTime(leadTimezone, windowConfig);
+            if (!isWithinCallingWindow(tz, windowConfig)) {
+                scheduledAt = getNextValidCallTime(tz, windowConfig);
                 shouldSchedule = true;
             }
         }

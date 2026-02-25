@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getTierDefinition, getPriceId, type PlanTier, type BillingInterval } from '@/lib/billing/tiers';
+import { getTierDefinition, getPriceId, getMeteredPriceId, type PlanTier, type BillingInterval } from '@/lib/billing/tiers';
+import type { PlanType } from '@/types/database';
 
 function getStripe() {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -13,7 +14,8 @@ function getStripe() {
     });
 }
 
-const VALID_TIERS: PlanTier[] = ['starter', 'growth', 'scale'];
+const VALID_TIERS: PlanTier[] = ['starter', 'growth', 'agency'];
+const VALID_PLAN_TYPES: PlanType[] = ['self_service', 'managed'];
 
 // POST /api/billing/checkout - Create Stripe checkout session for subscription
 export async function POST(request: NextRequest) {
@@ -30,28 +32,31 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json().catch(() => ({}));
         const { tier, interval, return_url } = body;
+        const planType: PlanType = VALID_PLAN_TYPES.includes(body.planType) ? body.planType : 'self_service';
         const billingInterval: BillingInterval = interval === 'yearly' ? 'yearly' : 'monthly';
 
-        // Resolve price ID from tier + interval, or fall back to legacy single-price env var
-        let priceId: string | undefined;
+        // Resolve base price ID from tier + planType + interval
+        let basePriceId: string | undefined;
         let planTier: string = 'unknown';
 
         if (tier && VALID_TIERS.includes(tier)) {
-            const tierDef = getTierDefinition(tier);
+            const tierDef = getTierDefinition(tier, planType);
             if (!tierDef) {
-                return NextResponse.json({ error: `Tier "${tier}" is not configured` }, { status: 400 });
+                return NextResponse.json({ error: `Tier "${tier}" (${planType}) is not configured` }, { status: 400 });
             }
-            // Try the requested interval, fall back to monthly if yearly not configured
-            priceId = getPriceId(tier, billingInterval) || tierDef.priceId;
+            basePriceId = getPriceId(tier, planType, billingInterval) || tierDef.priceId;
             planTier = tier;
         } else {
             // Backward compat: fall back to legacy STRIPE_PRICE_ID
-            priceId = process.env.STRIPE_PRICE_ID;
+            basePriceId = process.env.STRIPE_PRICE_ID;
         }
 
-        if (!priceId) {
+        if (!basePriceId) {
             return NextResponse.json({ error: 'No pricing configured. Please select a plan.' }, { status: 400 });
         }
+
+        // Get metered price for per-minute billing
+        const meteredPriceId = getMeteredPriceId();
 
         const stripe = getStripe();
         const supabase = createServiceClient();
@@ -111,29 +116,38 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // Build line items: base price + optional metered price
+        const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+            { price: basePriceId, quantity: 1 },
+        ];
+
+        // Add metered line item for per-minute billing (always included — 0 usage = $0 charge)
+        if (meteredPriceId) {
+            lineItems.push({ price: meteredPriceId });
+        } else {
+            console.warn('[CHECKOUT] STRIPE_PRICE_METERED_MINUTE not configured — subscription will lack per-minute billing');
+        }
+
         // Create checkout session
         const session = await stripe.checkout.sessions.create({
             customer: customerId,
             mode: 'subscription',
             payment_method_types: ['card'],
-            line_items: [
-                {
-                    price: priceId,
-                    quantity: 1,
-                },
-            ],
+            line_items: lineItems,
             success_url: `${returnUrl}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${returnUrl}?checkout=canceled`,
             subscription_data: {
                 metadata: {
                     agency_id: agency.id,
                     plan_tier: planTier,
+                    plan_type: planType,
                     billing_interval: billingInterval,
                 },
             },
             metadata: {
                 agency_id: agency.id,
                 plan_tier: planTier,
+                plan_type: planType,
                 billing_interval: billingInterval,
             },
             allow_promotion_codes: true,

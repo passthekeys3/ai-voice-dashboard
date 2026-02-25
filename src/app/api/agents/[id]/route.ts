@@ -180,6 +180,32 @@ export async function DELETE(
             return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
         }
 
+        // Pre-delete safety check: block if agent has active dependencies
+        const [{ count: activeWorkflows }, { count: pendingCalls }] = await Promise.all([
+            supabase
+                .from('workflows')
+                .select('id', { count: 'exact', head: true })
+                .eq('agent_id', id)
+                .eq('agency_id', user.agency.id)
+                .eq('is_active', true),
+            supabase
+                .from('scheduled_calls')
+                .select('id', { count: 'exact', head: true })
+                .eq('agent_id', id)
+                .eq('agency_id', user.agency.id)
+                .eq('status', 'pending'),
+        ]);
+
+        if ((activeWorkflows && activeWorkflows > 0) || (pendingCalls && pendingCalls > 0)) {
+            const reasons: string[] = [];
+            if (activeWorkflows && activeWorkflows > 0) reasons.push(`${activeWorkflows} active workflow(s)`);
+            if (pendingCalls && pendingCalls > 0) reasons.push(`${pendingCalls} pending scheduled call(s)`);
+            return NextResponse.json(
+                { error: `Cannot delete agent with ${reasons.join(' and ')}. Deactivate or cancel them first.` },
+                { status: 409 },
+            );
+        }
+
         // Delete from voice provider only if explicitly requested
         const deleteFromProvider = request.nextUrl.searchParams.get('deleteFromProvider') === 'true';
         if (deleteFromProvider && agent.external_id) {

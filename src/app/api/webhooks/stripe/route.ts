@@ -31,6 +31,9 @@ function mapStripeStatus(stripeStatus: Stripe.Subscription.Status): Subscription
         'incomplete_expired': 'incomplete_expired',
         'paused': 'paused',
     };
+    if (!statusMap[stripeStatus]) {
+        console.warn(`Unmapped Stripe subscription status: ${stripeStatus}, defaulting to 'incomplete'`);
+    }
     return statusMap[stripeStatus] || 'incomplete';
 }
 
@@ -38,14 +41,23 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     const supabase = createServiceClient();
     const customerId = subscription.customer as string;
 
-    // Get the first subscription item for period information
-    const firstItem = subscription.items.data[0];
-    const periodStart = firstItem?.current_period_start
-        ? new Date(firstItem.current_period_start * 1000).toISOString()
+    // Find the base item (non-metered) and metered item separately
+    const baseItem = subscription.items.data.find(item =>
+        !item.price.recurring || item.price.recurring.usage_type !== 'metered'
+    ) || subscription.items.data[0];
+    const meteredItem = subscription.items.data.find(item =>
+        item.price.recurring?.usage_type === 'metered'
+    );
+
+    const periodStart = baseItem?.current_period_start
+        ? new Date(baseItem.current_period_start * 1000).toISOString()
         : null;
-    const periodEnd = firstItem?.current_period_end
-        ? new Date(firstItem.current_period_end * 1000).toISOString()
+    const periodEnd = baseItem?.current_period_end
+        ? new Date(baseItem.current_period_end * 1000).toISOString()
         : null;
+
+    // Extract plan_type from metadata (defaults to self_service for legacy subscriptions)
+    const planType = subscription.metadata?.plan_type || 'self_service';
 
     // Get agency by stripe_customer_id
     const { data: agency, error: agencyError } = await supabase
@@ -69,10 +81,12 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
                 stripe_customer_id: customerId,
                 subscription_id: subscription.id,
                 subscription_status: mapStripeStatus(subscription.status),
-                subscription_price_id: firstItem?.price?.id || null,
+                subscription_price_id: baseItem?.price?.id || null,
                 subscription_current_period_start: periodStart,
                 subscription_current_period_end: periodEnd,
                 subscription_cancel_at_period_end: subscription.cancel_at_period_end,
+                plan_type: planType,
+                metered_subscription_item_id: meteredItem?.id || null,
             })
             .eq('id', agencyId);
 
@@ -90,10 +104,12 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
         .update({
             subscription_id: subscription.id,
             subscription_status: mapStripeStatus(subscription.status),
-            subscription_price_id: firstItem?.price?.id || null,
+            subscription_price_id: baseItem?.price?.id || null,
             subscription_current_period_start: periodStart,
             subscription_current_period_end: periodEnd,
             subscription_cancel_at_period_end: subscription.cancel_at_period_end,
+            plan_type: planType,
+            metered_subscription_item_id: meteredItem?.id || null,
         })
         .eq('id', agency.id);
 
@@ -120,7 +136,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
         return;
     }
 
-    // Clear subscription data but keep customer_id for future use
+    // Clear subscription data but keep customer_id and plan_type for future use
     const { error: updateError } = await supabase
         .from('agencies')
         .update({
@@ -130,6 +146,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
             subscription_current_period_start: null,
             subscription_current_period_end: null,
             subscription_cancel_at_period_end: false,
+            metered_subscription_item_id: null,
         })
         .eq('id', agency.id);
 
@@ -164,8 +181,8 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
             .single();
 
         if (admin?.email && invoice.amount_paid) {
-            const tier = getTierFromPriceId(agency.subscription_price_id || '');
-            const planName = tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : 'Subscription';
+            const tierInfo = getTierFromPriceId(agency.subscription_price_id || '');
+            const planName = tierInfo ? tierInfo.tier.charAt(0).toUpperCase() + tierInfo.tier.slice(1) : 'Subscription';
             const amount = `$${(invoice.amount_paid / 100).toFixed(2)}`;
             const invoiceUrl = invoice.hosted_invoice_url || undefined;
 
@@ -206,8 +223,8 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
             .single();
 
         if (admin?.email) {
-            const tier = getTierFromPriceId(agency.subscription_price_id || '');
-            const planName = tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : 'Subscription';
+            const tierInfo2 = getTierFromPriceId(agency.subscription_price_id || '');
+            const planName = tierInfo2 ? tierInfo2.tier.charAt(0).toUpperCase() + tierInfo2.tier.slice(1) : 'Subscription';
             const amount = invoice.amount_due ? `$${(invoice.amount_due / 100).toFixed(2)}` : 'your subscription';
 
             await sendEmail({

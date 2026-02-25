@@ -141,6 +141,23 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
+        // Deduplicate — skip events we've already processed
+        const dedupKey = `vapi:${call.id}:${messageType}`;
+        const { data: existingEvent } = await supabase
+            .from('webhook_events')
+            .select('event_id')
+            .eq('event_id', dedupKey)
+            .single();
+
+        if (existingEvent) {
+            return NextResponse.json({ received: true });
+        }
+
+        await supabase.from('webhook_events').upsert(
+            { event_id: dedupKey },
+            { onConflict: 'event_id', ignoreDuplicates: true }
+        );
+
         // ======================================
         // Handle transcript events — append to DB and broadcast for live UI
         // ======================================
@@ -169,32 +186,38 @@ export async function POST(request: NextRequest) {
                     p_max_length: MAX_TRANSCRIPT_LENGTH,
                 }) as { data: { transcript: string }[] | null; error: Error | null };
 
-            // If the RPC doesn't exist or the call record doesn't exist yet, fall back to upsert.
-            // Use raw SQL concat to avoid overwriting existing transcript data.
+            // Fallback: RPC doesn't exist (pre-migration) or call record missing.
+            // NOTE: This read-modify-write has a small race window if Vapi sends rapid
+            // transcript events and the RPC is unavailable. Accepted trade-off for the
+            // fallback path — the primary RPC path above is atomic.
             if (updateError) {
-                const { data: existingCall } = await supabase
-                    .from('calls')
-                    .select('transcript')
-                    .eq('external_id', call.id)
-                    .single();
+                try {
+                    const { data: existingCall } = await supabase
+                        .from('calls')
+                        .select('transcript')
+                        .eq('external_id', call.id)
+                        .single();
 
-                const existingTranscript = existingCall?.transcript;
-                const mergedTranscript = existingTranscript
-                    ? `${existingTranscript}\n${newLine}`
-                    : newLine;
+                    const existingTranscript = existingCall?.transcript;
+                    const mergedTranscript = existingTranscript
+                        ? `${existingTranscript}\n${newLine}`
+                        : newLine;
 
-                await supabase
-                    .from('calls')
-                    .upsert({
-                        agent_id: agent.id,
-                        client_id: agent.client_id,
-                        external_id: call.id,
-                        provider: 'vapi',
-                        status: 'in_progress',
-                        direction: call.type === 'inboundPhoneCall' ? 'inbound' : 'outbound',
-                        transcript: mergedTranscript.slice(0, MAX_TRANSCRIPT_LENGTH),
-                        started_at: call.startedAt || new Date().toISOString(),
-                    }, { onConflict: 'external_id' });
+                    await supabase
+                        .from('calls')
+                        .upsert({
+                            agent_id: agent.id,
+                            client_id: agent.client_id,
+                            external_id: call.id,
+                            provider: 'vapi',
+                            status: 'in_progress',
+                            direction: call.type === 'inboundPhoneCall' ? 'inbound' : 'outbound',
+                            transcript: mergedTranscript.slice(0, MAX_TRANSCRIPT_LENGTH),
+                            started_at: call.startedAt || new Date().toISOString(),
+                        }, { onConflict: 'external_id' });
+                } catch (fallbackErr) {
+                    console.error('Vapi transcript fallback failed:', fallbackErr instanceof Error ? fallbackErr.message : 'Unknown error');
+                }
             }
 
             // Broadcast transcript update for real-time UI
@@ -306,7 +329,7 @@ export async function POST(request: NextRequest) {
         if (error) {
             console.error('Error saving Vapi call:', error.code);
             // Return 200 to prevent webhook retry storms — log for internal investigation
-            return NextResponse.json({ received: true, warning: 'Failed to save call data' });
+            return NextResponse.json({ received: true });
         }
 
         // AI-powered call analysis (runs in background, gated behind per-client opt-in)
@@ -422,7 +445,7 @@ export async function POST(request: NextRequest) {
             waitUntil(forwardToWebhook(agent.webhook_url, webhookPayload));
         }
 
-        // Accumulate usage for per-minute billing
+        // Accumulate usage for per-minute billing (client-level)
         if (isCallEnded && status === 'completed' && agent.client_id && durationSeconds > 0) {
             waitUntil((async () => {
                 try {
@@ -443,6 +466,31 @@ export async function POST(request: NextRequest) {
                     }
                 } catch (err) {
                     console.error('Failed to accumulate usage for Vapi call:', err instanceof Error ? err.message : 'Unknown error');
+                }
+            })());
+        }
+
+        // Report platform-key metered usage to Stripe (agency-level billing for using our API keys)
+        if (isCallEnded && status === 'completed' && durationSeconds > 0 && resolvedKeys.source.vapi === 'platform') {
+            waitUntil((async () => {
+                try {
+                    const { data: agencyRow } = await supabase
+                        .from('agencies')
+                        .select('metered_subscription_item_id')
+                        .eq('id', agent.agency_id)
+                        .single();
+
+                    if (agencyRow?.metered_subscription_item_id) {
+                        const { reportMeteredUsage } = await import('@/lib/billing/metered');
+                        await reportMeteredUsage({
+                            subscriptionItemId: agencyRow.metered_subscription_item_id,
+                            minutes: durationSeconds / 60,
+                            timestamp: Math.floor(new Date(endedAt || Date.now()).getTime() / 1000),
+                            idempotencyKey: `vapi_call_${call.id}`,
+                        });
+                    }
+                } catch (err) {
+                    console.error('Failed to report metered usage for Vapi call:', err instanceof Error ? err.message : 'Unknown error');
                 }
             })());
         }
@@ -599,8 +647,8 @@ export async function POST(request: NextRequest) {
                         metadata: call.metadata,
                         provider: 'vapi',
                     };
-                    // Fire-and-forget: don't block CRM/workflow processing
-                    void forwardToWebhook(resolvedIntegrations.api.webhook_url, clientWebhookPayload);
+                    // Forward webhook in background — don't block CRM/workflow processing
+                    waitUntil(forwardToWebhook(resolvedIntegrations.api.webhook_url, clientWebhookPayload));
                 }
 
                 const ghlInteg = resolvedIntegrations.ghl;
@@ -728,6 +776,6 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error('Vapi webhook error:', error instanceof Error ? error.message : 'Unknown error');
         // Return 200 to prevent webhook retry storms — log for internal investigation
-        return NextResponse.json({ received: true, warning: 'Internal error occurred' });
+        return NextResponse.json({ received: true });
     }
 }

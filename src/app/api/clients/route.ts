@@ -30,7 +30,8 @@ export const GET = withErrorHandling(async () => {
         .from('clients')
         .select('*')
         .eq('agency_id', user.agency.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(200);
 
     if (error) {
         return databaseError(error);
@@ -94,9 +95,9 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     // ---- Tier limit enforcement ----
     const supabase = await createClient();
 
-    const tier = getTierFromPriceId(user.agency.subscription_price_id || '');
-    if (tier) {
-        const tierConfig = getTierConfig(tier);
+    const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+    if (tierInfo) {
+        const tierConfig = getTierConfig(tierInfo.tier, tierInfo.planType);
         if (tierConfig && tierConfig.limits.maxClients !== Infinity) {
             const { count, error: countError } = await supabase
                 .from('clients')

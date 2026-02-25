@@ -1,14 +1,19 @@
 /**
  * Plan Tier Definitions
  *
- * Single source of truth for Starter / Growth / Scale pricing tiers.
+ * Single source of truth for Starter / Growth / Agency pricing tiers.
+ * Supports two plan types: Self-Service and Managed (done-for-you).
+ *
  * Price IDs are read from environment variables so they can differ
  * across dev / staging / production (and test mode vs live mode).
  *
+ * Per-minute: Flat $0.15/min across all tiers when using platform API keys.
  * Yearly pricing = 10 months (2 months free).
  */
 
-export type PlanTier = 'starter' | 'growth' | 'scale';
+import type { PlanType } from '@/types/database';
+
+export type PlanTier = 'starter' | 'growth' | 'agency';
 export type BillingInterval = 'monthly' | 'yearly';
 
 export interface TierLimits {
@@ -20,33 +25,47 @@ export interface TierLimits {
 
 export interface TierDefinition {
     tier: PlanTier;
-    name: string;
-    priceId: string;
-    monthlyPrice: number; // Display price in dollars
-    yearlyPrice: number; // Total yearly price (10 months)
-    yearlyMonthly: number; // Effective monthly when billed yearly
-    yearlyPriceId: string;
+    planType: PlanType;
+    name: string;           // e.g., "Self-Service Starter"
+    displayName: string;    // e.g., "Starter"
+    monthlyPrice: number;
+    yearlyPrice: number;    // Total yearly price (10 months)
+    yearlyMonthly: number;  // Effective monthly when billed yearly
+    perMinuteRate: number;  // $/minute for platform-key usage (0.15 for all tiers)
     limits: TierLimits;
     features: string[];
+    // Resolved from env vars
+    priceId: string;
+    yearlyPriceId: string;
 }
 
 interface TierConfig {
     tier: PlanTier;
+    planType: PlanType;
     name: string;
+    displayName: string;
     monthlyPrice: number;
-    yearlyPrice: number; // Total yearly price
-    yearlyMonthly: number; // Effective monthly rate when billed yearly
+    yearlyPrice: number;
+    yearlyMonthly: number;
+    perMinuteRate: number;
     limits: TierLimits;
     features: string[];
 }
 
+/** Flat per-minute rate for platform-key usage across all tiers */
+export const PLATFORM_PER_MINUTE_RATE = 0.15;
+
 const TIER_CONFIGS: TierConfig[] = [
+    // ---- Self-Service Plans ----
     {
         tier: 'starter',
-        name: 'Starter',
-        monthlyPrice: 99,
-        yearlyPrice: 990, // 10 × $99 (save $198)
-        yearlyMonthly: 83, // $990 / 12
+        planType: 'self_service',
+        name: 'Self-Service Starter',
+        displayName: 'Starter',
+        monthlyPrice: 67,
+        yearlyPrice: 670,  // 10 × $67
+        yearlyMonthly: 56, // $670 / 12
+        perMinuteRate: PLATFORM_PER_MINUTE_RATE,
         limits: {
             maxAgents: Infinity,
             maxCallMinutesPerMonth: Infinity,
@@ -55,7 +74,7 @@ const TIER_CONFIGS: TierConfig[] = [
         },
         features: [
             '3 Clients included',
-            '$15/client for additional clients',
+            '$15/additional client',
             'Unlimited agents',
             'AI Agent Builder',
             'Custom domain',
@@ -66,127 +85,261 @@ const TIER_CONFIGS: TierConfig[] = [
     },
     {
         tier: 'growth',
-        name: 'Growth',
-        monthlyPrice: 249,
-        yearlyPrice: 2490, // 10 × $249 (save $498)
-        yearlyMonthly: 208, // $2490 / 12
+        planType: 'self_service',
+        name: 'Self-Service Growth',
+        displayName: 'Growth',
+        monthlyPrice: 147,
+        yearlyPrice: 1470,  // 10 × $147
+        yearlyMonthly: 123, // $1470 / 12
+        perMinuteRate: PLATFORM_PER_MINUTE_RATE,
         limits: {
             maxAgents: Infinity,
             maxCallMinutesPerMonth: Infinity,
-            maxClients: 5,
+            maxClients: 10,
             additionalClientPrice: 12,
         },
         features: [
-            '5 Clients included',
-            '$12/client for additional clients',
+            '10 Clients included',
+            '$12/additional client',
             'All Starter features',
             'CRM integrations (GHL + HubSpot)',
             'Stripe Connect client billing',
         ],
     },
     {
-        tier: 'scale',
-        name: 'Scale',
-        monthlyPrice: 499,
-        yearlyPrice: 4990, // 10 × $499 (save $998)
-        yearlyMonthly: 416, // $4990 / 12
+        tier: 'agency',
+        planType: 'self_service',
+        name: 'Self-Service Agency',
+        displayName: 'Agency',
+        monthlyPrice: 297,
+        yearlyPrice: 2970,  // 10 × $297
+        yearlyMonthly: 248, // $2970 / 12
+        perMinuteRate: PLATFORM_PER_MINUTE_RATE,
         limits: {
             maxAgents: Infinity,
             maxCallMinutesPerMonth: Infinity,
-            maxClients: 10,
+            maxClients: 25,
             additionalClientPrice: 10,
         },
         features: [
-            '10 Clients included',
-            '$10/client for additional clients',
+            '25 Clients included',
+            '$10/additional client',
             'All features',
             'White-label platform',
             'API access',
             'Priority support',
         ],
     },
+    // ---- Managed (Done-for-you) Plans ----
+    {
+        tier: 'starter',
+        planType: 'managed',
+        name: 'Managed Starter',
+        displayName: 'Starter',
+        monthlyPrice: 97,
+        yearlyPrice: 970,  // 10 × $97
+        yearlyMonthly: 81, // $970 / 12
+        perMinuteRate: PLATFORM_PER_MINUTE_RATE,
+        limits: {
+            maxAgents: Infinity,
+            maxCallMinutesPerMonth: Infinity,
+            maxClients: 3,
+            additionalClientPrice: 20, // SS + $5
+        },
+        features: [
+            '3 Clients included',
+            '$20/additional client',
+            'Done-for-you agent setup',
+            'AI Agent Builder',
+            'Custom domain',
+            'Call analytics',
+            'Workflow automation',
+            'Priority support',
+        ],
+    },
+    {
+        tier: 'growth',
+        planType: 'managed',
+        name: 'Managed Growth',
+        displayName: 'Growth',
+        monthlyPrice: 197,
+        yearlyPrice: 1970,  // 10 × $197
+        yearlyMonthly: 164, // $1970 / 12
+        perMinuteRate: PLATFORM_PER_MINUTE_RATE,
+        limits: {
+            maxAgents: Infinity,
+            maxCallMinutesPerMonth: Infinity,
+            maxClients: 10,
+            additionalClientPrice: 17, // SS + $5
+        },
+        features: [
+            '10 Clients included',
+            '$17/additional client',
+            'All Starter features',
+            'Done-for-you integrations',
+            'CRM integrations (GHL + HubSpot)',
+            'Stripe Connect client billing',
+        ],
+    },
+    {
+        tier: 'agency',
+        planType: 'managed',
+        name: 'Managed Agency',
+        displayName: 'Agency',
+        monthlyPrice: 397,
+        yearlyPrice: 3970,  // 10 × $397
+        yearlyMonthly: 331, // $3970 / 12
+        perMinuteRate: PLATFORM_PER_MINUTE_RATE,
+        limits: {
+            maxAgents: Infinity,
+            maxCallMinutesPerMonth: Infinity,
+            maxClients: 25,
+            additionalClientPrice: 15, // SS + $5
+        },
+        features: [
+            '25 Clients included',
+            '$15/additional client',
+            'All features',
+            'Done-for-you white-label setup',
+            'API access',
+            'Dedicated support',
+        ],
+    },
 ];
 
-/**
- * Environment variable names for each tier's Stripe Price ID.
- */
-const PRICE_ENV_VARS: Record<PlanTier, string> = {
-    starter: 'STRIPE_PRICE_ID_STARTER',
-    growth: 'STRIPE_PRICE_ID_GROWTH',
-    scale: 'STRIPE_PRICE_ID_SCALE',
+// ---- Environment Variable Mapping ----
+
+const BASE_PRICE_ENV_VARS: Record<PlanType, Record<PlanTier, string>> = {
+    self_service: {
+        starter: 'STRIPE_PRICE_SELF_SERVICE_STARTER_MONTHLY',
+        growth: 'STRIPE_PRICE_SELF_SERVICE_GROWTH_MONTHLY',
+        agency: 'STRIPE_PRICE_SELF_SERVICE_AGENCY_MONTHLY',
+    },
+    managed: {
+        starter: 'STRIPE_PRICE_MANAGED_STARTER_MONTHLY',
+        growth: 'STRIPE_PRICE_MANAGED_GROWTH_MONTHLY',
+        agency: 'STRIPE_PRICE_MANAGED_AGENCY_MONTHLY',
+    },
 };
 
-const YEARLY_PRICE_ENV_VARS: Record<PlanTier, string> = {
-    starter: 'STRIPE_PRICE_ID_STARTER_YEARLY',
-    growth: 'STRIPE_PRICE_ID_GROWTH_YEARLY',
-    scale: 'STRIPE_PRICE_ID_SCALE_YEARLY',
+const YEARLY_PRICE_ENV_VARS: Record<PlanType, Record<PlanTier, string>> = {
+    self_service: {
+        starter: 'STRIPE_PRICE_SELF_SERVICE_STARTER_YEARLY',
+        growth: 'STRIPE_PRICE_SELF_SERVICE_GROWTH_YEARLY',
+        agency: 'STRIPE_PRICE_SELF_SERVICE_AGENCY_YEARLY',
+    },
+    managed: {
+        starter: 'STRIPE_PRICE_MANAGED_STARTER_YEARLY',
+        growth: 'STRIPE_PRICE_MANAGED_GROWTH_YEARLY',
+        agency: 'STRIPE_PRICE_MANAGED_AGENCY_YEARLY',
+    },
 };
 
+const METERED_PRICE_ENV_VAR = 'STRIPE_PRICE_METERED_MINUTE';
+
+// Legacy env vars for backward compatibility with existing subscriptions
+const LEGACY_PRICE_ENV_VARS: Record<string, { tier: PlanTier; planType: PlanType }> = {
+    STRIPE_PRICE_ID_STARTER: { tier: 'starter', planType: 'self_service' },
+    STRIPE_PRICE_ID_GROWTH: { tier: 'growth', planType: 'self_service' },
+    STRIPE_PRICE_ID_SCALE: { tier: 'agency', planType: 'self_service' }, // scale → agency
+    STRIPE_PRICE_ID_STARTER_YEARLY: { tier: 'starter', planType: 'self_service' },
+    STRIPE_PRICE_ID_GROWTH_YEARLY: { tier: 'growth', planType: 'self_service' },
+    STRIPE_PRICE_ID_SCALE_YEARLY: { tier: 'agency', planType: 'self_service' },
+};
+
+// ---- Public API ----
+
 /**
- * Get all tier definitions with price IDs resolved from env vars.
- * Tiers without a configured price ID are excluded.
+ * Get all tier definitions, optionally filtered by plan type.
+ * Only returns tiers with configured price IDs.
  */
-export function getTierDefinitions(): TierDefinition[] {
-    return TIER_CONFIGS.map(config => ({
+export function getTierDefinitions(planType?: PlanType): TierDefinition[] {
+    const configs = planType
+        ? TIER_CONFIGS.filter(c => c.planType === planType)
+        : TIER_CONFIGS;
+
+    return configs.map(config => ({
         ...config,
-        priceId: process.env[PRICE_ENV_VARS[config.tier]] || '',
-        yearlyPriceId: process.env[YEARLY_PRICE_ENV_VARS[config.tier]] || '',
+        priceId: process.env[BASE_PRICE_ENV_VARS[config.planType][config.tier]] || '',
+        yearlyPriceId: process.env[YEARLY_PRICE_ENV_VARS[config.planType][config.tier]] || '',
     })).filter(t => t.priceId !== '');
 }
 
 /**
- * Get a single tier definition by tier name.
+ * Get a single tier definition by tier name and plan type.
  * Returns null if the tier's monthly price ID is not configured.
  */
-export function getTierDefinition(tier: PlanTier): TierDefinition | null {
-    const priceId = process.env[PRICE_ENV_VARS[tier]];
+export function getTierDefinition(tier: PlanTier, planType: PlanType = 'self_service'): TierDefinition | null {
+    const envVar = BASE_PRICE_ENV_VARS[planType]?.[tier];
+    if (!envVar) return null;
+
+    const priceId = process.env[envVar];
     if (!priceId) return null;
 
-    const config = TIER_CONFIGS.find(c => c.tier === tier);
+    const config = TIER_CONFIGS.find(c => c.tier === tier && c.planType === planType);
     if (!config) return null;
 
     return {
         ...config,
         priceId,
-        yearlyPriceId: process.env[YEARLY_PRICE_ENV_VARS[tier]] || '',
+        yearlyPriceId: process.env[YEARLY_PRICE_ENV_VARS[planType][tier]] || '',
     };
 }
 
 /**
- * Get the Stripe price ID for a tier and interval.
+ * Get the Stripe base price ID for a tier, plan type, and interval.
  */
-export function getPriceId(tier: PlanTier, interval: BillingInterval = 'monthly'): string | null {
-    const envVar = interval === 'yearly'
-        ? YEARLY_PRICE_ENV_VARS[tier]
-        : PRICE_ENV_VARS[tier];
-    return process.env[envVar] || null;
+export function getPriceId(tier: PlanTier, planType: PlanType = 'self_service', interval: BillingInterval = 'monthly'): string | null {
+    const envVars = interval === 'yearly'
+        ? YEARLY_PRICE_ENV_VARS[planType]
+        : BASE_PRICE_ENV_VARS[planType];
+    if (!envVars?.[tier]) return null;
+    return process.env[envVars[tier]] || null;
 }
 
 /**
- * Reverse-lookup: map a Stripe price_id back to a PlanTier.
- * Checks both monthly and yearly price IDs.
- * Also checks the legacy STRIPE_PRICE_ID env var (mapped to Growth as default).
+ * Get the Stripe metered price ID for per-minute billing.
+ * Single price shared across all tiers and plan types.
  */
-export function getTierFromPriceId(priceId: string): PlanTier | null {
+export function getMeteredPriceId(): string | null {
+    return process.env[METERED_PRICE_ENV_VAR] || null;
+}
+
+/**
+ * Get the per-minute rate in dollars. Currently flat across all tiers.
+ */
+export function getPerMinuteRate(): number {
+    return PLATFORM_PER_MINUTE_RATE;
+}
+
+/**
+ * Reverse-lookup: map a Stripe price_id back to tier + plan type.
+ * Checks new env vars first, then legacy env vars for backward compatibility.
+ */
+export function getTierFromPriceId(priceId: string): { tier: PlanTier; planType: PlanType } | null {
     if (!priceId) return null;
 
-    // Check each tier's monthly env var
-    for (const [tier, envVar] of Object.entries(PRICE_ENV_VARS)) {
-        if (process.env[envVar] === priceId) {
-            return tier as PlanTier;
+    // Check new env vars (monthly + yearly)
+    for (const planType of ['self_service', 'managed'] as PlanType[]) {
+        for (const tier of ['starter', 'growth', 'agency'] as PlanTier[]) {
+            const monthlyVar = BASE_PRICE_ENV_VARS[planType][tier];
+            const yearlyVar = YEARLY_PRICE_ENV_VARS[planType][tier];
+            if (process.env[monthlyVar] === priceId || process.env[yearlyVar] === priceId) {
+                return { tier, planType };
+            }
         }
     }
 
-    // Check each tier's yearly env var
-    for (const [tier, envVar] of Object.entries(YEARLY_PRICE_ENV_VARS)) {
+    // Legacy backward compatibility
+    for (const [envVar, mapping] of Object.entries(LEGACY_PRICE_ENV_VARS)) {
         if (process.env[envVar] === priceId) {
-            return tier as PlanTier;
+            return mapping;
         }
     }
 
-    // Backward compat: legacy single STRIPE_PRICE_ID maps to growth
+    // Final fallback: legacy single STRIPE_PRICE_ID maps to growth/self_service
     if (process.env.STRIPE_PRICE_ID === priceId) {
-        return 'growth';
+        return { tier: 'growth', planType: 'self_service' };
     }
 
     return null;
@@ -197,7 +350,13 @@ export function getTierFromPriceId(priceId: string): PlanTier | null {
  */
 export function isYearlyPriceId(priceId: string): boolean {
     if (!priceId) return false;
-    for (const envVar of Object.values(YEARLY_PRICE_ENV_VARS)) {
+    for (const planType of ['self_service', 'managed'] as PlanType[]) {
+        for (const tier of ['starter', 'growth', 'agency'] as PlanTier[]) {
+            if (process.env[YEARLY_PRICE_ENV_VARS[planType][tier]] === priceId) return true;
+        }
+    }
+    // Check legacy yearly vars
+    for (const envVar of ['STRIPE_PRICE_ID_STARTER_YEARLY', 'STRIPE_PRICE_ID_GROWTH_YEARLY', 'STRIPE_PRICE_ID_SCALE_YEARLY']) {
         if (process.env[envVar] === priceId) return true;
     }
     return false;
@@ -208,10 +367,11 @@ export function isYearlyPriceId(priceId: string): boolean {
  */
 export function checkTierLimits(
     tier: PlanTier,
+    planType: PlanType = 'self_service',
     usage: { agentCount: number; callMinutes: number; clientCount: number }
 ): { exceeded: boolean; details: string[] } {
-    const def = getTierDefinition(tier);
-    if (!def) return { exceeded: false, details: [] };
+    const def = getTierDefinition(tier, planType);
+    if (!def) return { exceeded: true, details: ['Tier not configured — limits cannot be verified'] };
 
     const details: string[] = [];
 
@@ -229,16 +389,19 @@ export function checkTierLimits(
 }
 
 /**
- * Get the tier config (without priceId) for display purposes.
+ * Get the tier config for display purposes (no priceId needed).
  * Works even when env vars aren't set (useful for client-side).
  */
-export function getTierConfig(tier: PlanTier): TierConfig | null {
-    return TIER_CONFIGS.find(c => c.tier === tier) || null;
+export function getTierConfig(tier: PlanTier, planType: PlanType = 'self_service'): TierConfig | null {
+    return TIER_CONFIGS.find(c => c.tier === tier && c.planType === planType) || null;
 }
 
 /**
  * Get all tier configs for display purposes (no priceId needed).
  */
-export function getAllTierConfigs(): TierConfig[] {
+export function getAllTierConfigs(planType?: PlanType): TierConfig[] {
+    if (planType) {
+        return TIER_CONFIGS.filter(c => c.planType === planType);
+    }
     return [...TIER_CONFIGS];
 }

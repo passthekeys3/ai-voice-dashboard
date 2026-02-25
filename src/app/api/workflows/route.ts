@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
             query = query.eq('agent_id', agentId);
         }
 
-        const { data: workflows, error } = await query;
+        const { data: workflows, error } = await query.limit(200);
 
         if (error) {
             console.error('Error fetching workflows:', error.code);

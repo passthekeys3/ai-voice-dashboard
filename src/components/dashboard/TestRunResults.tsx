@@ -48,9 +48,9 @@ function CriteriaResultsView({ results }: { results: CriterionResult[] }) {
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Criteria Results
             </p>
-            {results.map((cr, i) => (
+            {results.map((cr) => (
                 <div
-                    key={i}
+                    key={`${cr.criterion}-${cr.type}`}
                     className={`p-2.5 rounded border text-sm ${
                         cr.passed
                             ? 'bg-green-50/50 dark:bg-green-950/20 border-green-200 dark:border-green-800'

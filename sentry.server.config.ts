@@ -5,7 +5,7 @@ const dsn = process.env.SENTRY_DSN;
 if (dsn) {
     Sentry.init({
         dsn,
-        tracesSampleRate: 0.1,
+        tracesSampleRate: 1.0,
         environment: process.env.VERCEL_ENV || 'development',
     });
 }

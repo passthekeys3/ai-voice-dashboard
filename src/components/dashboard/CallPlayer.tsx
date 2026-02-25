@@ -70,7 +70,7 @@ export function CallPlayer({ audioUrl, transcript, summary }: CallPlayerProps) {
                             onEnded={() => setIsPlaying(false)}
                         />
                         <div className="flex items-center gap-4">
-                            <Button variant="outline" size="icon" onClick={togglePlay}>
+                            <Button variant="outline" size="icon" onClick={togglePlay} aria-label={isPlaying ? 'Pause' : 'Play'}>
                                 {isPlaying ? (
                                     <Pause className="h-4 w-4" />
                                 ) : (
@@ -86,7 +86,7 @@ export function CallPlayer({ audioUrl, transcript, summary }: CallPlayerProps) {
                                 aria-label="Call playback progress"
                                 className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700"
                             />
-                            <Button variant="ghost" size="icon" onClick={toggleMute}>
+                            <Button variant="ghost" size="icon" onClick={toggleMute} aria-label={isMuted ? 'Unmute' : 'Mute'}>
                                 {isMuted ? (
                                     <VolumeX className="h-4 w-4" />
                                 ) : (

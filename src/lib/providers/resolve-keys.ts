@@ -9,15 +9,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { VoiceProvider } from '@/types';
 
+export type KeySource = 'client' | 'agency' | 'platform' | null;
+
 export interface ResolvedApiKeys {
     retell_api_key: string | null;
     vapi_api_key: string | null;
     bland_api_key: string | null;
-    /** Which source each key came from (useful for debugging) */
+    /** Which source each key came from (useful for billing & debugging) */
     source: {
-        retell: 'client' | 'agency' | null;
-        vapi: 'client' | 'agency' | null;
-        bland: 'client' | 'agency' | null;
+        retell: KeySource;
+        vapi: KeySource;
+        bland: KeySource;
     };
 }
 
@@ -59,18 +61,25 @@ export async function resolveProviderApiKeys(
         clientKeys = client;
     }
 
+    // Platform keys (env vars) serve as final fallback — metered billing applies when used
+    const platformRetellKey = process.env.PLATFORM_RETELL_API_KEY || null;
+    const platformVapiKey = process.env.PLATFORM_VAPI_API_KEY || null;
+    const platformBlandKey = process.env.PLATFORM_BLAND_API_KEY || null;
+
     const resolve = (
         clientKey: string | null | undefined,
         agencyKey: string | null | undefined,
-    ): { key: string | null; source: 'client' | 'agency' | null } => {
+        platformKey: string | null,
+    ): { key: string | null; source: KeySource } => {
         if (clientKey) return { key: clientKey, source: 'client' };
         if (agencyKey) return { key: agencyKey, source: 'agency' };
+        if (platformKey) return { key: platformKey, source: 'platform' };
         return { key: null, source: null };
     };
 
-    const retell = resolve(clientKeys?.retell_api_key, agency?.retell_api_key);
-    const vapi = resolve(clientKeys?.vapi_api_key, agency?.vapi_api_key);
-    const bland = resolve(clientKeys?.bland_api_key, agency?.bland_api_key);
+    const retell = resolve(clientKeys?.retell_api_key, agency?.retell_api_key, platformRetellKey);
+    const vapi = resolve(clientKeys?.vapi_api_key, agency?.vapi_api_key, platformVapiKey);
+    const bland = resolve(clientKeys?.bland_api_key, agency?.bland_api_key, platformBlandKey);
 
     return {
         retell_api_key: retell.key,

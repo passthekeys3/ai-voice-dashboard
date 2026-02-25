@@ -48,8 +48,8 @@ export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) 
             traffic_weight: v.traffic_weight,
             is_control: v.is_control,
         })) || [
-            { name: 'Control', prompt: '', traffic_weight: 50, is_control: true },
-            { name: 'Variant A', prompt: '', traffic_weight: 50, is_control: false },
+            { id: crypto.randomUUID(), name: 'Control', prompt: '', traffic_weight: 50, is_control: true },
+            { id: crypto.randomUUID(), name: 'Variant A', prompt: '', traffic_weight: 50, is_control: false },
         ]
     );
 
@@ -57,6 +57,7 @@ export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) 
 
     const addVariant = () => {
         const newVariant: VariantDraft = {
+            id: crypto.randomUUID(),
             name: `Variant ${String.fromCharCode(65 + variants.length - 1)}`,
             prompt: '',
             traffic_weight: 0,
@@ -246,7 +247,7 @@ export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) 
                 </CardHeader>
                 <CardContent className="space-y-6">
                     {variants.map((variant, index) => (
-                        <Card key={index} className={variant.is_control ? 'border-primary' : ''}>
+                        <Card key={variant.id || index} className={variant.is_control ? 'border-primary' : ''}>
                             <CardHeader className="py-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">

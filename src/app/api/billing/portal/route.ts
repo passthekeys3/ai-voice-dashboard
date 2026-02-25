@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getTierFromPriceId, getTierDefinition } from '@/lib/billing/tiers';
+import { getTierFromPriceId, getTierDefinition, getPerMinuteRate } from '@/lib/billing/tiers';
 
 function getStripe() {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -105,7 +105,8 @@ export async function GET(_request: NextRequest) {
                 subscription_price_id,
                 subscription_current_period_start,
                 subscription_current_period_end,
-                subscription_cancel_at_period_end
+                subscription_cancel_at_period_end,
+                plan_type
             `)
             .eq('id', user.agency.id)
             .single();
@@ -159,8 +160,9 @@ export async function GET(_request: NextRequest) {
             };
         }
 
-        const tier = getTierFromPriceId(agency.subscription_price_id || '');
-        const tierDef = tier ? getTierDefinition(tier) : null;
+        const tierInfo = getTierFromPriceId(agency.subscription_price_id || '');
+        const agencyPlanType = tierInfo?.planType || (agency.plan_type as 'self_service' | 'managed') || 'self_service';
+        const tierDef = tierInfo ? getTierDefinition(tierInfo.tier, agencyPlanType) : null;
 
         return NextResponse.json({
             data: {
@@ -171,9 +173,11 @@ export async function GET(_request: NextRequest) {
                     current_period_start: agency.subscription_current_period_start,
                     current_period_end: agency.subscription_current_period_end,
                     cancel_at_period_end: agency.subscription_cancel_at_period_end,
-                    plan_tier: tier,
+                    plan_tier: tierInfo?.tier || null,
+                    plan_type: agencyPlanType,
                     plan_name: tierDef?.name || null,
                     limits: tierDef?.limits || null,
+                    per_minute_rate: getPerMinuteRate(),
                 },
                 has_payment_method: !!agency.stripe_customer_id,
                 usage: usageData,

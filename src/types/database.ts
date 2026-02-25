@@ -6,7 +6,8 @@ export type CallStatus = 'completed' | 'failed' | 'in_progress' | 'queued';
 export type CallSentiment = 'positive' | 'negative' | 'neutral';
 export type BillingType = 'subscription' | 'per_minute' | 'one_time';
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused';
-export type PlanTier = 'starter' | 'growth' | 'scale';
+export type PlanTier = 'starter' | 'growth' | 'agency';
+export type PlanType = 'self_service' | 'managed';
 
 export interface Agency {
     id: string;
@@ -32,6 +33,9 @@ export interface Agency {
     subscription_current_period_start?: string;
     subscription_current_period_end?: string;
     subscription_cancel_at_period_end?: boolean;
+    // Plan type (self_service or managed)
+    plan_type?: PlanType;
+    metered_subscription_item_id?: string;
     // Stripe Connect (agency bills their own clients)
     stripe_connect_account_id?: string;
     stripe_connect_onboarding_complete?: boolean;

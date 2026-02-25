@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { waitUntil } from '@vercel/functions';
 import { sendEmail } from '@/lib/email/send';
 import { welcomeEmail } from '@/lib/email/templates';
 
@@ -139,11 +140,13 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Send welcome email (fire-and-forget — don't block signup response)
-        sendEmail({
-            to: email,
-            ...welcomeEmail({ userName: sanitizedName, agencyName: sanitizedAgencyName, trialDays }),
-        }).catch(() => { /* logged inside sendEmail */ });
+        // Send welcome email (background — guaranteed to complete via waitUntil)
+        waitUntil(
+            sendEmail({
+                to: email,
+                ...welcomeEmail({ userName: sanitizedName, agencyName: sanitizedAgencyName, trialDays }),
+            }).catch(() => { /* logged inside sendEmail */ })
+        );
 
         return NextResponse.json({
             success: true,

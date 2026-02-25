@@ -14,7 +14,7 @@ import { escapeHtml } from '@/lib/email/templates';
 
 const VALID_FEEDBACK_TYPES = ['bug', 'feature_request', 'general'] as const;
 
-const FEEDBACK_NOTIFY_EMAIL = process.env.FEEDBACK_NOTIFY_EMAIL || 'kevin@buildvoiceai.com';
+const FEEDBACK_NOTIFY_EMAIL = process.env.FEEDBACK_NOTIFY_EMAIL || 'support@buildvoiceai.com';
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
     const user = await getCurrentUser();

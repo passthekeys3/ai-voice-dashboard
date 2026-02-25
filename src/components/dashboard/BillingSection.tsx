@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { PlanTier } from '@/types/database';
+import type { PlanTier, PlanType } from '@/types/database';
 
 type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused' | null;
 
@@ -20,12 +20,15 @@ interface BillingData {
         current_period_end: string | null;
         cancel_at_period_end: boolean;
         plan_tier: PlanTier | null;
+        plan_type?: PlanType | null;
         plan_name: string | null;
         limits: {
             maxAgents: number;
             maxCallMinutesPerMonth: number;
             maxClients: number;
+            additionalClientPrice?: number;
         } | null;
+        per_minute_rate?: number | null;
     };
     has_payment_method: boolean;
     usage: {
@@ -55,6 +58,13 @@ function getStatusBadge(status: SubscriptionStatus) {
 
     const config = variants[status] || { variant: 'outline', label: status };
     return <Badge variant={config.variant}>{config.label}</Badge>;
+}
+
+function getPlanTypeBadge(planType: PlanType | null | undefined) {
+    if (!planType) return null;
+    return planType === 'managed'
+        ? <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Managed</Badge>
+        : <Badge variant="secondary">Self-Service</Badge>;
 }
 
 function formatDate(dateString: string | null): string {
@@ -155,7 +165,9 @@ export function BillingSection() {
         billingData?.subscription.status === 'trialing';
 
     const planName = billingData?.subscription.plan_name;
+    const planType = billingData?.subscription.plan_type;
     const limits = billingData?.subscription.limits;
+    const perMinuteRate = billingData?.subscription.per_minute_rate;
 
     return (
         <Card>
@@ -166,6 +178,7 @@ export function BillingSection() {
                         <CardDescription>Manage your subscription and billing details</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
+                        {getPlanTypeBadge(planType)}
                         {planName && <Badge variant="secondary">{planName}</Badge>}
                         {billingData && getStatusBadge(billingData.subscription.status)}
                     </div>
@@ -225,14 +238,24 @@ export function BillingSection() {
                                                 <div className="p-4 bg-muted/50 rounded-lg">
                                                     <p className="text-2xl font-bold">{limits.maxClients}</p>
                                                     <p className="text-sm text-muted-foreground">Clients Included</p>
+                                                    {limits.additionalClientPrice != null && limits.additionalClientPrice > 0 && (
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            ${limits.additionalClientPrice}/additional
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div className="p-4 bg-muted/50 rounded-lg">
                                                     <p className="text-2xl font-bold">
-                                                        {!isFinite(limits.maxCallMinutesPerMonth) ? '∞' : limits.maxCallMinutesPerMonth.toLocaleString()}
+                                                        {perMinuteRate != null ? `$${perMinuteRate}` : '—'}
                                                     </p>
                                                     <p className="text-sm text-muted-foreground">
-                                                        {!isFinite(limits.maxCallMinutesPerMonth) ? 'Unlimited Minutes' : 'Minutes/Month'}
+                                                        {perMinuteRate != null ? 'Per Minute Rate' : 'No Per-Minute Billing'}
                                                     </p>
+                                                    {planType === 'self_service' && perMinuteRate != null && (
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            Only when using platform keys
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
