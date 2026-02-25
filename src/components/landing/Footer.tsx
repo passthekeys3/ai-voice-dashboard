@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Twitter, Linkedin } from 'lucide-react';
 import { useInView } from '@/hooks/useInView';
+import { Logo } from '@/components/Logo';
 
 const productLinks = [
     { label: 'Pricing', href: '#pricing' },
@@ -27,8 +28,8 @@ export function Footer() {
             <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                     <div className={`space-y-2 animate-on-scroll stagger-1 ${isInView ? 'is-visible' : ''}`}>
-                        <Link href="/" className="text-base font-semibold tracking-tight">
-                            BuildVoiceAI
+                        <Link href="/" className="flex items-center">
+                            <Logo variant="full" size="md" />
                         </Link>
                         <p className="text-sm text-muted-foreground">
                             AI voice agents for businesses and agencies.

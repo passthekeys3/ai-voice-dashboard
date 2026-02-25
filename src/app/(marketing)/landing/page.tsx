@@ -19,7 +19,7 @@ const organizationJsonLd = {
     '@type': 'Organization',
     name: 'BuildVoiceAI',
     url: SITE_URL,
-    logo: `${SITE_URL}/logo.png`,
+    logo: `${SITE_URL}/logo`,
     description:
         'Build AI voice agents from natural language descriptions. White-label platform for agencies.',
     sameAs: [],

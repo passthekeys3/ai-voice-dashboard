@@ -15,9 +15,7 @@ const inter = Inter({
 const DEFAULT_METADATA: Metadata = {
     title: "Voice AI Dashboard",
     description: "White-label voice AI agency dashboard",
-    icons: {
-        icon: "/favicon.ico",
-    },
+    // icons auto-detected from src/app/icon.tsx and apple-icon.tsx
 };
 
 // Generate dynamic metadata based on agency branding

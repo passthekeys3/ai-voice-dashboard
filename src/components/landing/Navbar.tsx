@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/Logo';
 
 const navLinks = [
     { label: 'How It Works', href: '#how-it-works' },
@@ -43,8 +44,8 @@ export function Navbar() {
         >
             <div className="mx-auto max-w-6xl px-4 sm:px-6">
                 <div className="flex h-16 items-center justify-between">
-                    <Link href="/" className="text-[15px] font-bold tracking-tight">
-                        BuildVoiceAI
+                    <Link href="/" className="flex items-center">
+                        <Logo variant="full" size="sm" />
                     </Link>
 
                     <div className="hidden md:flex items-center gap-6">

@@ -13,6 +13,12 @@ const publicRoutes = [
     '/api/widget',    // Widget session API
     '/landing',       // Public marketing landing page
     '/api/landing',   // Public agent preview API
+    '/privacy',       // Public legal pages
+    '/terms',
+    '/icon',          // Auto-generated images (favicon, apple icon, OG, logo)
+    '/apple-icon',
+    '/opengraph-image',
+    '/logo',
 ];
 
 // Platform domains that should NOT be treated as custom domains

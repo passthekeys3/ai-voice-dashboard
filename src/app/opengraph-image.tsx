@@ -56,6 +56,27 @@ export default function OGImage() {
                         gap: '20px',
                     }}
                 >
+                    {/* Soundwave icon */}
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            height: '64px',
+                        }}
+                    >
+                        {[24, 42, 60, 36, 48].map((h, i) => (
+                            <div
+                                key={i}
+                                style={{
+                                    width: '10px',
+                                    height: `${h}px`,
+                                    borderRadius: '5px',
+                                    background: 'linear-gradient(180deg, #60a5fa, #3b82f6)',
+                                }}
+                            />
+                        ))}
+                    </div>
                     <div
                         style={{
                             fontSize: '64px',
