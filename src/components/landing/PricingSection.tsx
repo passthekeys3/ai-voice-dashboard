@@ -2,15 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Check } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useInView } from '@/hooks/useInView';
 
-type PlanTypeToggle = 'self_service' | 'managed';
+type PlanType = 'self_service' | 'managed';
 
 interface PlanConfig {
     name: string;
-    description: string;
     selfServicePrice: number;
     managedPrice: number;
     selfServiceYearlyMonthly: number;
@@ -25,7 +24,6 @@ interface PlanConfig {
     cta: string;
     href: string;
     recommended: boolean;
-    badge?: string;
 }
 
 const PER_MINUTE_RATE = 0.15;
@@ -33,7 +31,6 @@ const PER_MINUTE_RATE = 0.15;
 const plans: PlanConfig[] = [
     {
         name: 'Starter',
-        description: 'For small, growing teams.',
         selfServicePrice: 67,
         managedPrice: 97,
         selfServiceYearlyMonthly: 56,
@@ -44,20 +41,22 @@ const plans: PlanConfig[] = [
         selfServiceOverage: 15,
         managedOverage: 20,
         selfServiceFeatures: [
-            'Unlimited Agents',
+            '3 Clients included',
+            'Unlimited agents',
             'AI Agent Builder',
-            'Custom Domain',
-            'Call Analytics Dashboard',
-            'Workflow Automation',
-            'Email Support',
+            'Custom domain',
+            'Call analytics',
+            'Workflow automation',
+            'Email support',
         ],
         managedFeatures: [
+            '3 Clients included',
             'Done-for-you agent setup',
             'AI Agent Builder',
-            'Custom Domain',
-            'Call Analytics Dashboard',
-            'Workflow Automation',
-            'Priority Support',
+            'Custom domain',
+            'Call analytics',
+            'Workflow automation',
+            'Priority support',
         ],
         cta: 'Get started',
         href: '/signup',
@@ -65,7 +64,6 @@ const plans: PlanConfig[] = [
     },
     {
         name: 'Growth',
-        description: 'For scaling businesses.',
         selfServicePrice: 147,
         managedPrice: 197,
         selfServiceYearlyMonthly: 123,
@@ -76,24 +74,24 @@ const plans: PlanConfig[] = [
         selfServiceOverage: 12,
         managedOverage: 17,
         selfServiceFeatures: [
+            '10 Clients included',
             'All Starter features',
-            'CRM Integrations (GHL, HubSpot)',
-            'Stripe Connect Billing',
+            'CRM integrations (GHL + HubSpot)',
+            'Stripe Connect client billing',
         ],
         managedFeatures: [
+            '10 Clients included',
             'All Starter features',
             'Done-for-you integrations',
-            'CRM Integrations (GHL, HubSpot)',
-            'Stripe Connect Billing',
+            'CRM integrations (GHL + HubSpot)',
+            'Stripe Connect client billing',
         ],
         cta: 'Get started',
         href: '/signup',
         recommended: true,
-        badge: 'Popular',
     },
     {
         name: 'Agency',
-        description: 'For high-volume agencies.',
         selfServicePrice: 297,
         managedPrice: 397,
         selfServiceYearlyMonthly: 248,
@@ -104,16 +102,18 @@ const plans: PlanConfig[] = [
         selfServiceOverage: 10,
         managedOverage: 15,
         selfServiceFeatures: [
+            '25 Clients included',
             'All features',
-            'White-Label Platform',
-            'API Access',
-            'Priority Support',
+            'White-label platform',
+            'API access',
+            'Priority support',
         ],
         managedFeatures: [
+            '25 Clients included',
             'All features',
             'Done-for-you white-label setup',
-            'API Access',
-            'Dedicated Support',
+            'API access',
+            'Dedicated support',
         ],
         cta: 'Get started',
         href: '/signup',
@@ -123,7 +123,7 @@ const plans: PlanConfig[] = [
 
 export function PricingSection() {
     const [isYearly, setIsYearly] = useState(false);
-    const [planType, setPlanType] = useState<PlanTypeToggle>('self_service');
+    const [planType, setPlanType] = useState<PlanType>('self_service');
     const { ref: headerRef, isInView: headerVisible } = useInView({ threshold: 0.2 });
     const { ref: gridRef, isInView: gridVisible } = useInView({ threshold: 0.1 });
 
@@ -133,7 +133,7 @@ export function PricingSection() {
         <section id="pricing" className="py-24 sm:py-32 px-4 sm:px-6">
             <div className="max-w-5xl mx-auto">
                 {/* Section header */}
-                <div ref={headerRef} className="text-center mb-16">
+                <div ref={headerRef} className="text-center mb-10">
                     <p
                         className={`text-xs font-medium text-muted-foreground uppercase tracking-widest mb-3 animate-on-scroll stagger-1 ${headerVisible ? 'is-visible' : ''}`}
                     >
@@ -144,19 +144,14 @@ export function PricingSection() {
                     >
                         Build it yourself or let us handle it
                     </h2>
-                    <p
-                        className={`mt-3 text-muted-foreground animate-on-scroll stagger-3 ${headerVisible ? 'is-visible' : ''}`}
-                    >
-                        {isSelfService
-                            ? 'Self-service plans for teams who know AI. Use your own API keys or ours.'
-                            : 'We build and manage your AI agents for you. All calls use our platform.'}
-                    </p>
+                </div>
 
-                    {/* Plan type toggle */}
-                    <div className={`mt-6 inline-flex items-center gap-1 rounded-full border bg-muted/50 p-1 animate-on-scroll stagger-3 ${headerVisible ? 'is-visible' : ''}`}>
+                {/* Plan type toggle */}
+                <div className={`flex justify-center animate-on-scroll stagger-3 ${headerVisible ? 'is-visible' : ''}`}>
+                    <div className="inline-flex items-center gap-1 rounded-full border bg-muted/50 p-1">
                         <button
                             onClick={() => setPlanType('self_service')}
-                            className={`relative rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
+                            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
                                 isSelfService
                                     ? 'bg-background text-foreground shadow-sm'
                                     : 'text-muted-foreground hover:text-foreground'
@@ -166,7 +161,7 @@ export function PricingSection() {
                         </button>
                         <button
                             onClick={() => setPlanType('managed')}
-                            className={`relative rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
+                            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
                                 !isSelfService
                                     ? 'bg-background text-foreground shadow-sm'
                                     : 'text-muted-foreground hover:text-foreground'
@@ -175,12 +170,21 @@ export function PricingSection() {
                             Managed
                         </button>
                     </div>
+                </div>
 
-                    {/* Billing toggle */}
-                    <div className={`mt-4 inline-flex items-center gap-1 rounded-full border bg-muted/50 p-1 animate-on-scroll stagger-3 ${headerVisible ? 'is-visible' : ''}`}>
+                {/* Plan type description */}
+                <p className={`text-center text-sm text-muted-foreground max-w-lg mx-auto mt-4 mb-6 animate-on-scroll stagger-3 ${headerVisible ? 'is-visible' : ''}`}>
+                    {isSelfService
+                        ? 'Build and manage your own AI voice agents. Use your own API keys for flat-rate pricing, or our platform keys for $0.15/min.'
+                        : 'We build and manage your AI agents for you. All calls use our platform at $0.15/min.'}
+                </p>
+
+                {/* Billing toggle */}
+                <div className={`flex justify-center mb-12 animate-on-scroll stagger-3 ${headerVisible ? 'is-visible' : ''}`}>
+                    <div className="inline-flex items-center gap-1 rounded-full border bg-muted/50 p-1">
                         <button
                             onClick={() => setIsYearly(false)}
-                            className={`relative rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
+                            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
                                 !isYearly
                                     ? 'bg-background text-foreground shadow-sm'
                                     : 'text-muted-foreground hover:text-foreground'
@@ -190,7 +194,7 @@ export function PricingSection() {
                         </button>
                         <button
                             onClick={() => setIsYearly(true)}
-                            className={`relative rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
+                            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
                                 isYearly
                                     ? 'bg-background text-foreground shadow-sm'
                                     : 'text-muted-foreground hover:text-foreground'
@@ -204,7 +208,7 @@ export function PricingSection() {
                     </div>
                 </div>
 
-                {/* Plan Cards grid */}
+                {/* Plan cards */}
                 <div ref={gridRef} className="grid gap-6 md:grid-cols-3">
                     {plans.map((plan, index) => {
                         const monthlyPrice = isSelfService ? plan.selfServicePrice : plan.managedPrice;
@@ -240,26 +244,22 @@ export function PricingSection() {
                                             aria-hidden="true"
                                         />
                                         <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-foreground text-background text-xs font-medium px-3 py-0.5 rounded-full z-10">
-                                            {plan.badge || 'Popular'}
+                                            Popular
                                         </span>
                                     </>
                                 )}
 
-                                <div className="relative z-10 mb-6">
+                                <div className="relative z-10 pb-4">
                                     <h3 className="text-lg font-semibold">{plan.name}</h3>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        {plan.description}
-                                    </p>
-                                    <div className="mt-4">
+                                    <div className="mt-3">
                                         <span className="text-3xl font-bold">${displayPrice}</span>
-                                        <span className="text-muted-foreground text-sm ml-1">/mo</span>
+                                        <span className="text-muted-foreground text-sm ml-1">/month</span>
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        {isYearly
-                                            ? `$${yearlyTotal}/year — save $${monthlyPrice * 12 - yearlyTotal}`
-                                            : 'Billed monthly'}
-                                    </p>
-                                    {/* Per-minute rate */}
+                                    {isYearly && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            ${yearlyTotal}/year — save ${monthlyPrice * 12 - yearlyTotal}
+                                        </p>
+                                    )}
                                     {!isSelfService && (
                                         <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">
                                             + ${PER_MINUTE_RATE}/min for calls
@@ -278,12 +278,12 @@ export function PricingSection() {
                                     <p className="text-muted-foreground">${overageRate}/additional client</p>
                                 </div>
 
-                                <div className="relative z-10 h-px bg-border mb-6" />
+                                <div className="relative z-10 h-px bg-border mb-5" />
 
                                 <ul className="relative z-10 space-y-2.5 mb-8 flex-1">
                                     {features.map((feature) => (
-                                        <li key={feature} className="text-sm text-muted-foreground flex items-center gap-2">
-                                            <Check className="h-4 w-4 shrink-0" />
+                                        <li key={feature} className="text-sm text-muted-foreground flex items-start gap-2">
+                                            <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
                                             {feature}
                                         </li>
                                     ))}
@@ -304,7 +304,7 @@ export function PricingSection() {
                 <p
                     className={`text-center text-sm text-muted-foreground/60 mt-6 animate-on-scroll stagger-4 ${gridVisible ? 'is-visible' : ''}`}
                 >
-                    14-day trial on all plans. Pay yearly and save 2 months.
+                    14-day trial on all plans · Pay yearly and save 2 months
                 </p>
             </div>
         </section>
