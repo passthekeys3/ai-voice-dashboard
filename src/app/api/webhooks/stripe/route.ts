@@ -298,20 +298,16 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ received: true });
         }
 
-        // Deduplicate — skip events we've already processed (prevents duplicate emails on retries)
+        // Deduplicate — atomic insert prevents race conditions on concurrent deliveries
         const supabase = createServiceClient();
-        const { data: existingEvent } = await supabase
+        const { error: insertError } = await supabase
             .from('webhook_events')
-            .select('event_id')
-            .eq('event_id', event.id)
-            .single();
+            .insert({ event_id: event.id });
 
-        if (existingEvent) {
+        if (insertError) {
+            // PK violation means this event was already processed — safe to skip
             return NextResponse.json({ received: true, duplicate: true });
         }
-
-        // Record the event ID before processing (at-most-once delivery)
-        await supabase.from('webhook_events').insert({ event_id: event.id });
 
         // Handle the event — use waitUntil to ensure completion in serverless
         const handleEvent = async () => {
