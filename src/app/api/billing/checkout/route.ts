@@ -44,7 +44,11 @@ export async function POST(request: NextRequest) {
             if (!tierDef) {
                 return NextResponse.json({ error: `Tier "${tier}" (${planType}) is not configured` }, { status: 400 });
             }
-            basePriceId = getPriceId(tier, planType, billingInterval) || tierDef.priceId;
+            const resolvedPrice = getPriceId(tier, planType, billingInterval);
+            if (!resolvedPrice && billingInterval === 'yearly') {
+                return NextResponse.json({ error: 'Yearly pricing is not yet available for this plan. Please choose monthly billing.' }, { status: 400 });
+            }
+            basePriceId = resolvedPrice || tierDef.priceId;
             planTier = tier;
         } else {
             // Backward compat: fall back to legacy STRIPE_PRICE_ID

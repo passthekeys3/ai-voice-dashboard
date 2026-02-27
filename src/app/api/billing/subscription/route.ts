@@ -217,7 +217,11 @@ export async function PATCH(request: NextRequest) {
             }
 
             const billingInterval: BillingInterval = body.interval === 'yearly' ? 'yearly' : 'monthly';
-            const newBasePriceId = getPriceId(body.tier, planType, billingInterval) || tierDef.priceId;
+            let newBasePriceId = getPriceId(body.tier, planType, billingInterval);
+            if (!newBasePriceId && billingInterval === 'yearly') {
+                return NextResponse.json({ error: 'Yearly pricing is not yet available for this plan. Please choose monthly billing.' }, { status: 400 });
+            }
+            newBasePriceId = newBasePriceId || tierDef.priceId;
             const newMeteredPriceId = getMeteredPriceId();
 
             const currentSub = await stripe.subscriptions.retrieve(agency.subscription_id);

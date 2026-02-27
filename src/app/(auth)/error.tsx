@@ -29,12 +29,10 @@ export default function AuthError({
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {error.message && (
-                        <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                            <p className="text-sm font-mono text-muted-foreground break-all">
-                                {error.message}
-                            </p>
-                        </div>
+                    {error.digest && (
+                        <p className="text-xs text-center text-muted-foreground">
+                            Error ID: {error.digest}
+                        </p>
                     )}
                     <div className="flex gap-3 justify-center">
                         <Button variant="outline" onClick={reset}>

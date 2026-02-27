@@ -146,6 +146,7 @@ export function paymentReceivedEmail(params: {
     const safeUserName = escapeHtml(userName);
     const safePlanName = escapeHtml(planName);
     const safeAmount = escapeHtml(amount);
+    const safeInvoiceUrl = invoiceUrl ? escapeHtml(invoiceUrl) : undefined;
 
     return {
         subject: `Payment received — ${APP_NAME} ${planName}`,
@@ -154,11 +155,11 @@ export function paymentReceivedEmail(params: {
             <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.6;">
                 Hi ${safeUserName}, we&rsquo;ve received your payment of <strong>${safeAmount}</strong> for the <strong>${safePlanName}</strong> plan.
             </p>
-            ${invoiceUrl ? `
+            ${safeInvoiceUrl ? `
             <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
                 <tr>
                     <td style="background-color:#f1f5f9;border-radius:8px;padding:12px 24px;border:1px solid #e2e8f0;">
-                        <a href="${invoiceUrl}" style="color:#0f172a;font-size:14px;font-weight:500;text-decoration:none;display:inline-block;">
+                        <a href="${safeInvoiceUrl}" style="color:#0f172a;font-size:14px;font-weight:500;text-decoration:none;display:inline-block;">
                             View invoice &rarr;
                         </a>
                     </td>
