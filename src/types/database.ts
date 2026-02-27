@@ -35,7 +35,6 @@ export interface Agency {
     subscription_cancel_at_period_end?: boolean;
     // Plan type (self_service or managed)
     plan_type?: PlanType;
-    metered_subscription_item_id?: string;
     // Stripe Connect (agency bills their own clients)
     stripe_connect_account_id?: string;
     stripe_connect_onboarding_complete?: boolean;

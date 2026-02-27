@@ -41,13 +41,10 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     const supabase = createServiceClient();
     const customerId = subscription.customer as string;
 
-    // Find the base item (non-metered) and metered item separately
+    // Find the base item (non-metered) — metered billing is handled via Stripe Meters, not subscription items
     const baseItem = subscription.items.data.find(item =>
         !item.price.recurring || item.price.recurring.usage_type !== 'metered'
     ) || subscription.items.data[0];
-    const meteredItem = subscription.items.data.find(item =>
-        item.price.recurring?.usage_type === 'metered'
-    );
 
     const periodStart = baseItem?.current_period_start
         ? new Date(baseItem.current_period_start * 1000).toISOString()
@@ -86,7 +83,6 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
                 subscription_current_period_end: periodEnd,
                 subscription_cancel_at_period_end: subscription.cancel_at_period_end,
                 plan_type: planType,
-                metered_subscription_item_id: meteredItem?.id || null,
             })
             .eq('id', agencyId);
 
@@ -109,7 +105,6 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
             subscription_current_period_end: periodEnd,
             subscription_cancel_at_period_end: subscription.cancel_at_period_end,
             plan_type: planType,
-            metered_subscription_item_id: meteredItem?.id || null,
         })
         .eq('id', agency.id);
 
@@ -146,7 +141,6 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
             subscription_current_period_start: null,
             subscription_current_period_end: null,
             subscription_cancel_at_period_end: false,
-            metered_subscription_item_id: null,
         })
         .eq('id', agency.id);
 

@@ -476,17 +476,17 @@ export async function POST(request: NextRequest) {
                 try {
                     const { data: agencyRow } = await supabase
                         .from('agencies')
-                        .select('metered_subscription_item_id')
+                        .select('stripe_customer_id')
                         .eq('id', agent.agency_id)
                         .single();
 
-                    if (agencyRow?.metered_subscription_item_id) {
+                    if (agencyRow?.stripe_customer_id) {
                         const { reportMeteredUsage } = await import('@/lib/billing/metered');
                         await reportMeteredUsage({
-                            subscriptionItemId: agencyRow.metered_subscription_item_id,
+                            stripeCustomerId: agencyRow.stripe_customer_id,
                             minutes: durationSeconds / 60,
                             timestamp: Math.floor(new Date(endedAt || Date.now()).getTime() / 1000),
-                            idempotencyKey: `vapi_call_${call.id}`,
+                            identifier: `vapi_call_${call.id}`,
                         });
                     }
                 } catch (err) {
