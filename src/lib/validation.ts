@@ -18,10 +18,16 @@ export function isValidUuid(value: string): boolean {
 /**
  * Safely parse JSON from a request body.
  * Returns the parsed object on success, or a 400 NextResponse on malformed JSON.
+ *
+ * The generic type parameter allows call sites to specify an expected body shape
+ * (e.g., `safeParseJson<{ name: string }>(request)`). When omitted, the default
+ * `Record<string, unknown>` is used — callers must then narrow or assert field
+ * types after runtime validation.
  */
-export async function safeParseJson(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function safeParseJson<T = Record<string, any>>(
     request: Request,
-) {
+): Promise<T | NextResponse> {
     try {
         return await request.json();
     } catch {

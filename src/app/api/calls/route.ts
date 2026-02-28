@@ -25,7 +25,10 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
     const parsedLimit = parseInt(searchParams.get('limit') || '50');
     const limit = Math.min(isNaN(parsedLimit) || parsedLimit < 1 ? 50 : parsedLimit, 100);
     const parsedOffset = parseInt(searchParams.get('offset') || '0');
-    const offset = Math.min(Math.max(isNaN(parsedOffset) ? 0 : parsedOffset, 0), 10_000);
+    const offset = Math.max(isNaN(parsedOffset) ? 0 : parsedOffset, 0);
+    if (offset > 10_000) {
+        return badRequest('Offset exceeds maximum of 10,000. Please narrow your search using filters.');
+    }
 
     const supabase = await createClient();
 

@@ -18,6 +18,11 @@ AS $$
 DECLARE
     result JSONB;
 BEGIN
+    -- Defense-in-depth: validate p_days even though the API layer checks 1-365
+    IF p_days < 1 OR p_days > 365 THEN
+        RAISE EXCEPTION 'p_days must be between 1 and 365, got %', p_days;
+    END IF;
+
     WITH filtered_calls AS (
         SELECT
             c.id,
