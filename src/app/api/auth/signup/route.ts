@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     try {
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
-        const { email, password, fullName, agencyName } = bodyOrError as Record<string, any>;
+        const { email, password, fullName, agencyName } = bodyOrError;
 
         if (!email || !password || !fullName || !agencyName) {
             return NextResponse.json(

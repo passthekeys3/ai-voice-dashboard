@@ -21,7 +21,7 @@ export function isValidUuid(value: string): boolean {
  */
 export async function safeParseJson(
     request: Request,
-): Promise<Record<string, unknown> | NextResponse> {
+) {
     try {
         return await request.json();
     } catch {

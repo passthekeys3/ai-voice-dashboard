@@ -52,8 +52,7 @@ export async function POST(request: NextRequest) {
 
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
-        const body = bodyOrError as Record<string, any>;
-        const { name, description, traits } = body;
+        const { name, description, traits } = bodyOrError;
 
         if (!name || !name.trim()) {
             return NextResponse.json({ error: 'Name is required' }, { status: 400 });

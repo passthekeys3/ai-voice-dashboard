@@ -19,7 +19,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { TestTube2, MoreHorizontal, Trash2, Bot, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { TestTube2, MoreHorizontal, Trash2, Bot, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import type { TestSuite, TestRun } from '@/types';
 

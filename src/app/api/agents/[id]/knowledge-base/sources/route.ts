@@ -26,8 +26,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
-        const body = bodyOrError as Record<string, any>;
-        const { type, title, content, url, enableAutoRefresh } = body;
+        const { type, title, content, url, enableAutoRefresh } = bodyOrError;
 
         const supabase = createServiceClient();
 

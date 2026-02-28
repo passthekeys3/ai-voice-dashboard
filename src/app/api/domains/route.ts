@@ -86,8 +86,7 @@ export async function POST(request: NextRequest) {
 
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
-        const body = bodyOrError as Record<string, any>;
-        const { custom_domain, slug } = body;
+        const { custom_domain, slug } = bodyOrError;
 
         const supabase = await createClient();
 

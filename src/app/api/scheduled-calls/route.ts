@@ -98,8 +98,7 @@ export async function POST(request: NextRequest) {
 
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
-        const body = bodyOrError as Record<string, any>;
-        const { agent_id, to_number, contact_name, scheduled_at, notes, metadata } = body;
+        const { agent_id, to_number, contact_name, scheduled_at, notes, metadata } = bodyOrError;
 
         if (!agent_id) {
             return NextResponse.json({ error: 'Agent is required' }, { status: 400 });

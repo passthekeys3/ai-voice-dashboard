@@ -75,8 +75,7 @@ export async function POST(request: NextRequest) {
 
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
-        const body = bodyOrError as Record<string, any>;
-        const { area_code, agent_id, provider: requestedProvider } = body;
+        const { area_code, agent_id, provider: requestedProvider } = bodyOrError;
 
         if (!area_code) {
             return NextResponse.json({ error: 'Area code is required' }, { status: 400 });

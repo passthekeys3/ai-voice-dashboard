@@ -59,7 +59,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
-        const body = bodyOrError as Record<string, any>;
+        const body = bodyOrError;
         const supabase = await createClient();
 
         // Verify ownership

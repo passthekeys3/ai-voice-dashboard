@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
 
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
-        const body = bodyOrError as Record<string, any>;
         const {
             name,
             provider: requestedProvider,
@@ -31,7 +30,7 @@ export async function POST(request: NextRequest) {
             first_message,
             client_id,
             phone_number_id,
-        } = body;
+        } = bodyOrError;
 
         if (!name?.trim()) {
             return NextResponse.json({ error: 'Agent name is required' }, { status: 400 });

@@ -294,7 +294,7 @@ export function TestSuiteEditor({ suite, personas }: TestSuiteEditorProps) {
             // Fallback to full page reload
             router.refresh();
         }
-    }, [suite.id]);
+    }, [suite.id, router]);
 
     const hasUnsavedCases = cases.some((c) => c.isDirty);
     const activeCount = cases.filter((c) => c.is_active && !c.isNew).length;
