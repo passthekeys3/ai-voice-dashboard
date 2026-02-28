@@ -36,7 +36,7 @@ import {
 import { toast } from '@/lib/toast';
 import type { ConnectionStatus as ConnectionStatusType } from '@/types/realtime';
 import { createClient } from '@/lib/supabase/client';
-import { parseTranscript } from '@/lib/utils/transcript';
+
 
 interface TranscriptLine {
     speaker: 'agent' | 'user';

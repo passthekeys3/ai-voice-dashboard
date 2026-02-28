@@ -118,7 +118,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
 
     // Data from API
     const [resolved, setResolved] = useState<Record<string, unknown> | null>(null);
-    const [clientOverrides, setClientOverrides] = useState<Record<string, unknown> | null>(null);
+    const [_clientOverrides, setClientOverrides] = useState<Record<string, unknown> | null>(null);
     const [source, setSource] = useState<Partial<Record<string, IntegrationSource>>>({});
 
     // Dialog state

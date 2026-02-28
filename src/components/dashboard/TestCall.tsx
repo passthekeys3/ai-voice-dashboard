@@ -87,7 +87,7 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
 
         const result = await response.json();
         const accessToken = result.data?.access_token;
-        const callId = result.data?.call_id;
+        const _callId = result.data?.call_id;
 
         if (!accessToken) {
             throw new Error('No access token received from server');

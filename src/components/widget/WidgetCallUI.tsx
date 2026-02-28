@@ -254,6 +254,7 @@ export function WidgetCallUI({ agentId, agentName, provider, widgetConfig }: Wid
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {/* Avatar */}
                     {widgetConfig.avatar_url ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
                         <img
                             src={widgetConfig.avatar_url}
                             alt={agentName}
@@ -347,6 +348,7 @@ export function WidgetCallUI({ agentId, agentName, provider, widgetConfig }: Wid
                     }}>
                         {/* Agent Avatar (large) */}
                         {widgetConfig.avatar_url ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
                             <img
                                 src={widgetConfig.avatar_url}
                                 alt={agentName}

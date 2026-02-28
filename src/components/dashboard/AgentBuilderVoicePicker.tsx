@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Play, Pause, Check, Search, ChevronDown, ChevronUp, Volume2, Loader2 } from 'lucide-react';
+import { Play, Pause, Check, Search, ChevronUp, Volume2, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import type { Voice } from '@/lib/agent-builder/types';

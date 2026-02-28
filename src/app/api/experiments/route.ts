@@ -98,9 +98,7 @@ export async function POST(request: NextRequest) {
 
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const body = bodyOrError as Record<string, any>;
-        const { name, description, agent_id, goal, variants } = body;
+        const { name, description, agent_id, goal, variants } = bodyOrError;
 
         if (!name || typeof name !== 'string') {
             return NextResponse.json({ error: 'Name is required' }, { status: 400 });

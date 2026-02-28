@@ -68,7 +68,7 @@ export function TierGate({ currentTier, requiredFeature, children, label }: Tier
  * Standalone upgrade card — renders the locked card directly without needing children.
  * Use this inside components where the tier check is done separately (e.g., after hooks).
  */
-export function TierGateCard({ currentTier, requiredFeature, label }: Omit<TierGateProps, 'children'>) {
+export function TierGateCard({ currentTier: _currentTier, requiredFeature, label }: Omit<TierGateProps, 'children'>) {
     const minTier = minimumTierForFeature(requiredFeature);
     const displayLabel = label || featureLabel(requiredFeature);
 

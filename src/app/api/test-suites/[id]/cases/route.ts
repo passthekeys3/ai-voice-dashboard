@@ -88,7 +88,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
-        const body = bodyOrError as Record<string, any>;
+        const body = bodyOrError;
 
         // Support batch creation (array) or single creation (object)
         const casesToCreate = Array.isArray(body) ? body : [body];
