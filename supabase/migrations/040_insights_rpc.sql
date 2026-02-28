@@ -106,22 +106,25 @@ BEGIN
 
     -- Agent performance
     -- Sentiment scoring matches JS: positive=1.0, negative=0.0, else=0.5
-    -- (line 220-222: includes('positive') → +1, includes('neutral') || !includes('negative') → +0.5, else → 0)
+    -- Only include calls with actual sentiment data in the average to avoid skew
     agent_perf AS (
         SELECT
             agent_id,
             agent_name,
             COUNT(*)::INT AS call_count,
             ROUND(AVG(duration_seconds))::INT AS avg_duration,
-            ROUND(
-                AVG(
-                    CASE
-                        WHEN LOWER(sentiment) LIKE '%positive%' THEN 1.0
-                        WHEN LOWER(sentiment) LIKE '%negative%' THEN 0.0
-                        ELSE 0.5
-                    END
-                ) * 100
-            )::INT AS avg_sentiment,
+            COALESCE(
+                ROUND(
+                    AVG(
+                        CASE
+                            WHEN LOWER(sentiment) LIKE '%positive%' THEN 1.0
+                            WHEN LOWER(sentiment) LIKE '%negative%' THEN 0.0
+                            ELSE 0.5
+                        END
+                    ) FILTER (WHERE sentiment IS NOT NULL AND sentiment != '') * 100
+                )::INT,
+                50
+            ) AS avg_sentiment,
             COALESCE(
                 ROUND(AVG(conversion_score) FILTER (WHERE conversion_score IS NOT NULL))::INT,
                 0

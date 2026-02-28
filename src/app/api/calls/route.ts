@@ -103,7 +103,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
         // Commas separate conditions and parentheses form nested expressions in PostgREST syntax.
         // Also escape SQL LIKE wildcards (%, _) to prevent unintended pattern matching.
         const sanitizedSearch = search
-            .replace(/[,()]/g, '')
+            .replace(/[,().]/g, '')
             .replace(/[%_\\]/g, c => `\\${c}`);
         if (sanitizedSearch) {
             // Keep ilike for short indexed fields (phone numbers, status)

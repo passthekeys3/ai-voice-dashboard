@@ -201,13 +201,17 @@ export function TestSuiteEditor({ suite, personas }: TestSuiteEditorProps) {
         if (!confirm('Delete this test case?')) return;
 
         try {
-            await fetch(`/api/test-suites/${suite.id}/cases/${tc.id}`, {
+            const res = await fetch(`/api/test-suites/${suite.id}/cases/${tc.id}`, {
                 method: 'DELETE',
             });
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || 'Failed to delete test case');
+            }
             setCases((prev) => prev.filter((_, i) => i !== index));
             toast.success('Test case deleted');
-        } catch {
-            toast.error('Failed to delete test case');
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to delete test case');
         }
     };
 

@@ -227,6 +227,7 @@ export async function GET(request: NextRequest) {
                 'Content-Type': 'text/csv',
                 'Content-Disposition': `attachment; filename="calls-export-${new Date().toISOString().split('T')[0]}.csv"`,
                 'X-Content-Type-Options': 'nosniff',
+                'Cache-Control': 'no-store, no-cache, must-revalidate',
             },
         });
     } catch (error) {
