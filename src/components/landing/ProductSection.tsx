@@ -1,10 +1,27 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useInView } from '@/hooks/useInView';
 import { BuilderMockup } from './mockups/BuilderMockup';
-import { AnalyticsMockup } from './mockups/AnalyticsMockup';
 import { WorkflowsMockup } from './mockups/WorkflowsMockup';
 import { PortalMockup } from './mockups/PortalMockup';
+
+const AnalyticsMockup = dynamic(
+    () => import('./mockups/AnalyticsMockup').then(mod => ({ default: mod.AnalyticsMockup })),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="p-3 space-y-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="rounded-lg border border-border bg-card h-16 animate-pulse" />
+                    ))}
+                </div>
+                <div className="rounded-lg border border-border bg-card h-[140px] animate-pulse" />
+            </div>
+        ),
+    }
+);
 
 interface ProductSectionProps {
     label: string;

@@ -15,7 +15,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Loader2, TestTube2, Bot } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 interface Agent {
     id: string;
@@ -88,12 +88,12 @@ export default function NewTestSuitePage() {
 
     return (
         <div className="flex flex-col h-full">
-            <div className="border-b px-6 py-4">
+            <header className="flex h-16 flex-shrink-0 items-center backdrop-blur-sm bg-white/80 dark:bg-slate-950/80 border-b border-slate-200/50 dark:border-slate-800/50 px-4 sm:px-6 relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-slate-300 after:to-transparent dark:after:via-slate-700">
                 <h1 className="text-lg font-semibold flex items-center gap-2">
                     <TestTube2 className="h-5 w-5" />
                     New Test Suite
                 </h1>
-            </div>
+            </header>
 
             <div className="flex-1 p-6 overflow-auto">
                 <div className="max-w-2xl mx-auto">

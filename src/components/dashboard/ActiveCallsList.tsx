@@ -149,7 +149,7 @@ export function ActiveCallsList() {
                             </>
                         ) : (
                             <>
-                                <span className="h-3 w-3 rounded-full bg-gray-300"></span>
+                                <span className="h-3 w-3 rounded-full bg-slate-300 dark:bg-slate-600"></span>
                                 <span className="text-muted-foreground">No active calls</span>
                             </>
                         )}

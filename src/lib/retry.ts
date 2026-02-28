@@ -20,6 +20,8 @@ export interface RetryOptions {
 }
 
 const DEFAULT_RETRYABLE_STATUSES = [429, 500, 502, 503, 504];
+/** Default timeout for fetchWithRetry when no signal is provided (30s) */
+const DEFAULT_FETCH_TIMEOUT = 30_000;
 
 /**
  * Execute an async function with exponential backoff retries.
@@ -91,8 +93,11 @@ export async function fetchWithRetry(
 ): Promise<Response> {
     const retryableStatuses = options.retryableStatuses ?? DEFAULT_RETRYABLE_STATUSES;
 
+    // Apply a default timeout if the caller didn't supply an AbortSignal
+    const fetchInit = init.signal ? init : { ...init, signal: AbortSignal.timeout(DEFAULT_FETCH_TIMEOUT) };
+
     return withRetry(async () => {
-        const response = await fetch(url, init);
+        const response = await fetch(url, fetchInit);
         if (!response.ok && retryableStatuses.includes(response.status)) {
             throw new HttpRetryError(response.status, url);
         }

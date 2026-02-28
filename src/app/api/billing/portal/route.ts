@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, isBillingAdmin } from '@/lib/auth';
 import { getTierFromPriceId, getTierDefinition, getPerMinuteRate } from '@/lib/billing/tiers';
-
-function getStripe() {
-    if (!process.env.STRIPE_SECRET_KEY) {
-        throw new Error('STRIPE_SECRET_KEY not configured');
-    }
-    return new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2026-01-28.clover',
-    });
-}
+import { getStripe } from '@/lib/stripe';
 
 // POST /api/billing/portal - Create Stripe customer portal session
 export async function POST(request: NextRequest) {
@@ -22,7 +14,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Only agency admins can access billing portal
-        if (!['agency_admin'].includes(user.profile.role)) {
+        if (!isBillingAdmin(user)) {
             return NextResponse.json({ error: 'Only agency admins can access billing' }, { status: 403 });
         }
 
@@ -87,7 +79,7 @@ export async function GET(_request: NextRequest) {
         }
 
         // Only agency admins can view billing details
-        if (!['agency_admin'].includes(user.profile.role)) {
+        if (!isBillingAdmin(user)) {
             return NextResponse.json({ error: 'Only agency admins can access billing' }, { status: 403 });
         }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
 import { verifyDomainOnVercel, isVercelConfigured } from '@/lib/vercel-domains';
 import dns from 'dns';
 import { promisify } from 'util';
@@ -89,6 +90,15 @@ export async function POST() {
         // Only agency admins can verify domains
         if (!isAgencyAdmin(user)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // ---- Tier gate: Custom domains require Growth+ ----
+        const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+        if (!tierInfo || !hasFeature(tierInfo.tier, 'white_label')) {
+            return NextResponse.json(
+                { error: 'Custom domains require a Growth plan or higher. Please upgrade.' },
+                { status: 403 }
+            );
         }
 
         const supabase = await createClient();
@@ -208,6 +218,15 @@ export async function GET() {
         // Only agency admins can check verification status
         if (!isAgencyAdmin(user)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // ---- Tier gate: Custom domains require Growth+ ----
+        const getTierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+        if (!getTierInfo || !hasFeature(getTierInfo.tier, 'white_label')) {
+            return NextResponse.json(
+                { error: 'Custom domains require a Growth plan or higher. Please upgrade.' },
+                { status: 403 }
+            );
         }
 
         const supabase = await createClient();

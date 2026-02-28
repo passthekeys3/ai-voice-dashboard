@@ -101,8 +101,23 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
     if (search) {
         // Sanitize search to prevent PostgREST filter injection via .or() string interpolation.
         // Commas separate conditions and parentheses form nested expressions in PostgREST syntax.
-        const sanitizedSearch = search.replace(/[,()]/g, '');
+        // Also escape SQL LIKE wildcards (%, _) to prevent unintended pattern matching.
+        const sanitizedSearch = search
+            .replace(/[,()]/g, '')
+            .replace(/[%_\\]/g, c => `\\${c}`);
         if (sanitizedSearch) {
+            // Keep ilike for short indexed fields (phone numbers, status)
+            const orConditions = [
+                `from_number.ilike.%${sanitizedSearch}%`,
+                `to_number.ilike.%${sanitizedSearch}%`,
+                `status.ilike.%${sanitizedSearch}%`,
+            ];
+
+            // Full-text search on transcript using tsvector + GIN index
+            // plfts uses plainto_tsquery which handles natural language input
+            // and automatically ANDs multiple terms (no manual tsquery building needed)
+            orConditions.push(`transcript_search.plfts.${sanitizedSearch}`);
+
             // Find agents matching the search term (for agent name search)
             const matchingAgentIds = agentIds
                 ? (await supabase
@@ -114,10 +129,10 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
                 : [];
 
             if (matchingAgentIds.length > 0) {
-                query = query.or(`from_number.ilike.%${sanitizedSearch}%,to_number.ilike.%${sanitizedSearch}%,status.ilike.%${sanitizedSearch}%,transcript.ilike.%${sanitizedSearch}%,agent_id.in.(${matchingAgentIds.join(',')})`);
-            } else {
-                query = query.or(`from_number.ilike.%${sanitizedSearch}%,to_number.ilike.%${sanitizedSearch}%,status.ilike.%${sanitizedSearch}%,transcript.ilike.%${sanitizedSearch}%`);
+                orConditions.push(`agent_id.in.(${matchingAgentIds.join(',')})`);
             }
+
+            query = query.or(orConditions.join(','));
         }
     }
 

@@ -3,6 +3,70 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getUserPermissions } from '@/lib/permissions';
 
+const BATCH_SIZE = 1000;
+const MAX_ROWS = 100000;
+
+const CSV_SELECT = `
+    id,
+    external_id,
+    status,
+    direction,
+    duration_seconds,
+    cost_cents,
+    from_number,
+    to_number,
+    summary,
+    sentiment,
+    started_at,
+    ended_at,
+    agent:agents(name),
+    client:clients(name)
+`;
+
+const CSV_HEADERS = [
+    'Call ID',
+    'Status',
+    'Direction',
+    'Duration (seconds)',
+    'Cost ($)',
+    'From Number',
+    'To Number',
+    'Agent',
+    'Client',
+    'Sentiment',
+    'Summary',
+    'Started At',
+    'Ended At',
+];
+
+// CSV escape function - prevents formula injection and handles special characters
+function escapeCSV(value: string | number | null | undefined): string {
+    if (value === null || value === undefined) return '';
+    const str = String(value);
+
+    // Prevent CSV formula injection by prefixing formula characters with single quote
+    // Excel formulas start with: = + - @ or tab/carriage return
+    let escaped = str;
+    if (/^[=+\-@\t\r]/.test(escaped)) {
+        escaped = "'" + escaped;
+    }
+
+    // Escape quotes and wrap in quotes if contains special characters
+    if (escaped.includes(',') || escaped.includes('"') || escaped.includes('\n') || escaped.includes('\r')) {
+        escaped = '"' + escaped.replace(/"/g, '""') + '"';
+    }
+
+    return escaped;
+}
+
+interface ExportFilters {
+    agentIds: string[];
+    clientId?: string;
+    startDate?: string;
+    endDate?: string;
+    agentId?: string;
+}
+
 export async function GET(request: NextRequest) {
     try {
         const user = await getCurrentUser();
@@ -21,152 +85,148 @@ export async function GET(request: NextRequest) {
         const supabase = await createClient();
         const { searchParams } = new URL(request.url);
 
-        const startDate = searchParams.get('start');
-        const endDate = searchParams.get('end');
-        const agentId = searchParams.get('agent_id');
+        const startDate = searchParams.get('start') || undefined;
+        const endDate = searchParams.get('end') || undefined;
+        const agentId = searchParams.get('agent_id') || undefined;
 
-        // Build query
-        let query = supabase
-            .from('calls')
-            .select(`
-                id,
-                external_id,
-                status,
-                direction,
-                duration_seconds,
-                cost_cents,
-                from_number,
-                to_number,
-                summary,
-                sentiment,
-                started_at,
-                ended_at,
-                agent:agents(name),
-                client:clients(name)
-            `)
-            .order('started_at', { ascending: false });
-
-        // Agency scope
-        // Fetch agent IDs for the agency (used for scoping and validation)
+        // Agency scope — fetch agent IDs for scoping and validation
         const { data: agentIdsData } = await supabase
             .from('agents')
             .select('id')
             .eq('agency_id', user.agency.id);
         const agentIds = agentIdsData?.map(a => a.id) || [];
 
+        // Determine client scoping
+        let clientId: string | undefined;
         if (isAgencyAdmin(user)) {
             // SECURITY: If no agents exist, return empty CSV to prevent unscoped query
             if (agentIds.length === 0) {
-                const emptyHeaders = 'Date,Agent,Direction,Status,Duration,Phone,Summary\n';
-                return new Response(emptyHeaders, {
-                    headers: { 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename="calls-export.csv"' },
+                return new Response(CSV_HEADERS.join(',') + '\n', {
+                    headers: {
+                        'Content-Type': 'text/csv',
+                        'Content-Disposition': 'attachment; filename="calls-export.csv"',
+                    },
                 });
             }
-            query = query.in('agent_id', agentIds);
         } else if (user.client) {
-            // Client sees only their calls
-            query = query.eq('client_id', user.client.id);
+            clientId = user.client.id;
         } else {
             // Non-admin without client — no calls to export
-            const emptyHeaders = 'Date,Agent,Direction,Status,Duration,Phone,Summary\n';
-            return new Response(emptyHeaders, {
-                headers: { 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename="calls-export.csv"' },
+            return new Response(CSV_HEADERS.join(',') + '\n', {
+                headers: {
+                    'Content-Type': 'text/csv',
+                    'Content-Disposition': 'attachment; filename="calls-export.csv"',
+                },
             });
         }
 
-        // Date filters
-        if (startDate) {
-            query = query.gte('started_at', startDate);
-        }
-        if (endDate) {
-            query = query.lte('started_at', endDate);
-        }
+        // Validate agent_id belongs to agency
         if (agentId) {
             if (!agentIds.includes(agentId)) {
                 return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
             }
-            query = query.eq('agent_id', agentId);
         }
 
-        // Limit to prevent huge exports
-        query = query.limit(10000);
+        const filters: ExportFilters = { agentIds, clientId, startDate, endDate, agentId };
+        const encoder = new TextEncoder();
 
-        const { data: calls, error } = await query;
+        // Stream CSV in batches to avoid building the entire file in memory
+        const stream = new ReadableStream({
+            async start(controller) {
+                try {
+                    // Emit CSV header row
+                    controller.enqueue(encoder.encode(CSV_HEADERS.join(',') + '\n'));
 
-        if (error) {
-            console.error('Error fetching calls for export:', error.code);
-            return NextResponse.json({ error: 'Failed to export calls' }, { status: 500 });
-        }
+                    let offset = 0;
+                    let totalFetched = 0;
 
-        // CSV escape function - prevents formula injection and handles special characters
-        const escapeCSV = (value: string | number | null | undefined): string => {
-            if (value === null || value === undefined) return '';
-            const str = String(value);
+                    while (totalFetched < MAX_ROWS) {
+                        // Build batch query with all filters
+                        let batchQuery = supabase
+                            .from('calls')
+                            .select(CSV_SELECT)
+                            .order('started_at', { ascending: false })
+                            .range(offset, offset + BATCH_SIZE - 1);
 
-            // Prevent CSV formula injection by prefixing formula characters with single quote
-            // Excel formulas start with: = + - @ or tab/carriage return
-            let escaped = str;
-            if (/^[=+\-@\t\r]/.test(escaped)) {
-                escaped = "'" + escaped;
-            }
+                        // Apply filters
+                        batchQuery = batchQuery.in('agent_id', filters.agentIds);
+                        if (filters.clientId) {
+                            batchQuery = batchQuery.eq('client_id', filters.clientId);
+                        }
+                        if (filters.startDate) {
+                            batchQuery = batchQuery.gte('started_at', filters.startDate);
+                        }
+                        if (filters.endDate) {
+                            batchQuery = batchQuery.lte('started_at', filters.endDate);
+                        }
+                        if (filters.agentId) {
+                            batchQuery = batchQuery.eq('agent_id', filters.agentId);
+                        }
 
-            // Escape quotes and wrap in quotes if contains special characters
-            if (escaped.includes(',') || escaped.includes('"') || escaped.includes('\n') || escaped.includes('\r')) {
-                escaped = '"' + escaped.replace(/"/g, '""') + '"';
-            }
+                        const { data: calls, error } = await batchQuery;
 
-            return escaped;
-        };
+                        if (error) {
+                            console.error('Error fetching batch for export:', error.code);
+                            // Write an error comment row so the user knows the export is incomplete
+                            controller.enqueue(encoder.encode('# ERROR: Export incomplete due to a database error\n'));
+                            break;
+                        }
 
-        // Generate CSV
-        const headers = [
-            'Call ID',
-            'Status',
-            'Direction',
-            'Duration (seconds)',
-            'Cost ($)',
-            'From Number',
-            'To Number',
-            'Agent',
-            'Client',
-            'Sentiment',
-            'Summary',
-            'Started At',
-            'Ended At',
-        ];
+                        if (!calls || calls.length === 0) {
+                            break; // No more rows
+                        }
 
-        const csvRows = [headers.join(',')];
+                        // Build CSV chunk for this batch
+                        const chunk = calls.map(call => {
+                            const agentName = (call.agent as unknown as { name: string } | null)?.name || '';
+                            const clientName = (call.client as unknown as { name: string } | null)?.name || '';
 
-        for (const call of calls || []) {
-            // Handle joined relations - cast through unknown to handle Supabase type inference
-            const agentName = (call.agent as unknown as { name: string } | null)?.name || '';
-            const clientName = (call.client as unknown as { name: string } | null)?.name || '';
+                            return [
+                                escapeCSV(call.external_id || call.id),
+                                escapeCSV(call.status),
+                                escapeCSV(call.direction),
+                                call.duration_seconds ?? '',
+                                call.cost_cents != null ? (call.cost_cents / 100).toFixed(2) : '0.00',
+                                escapeCSV(call.from_number),
+                                escapeCSV(call.to_number),
+                                escapeCSV(agentName),
+                                escapeCSV(clientName),
+                                escapeCSV(call.sentiment),
+                                escapeCSV(call.summary),
+                                escapeCSV(call.started_at),
+                                escapeCSV(call.ended_at),
+                            ].join(',');
+                        }).join('\n') + '\n';
 
-            const row = [
-                escapeCSV(call.external_id || call.id),
-                escapeCSV(call.status),
-                escapeCSV(call.direction),
-                call.duration_seconds ?? '',
-                call.cost_cents != null ? (call.cost_cents / 100).toFixed(2) : '0.00',
-                escapeCSV(call.from_number),
-                escapeCSV(call.to_number),
-                escapeCSV(agentName),
-                escapeCSV(clientName),
-                escapeCSV(call.sentiment),
-                escapeCSV(call.summary),
-                escapeCSV(call.started_at),
-                escapeCSV(call.ended_at),
-            ];
-            csvRows.push(row.join(','));
-        }
+                        controller.enqueue(encoder.encode(chunk));
 
-        const csv = csvRows.join('\n');
+                        totalFetched += calls.length;
+                        offset += BATCH_SIZE;
 
-        // Return as downloadable CSV
-        return new NextResponse(csv, {
+                        // If we got fewer than BATCH_SIZE, we've reached the end
+                        if (calls.length < BATCH_SIZE) {
+                            break;
+                        }
+                    }
+
+                    controller.close();
+                } catch (err) {
+                    console.error('Error streaming CSV export:', err instanceof Error ? err.message : 'Unknown error');
+                    try {
+                        controller.enqueue(encoder.encode('# ERROR: Export incomplete due to a server error\n'));
+                        controller.close();
+                    } catch {
+                        // Controller may already be closed
+                    }
+                }
+            },
+        });
+
+        return new Response(stream, {
             headers: {
                 'Content-Type': 'text/csv',
                 'Content-Disposition': `attachment; filename="calls-export-${new Date().toISOString().split('T')[0]}.csv"`,
+                'X-Content-Type-Options': 'nosniff',
             },
         });
     } catch (error) {

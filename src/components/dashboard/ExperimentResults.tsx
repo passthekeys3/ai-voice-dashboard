@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,13 +25,14 @@ interface ExperimentResultsProps {
 }
 
 const statusColors: Record<string, string> = {
-    draft: 'bg-gray-500',
+    draft: 'bg-slate-500',
     running: 'bg-green-500',
     paused: 'bg-yellow-500',
     completed: 'bg-blue-500',
 };
 
 export function ExperimentResults({ experiment }: ExperimentResultsProps) {
+    const router = useRouter();
     const [updating, setUpdating] = useState(false);
 
     const variants = experiment.variants || [];
@@ -65,7 +67,7 @@ export function ExperimentResults({ experiment }: ExperimentResultsProps) {
                 const errData = await res.json().catch(() => ({}));
                 throw new Error(errData.error || 'Failed to update experiment');
             }
-            window.location.reload();
+            router.refresh();
         } catch (err) {
             console.error('Failed to update experiment:', err);
             alert(err instanceof Error ? err.message : 'Failed to update experiment');
@@ -102,7 +104,7 @@ export function ExperimentResults({ experiment }: ExperimentResultsProps) {
                 description: `"${leader.name}" prompt has been applied to the agent`,
             });
 
-            window.location.reload();
+            router.refresh();
         } catch (err) {
             console.error('Failed to promote winner:', err);
             toast.error('Failed to promote winner', {

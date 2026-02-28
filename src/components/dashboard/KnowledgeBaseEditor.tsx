@@ -268,6 +268,7 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
                                             size="icon"
                                             onClick={() => deleteSource(source.source_id)}
                                             disabled={deletingSource === source.source_id}
+                                            aria-label="Delete source"
                                         >
                                             {deletingSource === source.source_id ? (
                                                 <Loader2 className="h-4 w-4 animate-spin" />

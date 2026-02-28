@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 import { getBlandCall } from '@/lib/providers/bland';
+import { isValidUuid } from '@/lib/validation';
+
+const PROVIDER_API_TIMEOUT = 15_000;
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -17,6 +20,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id: callId } = await params;
+        if (!isValidUuid(callId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const providerHint = request.nextUrl.searchParams.get('provider') || 'retell';
         const supabase = await createClient();
 
@@ -80,6 +86,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 headers: {
                     'Authorization': `Bearer ${retellKey}`,
                 },
+                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
 
             if (!retellResponse.ok) {
@@ -137,6 +144,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
             const vapiResponse = await fetch(`https://api.vapi.ai/call/${callId}`, {
                 headers: { 'Authorization': `Bearer ${vapiKey}` },
+                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
 
             if (!vapiResponse.ok) {

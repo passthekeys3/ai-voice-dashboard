@@ -9,6 +9,7 @@ import { StripeConnectSection } from '@/components/dashboard/StripeConnectSectio
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUserPermissions } from '@/lib/permissions';
+import { getTierFromPriceId } from '@/lib/billing/tiers';
 import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = { title: 'Billing' };
@@ -129,7 +130,7 @@ export default async function BillingPage() {
                 {/* Stripe Connect — Client Billing */}
                 {isAdmin && (
                     <Suspense fallback={<SectionSkeleton />}>
-                        <StripeConnectSection />
+                        <StripeConnectSection currentTier={getTierFromPriceId(user.agency.subscription_price_id || '')?.tier ?? null} />
                     </Suspense>
                 )}
             </div>

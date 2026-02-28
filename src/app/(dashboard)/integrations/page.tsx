@@ -4,6 +4,7 @@ import { requireAgencyAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
 import { IntegrationsPage } from '@/components/dashboard/IntegrationsPage';
+import { getTierFromPriceId } from '@/lib/billing/tiers';
 
 export const metadata: Metadata = { title: 'Integrations' };
 
@@ -34,6 +35,10 @@ export default async function IntegrationsRoute() {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
 
+    // Resolve current tier for feature gating
+    const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+    const currentTier = tierInfo?.tier ?? null;
+
     return (
         <div className="flex flex-col h-full">
             <Header
@@ -55,6 +60,7 @@ export default async function IntegrationsRoute() {
                     apiConfig={apiConfig}
                     agents={agents || []}
                     appUrl={appUrl}
+                    currentTier={currentTier}
                 />
             </div>
         </div>

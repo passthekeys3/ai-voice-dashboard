@@ -4,6 +4,8 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { listBlandActiveCalls } from '@/lib/providers/bland';
 import { listVapiCalls } from '@/lib/providers/vapi';
 
+const PROVIDER_API_TIMEOUT = 15_000;
+
 // GET /api/calls/active - Get all active calls from all configured providers
 export async function GET(_request: NextRequest) {
     try {
@@ -86,6 +88,7 @@ export async function GET(_request: NextRequest) {
                         },
                         limit: 50,
                     }),
+                    signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                 });
 
                 if (retellResponse.ok) {
@@ -149,7 +152,10 @@ export async function GET(_request: NextRequest) {
                 );
 
                 if (vapiAgentExternalIds.size > 0) {
-                    // Vapi API doesn't support filtering by status, so fetch recent calls and filter
+                    // Vapi API doesn't support filtering by status, so fetch recent calls and filter.
+                    // NOTE: Limited to 100 most recent calls. For very high-volume agencies (100+
+                    // calls between active call start and this request), some active calls may be
+                    // missed from the dashboard. Full call tracking is handled by webhooks regardless.
                     const vapiCalls = await listVapiCalls(agency.vapi_api_key, { limit: 100 });
                     const activeCalls = vapiCalls.filter(
                         c => c.status === 'in-progress' && vapiAgentExternalIds.has(c.assistantId)

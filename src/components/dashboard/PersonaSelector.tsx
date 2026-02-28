@@ -39,16 +39,19 @@ export function PersonaSelector({ value, onChange, personas: externalPersonas }:
             return;
         }
 
+        const controller = new AbortController();
+
         async function fetchPersonas() {
             try {
                 setError(null);
-                const res = await fetch('/api/test-personas');
+                const res = await fetch('/api/test-personas', { signal: controller.signal });
                 if (!res.ok) {
                     throw new Error('Failed to load personas');
                 }
                 const data = await res.json();
                 if (data.data) setPersonas(data.data);
             } catch (err) {
+                if (err instanceof Error && err.name === 'AbortError') return;
                 console.error('Failed to load personas:', err);
                 setError('Could not load personas');
             } finally {
@@ -56,6 +59,7 @@ export function PersonaSelector({ value, onChange, personas: externalPersonas }:
             }
         }
         fetchPersonas();
+        return () => controller.abort();
     }, [externalPersonas]);
 
     const presets = personas.filter((p) => p.is_preset);

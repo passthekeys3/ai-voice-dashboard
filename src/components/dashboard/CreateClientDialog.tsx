@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,10 +22,11 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Plus, Loader2, Building2, Calendar, Clock, DollarSign } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import type { BillingType } from '@/types';
 
 export function CreateClientDialog() {
+    const router = useRouter();
     const [open, setOpen] = useState(false);
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -106,7 +108,7 @@ export function CreateClientDialog() {
             setOpen(false);
             resetForm();
             toast.success('Client created successfully');
-            window.location.reload();
+            router.refresh();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
@@ -147,6 +149,7 @@ export function CreateClientDialog() {
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="e.g., Acme Plumbing"
+                            maxLength={100}
                         />
                     </div>
 

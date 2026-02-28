@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +16,7 @@ import {
     Plug, Loader2, RotateCcw, Settings2, CheckCircle2,
     ArrowRight, MessageSquare, Key, Calendar,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import type { IntegrationSource } from '@/lib/integrations/resolve';
 
 /* ── Types ─────────────────────────────────────────────────────── */
@@ -111,6 +112,7 @@ const INTEGRATIONS: IntegrationMeta[] = [
 /* ── Component ─────────────────────────────────────────────────── */
 
 export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientIntegrationsEditorProps) {
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -196,7 +198,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
             toast.success('Integration settings saved');
             setEditingKey(null);
             await fetchIntegrations();
-            window.location.reload();
+            router.refresh();
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Failed to save');
         } finally {
@@ -213,7 +215,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
             if (!res.ok) throw new Error('Failed to reset');
             toast.success('Reset to agency default');
             await fetchIntegrations();
-            window.location.reload();
+            router.refresh();
         } catch {
             toast.error('Failed to reset integration');
         } finally {

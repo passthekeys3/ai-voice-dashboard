@@ -4,7 +4,7 @@ import { requireAuth } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
 import { AnalyticsCards } from '@/components/dashboard/AnalyticsCards';
-import { UsageChart } from '@/components/dashboard/UsageChart';
+import { UsageChart } from '@/components/dashboard/UsageChartLazy';
 import { CallsTable } from '@/components/dashboard/CallsTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getUserPermissions } from '@/lib/permissions';

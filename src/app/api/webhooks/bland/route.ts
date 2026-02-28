@@ -12,6 +12,7 @@ import { isValidWebhookUrl } from '@/lib/webhooks/validation';
 import { waitUntil } from '@vercel/functions';
 import crypto from 'crypto';
 import type { Workflow } from '@/types';
+const WEBHOOK_FWD_TIMEOUT = 10_000;
 
 // Max transcript length to store in DB (≈100k words — generous for any real call, prevents abuse)
 const MAX_TRANSCRIPT_LENGTH = 500_000;
@@ -73,6 +74,7 @@ async function forwardToWebhook(webhookUrl: string, callData: Record<string, unk
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(callData),
+            signal: AbortSignal.timeout(WEBHOOK_FWD_TIMEOUT),
         });
     } catch (err) {
         console.error('Failed to forward Bland webhook:', err instanceof Error ? err.message : 'Unknown error');
@@ -82,7 +84,13 @@ async function forwardToWebhook(webhookUrl: string, callData: Record<string, unk
 export async function POST(request: NextRequest) {
     try {
         const rawBody = await request.text();
-        const payload: BlandWebhookPayload = JSON.parse(rawBody);
+        let payload: BlandWebhookPayload;
+        try {
+            payload = JSON.parse(rawBody);
+        } catch {
+            console.error('[BLAND WEBHOOK] Invalid JSON payload');
+            return NextResponse.json({ received: true });
+        }
 
         const supabase = createServiceClient();
 
@@ -128,22 +136,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
-        // Deduplicate — skip events we've already processed
+        // Deduplicate — atomic INSERT rejects duplicates via primary key constraint
         const dedupKey = `bland:${payload.call_id}`;
-        const { data: existingEvent } = await supabase
+        const { error: dedupError } = await supabase
             .from('webhook_events')
-            .select('event_id')
-            .eq('event_id', dedupKey)
-            .single();
+            .insert({ event_id: dedupKey });
 
-        if (existingEvent) {
+        if (dedupError?.code === '23505') {
             return NextResponse.json({ received: true });
         }
-
-        await supabase.from('webhook_events').upsert(
-            { event_id: dedupKey },
-            { onConflict: 'event_id', ignoreDuplicates: true }
-        );
 
         // Convert Bland units
         const durationSeconds = payload.call_length

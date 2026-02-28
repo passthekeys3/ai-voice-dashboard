@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
 import { isValidCustomDomain } from '@/lib/getAgencyFromDomain';
 import { addDomainToVercel, removeDomainFromVercel, getDomainFromVercel, isVercelConfigured } from '@/lib/vercel-domains';
 import crypto from 'crypto';
+import { safeParseJson } from '@/lib/validation';
 
 // GET /api/domains - Get current domain configuration
 export async function GET() {
@@ -73,7 +75,18 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const body = await request.json();
+        // ---- Tier gate: Custom domains require Growth+ ----
+        const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+        if (!tierInfo || !hasFeature(tierInfo.tier, 'white_label')) {
+            return NextResponse.json(
+                { error: 'Custom domains require a Growth plan or higher. Please upgrade.' },
+                { status: 403 }
+            );
+        }
+
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        const body = bodyOrError as Record<string, any>;
         const { custom_domain, slug } = body;
 
         const supabase = await createClient();
@@ -131,7 +144,8 @@ export async function POST(request: NextRequest) {
                     vercelStatus = 'added';
                 } else {
                     console.warn(`[domains] Vercel add failed for ${custom_domain}: ${vercelResult.error}`);
-                    vercelStatus = `warning: ${vercelResult.error}`;
+                    // Return generic message to avoid leaking Vercel infrastructure details
+                    vercelStatus = 'warning: domain could not be added to hosting provider';
                 }
             }
 
@@ -200,6 +214,8 @@ export async function POST(request: NextRequest) {
 }
 
 // DELETE /api/domains - Remove custom domain
+// Intentionally NOT tier-gated: allow users who downgrade to remove
+// their custom domain rather than stranding them.
 export async function DELETE() {
     try {
         const user = await getCurrentUser();

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { detectTimezone, isWithinCallingWindow, getNextValidCallTime } from '@/lib/timezone/detector';
+import { isValidUuid, safeParseJson } from '@/lib/validation';
 import type { CallingWindowConfig } from '@/types';
 
 // GET /api/scheduled-calls - List scheduled calls
@@ -53,6 +54,19 @@ export async function GET(request: NextRequest) {
         }
 
         if (agentId) {
+            // Validate UUID format and verify agent belongs to this agency (defense-in-depth)
+            if (!isValidUuid(agentId)) {
+                return NextResponse.json({ error: 'Invalid agent_id format' }, { status: 400 });
+            }
+            const { data: agentCheck } = await supabase
+                .from('agents')
+                .select('id')
+                .eq('id', agentId)
+                .eq('agency_id', user.agency.id)
+                .single();
+            if (!agentCheck) {
+                return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+            }
             query = query.eq('agent_id', agentId);
         }
 
@@ -82,7 +96,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const body = await request.json();
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        const body = bodyOrError as Record<string, any>;
         const { agent_id, to_number, contact_name, scheduled_at, notes, metadata } = body;
 
         if (!agent_id) {
@@ -146,7 +162,7 @@ export async function POST(request: NextRequest) {
 
             // Check if the requested time falls within the calling window
             // For future-scheduled calls, check what the local time will be at the scheduled moment
-            if (!isWithinCallingWindow(tz, windowConfig)) {
+            if (!isWithinCallingWindow(tz, windowConfig, scheduledDate)) {
                 // Auto-delay to the next valid calling time
                 originalScheduledAt = scheduledDate.toISOString();
                 finalScheduledAt = getNextValidCallTime(

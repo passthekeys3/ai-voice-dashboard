@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
+import { isValidUuid } from '@/lib/validation';
 
 export async function GET(
     request: NextRequest,
@@ -14,6 +15,9 @@ export async function GET(
         }
 
         const { id } = await params;
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         const { data: agent, error } = await supabase
@@ -54,6 +58,9 @@ export async function PATCH(
         }
 
         const { id } = await params;
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const body = await request.json();
 
         // Validate webhook URL to prevent SSRF attacks
@@ -160,10 +167,8 @@ export async function DELETE(
         }
 
         const { id } = await params;
-
-        // Validate UUID format to prevent filter injection
-        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-            return NextResponse.json({ error: 'Invalid agent ID format' }, { status: 400 });
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
         }
 
         const supabase = await createClient();

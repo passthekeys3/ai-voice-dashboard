@@ -10,6 +10,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ExternalLink, Link2, Link2Off, AlertCircle, CheckCircle2, Loader2, Save } from 'lucide-react';
+import { TierGateCard } from '@/components/ui/tier-gate';
+import { hasFeature } from '@/lib/billing/tiers';
+import type { PlanTier } from '@/lib/billing/tiers';
 
 interface ConnectStatus {
     connected: boolean;
@@ -23,7 +26,7 @@ interface ConnectStatus {
     error?: string;
 }
 
-export function StripeConnectSection() {
+export function StripeConnectSection({ currentTier }: { currentTier?: PlanTier | null }) {
     const searchParams = useSearchParams();
     const [status, setStatus] = useState<ConnectStatus | null>(null);
     const [loading, setLoading] = useState(true);
@@ -54,9 +57,11 @@ export function StripeConnectSection() {
 
     // Fetch Connect status
     useEffect(() => {
+        const controller = new AbortController();
+
         async function fetchStatus() {
             try {
-                const response = await fetch('/api/billing/connect');
+                const response = await fetch('/api/billing/connect', { signal: controller.signal });
                 if (!response.ok) {
                     throw new Error('Failed to fetch Connect status');
                 }
@@ -65,7 +70,8 @@ export function StripeConnectSection() {
                 if (result.data?.platform_fee_percent !== undefined) {
                     setPlatformFee(String(result.data.platform_fee_percent));
                 }
-            } catch {
+            } catch (err) {
+                if (err instanceof Error && err.name === 'AbortError') return;
                 setError('Failed to load Stripe Connect status');
             } finally {
                 setLoading(false);
@@ -73,6 +79,7 @@ export function StripeConnectSection() {
         }
 
         fetchStatus();
+        return () => controller.abort();
     }, []);
 
     const handleSavePlatformFee = async () => {
@@ -187,6 +194,13 @@ export function StripeConnectSection() {
             setActionLoading(null);
         }
     };
+
+    // ---- Tier gate: Stripe Connect requires Growth+ ----
+    if (!currentTier || !hasFeature(currentTier, 'stripe_connect')) {
+        return (
+            <TierGateCard currentTier={currentTier ?? null} requiredFeature="stripe_connect" label="Stripe Connect Client Billing" />
+        );
+    }
 
     if (loading) {
         return (

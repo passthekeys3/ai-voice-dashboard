@@ -4,12 +4,12 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getTemplateById, getTemplateActions } from '@/lib/agent-builder/templates';
 import { publishRetellAgent } from '@/lib/providers/retell';
 import { resolveProviderApiKeys, autoSelectProvider } from '@/lib/providers/resolve-keys';
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isValidUuid } from '@/lib/validation';
 const MAX_NAME_LENGTH = 200;
 const MAX_PROMPT_LENGTH = 50000;
 const MAX_FIRST_MESSAGE_LENGTH = 1000;
 const MAX_VOICE_ID_LENGTH = 200;
+const PROVIDER_API_TIMEOUT = 15_000;
 
 /** Convert BCP 47 short codes to full locale for Retell (requires region suffix) */
 function toRetellLanguage(lang: string): string {
@@ -80,10 +80,10 @@ export async function POST(request: NextRequest) {
             : 'en';
 
         // Validate UUID format for IDs
-        if (client_id && (typeof client_id !== 'string' || !UUID_REGEX.test(client_id))) {
+        if (client_id && (typeof client_id !== 'string' || !isValidUuid(client_id))) {
             return NextResponse.json({ error: 'Invalid client ID format' }, { status: 400 });
         }
-        if (phone_number_id && (typeof phone_number_id !== 'string' || !UUID_REGEX.test(phone_number_id))) {
+        if (phone_number_id && (typeof phone_number_id !== 'string' || !isValidUuid(phone_number_id))) {
             return NextResponse.json({ error: 'Invalid phone number ID format' }, { status: 400 });
         }
 
@@ -153,6 +153,7 @@ export async function POST(request: NextRequest) {
                     model: 'gpt-4o',
                     start_speaker: 'agent',
                 }),
+                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
 
             if (!llmResponse.ok) {
@@ -184,6 +185,7 @@ export async function POST(request: NextRequest) {
                     webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`}/api/webhooks/retell`,
                     webhook_events: ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'],
                 }),
+                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
 
             if (!retellResponse.ok) {
@@ -226,6 +228,7 @@ export async function POST(request: NextRequest) {
                         ],
                     },
                 }),
+                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
 
             if (!vapiResponse.ok) {
@@ -252,6 +255,7 @@ export async function POST(request: NextRequest) {
                     name: safeName,
                     description: safeSystemPrompt,
                 }),
+                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
 
             if (!blandResponse.ok) {
@@ -313,6 +317,7 @@ export async function POST(request: NextRequest) {
                         body: JSON.stringify({
                             inbound_agent_id: externalId,
                         }),
+                        signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                     });
                     if (!phoneUpdateRes.ok) {
                         console.warn('Failed to update phone number in Retell:', phoneUpdateRes.status);
@@ -327,6 +332,7 @@ export async function POST(request: NextRequest) {
                         body: JSON.stringify({
                             assistantId: externalId,
                         }),
+                        signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                     });
                     if (!phoneUpdateRes.ok) {
                         console.warn('Failed to update phone number in Vapi:', phoneUpdateRes.status);

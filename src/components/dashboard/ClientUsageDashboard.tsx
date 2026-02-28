@@ -28,9 +28,11 @@ export function ClientUsageDashboard({ clientId }: ClientUsageDashboardProps) {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        const controller = new AbortController();
+
         async function fetchUsage() {
             try {
-                const res = await fetch(`/api/clients/${clientId}/usage`);
+                const res = await fetch(`/api/clients/${clientId}/usage`, { signal: controller.signal });
                 if (!res.ok) {
                     if (res.status === 400) return; // Not per-minute billing
                     throw new Error('Failed to fetch usage');
@@ -38,6 +40,7 @@ export function ClientUsageDashboard({ clientId }: ClientUsageDashboardProps) {
                 const json = await res.json();
                 setData(json);
             } catch (err) {
+                if (err instanceof Error && err.name === 'AbortError') return;
                 console.error('Error fetching usage:', err);
                 setError('Failed to load usage data');
             } finally {
@@ -46,6 +49,7 @@ export function ClientUsageDashboard({ clientId }: ClientUsageDashboardProps) {
         }
 
         fetchUsage();
+        return () => controller.abort();
     }, [clientId]);
 
     if (isLoading) {

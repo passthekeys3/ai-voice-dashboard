@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { purchaseBlandInboundNumber } from '@/lib/providers/bland';
+import { safeParseJson } from '@/lib/validation';
+import { PHONE_NUMBER_MONTHLY_COST_CENTS } from '@/lib/billing/tiers';
+
+const PROVIDER_API_TIMEOUT = 15_000;
 
 // GET /api/phone-numbers - List owned phone numbers
 export async function GET(_request: NextRequest) {
@@ -13,7 +17,7 @@ export async function GET(_request: NextRequest) {
 
         const supabase = await createClient();
 
-        const { data: phoneNumbers, error } = await supabase
+        let query = supabase
             .from('phone_numbers')
             .select(`
                 *,
@@ -22,7 +26,28 @@ export async function GET(_request: NextRequest) {
             `)
             .eq('agency_id', user.agency.id)
             .eq('status', 'active')
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .limit(200);
+
+        // Client-scoping: non-admin users only see phone numbers assigned to their client's agents
+        if (!isAgencyAdmin(user)) {
+            if (user.client) {
+                const { data: clientAgents } = await supabase
+                    .from('agents')
+                    .select('id')
+                    .eq('agency_id', user.agency.id)
+                    .eq('client_id', user.client.id);
+                const agentIds = clientAgents?.map(a => a.id) || [];
+                if (agentIds.length === 0) {
+                    return NextResponse.json({ data: [] });
+                }
+                query = query.or(`inbound_agent_id.in.(${agentIds.join(',')}),outbound_agent_id.in.(${agentIds.join(',')})`);
+            } else {
+                return NextResponse.json({ data: [] });
+            }
+        }
+
+        const { data: phoneNumbers, error } = await query;
 
         if (error) {
             console.error('Error fetching phone numbers:', error.code);
@@ -48,7 +73,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const body = await request.json();
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        const body = bodyOrError as Record<string, any>;
         const { area_code, agent_id, provider: requestedProvider } = body;
 
         if (!area_code) {
@@ -97,6 +124,7 @@ export async function POST(request: NextRequest) {
                 body: JSON.stringify({
                     area_code: parseInt(area_code),
                 }),
+                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
 
             if (!retellResponse.ok) {
@@ -115,7 +143,7 @@ export async function POST(request: NextRequest) {
                     provider: 'retell',
                     agent_id: agent_id || null,
                     inbound_agent_id: agent_id || null,
-                    monthly_cost_cents: 200,
+                    monthly_cost_cents: PHONE_NUMBER_MONTHLY_COST_CENTS,
                     purchased_at: new Date().toISOString(),
                 })
                 .select('*, inbound_agent:agents!phone_numbers_inbound_agent_id_fkey(id, name), outbound_agent:agents!phone_numbers_outbound_agent_id_fkey(id, name)')
@@ -152,6 +180,7 @@ export async function POST(request: NextRequest) {
                     areaCode: area_code,
                     ...(agentExternalId ? { assistantId: agentExternalId } : {}),
                 }),
+                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
 
             if (!vapiResponse.ok) {
@@ -170,7 +199,7 @@ export async function POST(request: NextRequest) {
                     provider: 'vapi',
                     agent_id: agent_id || null,
                     inbound_agent_id: agent_id || null,
-                    monthly_cost_cents: 200,
+                    monthly_cost_cents: PHONE_NUMBER_MONTHLY_COST_CENTS,
                     purchased_at: new Date().toISOString(),
                 })
                 .select('*, inbound_agent:agents!phone_numbers_inbound_agent_id_fkey(id, name), outbound_agent:agents!phone_numbers_outbound_agent_id_fkey(id, name)')
@@ -195,7 +224,7 @@ export async function POST(request: NextRequest) {
                     provider: 'bland',
                     agent_id: agent_id || null,
                     inbound_agent_id: agent_id || null,
-                    monthly_cost_cents: 200,
+                    monthly_cost_cents: PHONE_NUMBER_MONTHLY_COST_CENTS,
                     purchased_at: new Date().toISOString(),
                 })
                 .select('*, inbound_agent:agents!phone_numbers_inbound_agent_id_fkey(id, name), outbound_agent:agents!phone_numbers_outbound_agent_id_fkey(id, name)')

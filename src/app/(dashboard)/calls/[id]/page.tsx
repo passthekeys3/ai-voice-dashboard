@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Phone } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { isValidUuid } from '@/lib/validation';
 
 export const metadata: Metadata = { title: 'Call Details' };
 
@@ -20,6 +21,9 @@ export default async function CallDetailPage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
+    if (!isValidUuid(id)) {
+        notFound();
+    }
     const user = await requireAuth();
     const supabase = await createClient();
     const isAdmin = isAgencyAdmin(user);
@@ -71,7 +75,7 @@ export default async function CallDetailPage({
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href="/calls">
+                        <Link href="/calls" aria-label="Back to calls">
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>

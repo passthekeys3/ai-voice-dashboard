@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
@@ -10,6 +10,15 @@ const inter = Inter({
     subsets: ["latin"],
     variable: "--font-inter",
 });
+
+export const viewport: Viewport = {
+    width: 'device-width',
+    initialScale: 1,
+    themeColor: [
+        { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+        { media: '(prefers-color-scheme: dark)', color: '#020617' },
+    ],
+};
 
 // Default metadata for the platform
 const DEFAULT_METADATA: Metadata = {

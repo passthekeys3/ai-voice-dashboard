@@ -116,19 +116,20 @@ export function WorkflowExecutionLog({ workflowId, limit = 50 }: WorkflowExecuti
     const [loading, setLoading] = useState(true);
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
-    const fetchExecutions = useCallback(async () => {
+    const fetchExecutions = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
         try {
             const url = workflowId
                 ? `/api/workflows/${workflowId}/executions?limit=${limit}`
                 : `/api/workflows/executions?limit=${limit}`;
 
-            const res = await fetch(url);
+            const res = await fetch(url, { signal });
             if (!res.ok) throw new Error('Failed to fetch');
 
             const data = await res.json();
             setExecutions(data.executions || []);
         } catch (err) {
+            if (err instanceof Error && err.name === 'AbortError') return;
             console.error('Failed to fetch executions:', err);
         } finally {
             setLoading(false);
@@ -136,7 +137,9 @@ export function WorkflowExecutionLog({ workflowId, limit = 50 }: WorkflowExecuti
     }, [workflowId, limit]);
 
     useEffect(() => {
-        fetchExecutions();
+        const controller = new AbortController();
+        fetchExecutions(controller.signal);
+        return () => controller.abort();
     }, [fetchExecutions]);
 
     const toggleExpand = (id: string) => {
@@ -168,7 +171,7 @@ export function WorkflowExecutionLog({ workflowId, limit = 50 }: WorkflowExecuti
                 <Button
                     variant="outline"
                     size="sm"
-                    onClick={fetchExecutions}
+                    onClick={() => fetchExecutions()}
                     disabled={loading}
                 >
                     <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />

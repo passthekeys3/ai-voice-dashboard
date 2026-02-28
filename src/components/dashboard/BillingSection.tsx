@@ -99,15 +99,18 @@ export function BillingSection() {
 
     // Fetch billing data
     useEffect(() => {
+        const controller = new AbortController();
+
         async function fetchBillingData() {
             try {
-                const response = await fetch('/api/billing/portal');
+                const response = await fetch('/api/billing/portal', { signal: controller.signal });
                 if (!response.ok) {
                     throw new Error('Failed to fetch billing data');
                 }
                 const result = await response.json();
                 setBillingData(result.data);
-            } catch (_err) {
+            } catch (err) {
+                if (err instanceof Error && err.name === 'AbortError') return;
                 setError('Failed to load billing information');
             } finally {
                 setLoading(false);
@@ -115,6 +118,7 @@ export function BillingSection() {
         }
 
         fetchBillingData();
+        return () => controller.abort();
     }, []);
 
     const handleManageBilling = async () => {

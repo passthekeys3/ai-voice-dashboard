@@ -19,6 +19,8 @@ function safeParseInt(value: string | undefined, defaultValue: number): number {
     return isNaN(parsed) ? defaultValue : parsed;
 }
 
+const EXTERNAL_API_TIMEOUT = 15_000;
+
 interface ExecutionOptions {
     supabase?: SupabaseClient;
     agencyId?: string;
@@ -219,7 +221,7 @@ async function executeAction(
 
                 // Block internal/private IPs
                 const hostname = parsedUrl.hostname.toLowerCase();
-                const blockedHosts = ['localhost', '127.0.0.1', '::1', '0.0.0.0', '[::1]'];
+                const blockedHosts = ['localhost', '127.0.0.1', '::1', '0.0.0.0', '[::1]', 'metadata.google.internal', 'metadata.google'];
                 if (blockedHosts.includes(hostname)) {
                     return { success: false, error: 'Webhook URL cannot target internal hosts' };
                 }
@@ -241,8 +243,8 @@ async function executeAction(
                 const ipMatch = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
                 if (ipMatch) {
                     const [, a, b] = ipMatch.map(Number);
-                    // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16
-                    if (a === 10 || (a === 172 && b >= 16 && b <= 31) ||
+                    // 10.0.0.0/8, 127.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16
+                    if (a === 10 || a === 127 || (a === 172 && b >= 16 && b <= 31) ||
                         (a === 192 && b === 168) || (a === 169 && b === 254) || a === 0) {
                         return { success: false, error: 'Webhook URL cannot target private IP ranges' };
                     }
@@ -1401,6 +1403,7 @@ async function executeAction(
                         From: fromNumber,
                         Body: message.substring(0, 1600), // SMS body limit
                     }),
+                    signal: AbortSignal.timeout(EXTERNAL_API_TIMEOUT),
                 });
 
                 if (!smsResponse.ok) {
@@ -1466,6 +1469,7 @@ async function executeAction(
                         subject,
                         html: body || `<p>${subject}</p>`,
                     }),
+                    signal: AbortSignal.timeout(EXTERNAL_API_TIMEOUT),
                 });
 
                 if (!emailResponse.ok) {

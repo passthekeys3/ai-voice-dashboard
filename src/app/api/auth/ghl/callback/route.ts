@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
 import crypto from 'crypto';
 
 const GHL_CLIENT_ID = process.env.GHL_CLIENT_ID;
 const GHL_CLIENT_SECRET = process.env.GHL_CLIENT_SECRET;
 const GHL_REDIRECT_URI = process.env.GHL_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/ghl/callback`;
+const OAUTH_TOKEN_TIMEOUT = 15_000;
 
 /**
  * GET /api/auth/ghl/callback - GHL OAuth callback
@@ -70,6 +73,22 @@ export async function GET(request: NextRequest) {
             );
         }
 
+        // Defense-in-depth: verify the current session matches the agencyId in the state
+        // The HMAC signature prevents state tampering, but this ensures the same user
+        // who initiated the flow is completing it.
+        const user = await getCurrentUser();
+        if (!user || !isAgencyAdmin(user)) {
+            return NextResponse.redirect(
+                new URL('/settings?ghl=error&message=Session+expired+or+unauthorized', request.url)
+            );
+        }
+        if (user.agency.id !== agencyId) {
+            console.error(`GHL OAuth: session agency ${user.agency.id} does not match state agency ${agencyId}`);
+            return NextResponse.redirect(
+                new URL('/settings?ghl=error&message=Agency+mismatch', request.url)
+            );
+        }
+
         // Validate env vars before token exchange
         if (!GHL_CLIENT_ID || !GHL_CLIENT_SECRET) {
             console.error('GHL OAuth callback: missing GHL_CLIENT_ID or GHL_CLIENT_SECRET');
@@ -92,6 +111,7 @@ export async function GET(request: NextRequest) {
                 redirect_uri: GHL_REDIRECT_URI,
                 user_type: 'Location',
             }),
+            signal: AbortSignal.timeout(OAUTH_TOKEN_TIMEOUT),
         });
 
         if (!tokenResponse.ok) {
@@ -123,7 +143,7 @@ export async function GET(request: NextRequest) {
 
         const { data: agency } = await supabase
             .from('agencies')
-            .select('integrations')
+            .select('integrations, subscription_price_id')
             .eq('id', agencyId)
             .single();
 
@@ -131,6 +151,14 @@ export async function GET(request: NextRequest) {
             console.error('GHL OAuth callback: agency not found:', agencyId);
             return NextResponse.redirect(
                 new URL('/settings?ghl=error&message=Agency+not+found', request.url)
+            );
+        }
+
+        // Defense-in-depth: re-verify tier in case agency downgraded during OAuth flow
+        const callbackTierInfo = getTierFromPriceId(agency.subscription_price_id || '');
+        if (!callbackTierInfo || !hasFeature(callbackTierInfo.tier, 'crm_integrations')) {
+            return NextResponse.redirect(
+                new URL('/settings?ghl=error&message=CRM+integrations+require+a+Growth+plan+or+higher', request.url)
             );
         }
 

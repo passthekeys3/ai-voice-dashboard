@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import * as retell from '@/lib/providers/retell';
+import { isValidUuid, safeParseJson } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -20,7 +21,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id: agentId } = await params;
-        const body = await request.json();
+        if (!isValidUuid(agentId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        const body = bodyOrError as Record<string, any>;
         const { type, title, content, url, enableAutoRefresh } = body;
 
         const supabase = createServiceClient();

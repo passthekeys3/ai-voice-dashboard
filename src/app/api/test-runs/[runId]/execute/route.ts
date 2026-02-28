@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { executeTestRun } from '@/lib/testing/runner';
+import { isValidUuid } from '@/lib/validation';
 import type { TestCase, TestPersona } from '@/types';
 
 interface RouteParams {
@@ -21,6 +22,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         const { runId } = await params;
+        if (!isValidUuid(runId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         // Fetch the run

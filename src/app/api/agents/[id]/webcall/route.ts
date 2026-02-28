@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
+import { isValidUuid } from '@/lib/validation';
+
+const PROVIDER_API_TIMEOUT = 15_000;
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -20,6 +23,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id: agentId } = await params;
+        if (!isValidUuid(agentId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = createServiceClient();
 
         // Get agent details
@@ -53,6 +59,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 body: JSON.stringify({
                     agent_id: agent.external_id,
                 }),
+                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
 
             if (!retellResponse.ok) {

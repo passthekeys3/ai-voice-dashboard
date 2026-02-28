@@ -11,15 +11,8 @@ import {
     externalServiceError,
     withErrorHandling,
 } from '@/lib/api/response';
-
-function getStripe() {
-    if (!process.env.STRIPE_SECRET_KEY) {
-        throw new Error('STRIPE_SECRET_KEY not configured');
-    }
-    return new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2026-01-28.clover',
-    });
-}
+import { getStripe } from '@/lib/stripe';
+import { isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -49,6 +42,11 @@ export const POST = withErrorHandling(async (
     }
 
     const { id } = await context!.params;
+
+    if (!isValidUuid(id)) {
+        return badRequest('Invalid ID format');
+    }
+
     const body = await request.json().catch(() => ({}));
 
     const supabase = createServiceClient();

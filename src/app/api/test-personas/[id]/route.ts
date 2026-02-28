@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { safeParseJson, isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -19,6 +20,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id } = await params;
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         // Verify persona exists and belongs to this agency
@@ -42,7 +46,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Persona not found' }, { status: 404 });
         }
 
-        const body = await request.json();
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        const body = bodyOrError as Record<string, any>;
         const updateData: Record<string, unknown> = {
             updated_at: new Date().toISOString(),
         };
@@ -106,6 +112,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id } = await params;
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         // Verify persona exists and belongs to this agency

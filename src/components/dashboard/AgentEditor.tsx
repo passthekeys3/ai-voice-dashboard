@@ -478,6 +478,7 @@ export function AgentEditor({
                                             value={voiceId}
                                             onChange={(e) => setVoiceId(e.target.value)}
                                             placeholder="Enter voice ID"
+                                            aria-label="Voice ID"
                                         />
                                         <p className="text-sm text-muted-foreground">
                                             Enter the voice ID from your {VAPI_VOICE_PROVIDERS.find(vp => vp.id === voiceProvider)?.name || voiceProvider} account.

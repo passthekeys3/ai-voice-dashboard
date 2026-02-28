@@ -32,7 +32,7 @@ export default async function PortalIntegrationsPage() {
                 userEmail={user.email}
                 userAvatar={user.profile.avatar_url}
             />
-            <div className="flex-1 p-4 sm:p-6">
+            <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
                 <ClientIntegrationsEditor clientId={clientId} isPortal />
             </div>
         </div>

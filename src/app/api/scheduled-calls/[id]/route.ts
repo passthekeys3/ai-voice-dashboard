@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { safeParseJson } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -48,7 +49,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id } = await params;
-        const body = await request.json();
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const body = bodyOrError as Record<string, any>;
         const supabase = await createClient();
 
         // Check if the call can be modified

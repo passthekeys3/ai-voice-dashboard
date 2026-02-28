@@ -9,6 +9,7 @@
  */
 
 const VERCEL_API = 'https://api.vercel.com';
+const VERCEL_API_TIMEOUT = 10_000; // 10s timeout for Vercel API calls
 
 function getConfig() {
     const token = process.env.VERCEL_TOKEN;
@@ -77,6 +78,7 @@ export async function addDomainToVercel(
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ name: domain.toLowerCase() }),
+            signal: AbortSignal.timeout(VERCEL_API_TIMEOUT),
         });
 
         const data = await res.json() as VercelDomain & VercelResponse;
@@ -117,6 +119,7 @@ export async function removeDomainFromVercel(
             headers: {
                 Authorization: `Bearer ${config.token}`,
             },
+            signal: AbortSignal.timeout(VERCEL_API_TIMEOUT),
         });
 
         if (!res.ok) {
@@ -156,6 +159,7 @@ export async function getDomainFromVercel(
             headers: {
                 Authorization: `Bearer ${config.token}`,
             },
+            signal: AbortSignal.timeout(VERCEL_API_TIMEOUT),
         });
 
         if (!res.ok) {
@@ -192,6 +196,7 @@ export async function verifyDomainOnVercel(
             headers: {
                 Authorization: `Bearer ${config.token}`,
             },
+            signal: AbortSignal.timeout(VERCEL_API_TIMEOUT),
         });
 
         if (!res.ok) {

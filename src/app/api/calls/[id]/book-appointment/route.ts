@@ -16,6 +16,7 @@ import crypto from 'crypto';
 import { createServiceClient } from '@/lib/supabase/server';
 import { bookNextAvailableAppointment, getCalendarFreeSlots, createAppointment, searchContactByPhone, createContact } from '@/lib/integrations/ghl';
 import { resolveIntegrations } from '@/lib/integrations/resolve';
+import { isValidUuid } from '@/lib/validation';
 
 export async function POST(
     request: NextRequest,
@@ -33,7 +34,16 @@ export async function POST(
         }
 
         const { id: callId } = await params;
-        const body = await request.json();
+        if (!isValidUuid(callId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
+
+        let body: Record<string, unknown>;
+        try {
+            body = await request.json();
+        } catch {
+            return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 });
+        }
 
         const {
             calendar_id,

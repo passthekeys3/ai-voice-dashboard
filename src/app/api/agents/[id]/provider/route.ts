@@ -5,6 +5,7 @@ import { updateRetellAgent, getRetellAgent, getRetellLLM, updateRetellLLM } from
 import { getVapiAssistant, updateVapiAssistant, extractVapiSystemPrompt, usesVapiMessagesFormat } from '@/lib/providers/vapi';
 import { getBlandPathway, updateBlandPathway } from '@/lib/providers/bland';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
+import { isValidUuid } from '@/lib/validation';
 
 export async function GET(
     request: NextRequest,
@@ -17,6 +18,9 @@ export async function GET(
         }
 
         const { id } = await params;
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         // Get the agent
@@ -135,6 +139,9 @@ export async function PATCH(
         }
 
         const { id } = await params;
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const body = await request.json();
 
         const supabase = await createClient();

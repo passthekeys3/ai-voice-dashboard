@@ -6,6 +6,7 @@
  */
 
 const HUBSPOT_API_BASE = 'https://api.hubspot.com';
+const HUBSPOT_API_TIMEOUT = 15_000; // 15s timeout for all HubSpot API calls
 
 export interface HubSpotConfig {
     accessToken: string;
@@ -52,6 +53,7 @@ export async function searchContactByPhone(
                     'Authorization': `Bearer ${config.accessToken}`,
                     'Content-Type': 'application/json',
                 },
+                signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
                 body: JSON.stringify({
                     filterGroups: [{
                         filters: [{
@@ -100,6 +102,7 @@ export async function searchContactByEmail(
                     'Authorization': `Bearer ${config.accessToken}`,
                     'Content-Type': 'application/json',
                 },
+                signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
                 body: JSON.stringify({
                     filterGroups: [{
                         filters: [{
@@ -162,6 +165,7 @@ export async function createContact(
                     'Authorization': `Bearer ${config.accessToken}`,
                     'Content-Type': 'application/json',
                 },
+                signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
                 body: JSON.stringify({ properties }),
             }
         );
@@ -199,6 +203,7 @@ export async function updateContact(
                     'Authorization': `Bearer ${config.accessToken}`,
                     'Content-Type': 'application/json',
                 },
+                signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
                 body: JSON.stringify({ properties }),
             }
         );
@@ -241,6 +246,7 @@ export async function createCallEngagement(
                     'Authorization': `Bearer ${config.accessToken}`,
                     'Content-Type': 'application/json',
                 },
+                signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
                 body: JSON.stringify({
                     properties: {
                         hs_timestamp: callData.timestamp,
@@ -399,6 +405,7 @@ export async function refreshAccessToken(
                     client_secret: clientSecret,
                     refresh_token: refreshToken,
                 }),
+                signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
             }
         );
 
@@ -533,6 +540,7 @@ export async function addNoteToContact(
                     'Authorization': `Bearer ${config.accessToken}`,
                     'Content-Type': 'application/json',
                 },
+                signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
                 body: JSON.stringify({
                     properties: {
                         hs_timestamp: new Date().toISOString(),
@@ -664,6 +672,7 @@ export async function updateContactTags(
             `${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${encodeURIComponent(contactId)}?properties=ai_call_tags`,
             {
                 headers: { 'Authorization': `Bearer ${config.accessToken}` },
+                signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
             }
         );
         if (contactResponse.ok) {
@@ -735,6 +744,7 @@ export async function updateContactPipeline(
             `${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${encodeURIComponent(contactId)}/associations/deals`,
             {
                 headers: { 'Authorization': `Bearer ${config.accessToken}` },
+                signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
             }
         );
 
@@ -749,6 +759,7 @@ export async function updateContactPipeline(
                     `${HUBSPOT_API_BASE}/crm/v3/objects/deals/${encodeURIComponent(dealId)}?properties=pipeline,dealstage`,
                     {
                         headers: { 'Authorization': `Bearer ${config.accessToken}` },
+                        signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
                     }
                 );
                 if (dealResponse.ok) {
@@ -793,6 +804,7 @@ export async function updateContactPipeline(
                     'Authorization': `Bearer ${config.accessToken}`,
                     'Content-Type': 'application/json',
                 },
+                signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
                 body: JSON.stringify({
                     properties: {
                         dealname: dealName || 'AI Voice Call Lead',
@@ -850,6 +862,7 @@ export async function createMeeting(
                     'Authorization': `Bearer ${config.accessToken}`,
                     'Content-Type': 'application/json',
                 },
+                signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
                 body: JSON.stringify({
                     properties: {
                         hs_timestamp: params.startTime,
@@ -899,6 +912,7 @@ export async function cancelMeeting(
                     'Authorization': `Bearer ${config.accessToken}`,
                     'Content-Type': 'application/json',
                 },
+                signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
                 body: JSON.stringify({
                     properties: {
                         hs_meeting_outcome: 'CANCELED',
@@ -952,6 +966,7 @@ export async function getMeetingsByContact(
                     'Authorization': `Bearer ${config.accessToken}`,
                     'Content-Type': 'application/json',
                 },
+                signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
                 body: JSON.stringify({
                     inputs: meetingIds.map(id => ({ id })),
                     properties: ['hs_timestamp', 'hs_meeting_title', 'hs_meeting_start_time', 'hs_meeting_end_time', 'hs_meeting_outcome'],
@@ -1040,6 +1055,7 @@ export async function triggerWorkflow(
                     'Authorization': `Bearer ${config.accessToken}`,
                     'Content-Type': 'application/json',
                 },
+                signal: AbortSignal.timeout(HUBSPOT_API_TIMEOUT),
                 body: JSON.stringify({
                     objectId: contactId,
                     objectType: 'CONTACT',

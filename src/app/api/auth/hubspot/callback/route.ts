@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
 import crypto from 'crypto';
 
 const HUBSPOT_CLIENT_ID = process.env.HUBSPOT_CLIENT_ID;
 const HUBSPOT_CLIENT_SECRET = process.env.HUBSPOT_CLIENT_SECRET;
 const HUBSPOT_REDIRECT_URI = process.env.HUBSPOT_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/hubspot/callback`;
+const OAUTH_TOKEN_TIMEOUT = 15_000;
 
 /**
  * GET /api/auth/hubspot/callback - HubSpot OAuth callback
@@ -87,6 +89,14 @@ export async function GET(request: NextRequest) {
             );
         }
 
+        // Defense-in-depth: re-verify tier in case agency downgraded during OAuth flow
+        const callbackTierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+        if (!callbackTierInfo || !hasFeature(callbackTierInfo.tier, 'crm_integrations')) {
+            return NextResponse.redirect(
+                new URL('/settings?hubspot=error&message=CRM+integrations+require+a+Growth+plan+or+higher', request.url)
+            );
+        }
+
         // Validate env vars before token exchange
         if (!HUBSPOT_CLIENT_ID || !HUBSPOT_CLIENT_SECRET) {
             console.error('HubSpot OAuth callback: missing HUBSPOT_CLIENT_ID or HUBSPOT_CLIENT_SECRET');
@@ -108,6 +118,7 @@ export async function GET(request: NextRequest) {
                 redirect_uri: HUBSPOT_REDIRECT_URI,
                 code,
             }),
+            signal: AbortSignal.timeout(OAUTH_TOKEN_TIMEOUT),
         });
 
         if (!tokenResponse.ok) {
@@ -137,13 +148,16 @@ export async function GET(request: NextRequest) {
             .eq('id', agencyId)
             .single();
 
+        // Safely parse expires_in (default to 6h if missing/invalid — HubSpot tokens typically last 6h)
+        const expiresIn = typeof tokens.expires_in === 'number' ? tokens.expires_in : 21600;
+
         // Update with HubSpot tokens
         const updatedIntegrations = {
             ...agency?.integrations,
             hubspot: {
                 access_token: tokens.access_token,
                 refresh_token: tokens.refresh_token,
-                expires_at: Date.now() + (tokens.expires_in * 1000),
+                expires_at: Date.now() + (expiresIn * 1000),
                 enabled: true,
             },
         };

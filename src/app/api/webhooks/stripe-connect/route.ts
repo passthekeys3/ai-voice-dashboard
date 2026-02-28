@@ -3,15 +3,7 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { waitUntil } from '@vercel/functions';
 import { createServiceClient } from '@/lib/supabase/server';
-
-function getStripe() {
-    if (!process.env.STRIPE_SECRET_KEY) {
-        throw new Error('STRIPE_SECRET_KEY not configured');
-    }
-    return new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2026-01-28.clover',
-    });
-}
+import { getStripe } from '@/lib/stripe';
 
 const webhookSecret = process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
 
@@ -46,22 +38,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
         }
 
-        // Deduplicate — skip events we've already processed
+        // Deduplicate — atomic INSERT rejects duplicates via primary key constraint
         const dedupSupabase = createServiceClient();
-        const { data: existingEvent } = await dedupSupabase
+        const { error: dedupError } = await dedupSupabase
             .from('webhook_events')
-            .select('event_id')
-            .eq('event_id', event.id)
-            .single();
+            .insert({ event_id: event.id });
 
-        if (existingEvent) {
+        if (dedupError?.code === '23505') {
             return NextResponse.json({ received: true });
         }
-
-        await dedupSupabase.from('webhook_events').upsert(
-            { event_id: event.id },
-            { onConflict: 'event_id', ignoreDuplicates: true }
-        );
 
         const handleEvent = async () => {
             const supabase = createServiceClient();

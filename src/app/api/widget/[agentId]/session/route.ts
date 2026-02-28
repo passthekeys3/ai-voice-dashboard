@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
+import { checkRateLimitAsync } from '@/lib/rate-limit';
+import { isValidUuid } from '@/lib/validation';
+
+export async function OPTIONS() {
+    return new NextResponse(null, {
+        status: 204,
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Max-Age': '86400',
+        },
+    });
+}
+
+/** Widget session: 10 sessions per agent per minute */
+const WIDGET_SESSION_RATE_LIMIT = { windowMs: 60_000, maxRequests: 10 };
+const PROVIDER_API_TIMEOUT = 15_000;
 
 /**
  * POST /api/widget/[agentId]/session
@@ -9,7 +27,8 @@ import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-
  * No dashboard authentication required — secured by:
  *   - Agent must have widget_enabled = true
  *   - Agent must be is_active = true
- *   - Rate limiting (handled by middleware)
+ *   - In-code rate limiting (per agent, 10/min)
+ *   - Middleware rate limiting (per IP)
  *
  * Returns an access_token that the widget UI uses to start the call via the
  * provider's client SDK (Retell).
@@ -23,6 +42,25 @@ export async function POST(
 
         if (!agentId) {
             return NextResponse.json({ error: 'Agent ID is required' }, { status: 400 });
+        }
+
+        // Validate UUID format to fail fast before hitting the database
+        if (!isValidUuid(agentId)) {
+            return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+        }
+
+        // In-code rate limit per agent (defense-in-depth alongside middleware IP-based limiting)
+        const rl = await checkRateLimitAsync(`widget:${agentId}`, WIDGET_SESSION_RATE_LIMIT);
+        if (!rl.allowed) {
+            return NextResponse.json(
+                { error: 'Too many requests. Please try again later.' },
+                {
+                    status: 429,
+                    headers: {
+                        'Retry-After': String(Math.ceil((rl.resetTime - Date.now()) / 1000)),
+                    },
+                }
+            );
         }
 
         const supabase = createServiceClient();
@@ -79,6 +117,7 @@ export async function POST(
                 body: JSON.stringify({
                     agent_id: agent.external_id,
                 }),
+                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
 
             if (!retellResponse.ok) {
@@ -106,11 +145,24 @@ export async function POST(
         }
 
         // Merge widget config with agency branding defaults
+        // Validate avatar_url to prevent javascript:/data: scheme injection
+        let avatarUrl: string | null = agent.widget_config?.avatar_url || null;
+        if (avatarUrl) {
+            try {
+                const parsed = new URL(avatarUrl);
+                if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                    avatarUrl = null; // Block non-HTTP schemes (javascript:, data:, etc.)
+                }
+            } catch {
+                avatarUrl = null; // Invalid URL
+            }
+        }
+
         const widgetConfig = {
             color: agent.widget_config?.color || agency.branding?.primary_color || '#0f172a',
             position: agent.widget_config?.position || 'right',
             greeting: agent.widget_config?.greeting || `Talk to ${agent.name}`,
-            avatar_url: agent.widget_config?.avatar_url || null,
+            avatar_url: avatarUrl,
         };
 
         return NextResponse.json({

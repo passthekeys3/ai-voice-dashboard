@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Key, Clock, CheckCircle2, Settings2 } from 'lucide-react';
 import { ApiWebhooksConfig } from './ApiWebhooksConfig';
+import { TierBadge } from '@/components/ui/tier-gate';
+import { hasFeature } from '@/lib/billing/tiers';
+import type { PlanTier, TierFeature } from '@/lib/billing/tiers';
 
 /* ── Brand SVG logos ─────────────────────────────────────────────── */
 
@@ -65,6 +68,7 @@ interface Integration {
     comingSoon: boolean;
     features: string[];
     configurable?: boolean;
+    requiredFeature?: TierFeature;
 }
 
 const integrations: Integration[] = [
@@ -74,6 +78,7 @@ const integrations: Integration[] = [
         logo: <GoHighLevelLogo />,
         bgClassName: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
         comingSoon: true,
+        requiredFeature: 'crm_integrations',
         features: [
             'Auto-log calls to contacts',
             'Update pipeline stages',
@@ -88,6 +93,7 @@ const integrations: Integration[] = [
         logo: <HubSpotLogo />,
         bgClassName: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400',
         comingSoon: true,
+        requiredFeature: 'crm_integrations',
         features: [
             'Create call engagements',
             'Manage deals & pipeline',
@@ -142,6 +148,7 @@ const integrations: Integration[] = [
         bgClassName: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400',
         comingSoon: false,
         configurable: true,
+        requiredFeature: 'api_access',
         features: [
             'Trigger outbound calls via API',
             'Webhook-based automation',
@@ -162,97 +169,111 @@ interface IntegrationsPageProps {
     };
     agents?: { id: string; name: string; provider: string }[];
     appUrl?: string;
+    currentTier?: PlanTier | null;
 }
 
-export function IntegrationsPage({ apiConfig, agents = [], appUrl = '' }: IntegrationsPageProps) {
+export function IntegrationsPage({ apiConfig, agents = [], appUrl = '', currentTier = null }: IntegrationsPageProps) {
     const [apiDialogOpen, setApiDialogOpen] = useState(false);
 
     return (
         <>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" role="list" aria-label="Available integrations">
-                {integrations.map((integration) => (
-                    <Card
-                        key={integration.name}
-                        className={`relative overflow-hidden ${
-                            integration.configurable ? 'cursor-pointer hover:border-primary/50 focus-within:border-primary/50 transition-colors' : ''
-                        }`}
-                        role="listitem"
-                        tabIndex={integration.configurable ? 0 : undefined}
-                        onClick={integration.configurable ? () => setApiDialogOpen(true) : undefined}
-                        onKeyDown={integration.configurable ? (e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                setApiDialogOpen(true);
-                            }
-                        } : undefined}
-                    >
-                        <CardHeader className="pb-3">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div
-                                        className={`flex h-10 w-10 items-center justify-center rounded-lg ${integration.bgClassName}`}
-                                        role="img"
-                                        aria-label={integration.name}
-                                    >
-                                        {integration.logo}
+                {integrations.map((integration) => {
+                    // Check if this integration is locked behind a higher tier
+                    const isLocked = integration.requiredFeature
+                        ? !currentTier || !hasFeature(currentTier, integration.requiredFeature)
+                        : false;
+                    const isClickable = integration.configurable && !isLocked;
+
+                    return (
+                        <Card
+                            key={integration.name}
+                            className={`relative overflow-hidden ${
+                                isClickable ? 'cursor-pointer hover:border-primary/50 focus-within:border-primary/50 transition-colors' : ''
+                            } ${isLocked ? 'opacity-75' : ''}`}
+                            role="listitem"
+                            tabIndex={isClickable ? 0 : undefined}
+                            onClick={isClickable ? () => setApiDialogOpen(true) : undefined}
+                            onKeyDown={isClickable ? (e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setApiDialogOpen(true);
+                                }
+                            } : undefined}
+                        >
+                            <CardHeader className="pb-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div
+                                            className={`flex h-10 w-10 items-center justify-center rounded-lg ${integration.bgClassName}`}
+                                            role="img"
+                                            aria-label={integration.name}
+                                        >
+                                            {integration.logo}
+                                        </div>
+                                        <CardTitle className="text-base">{integration.name}</CardTitle>
                                     </div>
-                                    <CardTitle className="text-base">{integration.name}</CardTitle>
-                                </div>
-                                {integration.comingSoon ? (
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                                        <Clock className="h-3 w-3" />
-                                        Coming Soon
-                                    </span>
-                                ) : (
-                                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                        apiConfig?.enabled && apiConfig?.api_key
-                                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                                    }`}>
-                                        {apiConfig?.enabled && apiConfig?.api_key ? (
-                                            <>
-                                                <CheckCircle2 className="h-3 w-3" />
-                                                Active
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Settings2 className="h-3 w-3" />
-                                                Configure
-                                            </>
+                                    <div className="flex items-center gap-2">
+                                        {integration.requiredFeature && (
+                                            <TierBadge feature={integration.requiredFeature} currentTier={currentTier} />
                                         )}
-                                    </span>
+                                        {integration.comingSoon ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                                                <Clock className="h-3 w-3" />
+                                                Coming Soon
+                                            </span>
+                                        ) : !isLocked ? (
+                                            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                                apiConfig?.enabled && apiConfig?.api_key
+                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                                            }`}>
+                                                {apiConfig?.enabled && apiConfig?.api_key ? (
+                                                    <>
+                                                        <CheckCircle2 className="h-3 w-3" />
+                                                        Active
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Settings2 className="h-3 w-3" />
+                                                        Configure
+                                                    </>
+                                                )}
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    {integration.description}
+                                </p>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-1.5 text-sm text-muted-foreground">
+                                    {integration.features.map((feature) => (
+                                        <li key={feature} className="flex items-center gap-2">
+                                            <span className="h-1 w-1 rounded-full bg-muted-foreground/40 flex-shrink-0" />
+                                            {feature}
+                                        </li>
+                                    ))}
+                                </ul>
+                                {integration.configurable && !isLocked && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full mt-4"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setApiDialogOpen(true);
+                                        }}
+                                    >
+                                        <Settings2 className="h-4 w-4 mr-2" />
+                                        {apiConfig?.enabled ? 'Manage API Settings' : 'Set Up API Access'}
+                                    </Button>
                                 )}
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                {integration.description}
-                            </p>
-                        </CardHeader>
-                        <CardContent>
-                            <ul className="space-y-1.5 text-sm text-muted-foreground">
-                                {integration.features.map((feature) => (
-                                    <li key={feature} className="flex items-center gap-2">
-                                        <span className="h-1 w-1 rounded-full bg-muted-foreground/40 flex-shrink-0" />
-                                        {feature}
-                                    </li>
-                                ))}
-                            </ul>
-                            {integration.configurable && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full mt-4"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setApiDialogOpen(true);
-                                    }}
-                                >
-                                    <Settings2 className="h-4 w-4 mr-2" />
-                                    {apiConfig?.enabled ? 'Manage API Settings' : 'Set Up API Access'}
-                                </Button>
-                            )}
-                        </CardContent>
-                    </Card>
-                ))}
+                            </CardContent>
+                        </Card>
+                    );
+                })}
             </div>
 
             {/* API / Webhooks Configuration Dialog */}

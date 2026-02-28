@@ -16,7 +16,7 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { AlertTriangle, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 export function DeleteAccountSection() {
     const [confirmation, setConfirmation] = useState('');
@@ -108,7 +108,7 @@ export function DeleteAccountSection() {
                             <AlertDialogAction
                                 onClick={handleDelete}
                                 disabled={!isConfirmed || deleting}
-                                className="bg-red-600 hover:bg-red-700 text-white"
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
                                 {deleting ? (
                                     <>

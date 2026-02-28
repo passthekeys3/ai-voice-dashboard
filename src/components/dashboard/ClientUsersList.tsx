@@ -16,7 +16,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { UserCircle, Trash2, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 interface UserProfile {
     id: string;
@@ -50,7 +50,7 @@ export function ClientUsersList({ clientId, clientName, users }: ClientUsersList
 
             toast.success('User removed successfully');
             setConfirmUser(null);
-            window.location.reload();
+            router.refresh();
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Failed to remove user');
         } finally {
@@ -129,7 +129,7 @@ export function ClientUsersList({ clientId, clientName, users }: ClientUsersList
                                 e.preventDefault();
                                 if (confirmUser) handleDeleteUser(confirmUser.id);
                             }}
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             disabled={!!deletingUserId}
                         >
                             {deletingUserId ? (
@@ -241,7 +241,7 @@ export function DeleteClientButton({ clientId, clientName, userCount }: DeleteCl
                                 e.preventDefault();
                                 handleDelete();
                             }}
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             disabled={deleting}
                         >
                             {deleting ? (

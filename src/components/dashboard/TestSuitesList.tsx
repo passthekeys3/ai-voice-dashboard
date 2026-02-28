@@ -20,7 +20,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { TestTube2, MoreHorizontal, Trash2, Bot, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import type { TestSuite, TestRun } from '@/types';
 
 interface TestSuitesListProps {
@@ -70,7 +70,7 @@ export function TestSuitesList({ suites }: TestSuitesListProps) {
                 throw new Error(data.error || 'Failed to delete test suite');
             }
             toast.success('Test suite deleted');
-            window.location.reload();
+            router.refresh();
         } catch (err) {
             console.error('Failed to delete suite:', err);
             toast.error(err instanceof Error ? err.message : 'Failed to delete test suite');
@@ -79,14 +79,14 @@ export function TestSuitesList({ suites }: TestSuitesListProps) {
 
     if (suites.length === 0) {
         return (
-            <Card>
+            <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-16">
                     <TestTube2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                    <CardTitle className="mb-2 text-lg">No Test Suites Yet</CardTitle>
-                    <CardDescription className="text-center max-w-md mb-6">
+                    <h3 className="text-lg font-medium mb-2">No Test Suites Yet</h3>
+                    <p className="text-muted-foreground text-center max-w-md mb-6">
                         Create your first test suite to validate agent behavior before deployment.
                         AI will help you generate realistic test scenarios.
-                    </CardDescription>
+                    </p>
                     <Button asChild>
                         <Link href="/testing/new">Create Test Suite</Link>
                     </Button>
@@ -104,6 +104,76 @@ export function TestSuitesList({ suites }: TestSuitesListProps) {
                 </CardDescription>
             </CardHeader>
             <CardContent>
+                {/* Mobile card view */}
+                <div className="md:hidden space-y-3">
+                    {suites.map((suite) => {
+                        const caseCount = suite.test_cases?.length || 0;
+                        const latestRun = suite.latest_run?.[0];
+
+                        return (
+                            <div
+                                key={suite.id}
+                                className="border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                                onClick={() => router.push(`/testing/${suite.id}`)}
+                            >
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium truncate">{suite.name}</p>
+                                        {suite.description && (
+                                            <p className="text-xs text-muted-foreground mt-0.5 truncate">{suite.description}</p>
+                                        )}
+                                    </div>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Suite actions">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                                className="text-red-600 focus:text-red-600"
+                                                onClick={(e: React.MouseEvent) => {
+                                                    e.stopPropagation();
+                                                    handleDelete(suite.id);
+                                                }}
+                                            >
+                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                Delete
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                                <div className="flex items-center gap-3 mt-3 text-sm text-muted-foreground">
+                                    <div className="flex items-center gap-1.5">
+                                        <Bot className="h-3.5 w-3.5" />
+                                        <span>{suite.agent?.name || 'Unknown'}</span>
+                                    </div>
+                                    <span>·</span>
+                                    <span>{caseCount} case{caseCount !== 1 ? 's' : ''}</span>
+                                </div>
+                                <div className="flex items-center justify-between mt-2">
+                                    <div>
+                                        {latestRun ? getRunStatusBadge(latestRun) : (
+                                            <span className="text-sm text-muted-foreground">Never run</span>
+                                        )}
+                                    </div>
+                                    {latestRun?.avg_score != null && (
+                                        <span className={`text-sm font-medium ${
+                                            latestRun.avg_score >= 80 ? 'text-green-600' :
+                                            latestRun.avg_score >= 60 ? 'text-amber-600' :
+                                            'text-red-600'
+                                        }`}>
+                                            {latestRun.avg_score}%
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Desktop table view */}
+                <div className="hidden md:block">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -191,6 +261,7 @@ export function TestSuitesList({ suites }: TestSuitesListProps) {
                         })}
                     </TableBody>
                 </Table>
+                </div>
             </CardContent>
         </Card>
     );

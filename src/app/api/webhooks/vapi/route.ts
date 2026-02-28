@@ -12,6 +12,7 @@ import { isValidWebhookUrl } from '@/lib/webhooks/validation';
 import { waitUntil } from '@vercel/functions';
 import type { Workflow } from '@/types';
 import crypto from 'crypto';
+const WEBHOOK_FWD_TIMEOUT = 10_000;
 
 // Max transcript length to store in DB (≈100k words — generous for any real call, prevents abuse)
 const MAX_TRANSCRIPT_LENGTH = 500_000;
@@ -44,6 +45,7 @@ async function forwardToWebhook(webhookUrl: string, callData: Record<string, unk
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(callData),
+            signal: AbortSignal.timeout(WEBHOOK_FWD_TIMEOUT),
         });
     } catch (err) {
         console.error('Failed to forward Vapi webhook:', err instanceof Error ? err.message : 'Unknown error');
@@ -93,7 +95,13 @@ export async function POST(request: NextRequest) {
         const rawBody = await request.text();
         const signature = request.headers.get('x-vapi-signature');
 
-        const payload: VapiWebhookPayload = JSON.parse(rawBody);
+        let payload: VapiWebhookPayload;
+        try {
+            payload = JSON.parse(rawBody);
+        } catch {
+            console.error('[VAPI WEBHOOK] Invalid JSON payload');
+            return NextResponse.json({ received: true });
+        }
 
         // Process end-of-call-report, status-update (for call_started), and transcript events
         const messageType = payload.message.type;
@@ -141,22 +149,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
-        // Deduplicate — skip events we've already processed
-        const dedupKey = `vapi:${call.id}:${messageType}`;
-        const { data: existingEvent } = await supabase
-            .from('webhook_events')
-            .select('event_id')
-            .eq('event_id', dedupKey)
-            .single();
+        // Deduplicate — atomic INSERT rejects duplicates via primary key constraint.
+        // NOTE: Transcript events are excluded from deduplication because Vapi sends
+        // many per call (one per utterance). The atomic append_transcript_line RPC
+        // provides idempotency at the DB level, and duplicates are harmless (appended text).
+        if (messageType !== 'transcript') {
+            const dedupKey = `vapi:${call.id}:${messageType}`;
+            const { error: dedupError } = await supabase
+                .from('webhook_events')
+                .insert({ event_id: dedupKey });
 
-        if (existingEvent) {
-            return NextResponse.json({ received: true });
+            if (dedupError?.code === '23505') {
+                return NextResponse.json({ received: true });
+            }
         }
-
-        await supabase.from('webhook_events').upsert(
-            { event_id: dedupKey },
-            { onConflict: 'event_id', ignoreDuplicates: true }
-        );
 
         // ======================================
         // Handle transcript events — append to DB and broadcast for live UI

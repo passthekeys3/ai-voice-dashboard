@@ -180,6 +180,7 @@ export function AgentPreviewDemo() {
                         size="icon"
                         disabled={!prompt.trim() || isGenerating}
                         className="absolute right-2.5 bottom-2.5 h-8 w-8 rounded-md"
+                        aria-label="Send message"
                     >
                         {isGenerating ? (
                             <Loader2 className="h-4 w-4 animate-spin" />

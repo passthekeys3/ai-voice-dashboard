@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { isValidUuid } from '@/lib/validation';
 
 const MIN_CALLS_FOR_SUGGESTIONS = 5;
 const MAX_CALLS_TO_ANALYZE = 20;
@@ -32,6 +33,9 @@ export async function GET(
 ) {
     try {
         const { id } = await params;
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const user = await getCurrentUser();
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

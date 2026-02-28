@@ -66,6 +66,7 @@ export function SearchInput({
                 value={displayValue}
                 onChange={(e) => handleChange(e.target.value)}
                 className="pl-9 pr-8"
+                aria-label="Search"
             />
             {displayValue && (
                 <button

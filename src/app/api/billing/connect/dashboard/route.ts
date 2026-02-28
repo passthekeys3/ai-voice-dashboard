@@ -1,16 +1,8 @@
 import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-
-function getStripe() {
-    if (!process.env.STRIPE_SECRET_KEY) {
-        throw new Error('STRIPE_SECRET_KEY not configured');
-    }
-    return new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2026-01-28.clover',
-    });
-}
+import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
+import { getStripe } from '@/lib/stripe';
 
 /**
  * POST /api/billing/connect/dashboard — Generate Express Dashboard login link
@@ -23,6 +15,15 @@ export async function POST() {
         const user = await getCurrentUser();
         if (!user || !isAgencyAdmin(user)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // ---- Tier gate: Stripe Connect requires Growth+ ----
+        const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+        if (!tierInfo || !hasFeature(tierInfo.tier, 'stripe_connect')) {
+            return NextResponse.json(
+                { error: 'Stripe Connect requires a Growth plan or higher. Please upgrade.' },
+                { status: 403 }
+            );
         }
 
         const supabase = createServiceClient();

@@ -5,6 +5,7 @@ import { getProviderClient, type NormalizedAgent } from '@/lib/providers';
 import { listRetellAgents, ensureAgentWebhookConfig, REQUIRED_WEBHOOK_EVENTS } from '@/lib/providers/retell';
 import { listVapiAssistants, updateVapiAssistant } from '@/lib/providers/vapi';
 import type { VoiceProvider } from '@/types';
+const PROVIDER_API_TIMEOUT = 15_000;
 
 /** One workspace to sync: a provider + API key + optional client scope */
 interface SyncEntry {
@@ -210,6 +211,7 @@ export async function POST(request: NextRequest) {
                                 const phoneResponse = await fetch('https://api.retellai.com/list-phone-numbers', {
                                     method: 'GET',
                                     headers: { 'Authorization': `Bearer ${apiKey}` },
+                                    signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                                 });
 
                                 if (phoneResponse.ok) {

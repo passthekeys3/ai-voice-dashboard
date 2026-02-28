@@ -85,6 +85,7 @@ export function CriteriaEditor({ criteria, onChange, disabled }: CriteriaEditorP
                                         size="icon"
                                         className="h-6 w-6 shrink-0"
                                         onClick={() => handleRemove(index)}
+                                        aria-label="Remove criterion"
                                     >
                                         <X className="h-3 w-3" />
                                     </Button>

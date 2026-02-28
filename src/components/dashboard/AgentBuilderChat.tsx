@@ -258,6 +258,7 @@ export function AgentBuilderChat({
                         className="min-h-[56px] max-h-[120px] resize-none"
                         disabled={isStreaming}
                         rows={2}
+                        aria-label="Chat message"
                     />
                     <Button
                         size="icon"

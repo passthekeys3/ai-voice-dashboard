@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { safeParseJson, isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ runId: string }>;
@@ -19,6 +20,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         const { runId } = await params;
+        if (!isValidUuid(runId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         const { data: run, error } = await supabase
@@ -76,7 +80,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         const { runId } = await params;
-        const body = await request.json();
+        if (!isValidUuid(runId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        const body = bodyOrError as Record<string, any>;
         const supabase = await createClient();
 
         if (body.status === 'cancelled') {

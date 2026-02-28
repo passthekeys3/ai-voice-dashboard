@@ -6,15 +6,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { sendEmail } from '@/lib/email/send';
 import { paymentReceivedEmail, paymentFailedEmail } from '@/lib/email/templates';
 import { getTierFromPriceId } from '@/lib/billing/tiers';
-
-function getStripe() {
-    if (!process.env.STRIPE_SECRET_KEY) {
-        throw new Error('STRIPE_SECRET_KEY not configured');
-    }
-    return new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2026-01-28.clover',
-    });
-}
+import { getStripe } from '@/lib/stripe';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 

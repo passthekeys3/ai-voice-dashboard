@@ -23,6 +23,8 @@ export default function robots(): MetadataRoute.Robots {
                     '/phone-numbers',
                     '/scheduled-calls',
                     '/insights',
+                    '/agent-builder',
+                    '/integrations',
                 ],
             },
         ],

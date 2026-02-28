@@ -6,6 +6,7 @@
 import { fetchWithRetry } from '@/lib/retry';
 
 const RETELL_BASE_URL = 'https://api.retellai.com';
+const RETELL_API_TIMEOUT = 15_000;
 
 export interface RetellAgent {
     agent_id: string;
@@ -113,18 +114,17 @@ async function retellFetch<T>(
     }
 
     // Some endpoints (publish-agent, delete-agent) return non-JSON responses.
-    // Layer 1: Check content-type header
+    // Layer 1: Check content-type header — non-JSON is expected for void-return endpoints
     const contentType = response.headers.get('content-type');
     if (!contentType?.includes('application/json')) {
-        return undefined as T;
+        return undefined as unknown as T;
     }
 
-    // Layer 2: Catch JSON parse errors as fallback
-    // (some APIs don't set content-type correctly, or return empty bodies)
+    // Layer 2: Parse JSON body — throw on invalid JSON (indicates a server-side issue)
     try {
-        return await response.json();
+        return await response.json() as T;
     } catch {
-        return undefined as T;
+        throw new Error(`Retell API returned invalid JSON for ${path}`);
     }
 }
 
@@ -193,6 +193,7 @@ export async function publishRetellAgent(
             'Authorization': `Bearer ${apiKey}`,
             'Accept': '*/*',
         },
+        signal: AbortSignal.timeout(RETELL_API_TIMEOUT),
     });
 
     if (!response.ok) {

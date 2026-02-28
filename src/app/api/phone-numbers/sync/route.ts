@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { listVapiPhoneNumbers } from '@/lib/providers/vapi';
 import { listBlandPhoneNumbers } from '@/lib/providers/bland';
+import { PHONE_NUMBER_MONTHLY_COST_CENTS } from '@/lib/billing/tiers';
+
+const PROVIDER_API_TIMEOUT = 15_000;
 
 // POST /api/phone-numbers/sync - Sync phone numbers from Retell, VAPI, and Bland
 export async function POST(_request: NextRequest) {
@@ -51,6 +54,7 @@ export async function POST(_request: NextRequest) {
                     headers: {
                         'Authorization': `Bearer ${agency.retell_api_key}`,
                     },
+                    signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                 });
 
                 if (retellResponse.ok) {
@@ -108,7 +112,7 @@ export async function POST(_request: NextRequest) {
                                     inbound_agent_id: inboundAgentId,
                                     outbound_agent_id: outboundAgentId,
                                     agent_id: inboundAgentId,
-                                    monthly_cost_cents: 200,
+                                    monthly_cost_cents: PHONE_NUMBER_MONTHLY_COST_CENTS,
                                     purchased_at: new Date().toISOString(),
                                 });
                             if (insertErr) {
@@ -182,7 +186,7 @@ export async function POST(_request: NextRequest) {
                                 provider: 'vapi',
                                 inbound_agent_id: inboundAgentId,
                                 agent_id: inboundAgentId,
-                                monthly_cost_cents: 200,
+                                monthly_cost_cents: PHONE_NUMBER_MONTHLY_COST_CENTS,
                                 purchased_at: new Date().toISOString(),
                             });
                         if (insertErr) {
@@ -238,7 +242,7 @@ export async function POST(_request: NextRequest) {
                                 provider: 'bland',
                                 agent_id: inboundAgentId,
                                 inbound_agent_id: inboundAgentId,
-                                monthly_cost_cents: 200,
+                                monthly_cost_cents: PHONE_NUMBER_MONTHLY_COST_CENTS,
                                 purchased_at: new Date().toISOString(),
                             });
                         if (insertErr) {

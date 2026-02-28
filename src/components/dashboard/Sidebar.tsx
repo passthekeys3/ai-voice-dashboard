@@ -163,7 +163,7 @@ function SidebarContent({
             </div>
 
             {/* Navigation */}
-            <nav className="relative z-10 flex-1 space-y-1 px-3 py-4 overflow-y-auto">
+            <nav aria-label="Main navigation" className="relative z-10 flex-1 space-y-1 px-3 py-4 overflow-y-auto">
                 {allNavigation.map((item) => {
                     const isActive = pathname === item.href ||
                         (item.href !== '/' && pathname.startsWith(item.href));

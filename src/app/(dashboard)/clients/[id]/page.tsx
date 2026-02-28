@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Users, Bot, Phone, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { isValidUuid } from '@/lib/validation';
 import type { Profile, Client, Agent, Call } from '@/types';
 import { getClientPermissions } from '@/lib/permissions';
 
@@ -34,6 +35,9 @@ export default async function ClientDetailPage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
+    if (!isValidUuid(id)) {
+        notFound();
+    }
     const user = await requireAgencyAdmin();
     const supabase = await createClient();
 
@@ -105,7 +109,7 @@ export default async function ClientDetailPage({
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href="/clients">
+                        <Link href="/clients" aria-label="Back to clients">
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>

@@ -6,7 +6,7 @@ import { requireAuth, isAgencyAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
 import { AnalyticsCards } from '@/components/dashboard/AnalyticsCards';
-import { UsageChart } from '@/components/dashboard/UsageChart';
+import { UsageChart } from '@/components/dashboard/UsageChartLazy';
 import { CallsTable } from '@/components/dashboard/CallsTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getUserPermissions } from '@/lib/permissions';
@@ -55,10 +55,13 @@ export default async function DashboardPage() {
 
     const { data: recentCalls } = await callsQuery;
 
-    // Calculate stats from actual calls in database
+    // Calculate stats from actual calls in database (bounded to last 90 days for performance)
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     let statsQuery = supabase
         .from('calls')
-        .select('duration_seconds, cost_cents, status, started_at');
+        .select('duration_seconds, cost_cents, status, started_at')
+        .gte('started_at', ninetyDaysAgo.toISOString());
 
     if (agentIds.length > 0) {
         statsQuery = statsQuery.in('agent_id', agentIds);

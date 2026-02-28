@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { safeParseJson, isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
 }
+
+const PROVIDER_API_TIMEOUT = 15_000;
 
 // GET /api/phone-numbers/[id] - Get a phone number
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -15,6 +18,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id } = await params;
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         const { data: phoneNumber, error } = await supabase
@@ -48,7 +54,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id } = await params;
-        const body = await request.json();
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        const body = bodyOrError as Record<string, any>;
         const supabase = await createClient();
 
         // Verify ownership
@@ -140,6 +151,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                             method: 'PATCH',
                             headers: { 'Authorization': `Bearer ${agency.retell_api_key}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify(retellUpdate),
+                            signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                         });
                         if (!retellRes.ok) {
                             console.error('Retell phone number update failed:', retellRes.status);
@@ -156,6 +168,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                             method: 'PATCH',
                             headers: { 'Authorization': `Bearer ${agency.vapi_api_key}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ assistantId: externalAgentId }),
+                            signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                         });
                         if (!vapiRes.ok) {
                             console.error('Vapi phone number update failed:', vapiRes.status);
@@ -173,6 +186,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                                 method: 'POST',
                                 headers: { 'Authorization': agency.bland_api_key, 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ pathway_id: externalAgentId }),
+                                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                             });
                             if (!blandRes.ok) {
                                 console.error('Bland phone number update failed:', blandRes.status);
@@ -223,6 +237,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id } = await params;
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         // Get phone number
@@ -250,18 +267,21 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
                     const deleteRes = await fetch(`https://api.retellai.com/v2/delete-phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
                         method: 'DELETE',
                         headers: { 'Authorization': `Bearer ${agency.retell_api_key}` },
+                        signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                     });
                     if (!deleteRes.ok) console.error('Retell phone delete failed:', deleteRes.status);
                 } else if (phoneNumber.provider === 'vapi' && agency?.vapi_api_key) {
                     const deleteRes = await fetch(`https://api.vapi.ai/phone-number/${encodeURIComponent(phoneNumber.external_id)}`, {
                         method: 'DELETE',
                         headers: { 'Authorization': `Bearer ${agency.vapi_api_key}` },
+                        signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                     });
                     if (!deleteRes.ok) console.error('Vapi phone delete failed:', deleteRes.status);
                 } else if (phoneNumber.provider === 'bland' && agency?.bland_api_key) {
                     const deleteRes = await fetch(`https://api.bland.ai/v1/inbound/${encodeURIComponent(phoneNumber.phone_number)}`, {
                         method: 'DELETE',
                         headers: { 'Authorization': agency.bland_api_key, 'Content-Type': 'application/json' },
+                        signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                     });
                     if (!deleteRes.ok) console.error('Bland phone delete failed:', deleteRes.status);
                 }

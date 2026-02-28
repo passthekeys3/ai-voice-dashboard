@@ -48,7 +48,10 @@ export default async function DashboardLayout({
                     branding={user.agency.branding}
                     permissions={permissions}
                 />
-                <main className="flex-1 overflow-auto pt-14 md:pt-0">
+                <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-black dark:focus:bg-slate-900 dark:focus:text-white rounded-md">
+                    Skip to main content
+                </a>
+                <main id="main-content" className="flex-1 overflow-auto pt-14 md:pt-0">
                     <BackgroundSync />
                     {children}
                 </main>

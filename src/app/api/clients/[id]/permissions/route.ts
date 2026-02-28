@@ -5,10 +5,12 @@ import {
     unauthorized,
     forbidden,
     notFound,
+    badRequest,
     apiSuccess,
     databaseError,
     withErrorHandling,
 } from '@/lib/api/response';
+import { isValidUuid } from '@/lib/validation';
 import type { ClientPermissions } from '@/types';
 
 interface RouteParams {
@@ -30,6 +32,11 @@ export const PATCH = withErrorHandling(async (
     }
 
     const { id: clientId } = await context!.params;
+
+    if (!isValidUuid(clientId)) {
+        return badRequest('Invalid ID format');
+    }
+
     const body = await request.json();
     const { permissions } = body as { permissions: ClientPermissions | null };
 

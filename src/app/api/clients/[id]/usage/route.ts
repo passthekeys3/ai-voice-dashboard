@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getCurrentUsage } from '@/lib/billing/usage';
+import { isValidUuid } from '@/lib/validation';
 
 /**
  * GET /api/clients/[id]/usage
@@ -15,6 +16,11 @@ export async function GET(
 ) {
     try {
         const { id } = await params;
+
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
+
         const user = await getCurrentUser();
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

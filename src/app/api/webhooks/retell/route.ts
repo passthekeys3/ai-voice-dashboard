@@ -10,6 +10,7 @@ import { isValidWebhookUrl } from '@/lib/webhooks/validation';
 import { waitUntil } from '@vercel/functions';
 import type { Workflow } from '@/types';
 import Retell from 'retell-sdk';
+const WEBHOOK_FWD_TIMEOUT = 10_000;
 
 // Retell webhook payload types
 interface RetellWebhookPayload {
@@ -58,6 +59,7 @@ async function forwardToWebhook(webhookUrl: string, callData: Record<string, unk
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(callData),
+            signal: AbortSignal.timeout(WEBHOOK_FWD_TIMEOUT),
         });
     } catch (err) {
         console.error('Failed to forward webhook:', err instanceof Error ? err.message : 'Unknown error');
@@ -70,7 +72,13 @@ export async function POST(request: NextRequest) {
         const rawBody = await request.text();
         const signature = request.headers.get('x-retell-signature');
 
-        const payload: RetellWebhookPayload = JSON.parse(rawBody);
+        let payload: RetellWebhookPayload;
+        try {
+            payload = JSON.parse(rawBody);
+        } catch {
+            console.error('[RETELL WEBHOOK] Invalid JSON payload');
+            return NextResponse.json({ received: true });
+        }
 
         // Validate event type at runtime (TypeScript union doesn't enforce this)
         const ALLOWED_EVENTS = ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'] as const;
@@ -111,22 +119,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
-        // Deduplicate — skip events we've already processed
+        // Deduplicate — atomic INSERT rejects duplicates via primary key constraint
         const dedupKey = `retell:${payload.call.call_id}:${payload.event}`;
-        const { data: existingEvent } = await supabase
+        const { error: dedupError } = await supabase
             .from('webhook_events')
-            .select('event_id')
-            .eq('event_id', dedupKey)
-            .single();
+            .insert({ event_id: dedupKey });
 
-        if (existingEvent) {
+        if (dedupError?.code === '23505') {
             return NextResponse.json({ received: true });
         }
-
-        await supabase.from('webhook_events').upsert(
-            { event_id: dedupKey },
-            { onConflict: 'event_id', ignoreDuplicates: true }
-        );
 
         // Handle transcript_updated event — lightweight: just update DB transcript and return
         if (payload.event === 'transcript_updated') {

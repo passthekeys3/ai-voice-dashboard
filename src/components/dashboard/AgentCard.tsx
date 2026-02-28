@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +46,7 @@ function formatPhoneNumber(number: string) {
 }
 
 export function AgentCard({ agent, phoneNumber, showDelete = true, configBasePath = '/agents' }: AgentCardProps) {
+    const router = useRouter();
     const [deleting, setDeleting] = useState(false);
     const [deleteFromProvider, setDeleteFromProvider] = useState(false);
 
@@ -71,7 +73,7 @@ export function AgentCard({ agent, phoneNumber, showDelete = true, configBasePat
                         ? `"${agent.name}" has been removed from your dashboard and ${providerDisplayName}`
                         : `"${agent.name}" has been removed from your dashboard. It still exists in ${providerDisplayName}.`,
                 });
-                window.location.reload();
+                router.refresh();
             } else {
                 const data = await response.json().catch(() => ({}));
                 toast.error('Failed to delete agent', {
@@ -138,7 +140,7 @@ export function AgentCard({ agent, phoneNumber, showDelete = true, configBasePat
                                 'h-2 w-2 rounded-full',
                                 agent.is_active
                                     ? 'bg-green-500 animate-pulse'
-                                    : 'bg-gray-400'
+                                    : 'bg-gray-400 dark:bg-gray-500'
                             )}
                         />
                         <span className={cn(
@@ -192,7 +194,7 @@ export function AgentCard({ agent, phoneNumber, showDelete = true, configBasePat
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                                         <AlertDialogAction
                                             onClick={handleDelete}
-                                            className="bg-red-600 hover:bg-red-700"
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                         >
                                             Delete
                                         </AlertDialogAction>

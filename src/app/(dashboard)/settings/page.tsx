@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Brain } from 'lucide-react';
 import type { Agency, AgencyIntegrations } from '@/types';
+import { getTierFromPriceId } from '@/lib/billing/tiers';
 
 function BillingSkeleton() {
     return (
@@ -151,6 +152,10 @@ export default async function SettingsPage() {
     const user = await requireAgencyAdmin();
     const safeAgency = sanitizeAgencyForClient(user.agency);
 
+    // Resolve current tier for feature gating
+    const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+    const currentTier = tierInfo?.tier ?? null;
+
     return (
         <div className="flex flex-col h-full">
             <Header
@@ -179,7 +184,7 @@ export default async function SettingsPage() {
 
                 {/* Custom Domain Settings - Only for agency admins */}
                 {user.profile.role === 'agency_admin' && (
-                    <CustomDomainSettings />
+                    <CustomDomainSettings currentTier={currentTier} />
                 )}
 
                 <ClientPermissionsEditor

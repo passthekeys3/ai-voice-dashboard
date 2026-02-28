@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
+import { safeParseJson, isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -19,7 +21,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
+        // ---- Tier gate: Experiments require Growth+ ----
+        const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+        if (!tierInfo || !hasFeature(tierInfo.tier, 'experiments')) {
+            return NextResponse.json(
+                { error: 'A/B Experiments require a Growth plan or higher. Please upgrade.' },
+                { status: 403 }
+            );
+        }
+
         const { id } = await params;
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         // Fetch experiment with variants
@@ -36,20 +50,24 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         // Fetch call metrics per variant
         if (experiment.variants && experiment.variants.length > 0) {
-            // Get agent IDs for this experiment to scope calls query
-            const variantAgentIds = experiment.variants
-                .map((v: { agent_id?: string }) => v.agent_id)
-                .filter(Boolean) as string[];
+            // Defense-in-depth: fetch this agency's agent IDs to explicitly scope
+            // the calls query, rather than relying solely on the FK chain
+            // (experiment → variant → calls) for agency isolation.
+            const { data: agencyAgents } = await supabase
+                .from('agents')
+                .select('id')
+                .eq('agency_id', user.agency.id);
+            const agencyAgentIds = agencyAgents?.map(a => a.id) || [];
 
             for (const variant of experiment.variants) {
-                const query = supabase
+                let query = supabase
                     .from('calls')
                     .select('duration_seconds, sentiment, status')
                     .eq('variant_id', variant.id);
 
-                // Defense-in-depth: scope calls to agents owned by this agency
-                if (variantAgentIds.length > 0) {
-                    query.in('agent_id', variantAgentIds);
+                // Explicit agency scoping via agent IDs
+                if (agencyAgentIds.length > 0) {
+                    query = query.in('agent_id', agencyAgentIds);
                 }
 
                 const { data: calls } = await query;
@@ -101,8 +119,23 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
+        // ---- Tier gate: Experiments require Growth+ ----
+        const patchTierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+        if (!patchTierInfo || !hasFeature(patchTierInfo.tier, 'experiments')) {
+            return NextResponse.json(
+                { error: 'A/B Experiments require a Growth plan or higher. Please upgrade.' },
+                { status: 403 }
+            );
+        }
+
         const { id } = await params;
-        const body = await request.json();
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const body = bodyOrError as Record<string, any>;
         const supabase = await createClient();
 
         const updateData: Record<string, unknown> = {
@@ -159,7 +192,19 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
+        // ---- Tier gate: Experiments require Growth+ ----
+        const deleteTierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+        if (!deleteTierInfo || !hasFeature(deleteTierInfo.tier, 'experiments')) {
+            return NextResponse.json(
+                { error: 'A/B Experiments require a Growth plan or higher. Please upgrade.' },
+                { status: 403 }
+            );
+        }
+
         const { id } = await params;
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         // Only allow deleting draft or completed experiments

@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
+import { isValidUuid } from '@/lib/validation';
 import { WidgetCallUI } from '@/components/widget/WidgetCallUI';
 
 export default async function WidgetPage({
@@ -8,6 +9,9 @@ export default async function WidgetPage({
     params: Promise<{ agentId: string }>;
 }) {
     const { agentId } = await params;
+    if (!isValidUuid(agentId)) {
+        notFound();
+    }
     const supabase = createServiceClient();
 
     // Fetch agent + agency branding for the widget

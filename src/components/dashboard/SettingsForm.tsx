@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Eye, Palette, Mail, Phone, Globe, RefreshCw, Key, Loader2, CheckCircle2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import type { Agency } from '@/types';
 
 interface SettingsFormProps {
@@ -23,6 +24,7 @@ const isMasked = (v?: string | null): boolean => !!v?.startsWith('...');
 const initSecret = (v?: string | null): string => isMasked(v) ? '' : (v || '');
 
 export function SettingsForm({ agency }: SettingsFormProps) {
+    const router = useRouter();
     const [showPreview, setShowPreview] = useState(false);
     const [savingBranding, setSavingBranding] = useState(false);
     const [brandingSaved, setBrandingSaved] = useState(false);
@@ -183,8 +185,8 @@ export function SettingsForm({ agency }: SettingsFormProps) {
 
             setBrandingSaved(true);
             toast.success('Branding saved');
-            // Hard reload so the new theme/branding takes effect immediately
-            window.location.reload();
+            // Refresh server data so the new theme/branding takes effect immediately
+            router.refresh();
         } catch {
             setBrandingError('An unexpected error occurred');
         } finally {
@@ -306,14 +308,14 @@ export function SettingsForm({ agency }: SettingsFormProps) {
                                 )}
 
                                 {/* Card Preview */}
-                                <div className="w-full max-w-sm bg-white rounded-lg shadow-md p-6 space-y-4">
+                                <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 space-y-4">
                                     <div className="space-y-2">
-                                        <div className="h-4 bg-slate-200 rounded w-16" />
-                                        <div className="h-10 bg-slate-100 rounded" />
+                                        <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-16" />
+                                        <div className="h-10 bg-slate-100 dark:bg-slate-700/60 rounded" />
                                     </div>
                                     <div className="space-y-2">
-                                        <div className="h-4 bg-slate-200 rounded w-20" />
-                                        <div className="h-10 bg-slate-100 rounded" />
+                                        <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-20" />
+                                        <div className="h-10 bg-slate-100 dark:bg-slate-700/60 rounded" />
                                     </div>
                                     <div
                                         className="h-10 rounded flex items-center justify-center text-white text-sm font-medium"
@@ -324,7 +326,7 @@ export function SettingsForm({ agency }: SettingsFormProps) {
                                 </div>
 
                                 {/* Footer Preview */}
-                                <p className="text-xs text-slate-400 mt-6">
+                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-6">
                                     {formData.footerText || `© ${new Date().getFullYear()} ${formData.companyName || formData.name || 'Your Company'}`}
                                 </p>
                             </div>
@@ -371,7 +373,7 @@ export function SettingsForm({ agency }: SettingsFormProps) {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex-1 bg-slate-50 p-4 text-slate-400 text-sm">
+                                    <div className="flex-1 bg-slate-50 dark:bg-slate-900 p-4 text-slate-400 dark:text-slate-500 text-sm">
                                         Main content area
                                     </div>
                                 </div>
@@ -432,6 +434,7 @@ export function SettingsForm({ agency }: SettingsFormProps) {
                                         value={formData.primaryColor}
                                         onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
                                         className="flex-1"
+                                        aria-label="Primary color hex value"
                                     />
                                 </div>
                             </div>
@@ -449,6 +452,7 @@ export function SettingsForm({ agency }: SettingsFormProps) {
                                         value={formData.secondaryColor}
                                         onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
                                         className="flex-1"
+                                        aria-label="Secondary color hex value"
                                     />
                                 </div>
                             </div>
@@ -466,6 +470,7 @@ export function SettingsForm({ agency }: SettingsFormProps) {
                                         value={formData.accentColor}
                                         onChange={(e) => setFormData({ ...formData, accentColor: e.target.value })}
                                         className="flex-1"
+                                        aria-label="Accent color hex value"
                                     />
                                 </div>
                             </div>

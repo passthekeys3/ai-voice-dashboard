@@ -1,7 +1,19 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useInView } from '@/hooks/useInView';
-import { DashboardDemoContent } from './DashboardDemoContent';
+
+const DashboardDemoContent = dynamic(
+    () => import('./DashboardDemoContent').then(mod => ({ default: mod.DashboardDemoContent })),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="flex min-h-[380px] sm:min-h-[460px] items-center justify-center bg-background">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
+            </div>
+        ),
+    }
+);
 
 export function DashboardDemo() {
     const { ref, isInView } = useInView({ threshold: 0.1 });

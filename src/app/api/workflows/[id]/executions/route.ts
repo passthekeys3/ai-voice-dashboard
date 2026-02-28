@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { isValidUuid } from '@/lib/validation';
 
 // GET /api/workflows/:id/executions - List executions for a specific workflow
 export async function GET(
@@ -18,6 +19,9 @@ export async function GET(
         }
 
         const { id } = await params;
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
         const { searchParams } = new URL(request.url);
 

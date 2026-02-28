@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CreditCard, ExternalLink, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 export function BillingUsage() {
     const [loading, setLoading] = useState(false);
@@ -18,7 +18,17 @@ export function BillingUsage() {
             const data = await response.json();
 
             if (data.url) {
-                window.open(data.url, '_blank');
+                // Validate URL is from Stripe before opening
+                try {
+                    const parsed = new URL(data.url);
+                    if (!parsed.hostname.endsWith('stripe.com')) {
+                        throw new Error('Unexpected billing URL');
+                    }
+                    window.open(data.url, '_blank');
+                } catch {
+                    toast.error('Failed to open billing portal.');
+                    return;
+                }
             } else {
                 toast.error(data.message || 'Billing portal not yet configured. Contact your agency administrator.');
             }

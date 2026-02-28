@@ -11,6 +11,7 @@ import {
     withErrorHandling,
 } from '@/lib/api/response';
 import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
+import { isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -20,6 +21,7 @@ type ControlAction = 'mute' | 'unmute' | 'say';
 
 const VALID_ACTIONS: ControlAction[] = ['mute', 'unmute', 'say'];
 const MAX_SAY_LENGTH = 500;
+const PROVIDER_API_TIMEOUT = 15_000;
 
 // Defense-in-depth: ensure controlUrl points to Vapi infrastructure
 function isValidVapiControlUrl(url: string): boolean {
@@ -47,6 +49,9 @@ export const POST = withErrorHandling(async (
     }
 
     const { id: callId } = await context!.params;
+    if (!isValidUuid(callId)) {
+        return badRequest('Invalid ID format');
+    }
     const body = await request.json();
     const { action, message } = body as { action: ControlAction; message?: string };
 
@@ -102,6 +107,7 @@ export const POST = withErrorHandling(async (
 
         const vapiResponse = await fetch(`https://api.vapi.ai/call/${encodeURIComponent(callId)}`, {
             headers: { 'Authorization': `Bearer ${vapiKey}` },
+            signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
         });
 
         if (!vapiResponse.ok) {
@@ -156,6 +162,7 @@ async function sendControlCommand(controlUrl: string, action: ControlAction, mes
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
         });
 
         if (!response.ok) {

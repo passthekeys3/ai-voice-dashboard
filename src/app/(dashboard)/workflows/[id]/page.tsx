@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { isValidUuid } from '@/lib/validation';
 
 export const metadata: Metadata = { title: 'Edit Workflow' };
 
@@ -19,6 +20,9 @@ export default async function EditWorkflowPage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
+    if (!isValidUuid(id)) {
+        notFound();
+    }
     const user = await requireAgencyAdmin();
     const supabase = await createClient();
 
@@ -53,7 +57,7 @@ export default async function EditWorkflowPage({
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href="/workflows">
+                        <Link href="/workflows" aria-label="Back to workflows">
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>

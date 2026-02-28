@@ -5,7 +5,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
 import { AnalyticsCards } from '@/components/dashboard/AnalyticsCards';
 import { AnalyticsFilters } from '@/components/dashboard/AnalyticsFilters';
-import { UsageChart } from '@/components/dashboard/UsageChart';
+import { UsageChart } from '@/components/dashboard/UsageChartLazy';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getUserPermissions } from '@/lib/permissions';
 import { redirect } from 'next/navigation';

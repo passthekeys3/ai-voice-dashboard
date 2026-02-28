@@ -5,9 +5,11 @@ import {
     unauthorized,
     forbidden,
     notFound,
+    badRequest,
     apiSuccess,
     withErrorHandling,
 } from '@/lib/api/response';
+import { isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -23,6 +25,9 @@ export const GET = withErrorHandling(async (
     }
 
     const { id } = await context!.params;
+    if (!isValidUuid(id)) {
+        return badRequest('Invalid ID format');
+    }
     const supabase = await createClient();
 
     const { data: call, error } = await supabase

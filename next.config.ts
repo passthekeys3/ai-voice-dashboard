@@ -20,6 +20,8 @@ const securityHeaders = [
             "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
             "media-src 'self' https: blob:",
             "worker-src 'self' blob:",
+            "object-src 'none'",
+            "base-uri 'self'",
         ].join('; '),
     },
 ];
@@ -33,20 +35,42 @@ const nextConfig: NextConfig = {
             },
             {
                 // Widget must be embeddable in iframes on third-party sites
+                // CSP frame-ancestors * below handles iframe embedding (X-Frame-Options omitted — ALLOWALL is not a valid value)
                 source: '/widget/:path*',
                 headers: [
-                    { key: 'X-Frame-Options', value: 'ALLOWALL' },
+                    { key: 'X-Content-Type-Options', value: 'nosniff' },
                     {
                         key: 'Content-Security-Policy',
                         value: [
                             "default-src 'self'",
                             "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
                             "style-src 'self' 'unsafe-inline'",
+                            "img-src 'self' data: https:",
                             "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.retellai.com https://api.vapi.ai https://api.bland.ai",
                             "media-src 'self' https: blob:",
+                            "object-src 'none'",
+                            "base-uri 'self'",
                             "frame-ancestors *",
                         ].join('; '),
                     },
+                ],
+            },
+            {
+                // Widget session API — called cross-origin from embedded widget on customer sites
+                source: '/api/widget/:path*',
+                headers: [
+                    { key: 'Access-Control-Allow-Origin', value: '*' },
+                    { key: 'Access-Control-Allow-Methods', value: 'POST, OPTIONS' },
+                    { key: 'Access-Control-Allow-Headers', value: 'Content-Type' },
+                ],
+            },
+            {
+                // External trigger API — called from Make.com, Zapier, n8n, etc.
+                source: '/api/trigger-call',
+                headers: [
+                    { key: 'Access-Control-Allow-Origin', value: '*' },
+                    { key: 'Access-Control-Allow-Methods', value: 'POST, OPTIONS' },
+                    { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
                 ],
             },
         ];

@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
 import { listBlandVoices } from '@/lib/providers/bland';
 
+const PROVIDER_API_TIMEOUT = 15_000;
+
 // GET /api/voices - List available voices from configured providers
 export async function GET(request: NextRequest) {
     try {
@@ -41,6 +43,7 @@ export async function GET(request: NextRequest) {
                     headers: {
                         'Authorization': `Bearer ${agency.retell_api_key}`,
                     },
+                    signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                 });
 
                 if (retellResponse.ok) {

@@ -11,6 +11,7 @@ import {
     validateRequest,
     withErrorHandling,
 } from '@/lib/api/response';
+import { isValidUuid } from '@/lib/validation';
 
 // Use admin client to create users
 const supabaseAdmin = createClient(
@@ -37,6 +38,11 @@ export const POST = withErrorHandling(async (
     }
 
     const { id: clientId } = await context!.params;
+
+    if (!isValidUuid(clientId)) {
+        return badRequest('Invalid ID format');
+    }
+
     const body = await request.json();
     const { email, full_name, role = 'client_admin' } = body;
 

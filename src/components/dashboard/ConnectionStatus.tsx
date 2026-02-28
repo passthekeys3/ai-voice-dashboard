@@ -19,7 +19,7 @@ export function ConnectionStatus({
     if (status.connected) return 'text-green-500';
     if (status.reconnecting) return 'text-yellow-500';
     if (status.error) return 'text-red-500';
-    return 'text-gray-400';
+    return 'text-gray-400 dark:text-gray-500';
   };
 
   const getStatusText = () => {

@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
 import { getRetellAgent, updateRetellLLM } from '@/lib/providers/retell';
 import { updateVapiAssistant, getVapiAssistant, usesVapiMessagesFormat } from '@/lib/providers/vapi';
 import type { VapiAssistant } from '@/lib/providers/vapi';
 import { updateBlandPathway } from '@/lib/providers/bland';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 import type { VoiceProvider } from '@/types';
+import { safeParseJson, isValidUuid } from '@/lib/validation';
 
 interface PromoteRequestBody {
     variant_id: string;
@@ -26,8 +28,22 @@ export async function POST(
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
+        // ---- Tier gate: Experiments require Growth+ ----
+        const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+        if (!tierInfo || !hasFeature(tierInfo.tier, 'experiments')) {
+            return NextResponse.json(
+                { error: 'A/B Experiments require a Growth plan or higher. Please upgrade.' },
+                { status: 403 }
+            );
+        }
+
         const { id } = await params;
-        const body: PromoteRequestBody = await request.json();
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        const body = bodyOrError as unknown as PromoteRequestBody;
         const supabase = await createClient();
 
         // Get experiment with variants
@@ -44,6 +60,14 @@ export async function POST(
 
         if (expError || !experiment) {
             return NextResponse.json({ error: 'Experiment not found' }, { status: 404 });
+        }
+
+        // Guard: prevent re-promotion of completed experiments
+        if (experiment.status === 'completed') {
+            return NextResponse.json(
+                { error: 'This experiment has already been completed. Cannot promote again.' },
+                { status: 400 }
+            );
         }
 
         // Find the winning variant

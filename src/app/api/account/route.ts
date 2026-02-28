@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import Stripe from 'stripe';
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import {
@@ -10,6 +9,7 @@ import {
     apiSuccess,
     withErrorHandling,
 } from '@/lib/api/response';
+import { getStripe } from '@/lib/stripe';
 
 // Admin client for auth user deletion (same pattern as clients/[id]/route.ts)
 const supabaseAdmin = createSupabaseAdmin(
@@ -52,9 +52,7 @@ export const DELETE = withErrorHandling(async (request: NextRequest) => {
     // ─── 1. Cancel agency Stripe subscription ───
     if (user.agency.subscription_id && process.env.STRIPE_SECRET_KEY) {
         try {
-            const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-                apiVersion: '2026-01-28.clover',
-            });
+            const stripe = getStripe();
             await stripe.subscriptions.cancel(user.agency.subscription_id);
             console.log(`[ACCOUNT DELETE] Canceled agency subscription ${user.agency.subscription_id}`);
         } catch (stripeErr) {
@@ -74,9 +72,7 @@ export const DELETE = withErrorHandling(async (request: NextRequest) => {
                 .not('stripe_subscription_id', 'is', null);
 
             if (clientsWithSubs && clientsWithSubs.length > 0) {
-                const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-                    apiVersion: '2026-01-28.clover',
-                });
+                const stripe = getStripe();
 
                 for (const client of clientsWithSubs) {
                     try {

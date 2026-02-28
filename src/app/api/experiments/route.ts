@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
+import { safeParseJson } from '@/lib/validation';
 
 // GET /api/experiments - List all experiments
 export async function GET(request: NextRequest) {
@@ -12,6 +14,15 @@ export async function GET(request: NextRequest) {
 
         if (!isAgencyAdmin(user)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // ---- Tier gate: Experiments require Growth+ ----
+        const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+        if (!tierInfo || !hasFeature(tierInfo.tier, 'experiments')) {
+            return NextResponse.json(
+                { error: 'A/B Experiments require a Growth plan or higher. Please upgrade.' },
+                { status: 403 }
+            );
         }
 
         const supabase = await createClient();
@@ -76,7 +87,19 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const body = await request.json();
+        // ---- Tier gate: Experiments require Growth+ ----
+        const postTierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+        if (!postTierInfo || !hasFeature(postTierInfo.tier, 'experiments')) {
+            return NextResponse.json(
+                { error: 'A/B Experiments require a Growth plan or higher. Please upgrade.' },
+                { status: 403 }
+            );
+        }
+
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const body = bodyOrError as Record<string, any>;
         const { name, description, agent_id, goal, variants } = body;
 
         if (!name || typeof name !== 'string') {

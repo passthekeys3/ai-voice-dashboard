@@ -9,6 +9,7 @@ import {
     validateIntegrationUpdates,
     maskIntegrationSecrets,
 } from '@/lib/integrations/validate-integrations';
+import { safeParseJson, isValidUuid } from '@/lib/validation';
 
 /**
  * GET /api/clients/[id]/integrations
@@ -21,6 +22,11 @@ export async function GET(
 ) {
     try {
         const { id: clientId } = await params;
+
+        if (!isValidUuid(clientId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
+
         const user = await getCurrentUser();
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -67,6 +73,11 @@ export async function PATCH(
 ) {
     try {
         const { id: clientId } = await params;
+
+        if (!isValidUuid(clientId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
+
         const user = await getCurrentUser();
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -80,7 +91,10 @@ export async function PATCH(
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const body = await request.json();
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const body = bodyOrError as Record<string, any>;
         const { integrations } = body;
 
         if (!integrations || typeof integrations !== 'object' || Array.isArray(integrations)) {
@@ -163,6 +177,11 @@ export async function DELETE(
 ) {
     try {
         const { id: clientId } = await params;
+
+        if (!isValidUuid(clientId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
+
         const user = await getCurrentUser();
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
+import { isValidUuid, safeParseJson } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -18,8 +20,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
+        // ---- Tier gate: Experiments require Growth+ ----
+        const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+        if (!tierInfo || !hasFeature(tierInfo.tier, 'experiments')) {
+            return NextResponse.json(
+                { error: 'A/B Experiments require a Growth plan or higher. Please upgrade.' },
+                { status: 403 }
+            );
+        }
+
         const { id: experimentId } = await params;
-        const body = await request.json();
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const body = bodyOrError as Record<string, any>;
         const { name, prompt, traffic_weight, is_control } = body;
 
         if (!name || !prompt) {
@@ -84,8 +98,20 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
+        // ---- Tier gate: Experiments require Growth+ ----
+        const patchTierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+        if (!patchTierInfo || !hasFeature(patchTierInfo.tier, 'experiments')) {
+            return NextResponse.json(
+                { error: 'A/B Experiments require a Growth plan or higher. Please upgrade.' },
+                { status: 403 }
+            );
+        }
+
         const { id: experimentId } = await params;
-        const body = await request.json();
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const body = bodyOrError as Record<string, any>;
         const { variants } = body;
 
         if (!variants || !Array.isArray(variants)) {
@@ -142,6 +168,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         const errors: string[] = [];
         for (const variant of variants) {
             if (variant.id) {
+                // Validate variant ID format to prevent injection
+                if (!isValidUuid(variant.id)) {
+                    return NextResponse.json({ error: 'Invalid variant ID format' }, { status: 400 });
+                }
                 const updateFields: Record<string, unknown> = {
                     updated_at: new Date().toISOString(),
                 };

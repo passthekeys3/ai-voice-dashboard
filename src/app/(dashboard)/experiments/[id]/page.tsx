@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { isValidUuid } from '@/lib/validation';
 
 export const metadata: Metadata = { title: 'Experiment Details' };
 
@@ -17,6 +18,9 @@ export default async function ExperimentDetailPage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
+    if (!isValidUuid(id)) {
+        notFound();
+    }
     const user = await requireAgencyAdmin();
     const supabase = await createClient();
 
@@ -32,12 +36,33 @@ export default async function ExperimentDetailPage({
         notFound();
     }
 
+    // Get all agent IDs for this agency (for scoping variant call queries)
+    const { data: agencyAgents } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('agency_id', user.agency.id);
+    const agencyAgentIds = agencyAgents?.map(a => a.id) || [];
+
     // Calculate metrics for each variant
     for (const variant of experiment.variants || []) {
-        const { data: calls } = await supabase
+        let variantQuery = supabase
             .from('calls')
             .select('duration_seconds, sentiment, status')
             .eq('variant_id', variant.id);
+
+        // Scope to agency's agents to prevent cross-tenant data leaks
+        if (agencyAgentIds.length > 0) {
+            variantQuery = variantQuery.in('agent_id', agencyAgentIds);
+        } else {
+            // No agents = no calls to show
+            variant.call_count = 0;
+            variant.avg_duration = 0;
+            variant.avg_sentiment = 0;
+            variant.conversion_rate = 0;
+            continue;
+        }
+
+        const { data: calls } = await variantQuery;
 
         if (calls && calls.length > 0) {
             variant.call_count = calls.length;
@@ -76,7 +101,7 @@ export default async function ExperimentDetailPage({
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href="/experiments">
+                        <Link href="/experiments" aria-label="Back to experiments">
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>

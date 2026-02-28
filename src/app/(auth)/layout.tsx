@@ -1,7 +1,17 @@
+import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import Image from 'next/image';
 import { getAgencyFromDomain, isPlatformDomain } from '@/lib/getAgencyFromDomain';
 import { DEFAULT_AGENCY_BRANDING } from '@/types/database';
+
+export const metadata: Metadata = {
+    title: 'Account',
+    description: 'Sign in or create your Voice AI Dashboard account.',
+    robots: {
+        index: true,
+        follow: true,
+    },
+};
 
 export default async function AuthLayout({
     children,

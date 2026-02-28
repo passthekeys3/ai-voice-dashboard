@@ -21,7 +21,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { MessageSquarePlus, Loader2, Bug, Lightbulb, MessageCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 type FeedbackType = 'bug' | 'feature_request' | 'general';
 

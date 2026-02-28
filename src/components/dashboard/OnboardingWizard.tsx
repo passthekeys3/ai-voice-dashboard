@@ -15,7 +15,7 @@ import {
     Phone,
     Bot,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 interface OnboardingWizardProps {
     agency: { name: string };

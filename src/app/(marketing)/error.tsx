@@ -14,6 +14,12 @@ export default function MarketingError({
 }) {
     useEffect(() => {
         console.error('Marketing page error:', error);
+        // Report to Sentry for monitoring
+        import('@sentry/nextjs').then(Sentry => {
+            Sentry.captureException(error);
+        }).catch(() => {
+            // Sentry not available, error already logged to console
+        });
     }, [error]);
 
     return (

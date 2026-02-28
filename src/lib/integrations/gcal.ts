@@ -9,6 +9,7 @@
  */
 
 const GCAL_API_BASE = 'https://www.googleapis.com/calendar/v3';
+const GCAL_API_TIMEOUT = 15_000; // 15s timeout for all Google Calendar API calls
 
 // --- Types ---
 
@@ -68,6 +69,7 @@ async function refreshAccessToken(
                 client_secret: clientSecret,
                 refresh_token: refreshToken,
             }),
+            signal: AbortSignal.timeout(GCAL_API_TIMEOUT),
         });
 
         if (!response.ok) {
@@ -146,6 +148,7 @@ export async function listCalendars(
     try {
         const response = await fetch(`${GCAL_API_BASE}/users/me/calendarList`, {
             headers: { Authorization: `Bearer ${config.accessToken}` },
+            signal: AbortSignal.timeout(GCAL_API_TIMEOUT),
         });
 
         if (!response.ok) {
@@ -186,6 +189,7 @@ export async function getFreeBusy(
                 Authorization: `Bearer ${config.accessToken}`,
                 'Content-Type': 'application/json',
             },
+            signal: AbortSignal.timeout(GCAL_API_TIMEOUT),
             body: JSON.stringify({
                 timeMin: params.timeMin,
                 timeMax: params.timeMax,
@@ -340,6 +344,7 @@ export async function createEvent(
                     Authorization: `Bearer ${config.accessToken}`,
                     'Content-Type': 'application/json',
                 },
+                signal: AbortSignal.timeout(GCAL_API_TIMEOUT),
                 body: JSON.stringify(body),
             }
         );
@@ -377,6 +382,7 @@ export async function cancelEvent(
                 headers: {
                     Authorization: `Bearer ${config.accessToken}`,
                 },
+                signal: AbortSignal.timeout(GCAL_API_TIMEOUT),
             }
         );
 
@@ -405,6 +411,7 @@ export async function getEvent(
             `${GCAL_API_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
             {
                 headers: { Authorization: `Bearer ${config.accessToken}` },
+                signal: AbortSignal.timeout(GCAL_API_TIMEOUT),
             }
         );
 

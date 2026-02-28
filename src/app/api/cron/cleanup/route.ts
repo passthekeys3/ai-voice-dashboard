@@ -99,6 +99,22 @@ export async function POST(request: NextRequest) {
             ...(scheduledErr && { error: scheduledErr.code }),
         });
 
+        // Clean up webhook deduplication events (14 days)
+        // This table grows with every processed webhook event and has no TTL.
+        // 14 days is generous — Stripe retries for up to 72 hours, and voice
+        // provider webhooks retry for at most a few hours.
+        const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const { count: webhookEventsCount, error: webhookEventsErr } = await supabase
+            .from('webhook_events')
+            .delete({ count: 'exact' })
+            .lt('created_at', fourteenDaysAgo);
+
+        results.push({
+            table: 'webhook_events',
+            deleted: webhookEventsCount || 0,
+            ...(webhookEventsErr && { error: webhookEventsErr.code }),
+        });
+
         const totalDeleted = results.reduce((sum, r) => sum + r.deleted, 0);
         const errors = results.filter(r => r.error);
 

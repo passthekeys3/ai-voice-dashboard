@@ -10,10 +10,13 @@ import {
     withErrorHandling,
 } from '@/lib/api/response';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
+import { isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
 }
+
+const PROVIDER_API_TIMEOUT = 15_000;
 
 // POST /api/calls/[id]/end?provider=retell - End an active call
 export const POST = withErrorHandling(async (
@@ -30,6 +33,9 @@ export const POST = withErrorHandling(async (
     }
 
     const { id: callId } = await context!.params;
+    if (!isValidUuid(callId)) {
+        return badRequest('Invalid ID format');
+    }
     const providerParam = request.nextUrl.searchParams.get('provider') || 'retell';
     const supabase = await createClient();
 
@@ -79,6 +85,7 @@ export const POST = withErrorHandling(async (
                 'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json',
             },
+            signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
         });
         if (!endResponse.ok) {
             console.error('Failed to end Retell call:', endResponse.status);
@@ -91,6 +98,7 @@ export const POST = withErrorHandling(async (
                 'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json',
             },
+            signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
         });
         if (!endResponse.ok) {
             console.error('Failed to end Vapi call:', endResponse.status);
@@ -103,6 +111,7 @@ export const POST = withErrorHandling(async (
                 'authorization': apiKey,
                 'Content-Type': 'application/json',
             },
+            signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
         });
         if (!endResponse.ok) {
             console.error('Failed to end Bland call:', endResponse.status);

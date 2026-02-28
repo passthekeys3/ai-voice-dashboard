@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import * as retell from '@/lib/providers/retell';
+import { isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -16,6 +17,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id: agentId } = await params;
+        if (!isValidUuid(agentId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = createServiceClient();
 
         // Verify agent belongs to agency
@@ -86,6 +90,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id: agentId } = await params;
+        if (!isValidUuid(agentId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = createServiceClient();
 
         // Verify agent
@@ -157,6 +164,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id: agentId } = await params;
+        if (!isValidUuid(agentId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = createServiceClient();
 
         const { data: agent } = await supabase

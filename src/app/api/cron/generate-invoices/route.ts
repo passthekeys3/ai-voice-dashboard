@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getTierFromPriceId, getTierConfig } from '@/lib/billing/tiers';
+import { getStripe } from '@/lib/stripe';
 
 /**
  * Monthly Invoice Generation Cron
@@ -17,15 +17,6 @@ import { getTierFromPriceId, getTierConfig } from '@/lib/billing/tiers';
  *
  * Protected by CRON_SECRET bearer token.
  */
-
-function getStripe() {
-    if (!process.env.STRIPE_SECRET_KEY) {
-        throw new Error('STRIPE_SECRET_KEY not configured');
-    }
-    return new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2026-01-28.clover',
-    });
-}
 
 export async function POST(request: NextRequest) {
     try {
@@ -312,13 +303,16 @@ export async function POST(request: NextRequest) {
         }
 
         const invoicesCreated = results.filter(r => r.status === 'invoiced').length;
+        const errors = results.filter(r => r.status === 'error').length;
         const totalItems = results.length;
-        console.log(`Invoice generation complete: ${invoicesCreated}/${totalItems} items invoiced for ${monthLabel}`);
+        console.log(`Invoice generation complete: ${invoicesCreated}/${totalItems} items invoiced, ${errors} errors for ${monthLabel}`);
 
         return NextResponse.json({
-            success: true,
+            success: errors === 0,
             period: `${periodStart} to ${periodEnd}`,
+            processed: totalItems,
             invoicesCreated,
+            errors,
             results,
         });
     } catch (err) {

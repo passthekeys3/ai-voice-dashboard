@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { SearchInput } from '@/components/ui/search-input';
 import { AgentCard } from '@/components/dashboard/AgentCard';
+import { Card, CardContent } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
 import type { Agent } from '@/types';
 
@@ -28,15 +29,15 @@ export function FilterableAgentGrid({ agents, agentPhoneMap, configBasePath }: F
 
     if (agents.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
-                    <Plus className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium">No agents yet</h3>
-                <p className="text-muted-foreground max-w-sm mt-1">
-                    Click &quot;Sync Agents&quot; to import your voice agents from Retell, Vapi, or Bland.
-                </p>
-            </div>
+            <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                    <Plus className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No agents yet</h3>
+                    <p className="text-muted-foreground text-center max-w-md mb-6">
+                        Click &quot;Sync Agents&quot; to import your voice agents from Retell, Vapi, or Bland.
+                    </p>
+                </CardContent>
+            </Card>
         );
     }
 

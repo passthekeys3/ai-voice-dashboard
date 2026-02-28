@@ -198,6 +198,7 @@ export function WidgetSettings({
                                     onChange={(e) => setConfig({ ...config, color: e.target.value })}
                                     placeholder="#0f172a"
                                     className="flex-1 font-mono text-sm"
+                                    aria-label="Widget color hex value"
                                 />
                             </div>
                         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,7 @@ import { Loader2, CreditCard, Calendar, DollarSign, Clock, CheckCircle2, AlertCi
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import type { BillingType } from '@/types';
 
 interface ClientBillingEditorProps {
@@ -81,6 +82,7 @@ export function ClientBillingEditor({
     agencyHasConnect,
     aiCallAnalysis: initialAiCallAnalysis,
 }: ClientBillingEditorProps) {
+    const router = useRouter();
     const [billingType, setBillingType] = useState<BillingType | ''>(initialBillingType || '');
     const [amountInput, setAmountInput] = useState(formatCentsToDollars(initialAmountCents));
     const [aiCallAnalysis, setAiCallAnalysis] = useState(initialAiCallAnalysis ?? false);
@@ -136,7 +138,7 @@ export function ClientBillingEditor({
 
             toast.success('Billing settings saved');
             setHasChanges(false);
-            window.location.reload();
+            router.refresh();
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Failed to save');
         } finally {

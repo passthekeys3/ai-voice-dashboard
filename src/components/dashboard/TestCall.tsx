@@ -47,12 +47,10 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
                     const { RetellWebClient } = await import('retell-client-js-sdk');
                     retellClientRef.current = new RetellWebClient();
                     setSdkLoaded(true);
-                    console.log('[TestCall] Retell SDK loaded successfully');
                 } else if (provider === 'vapi') {
                     // Vapi SDK is loaded lazily when the call starts
                     // (it needs the public key which comes from the API)
                     setSdkLoaded(true);
-                    console.log('[TestCall] Vapi SDK ready (will load on call start)');
                 }
             } catch (err) {
                 console.error('[TestCall] Failed to load SDK:', err);
@@ -95,8 +93,6 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
             throw new Error('No access token received from server');
         }
 
-        console.log('[TestCall] Retell call started, call_id:', callId);
-
         const client = retellClientRef.current;
         if (!client) {
             throw new Error('Retell SDK not loaded. Please refresh the page.');
@@ -118,7 +114,6 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
 
         // Event listeners
         client.on('call_started', () => {
-            console.log('[TestCall] Call started');
             if (connectionTimeoutRef.current) {
                 clearTimeout(connectionTimeoutRef.current);
                 connectionTimeoutRef.current = null;
@@ -128,7 +123,6 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
         });
 
         client.on('call_ended', () => {
-            console.log('[TestCall] Call ended');
             setIsCallActive(false);
             setIsConnecting(false);
         });
@@ -146,9 +140,7 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
             }
         });
 
-        console.log('[TestCall] Starting call with Retell SDK...');
         await client.startCall({ accessToken });
-        console.log('[TestCall] startCall() resolved');
     }, [agentId]);
 
     const startVapiCall = useCallback(async () => {
@@ -166,8 +158,6 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
         if (!publicKey || !assistantId) {
             throw new Error('Missing Vapi public key or assistant ID. Check your Vapi settings.');
         }
-
-        console.log('[TestCall] Starting Vapi call, assistant:', assistantId);
 
         // Dynamically import and create Vapi SDK instance
         const VapiModule = await import('@vapi-ai/web');
@@ -191,7 +181,6 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
 
         // Event listeners
         vapiClient.on('call-start', () => {
-            console.log('[TestCall] Vapi call started');
             if (connectionTimeoutRef.current) {
                 clearTimeout(connectionTimeoutRef.current);
                 connectionTimeoutRef.current = null;
@@ -201,7 +190,6 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
         });
 
         vapiClient.on('call-end', () => {
-            console.log('[TestCall] Vapi call ended');
             setIsCallActive(false);
             setIsConnecting(false);
         });
@@ -229,7 +217,6 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
 
         // Start the call
         await vapiClient.start(assistantId);
-        console.log('[TestCall] Vapi start() resolved');
     }, [agentId]);
 
     const startCall = async () => {

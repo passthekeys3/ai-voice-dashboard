@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import Stripe from 'stripe';
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
@@ -7,12 +6,15 @@ import {
     unauthorized,
     forbidden,
     notFound,
+    badRequest,
     databaseError,
     validationError,
     apiSuccess,
     noContent,
     withErrorHandling,
 } from '@/lib/api/response';
+import { getStripe } from '@/lib/stripe';
+import { isValidUuid } from '@/lib/validation';
 
 // Admin client for auth user deletion (same pattern as invite route)
 const supabaseAdmin = createSupabaseAdmin(
@@ -38,6 +40,11 @@ export const GET = withErrorHandling(async (
     }
 
     const { id } = await context!.params;
+
+    if (!isValidUuid(id)) {
+        return badRequest('Invalid ID format');
+    }
+
     const supabase = await createClient();
 
     const { data: client, error } = await supabase
@@ -77,6 +84,11 @@ export const PATCH = withErrorHandling(async (
     }
 
     const { id } = await context!.params;
+
+    if (!isValidUuid(id)) {
+        return badRequest('Invalid ID format');
+    }
+
     const body = await request.json();
     const supabase = await createClient();
 
@@ -154,6 +166,10 @@ export const DELETE = withErrorHandling(async (
 
     const { id } = await context!.params;
 
+    if (!isValidUuid(id)) {
+        return badRequest('Invalid ID format');
+    }
+
     // Verify client exists and belongs to this agency
     const { data: client } = await supabaseAdmin
         .from('clients')
@@ -169,9 +185,7 @@ export const DELETE = withErrorHandling(async (
     // Cancel Stripe subscription if one exists (clients are billed via agency's Connect account)
     if (client.stripe_subscription_id && process.env.STRIPE_SECRET_KEY && user.agency.stripe_connect_account_id) {
         try {
-            const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-                apiVersion: '2026-01-28.clover',
-            });
+            const stripe = getStripe();
             await stripe.subscriptions.cancel(client.stripe_subscription_id, {
                 stripeAccount: user.agency.stripe_connect_account_id,
             });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -97,6 +97,15 @@ export function ApiWebhooksConfig({
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [showRegenConfirm, setShowRegenConfirm] = useState(false);
+    const successTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const copyTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (successTimerRef.current) clearTimeout(successTimerRef.current);
+            if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+        };
+    }, []);
 
     const hasKey = !!maskedKey || !!newKey;
 
@@ -122,7 +131,8 @@ export function ApiWebhooksConfig({
                 throw new Error(errorMsg);
             }
             setSuccess('Settings saved');
-            setTimeout(() => setSuccess(null), 3000);
+            if (successTimerRef.current) clearTimeout(successTimerRef.current);
+            successTimerRef.current = setTimeout(() => setSuccess(null), 3000);
             return true;
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save');
@@ -184,7 +194,8 @@ export function ApiWebhooksConfig({
         try {
             await navigator.clipboard.writeText(text);
             setCopiedItem(id);
-            setTimeout(() => setCopiedItem(null), 2000);
+            if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+            copyTimerRef.current = setTimeout(() => setCopiedItem(null), 2000);
         } catch {
             setError('Failed to copy to clipboard');
         }
@@ -325,6 +336,7 @@ Auth: Bearer Token (your API key)`;
                                                     size="icon"
                                                     onClick={() => handleCopy(newKey, 'api-key')}
                                                     title="Copy API key"
+                                                    aria-label="Copy API key"
                                                 >
                                                     {copiedItem === 'api-key' ? (
                                                         <Check className="h-4 w-4 text-green-500" />
@@ -461,6 +473,7 @@ Auth: Bearer Token (your API key)`;
                                         className="h-8 w-8"
                                         onClick={() => handleCopy(`${appUrl}/api/trigger-call`, 'endpoint')}
                                         title="Copy endpoint URL"
+                                        aria-label="Copy endpoint URL"
                                     >
                                         {copiedItem === 'endpoint' ? (
                                             <Check className="h-3.5 w-3.5 text-green-500" />

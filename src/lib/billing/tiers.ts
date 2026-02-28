@@ -16,6 +16,56 @@ import type { PlanType } from '@/types/database';
 export type PlanTier = 'starter' | 'growth' | 'agency';
 export type BillingInterval = 'monthly' | 'yearly';
 
+/** Features that are gated by tier */
+export type TierFeature =
+    | 'crm_integrations'    // GHL + HubSpot
+    | 'white_label'         // Custom domains + branding
+    | 'stripe_connect'      // Client billing via Stripe Connect
+    | 'experiments'          // A/B testing
+    | 'api_access';         // External trigger API
+
+/** Which features are available on each tier (Agency inherits all Growth features) */
+const TIER_FEATURES: Record<PlanTier, TierFeature[]> = {
+    starter: [],
+    growth: ['crm_integrations', 'white_label', 'stripe_connect', 'experiments'],
+    agency: ['crm_integrations', 'white_label', 'stripe_connect', 'experiments', 'api_access'],
+};
+
+/** Check if a tier has access to a specific feature */
+export function hasFeature(tier: PlanTier, feature: TierFeature): boolean {
+    return TIER_FEATURES[tier]?.includes(feature) ?? false;
+}
+
+/** Get the minimum tier required for a feature */
+export function minimumTierForFeature(feature: TierFeature): PlanTier {
+    if (TIER_FEATURES.starter.includes(feature)) return 'starter';
+    if (TIER_FEATURES.growth.includes(feature)) return 'growth';
+    return 'agency';
+}
+
+/** Human-readable label for a tier feature */
+export function featureLabel(feature: TierFeature): string {
+    const labels: Record<TierFeature, string> = {
+        crm_integrations: 'CRM Integrations',
+        white_label: 'White-Label & Custom Domains',
+        stripe_connect: 'Stripe Connect Billing',
+        experiments: 'A/B Experiments',
+        api_access: 'API Access',
+    };
+    return labels[feature];
+}
+
+/**
+ * Standard 403 error message for a tier-gated feature.
+ * Used by API routes to return consistent upgrade prompts.
+ */
+export function tierGateError(feature: TierFeature): string {
+    const minTier = minimumTierForFeature(feature);
+    const label = featureLabel(feature);
+    const tierName = minTier === 'agency' ? 'an Agency' : `a ${minTier.charAt(0).toUpperCase() + minTier.slice(1)}`;
+    return `${label} require${label.endsWith('s') ? '' : 's'} ${tierName} plan or higher. Please upgrade.`;
+}
+
 export interface TierLimits {
     maxAgents: number;
     maxCallMinutesPerMonth: number;
@@ -52,6 +102,9 @@ interface TierConfig {
     features: string[];
 }
 
+/** Monthly cost per phone number in cents */
+export const PHONE_NUMBER_MONTHLY_COST_CENTS = 200;
+
 /** Flat per-minute rate for platform-key usage across all tiers */
 export const PLATFORM_PER_MINUTE_RATE = 0.15;
 
@@ -77,7 +130,6 @@ const TIER_CONFIGS: TierConfig[] = [
             '$15/additional client',
             'Unlimited agents',
             'AI Agent Builder',
-            'Custom domain',
             'Call analytics',
             'Workflow automation',
             'Email support',
@@ -104,6 +156,8 @@ const TIER_CONFIGS: TierConfig[] = [
             'All Starter features',
             'CRM integrations (GHL + HubSpot)',
             'Stripe Connect client billing',
+            'White-label & custom domains',
+            'A/B Experiments',
         ],
     },
     {
@@ -124,8 +178,7 @@ const TIER_CONFIGS: TierConfig[] = [
         features: [
             '25 Clients included',
             '$10/additional client',
-            'All features',
-            'White-label platform',
+            'All Growth features',
             'API access',
             'Priority support',
         ],
@@ -151,7 +204,6 @@ const TIER_CONFIGS: TierConfig[] = [
             '$20/additional client',
             'Done-for-you agent setup',
             'AI Agent Builder',
-            'Custom domain',
             'Call analytics',
             'Workflow automation',
             'Priority support',
@@ -179,6 +231,8 @@ const TIER_CONFIGS: TierConfig[] = [
             'Done-for-you integrations',
             'CRM integrations (GHL + HubSpot)',
             'Stripe Connect client billing',
+            'White-label & custom domains',
+            'A/B Experiments',
         ],
     },
     {
@@ -199,7 +253,7 @@ const TIER_CONFIGS: TierConfig[] = [
         features: [
             '25 Clients included',
             '$15/additional client',
-            'All features',
+            'All Growth features',
             'Done-for-you white-label setup',
             'API access',
             'Dedicated support',

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+const PROVIDER_API_TIMEOUT = 15_000;
 
 export async function GET() {
     // Only allow in development mode — check both NODE_ENV and app URL
@@ -38,6 +39,7 @@ export async function GET() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ limit: 10, sort_order: 'descending' }),
+            signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
         });
 
         if (!response.ok) {

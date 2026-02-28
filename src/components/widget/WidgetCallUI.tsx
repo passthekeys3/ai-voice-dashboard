@@ -43,7 +43,9 @@ export function WidgetCallUI({ agentId, agentName, provider, widgetConfig }: Wid
     const durationRef = useRef<NodeJS.Timeout | null>(null);
     const transcriptEndRef = useRef<HTMLDivElement>(null);
 
-    const color = widgetConfig.color || '#0f172a';
+    // Validate color is a safe hex value to prevent CSS injection
+    const rawColor = widgetConfig.color || '#0f172a';
+    const color = /^#[0-9A-Fa-f]{3,8}$/.test(rawColor) ? rawColor : '#0f172a';
 
     // Notify parent window of state changes
     const postToParent = useCallback((action: string, data?: Record<string, unknown>) => {

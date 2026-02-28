@@ -46,7 +46,7 @@ export function CallsPageClient({
     const [currentPage, setCurrentPage] = useState(1);
     const [hasLoadedFromApi, setHasLoadedFromApi] = useState(false);
 
-    const fetchCalls = useCallback(async (page: number, search?: string, from?: string, to?: string) => {
+    const fetchCalls = useCallback(async (page: number, search?: string, from?: string, to?: string, signal?: AbortSignal) => {
         setIsLoading(true);
         setError(null);
         try {
@@ -65,7 +65,7 @@ export function CallsPageClient({
                 params.set('date_to', to);
             }
 
-            const res = await fetch(`/api/calls?${params.toString()}`);
+            const res = await fetch(`/api/calls?${params.toString()}`, { signal });
             if (!res.ok) throw new Error('Failed to fetch calls');
 
             const json = await res.json();
@@ -73,6 +73,7 @@ export function CallsPageClient({
             setPagination(json.meta || { total: 0, page: 1, perPage: ITEMS_PER_PAGE, totalPages: 1 });
             setHasLoadedFromApi(true);
         } catch (err) {
+            if (err instanceof Error && err.name === 'AbortError') return;
             console.error('Error fetching calls:', err);
             setError('Failed to load calls. Please try again.');
         } finally {
@@ -82,13 +83,17 @@ export function CallsPageClient({
 
     // Fetch first page from API to get accurate pagination metadata
     useEffect(() => {
-        fetchCalls(1);
+        const controller = new AbortController();
+        fetchCalls(1, undefined, undefined, undefined, controller.signal);
+        return () => controller.abort();
     }, [fetchCalls]);
 
     // Fetch on page change, search, or date filter change
     useEffect(() => {
         if (!hasLoadedFromApi) return;
-        fetchCalls(currentPage, searchQuery, dateFrom, dateTo);
+        const controller = new AbortController();
+        fetchCalls(currentPage, searchQuery, dateFrom, dateTo, controller.signal);
+        return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentPage, searchQuery, dateFrom, dateTo]);
 

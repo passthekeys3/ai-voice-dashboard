@@ -18,6 +18,10 @@ import {
     Trash2,
     AlertCircle,
 } from 'lucide-react';
+import { TierGateCard } from '@/components/ui/tier-gate';
+import { hasFeature } from '@/lib/billing/tiers';
+import { toast } from '@/lib/toast';
+import type { PlanTier } from '@/lib/billing/tiers';
 
 interface DomainConfig {
     custom_domain: string | null;
@@ -55,7 +59,7 @@ interface VerificationResult {
     instructions?: VerificationInstructions;
 }
 
-export function CustomDomainSettings() {
+export function CustomDomainSettings({ currentTier }: { currentTier?: PlanTier | null }) {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [verifying, setVerifying] = useState(false);
@@ -108,6 +112,15 @@ export function CustomDomainSettings() {
     }, [config, fetchVerificationStatus]);
 
     const handleSaveDomain = async () => {
+        const trimmedDomain = newDomain.trim();
+        if (trimmedDomain) {
+            const domainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?\.([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*[a-z]{2,}$/;
+            if (!domainRegex.test(trimmedDomain.toLowerCase())) {
+                toast.error('Please enter a valid domain (e.g., app.yourdomain.com)');
+                return;
+            }
+        }
+
         setSaving(true);
         setError(null);
         setSuccess(null);
@@ -254,6 +267,13 @@ export function CustomDomainSettings() {
         navigator.clipboard.writeText(text).catch(() => { /* clipboard unavailable */ });
     };
 
+    // ---- Tier gate: Custom domains require Growth+ ----
+    if (!currentTier || !hasFeature(currentTier, 'white_label')) {
+        return (
+            <TierGateCard currentTier={currentTier ?? null} requiredFeature="white_label" label="White-Label & Custom Domains" />
+        );
+    }
+
     if (loading) {
         return (
             <Card>
@@ -356,6 +376,7 @@ export function CustomDomainSettings() {
                             onChange={(e) => setNewDomain(e.target.value.toLowerCase())}
                             placeholder="dashboard.yourcompany.com"
                             disabled={config?.domain_verified}
+                            maxLength={253}
                             className="flex-1"
                         />
                         {!config?.custom_domain ? (
@@ -486,14 +507,19 @@ export function CustomDomainSettings() {
                         </div>
                         <p className="text-sm text-green-600 dark:text-green-400">
                             Clients can now access your dashboard at{' '}
-                            <a
-                                href={`https://${config.custom_domain}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="underline font-medium"
-                            >
-                                https://{config.custom_domain}
-                            </a>
+                            {/* Validate domain format before rendering as link to prevent URL injection */}
+                            {/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i.test(config.custom_domain) ? (
+                                <a
+                                    href={`https://${config.custom_domain}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="underline font-medium"
+                                >
+                                    https://{config.custom_domain}
+                                </a>
+                            ) : (
+                                <span className="font-medium">{config.custom_domain}</span>
+                            )}
                         </p>
                         <p className="text-xs text-green-600/70 dark:text-green-400/70">
                             If users encounter login issues on this domain, ensure it is added to your authentication provider&apos;s allowed redirect URLs.

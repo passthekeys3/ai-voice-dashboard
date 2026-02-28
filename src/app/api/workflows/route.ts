@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { ALLOWED_ACTION_TYPES, ALLOWED_TRIGGERS, ALLOWED_ACTION_TYPES_LIST, ALLOWED_TRIGGERS_LIST } from '@/lib/workflows/constants';
+import { isValidUuid, safeParseJson } from '@/lib/validation';
 
 // GET /api/workflows - List all workflows
 export async function GET(request: NextRequest) {
@@ -26,6 +27,19 @@ export async function GET(request: NextRequest) {
             .order('created_at', { ascending: false });
 
         if (agentId) {
+            // Validate UUID format and verify agent belongs to this agency (defense-in-depth)
+            if (!isValidUuid(agentId)) {
+                return NextResponse.json({ error: 'Invalid agent_id format' }, { status: 400 });
+            }
+            const { data: agentCheck } = await supabase
+                .from('agents')
+                .select('id')
+                .eq('id', agentId)
+                .eq('agency_id', user.agency.id)
+                .single();
+            if (!agentCheck) {
+                return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+            }
             query = query.eq('agent_id', agentId);
         }
 
@@ -55,7 +69,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const body = await request.json();
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        const body = bodyOrError as Record<string, any>;
         const { name, description, trigger, agent_id, conditions, actions, is_active } = body;
 
         if (!name || typeof name !== 'string') {

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { waitUntil } from '@vercel/functions';
 import { sendEmail } from '@/lib/email/send';
 import { welcomeEmail } from '@/lib/email/templates';
+import { safeParseJson } from '@/lib/validation';
 
 // Use admin client to bypass RLS for signup
 const supabaseAdmin = createClient(
@@ -12,7 +13,9 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest) {
     try {
-        const { email, password, fullName, agencyName } = await request.json();
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        const { email, password, fullName, agencyName } = bodyOrError as Record<string, any>;
 
         if (!email || !password || !fullName || !agencyName) {
             return NextResponse.json(

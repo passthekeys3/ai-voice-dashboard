@@ -9,26 +9,7 @@ import type {
   TranscriptLine,
   ConnectionStatus,
 } from '@/types/realtime';
-
-// Parse Retell transcript format into structured lines
-function parseTranscript(transcript: string): TranscriptLine[] {
-  if (!transcript) return [];
-
-  const lines: TranscriptLine[] = [];
-  const parts = transcript.split('\n').filter(line => line.trim());
-
-  for (const part of parts) {
-    if (part.startsWith('Agent:')) {
-      lines.push({ speaker: 'agent', text: part.replace('Agent:', '').trim() });
-    } else if (part.startsWith('User:')) {
-      lines.push({ speaker: 'user', text: part.replace('User:', '').trim() });
-    } else if (lines.length > 0) {
-      lines[lines.length - 1].text += ' ' + part.trim();
-    }
-  }
-
-  return lines;
-}
+import { parseTranscript } from '@/lib/utils/transcript';
 
 interface UseRealtimeCallsOptions {
   agencyId: string;
@@ -74,18 +55,20 @@ export function useRealtimeCalls({
   useEffect(() => {
     if (!enabled || !agencyId) return;
 
+    const controller = new AbortController();
     const supabase = supabaseRef.current;
 
     // Initial fetch - use an async IIFE to avoid lint warning
     const doInitialFetch = async () => {
       try {
-        const response = await fetch('/api/calls/active');
+        const response = await fetch('/api/calls/active', { signal: controller.signal });
         if (!response.ok) return;
         const result = await response.json();
         if (result.data) {
           setActiveCalls(result.data);
         }
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
         console.error('Failed to fetch active calls');
       }
     };
@@ -211,6 +194,7 @@ export function useRealtimeCalls({
     }, 1000);
 
     return () => {
+      controller.abort();
       clearInterval(durationInterval);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
@@ -298,12 +282,13 @@ export function useRealtimeLiveCall({
   useEffect(() => {
     if (!enabled || !callId) return;
 
+    const controller = new AbortController();
     const supabase = supabaseRef.current;
 
     // Initial fetch - use an async IIFE to avoid lint warning
     const doInitialFetch = async () => {
       try {
-        const response = await fetch(`/api/calls/${callId}/live`);
+        const response = await fetch(`/api/calls/${callId}/live`, { signal: controller.signal });
         if (!response.ok) {
           if (response.status === 404) {
             setError('Call not found or has ended');
@@ -331,6 +316,7 @@ export function useRealtimeLiveCall({
         });
         setError(null);
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
         console.error('Failed to fetch call details');
         setError('Failed to load call data');
       } finally {
@@ -447,6 +433,7 @@ export function useRealtimeLiveCall({
     }, 3000);
 
     return () => {
+      controller.abort();
       clearInterval(durationInterval);
       clearInterval(pollInterval);
       if (newLineTimeoutRef.current) clearTimeout(newLineTimeoutRef.current);

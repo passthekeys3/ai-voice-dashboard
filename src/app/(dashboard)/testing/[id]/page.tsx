@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
 import { TestSuiteEditor } from '@/components/dashboard/TestSuiteEditor';
 import { notFound } from 'next/navigation';
+import { isValidUuid } from '@/lib/validation';
 
 export const metadata: Metadata = { title: 'Test Suite' };
 
@@ -14,6 +15,9 @@ interface PageProps {
 
 export default async function TestSuiteDetailPage({ params }: PageProps) {
     const { id } = await params;
+    if (!isValidUuid(id)) {
+        notFound();
+    }
     const user = await requireAgencyAdmin();
     const supabase = await createClient();
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getAgentPrompt } from '@/lib/testing/get-agent-prompt';
+import { safeParseJson } from '@/lib/validation';
 
 // GET /api/test-suites - List all test suites
 export async function GET(request: NextRequest) {
@@ -77,7 +78,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const body = await request.json();
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        const body = bodyOrError as Record<string, any>;
         const { name, description, agent_id } = body;
 
         if (!name || !name.trim()) {

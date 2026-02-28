@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Loader2, Shield } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import type { ClientPermissions } from '@/types';
 import { DEFAULT_CLIENT_PERMISSIONS } from '@/types/database';
 
@@ -58,6 +59,7 @@ export function ClientPermissionsEditor({
     isAgencyDefault = true,
     clientId,
 }: ClientPermissionsEditorProps) {
+    const router = useRouter();
     const [permissions, setPermissions] = useState<ClientPermissions>(
         initialPermissions || DEFAULT_CLIENT_PERMISSIONS
     );
@@ -92,7 +94,7 @@ export function ClientPermissionsEditor({
 
             toast.success('Permissions saved');
             setHasChanges(false);
-            window.location.reload();
+            router.refresh();
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Failed to save');
         } finally {

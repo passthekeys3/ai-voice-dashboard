@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-
-function getStripe() {
-    if (!process.env.STRIPE_SECRET_KEY) {
-        throw new Error('STRIPE_SECRET_KEY not configured');
-    }
-    return new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2026-01-28.clover',
-    });
-}
+import { getStripe } from '@/lib/stripe';
+import { isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -35,6 +27,11 @@ export async function POST(
         }
 
         const { id: clientId } = await context.params;
+
+        if (!isValidUuid(clientId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
+
         const supabase = await createClient();
 
         // Verify client belongs to this agency and get stripe_customer_id

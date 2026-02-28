@@ -44,18 +44,16 @@ export function FilterableClientGrid({ clients }: FilterableClientGridProps) {
 
     if (clients.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
-                    <Users className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium">No clients yet</h3>
-                <p className="text-muted-foreground max-w-sm mt-1">
-                    Add your first business client to manage their voice AI agents.
-                </p>
-                <div className="mt-4">
+            <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                    <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No clients yet</h3>
+                    <p className="text-muted-foreground text-center max-w-md mb-6">
+                        Add your first business client to manage their voice AI agents.
+                    </p>
                     <CreateClientDialog />
-                </div>
-            </div>
+                </CardContent>
+            </Card>
         );
     }
 
@@ -109,7 +107,7 @@ export function FilterableClientGrid({ clients }: FilterableClientGridProps) {
                                                                     key={p}
                                                                     className={cn(
                                                                         'inline-block h-2 w-2 rounded-full',
-                                                                        providerDotColor[p] || 'bg-gray-400'
+                                                                        providerDotColor[p] || 'bg-gray-400 dark:bg-gray-500'
                                                                     )}
                                                                     title={p.charAt(0).toUpperCase() + p.slice(1)}
                                                                 />

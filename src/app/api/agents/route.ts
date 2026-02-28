@@ -67,6 +67,20 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
 
     const supabase = await createClient();
 
+    // Validate client_id belongs to this agency (if provided)
+    if (client_id) {
+        const { data: client } = await supabase
+            .from('clients')
+            .select('id')
+            .eq('id', client_id)
+            .eq('agency_id', user.agency.id)
+            .single();
+
+        if (!client) {
+            return forbidden('Invalid client_id');
+        }
+    }
+
     const { data: agent, error } = await supabase
         .from('agents')
         .insert({

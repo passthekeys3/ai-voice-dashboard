@@ -27,7 +27,7 @@ import {
     PhoneIncoming,
     PhoneOutgoing,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import type { PhoneNumber } from '@/types';
 
 interface PhoneNumbersListProps {
@@ -147,6 +147,7 @@ export function PhoneNumbersList({ phoneNumbers, agents, onDataChange }: PhoneNu
                                     onClick={() => handleDelete(phone.id)}
                                     disabled={deleting === phone.id}
                                     className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0"
+                                    aria-label="Unassign phone number"
                                 >
                                     {deleting === phone.id ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />

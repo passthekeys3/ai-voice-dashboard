@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,12 +23,14 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Plus, Loader2, CalendarClock } from 'lucide-react';
+import { toast } from '@/lib/toast';
 
 interface ScheduleCallButtonProps {
     agents: { id: string; name: string }[];
 }
 
 export function ScheduleCallButton({ agents }: ScheduleCallButtonProps) {
+    const router = useRouter();
     const [open, setOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -69,6 +72,12 @@ export function ScheduleCallButton({ agents }: ScheduleCallButtonProps) {
             return;
         }
 
+        const cleanedNumber = toNumber.replace(/[\s\-\(\)]/g, '');
+        if (!/^\+[1-9]\d{6,14}$/.test(cleanedNumber)) {
+            toast.error('Phone number must be in E.164 format (e.g., +15551234567)');
+            return;
+        }
+
         setSaving(true);
         setError(null);
 
@@ -92,7 +101,7 @@ export function ScheduleCallButton({ agents }: ScheduleCallButtonProps) {
 
             setOpen(false);
             resetForm();
-            window.location.reload();
+            router.refresh();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
@@ -151,28 +160,32 @@ export function ScheduleCallButton({ agents }: ScheduleCallButtonProps) {
 
                     <div className="grid gap-4 grid-cols-2">
                         <div className="space-y-2">
-                            <Label>Phone Number *</Label>
+                            <Label htmlFor="schedule-phone">Phone Number *</Label>
                             <Input
+                                id="schedule-phone"
                                 type="tel"
                                 value={toNumber}
                                 onChange={(e) => setToNumber(e.target.value)}
-                                placeholder="+1 555 123 4567"
+                                placeholder="+15551234567"
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Contact Name</Label>
+                            <Label htmlFor="schedule-contact">Contact Name</Label>
                             <Input
+                                id="schedule-contact"
                                 value={contactName}
                                 onChange={(e) => setContactName(e.target.value)}
                                 placeholder="John Smith"
+                                maxLength={100}
                             />
                         </div>
                     </div>
 
                     <div className="grid gap-4 grid-cols-2">
                         <div className="space-y-2">
-                            <Label>Date *</Label>
+                            <Label htmlFor="schedule-date">Date *</Label>
                             <Input
+                                id="schedule-date"
                                 type="date"
                                 value={scheduledDate}
                                 onChange={(e) => setScheduledDate(e.target.value)}
@@ -180,8 +193,9 @@ export function ScheduleCallButton({ agents }: ScheduleCallButtonProps) {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Time *</Label>
+                            <Label htmlFor="schedule-time">Time *</Label>
                             <Input
+                                id="schedule-time"
                                 type="time"
                                 value={scheduledTime}
                                 onChange={(e) => setScheduledTime(e.target.value)}
@@ -196,6 +210,7 @@ export function ScheduleCallButton({ agents }: ScheduleCallButtonProps) {
                             onChange={(e) => setNotes(e.target.value)}
                             placeholder="Context for this call..."
                             rows={2}
+                            maxLength={500}
                         />
                         <p className="text-xs text-muted-foreground">
                             Notes will be included in the call metadata

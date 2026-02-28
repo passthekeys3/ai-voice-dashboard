@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, isBillingAdmin } from '@/lib/auth';
 import { getTierDefinition, getPriceId, getMeteredPriceId, type PlanTier, type BillingInterval } from '@/lib/billing/tiers';
 import type { PlanType } from '@/types/database';
-
-function getStripe() {
-    if (!process.env.STRIPE_SECRET_KEY) {
-        throw new Error('STRIPE_SECRET_KEY not configured');
-    }
-    return new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2026-01-28.clover',
-    });
-}
+import { getStripe } from '@/lib/stripe';
 
 const VALID_TIERS: PlanTier[] = ['starter', 'growth', 'agency'];
 const VALID_PLAN_TYPES: PlanType[] = ['self_service', 'managed'];
@@ -25,8 +17,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Only agency admins can manage billing
-        if (!['agency_admin'].includes(user.profile.role)) {
+        // Only agency owners can manage billing (intentionally excludes agency_member)
+        if (!isBillingAdmin(user)) {
             return NextResponse.json({ error: 'Only agency admins can manage billing' }, { status: 403 });
         }
 
@@ -98,10 +90,18 @@ export async function POST(request: NextRequest) {
             customerId = customer.id;
 
             // Store customer ID in database
-            await supabase
+            const { error: updateError } = await supabase
                 .from('agencies')
                 .update({ stripe_customer_id: customerId })
                 .eq('id', agency.id);
+
+            if (updateError) {
+                console.error('Failed to store Stripe customer ID:', updateError);
+                return NextResponse.json(
+                    { error: 'Failed to initialize billing. Please try again.' },
+                    { status: 500 }
+                );
+            }
         }
 
         // Resolve return URL

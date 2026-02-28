@@ -9,6 +9,7 @@ import {
     databaseError,
     withErrorHandling,
 } from '@/lib/api/response';
+import { isValidUuid } from '@/lib/validation';
 import type { ClientPermissions } from '@/types';
 
 interface RouteParams {
@@ -30,6 +31,9 @@ export const PATCH = withErrorHandling(async (
     }
 
     const { id: agencyId } = await context!.params;
+    if (!isValidUuid(agencyId)) {
+        return badRequest('Invalid ID format');
+    }
 
     // Verify user belongs to this agency
     if (user.agency.id !== agencyId) {

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { Navbar } from '@/components/landing/Navbar';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { DashboardDemo } from '@/components/landing/DashboardDemo';
@@ -11,6 +12,11 @@ import { FAQSection } from '@/components/landing/FAQSection';
 import { AISummarySection } from '@/components/landing/AISummarySection';
 import { FinalCTA } from '@/components/landing/FinalCTA';
 import { Footer } from '@/components/landing/Footer';
+
+export const metadata: Metadata = {
+    title: 'Build Voice AI Agents for Your Clients',
+    description: 'White-label voice AI platform for agencies. Build, deploy, and manage AI voice agents with custom branding.',
+};
 
 const SITE_URL = 'https://buildvoiceai.com';
 

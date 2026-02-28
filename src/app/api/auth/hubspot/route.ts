@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
 import crypto from 'crypto';
 
 const HUBSPOT_CLIENT_ID = process.env.HUBSPOT_CLIENT_ID;
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const action = searchParams.get('action');
 
-        // Handle disconnect
+        // Allow disconnect regardless of tier (don't strand users)
         if (action === 'disconnect') {
             const supabase = await createAdminClient();
 
@@ -55,6 +56,15 @@ export async function GET(request: NextRequest) {
 
             // Redirect back to settings
             return NextResponse.redirect(new URL('/settings?hubspot=disconnected', request.url));
+        }
+
+        // ---- Tier gate: CRM integrations require Growth+ ----
+        const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+        if (!tierInfo || !hasFeature(tierInfo.tier, 'crm_integrations')) {
+            return NextResponse.json(
+                { error: 'CRM integrations require a Growth plan or higher. Please upgrade.' },
+                { status: 403 }
+            );
         }
 
         // Check if HubSpot OAuth is configured

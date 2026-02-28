@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +22,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { UserPlus, Loader2, Mail } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 interface InviteClientUserDialogProps {
     clientId: string;
@@ -29,6 +30,7 @@ interface InviteClientUserDialogProps {
 }
 
 export function InviteClientUserDialog({ clientId, clientName }: InviteClientUserDialogProps) {
+    const router = useRouter();
     const [open, setOpen] = useState(false);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -78,7 +80,7 @@ export function InviteClientUserDialog({ clientId, clientName }: InviteClientUse
             setOpen(false);
             resetForm();
             toast.success(`Invitation sent to ${email}`);
-            window.location.reload();
+            router.refresh();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
@@ -119,6 +121,7 @@ export function InviteClientUserDialog({ clientId, clientName }: InviteClientUse
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
                             placeholder="e.g., John Smith"
+                            maxLength={100}
                         />
                     </div>
 
@@ -131,6 +134,7 @@ export function InviteClientUserDialog({ clientId, clientName }: InviteClientUse
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="e.g., john@acmeplumbing.com"
+                            maxLength={254}
                         />
                     </div>
 

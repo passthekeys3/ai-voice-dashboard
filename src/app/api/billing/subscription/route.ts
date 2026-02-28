@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, isBillingAdmin } from '@/lib/auth';
 import { getTierFromPriceId, getTierDefinition, getPriceId, getMeteredPriceId, getPerMinuteRate, type PlanTier, type BillingInterval } from '@/lib/billing/tiers';
 import type { PlanType } from '@/types/database';
-
-function getStripe() {
-    if (!process.env.STRIPE_SECRET_KEY) {
-        throw new Error('STRIPE_SECRET_KEY not configured');
-    }
-    return new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2026-01-28.clover',
-    });
-}
+import { getStripe } from '@/lib/stripe';
 
 // GET /api/billing/subscription - Get current subscription details
 export async function GET(_request: NextRequest) {
@@ -22,7 +14,7 @@ export async function GET(_request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!['agency_admin'].includes(user.profile.role)) {
+        if (!isBillingAdmin(user)) {
             return NextResponse.json({ error: 'Only agency admins can view subscription' }, { status: 403 });
         }
 
@@ -124,7 +116,7 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!['agency_admin'].includes(user.profile.role)) {
+        if (!isBillingAdmin(user)) {
             return NextResponse.json({ error: 'Only agency admins can cancel subscription' }, { status: 403 });
         }
 
@@ -187,7 +179,7 @@ export async function PATCH(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!['agency_admin'].includes(user.profile.role)) {
+        if (!isBillingAdmin(user)) {
             return NextResponse.json({ error: 'Only agency admins can manage subscription' }, { status: 403 });
         }
 

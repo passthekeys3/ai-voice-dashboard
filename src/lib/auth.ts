@@ -8,6 +8,9 @@ export const AGENCY_ROLES = ['agency_admin', 'agency_member'] as const;
 /** Roles that have client-level access (own client data only) */
 export const CLIENT_ROLES = ['client_admin', 'client_member'] as const;
 
+/** All valid roles — used to reject corrupted/tampered role values */
+const VALID_ROLES = new Set<string>([...AGENCY_ROLES, ...CLIENT_ROLES]);
+
 /**
  * Get the current authenticated user with their profile, agency, and client data
  */
@@ -30,6 +33,12 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         .single();
 
     if (!profile) {
+        return null;
+    }
+
+    // Reject invalid/corrupted role values before trusting the profile
+    if (!VALID_ROLES.has(profile.role)) {
+        console.error('Invalid profile role detected:', profile.id);
         return null;
     }
 
@@ -130,6 +139,14 @@ export async function requireClientAccess(clientId: string): Promise<AuthUser> {
  */
 export function isAgencyAdmin(user: AuthUser): boolean {
     return (AGENCY_ROLES as readonly string[]).includes(user.profile.role);
+}
+
+/**
+ * Check if the user is the agency owner (agency_admin only).
+ * Used for billing/subscription management where agency_member access is intentionally restricted.
+ */
+export function isBillingAdmin(user: AuthUser): boolean {
+    return user.profile.role === 'agency_admin';
 }
 
 /**

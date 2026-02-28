@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { safeParseJson, isValidUuid } from '@/lib/validation';
 import { ALLOWED_ACTION_TYPES, ALLOWED_ACTION_TYPES_LIST, ALLOWED_TRIGGERS, ALLOWED_TRIGGERS_LIST } from '@/lib/workflows/constants';
 
 interface RouteParams {
@@ -20,6 +21,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id } = await params;
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         const { data: workflow, error } = await supabase
@@ -53,7 +57,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id } = await params;
-        const body = await request.json();
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const body = bodyOrError as Record<string, any>;
         const supabase = await createClient();
 
         // Validate action types against whitelist if actions are being updated
@@ -170,6 +180,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id } = await params;
+        if (!isValidUuid(id)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         const { error } = await supabase

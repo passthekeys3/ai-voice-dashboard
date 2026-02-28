@@ -36,6 +36,7 @@ import {
 import { toast } from '@/lib/toast';
 import type { ConnectionStatus as ConnectionStatusType } from '@/types/realtime';
 import { createClient } from '@/lib/supabase/client';
+import { parseTranscript } from '@/lib/utils/transcript';
 
 interface TranscriptLine {
     speaker: 'agent' | 'user';
@@ -60,26 +61,6 @@ interface LiveCall {
 interface LiveTranscriptProps {
     callId: string;
     provider?: string;
-}
-
-// Parse Retell transcript format into structured lines
-function parseTranscript(transcript: string): TranscriptLine[] {
-    if (!transcript) return [];
-
-    const lines: TranscriptLine[] = [];
-    const parts = transcript.split('\n').filter(line => line.trim());
-
-    for (const part of parts) {
-        if (part.startsWith('Agent:')) {
-            lines.push({ speaker: 'agent', text: part.replace('Agent:', '').trim() });
-        } else if (part.startsWith('User:')) {
-            lines.push({ speaker: 'user', text: part.replace('User:', '').trim() });
-        } else if (lines.length > 0) {
-            lines[lines.length - 1].text += ' ' + part.trim();
-        }
-    }
-
-    return lines;
 }
 
 export function LiveTranscript({ callId, provider: providerProp = 'retell' }: LiveTranscriptProps) {
@@ -562,7 +543,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                                         </div>
                                         <div className={`flex-1 max-w-[80%] rounded-lg p-3 ${line.speaker === 'agent'
                                             ? 'bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100'
-                                            : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'
+                                            : 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100'
                                             } ${line.isNew ? 'ring-2 ring-green-400 ring-opacity-50' : ''}`}>
                                             <p className="text-sm">{line.text}</p>
                                         </div>

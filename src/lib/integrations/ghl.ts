@@ -6,6 +6,7 @@
  */
 
 const GHL_API_BASE = 'https://services.leadconnectorhq.com';
+const GHL_API_TIMEOUT = 15_000; // 15s timeout for all GHL API calls
 
 // --- Token Refresh (OAuth) ---
 
@@ -31,6 +32,7 @@ async function refreshAccessToken(
                 refresh_token: refreshToken,
                 user_type: 'Location',
             }),
+            signal: AbortSignal.timeout(GHL_API_TIMEOUT),
         });
 
         if (!response.ok) {
@@ -165,6 +167,7 @@ export async function searchContactByPhone(
                     'Content-Type': 'application/json',
                     'Version': '2021-07-28',
                 },
+                signal: AbortSignal.timeout(GHL_API_TIMEOUT),
             }
         );
 
@@ -380,6 +383,7 @@ export async function updateContactTags(
                     'Content-Type': 'application/json',
                     'Version': '2021-07-28',
                 },
+                signal: AbortSignal.timeout(GHL_API_TIMEOUT),
             }
         );
 
@@ -441,6 +445,7 @@ export async function getPipelines(
                     'Content-Type': 'application/json',
                     'Version': '2021-07-28',
                 },
+                signal: AbortSignal.timeout(GHL_API_TIMEOUT),
             }
         );
 
@@ -483,6 +488,7 @@ export async function updateContactPipeline(
                     'Content-Type': 'application/json',
                     'Version': '2021-07-28',
                 },
+                signal: AbortSignal.timeout(GHL_API_TIMEOUT),
             }
         );
 
@@ -647,6 +653,7 @@ export async function getCalendars(
                     'Content-Type': 'application/json',
                     'Version': '2021-07-28',
                 },
+                signal: AbortSignal.timeout(GHL_API_TIMEOUT),
             }
         );
 
@@ -692,6 +699,7 @@ export async function getCalendarFreeSlots(
                 'Content-Type': 'application/json',
                 'Version': '2021-07-28',
             },
+            signal: AbortSignal.timeout(GHL_API_TIMEOUT),
         });
 
         if (!response.ok) {
@@ -778,6 +786,7 @@ export async function createAppointment(
                     'Content-Type': 'application/json',
                     'Version': '2021-04-15',
                 },
+                signal: AbortSignal.timeout(GHL_API_TIMEOUT),
                 body: JSON.stringify({
                     calendarId: appointment.calendarId,
                     locationId: config.locationId,
@@ -831,6 +840,7 @@ export async function updateAppointment(
                     'Content-Type': 'application/json',
                     'Version': '2021-04-15',
                 },
+                signal: AbortSignal.timeout(GHL_API_TIMEOUT),
                 body: JSON.stringify(updates),
             }
         );
@@ -874,6 +884,7 @@ export async function getAppointment(
                     'Content-Type': 'application/json',
                     'Version': '2021-04-15',
                 },
+                signal: AbortSignal.timeout(GHL_API_TIMEOUT),
             }
         );
 

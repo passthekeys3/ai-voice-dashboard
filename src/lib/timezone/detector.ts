@@ -70,27 +70,29 @@ export function getLocalTime(timezone: string): Date {
 }
 
 /**
- * Extract the current hour (0-23) in a given timezone.
+ * Extract the hour (0-23) in a given timezone for a reference date.
+ * Defaults to the current time if no reference date is provided.
  */
-export function getLocalHour(timezone: string): number {
+export function getLocalHour(timezone: string, referenceDate: Date = new Date()): number {
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
     hour: 'numeric',
     hour12: false,
   });
-  const hour = parseInt(formatter.format(new Date()), 10);
+  const hour = parseInt(formatter.format(referenceDate), 10);
   return hour === 24 ? 0 : hour; // Intl may format midnight as 24
 }
 
 /**
- * Extract the current day of week (0=Sun, 6=Sat) in a given timezone.
+ * Extract the day of week (0=Sun, 6=Sat) in a given timezone for a reference date.
+ * Defaults to the current time if no reference date is provided.
  */
-export function getLocalDay(timezone: string): number {
+export function getLocalDay(timezone: string, referenceDate: Date = new Date()): number {
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
     weekday: 'short',
   });
-  const day = formatter.format(new Date());
+  const day = formatter.format(referenceDate);
   const dayMap: Record<string, number> = {
     Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
   };
@@ -98,18 +100,20 @@ export function getLocalDay(timezone: string): number {
 }
 
 /**
- * Check if the current time in the given timezone is within the calling window.
+ * Check if a given time in the given timezone is within the calling window.
  *
  * @param timezone - IANA timezone string
  * @param window - Calling window configuration
- * @returns true if calls are allowed right now in the lead's timezone
+ * @param referenceDate - The date/time to check (defaults to now)
+ * @returns true if calls are allowed at the reference time in the lead's timezone
  */
 export function isWithinCallingWindow(
   timezone: string,
   window: CallingWindow,
+  referenceDate: Date = new Date(),
 ): boolean {
-  const hour = getLocalHour(timezone);
-  const day = getLocalDay(timezone);
+  const hour = getLocalHour(timezone, referenceDate);
+  const day = getLocalDay(timezone, referenceDate);
   const allowedDays = window.daysOfWeek ?? [1, 2, 3, 4, 5];
 
   // Check day of week

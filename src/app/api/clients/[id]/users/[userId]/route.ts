@@ -10,6 +10,7 @@ import {
     internalError,
     withErrorHandling,
 } from '@/lib/api/response';
+import { isValidUuid } from '@/lib/validation';
 
 // Use admin client to delete auth users (same pattern as invite route)
 const supabaseAdmin = createClient(
@@ -40,6 +41,10 @@ export const DELETE = withErrorHandling(async (
     }
 
     const { id: clientId, userId } = await context!.params;
+
+    if (!isValidUuid(clientId) || !isValidUuid(userId)) {
+        return badRequest('Invalid ID format');
+    }
 
     // Verify the client belongs to this agency
     const { data: client } = await supabaseAdmin

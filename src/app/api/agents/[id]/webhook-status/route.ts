@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getRetellAgentVersions, REQUIRED_WEBHOOK_EVENTS } from '@/lib/providers/retell';
+import { isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -21,6 +22,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         }
 
         const { id: agentId } = await params;
+        if (!isValidUuid(agentId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         // Get our agent record to find external_id

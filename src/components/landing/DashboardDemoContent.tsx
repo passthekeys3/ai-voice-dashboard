@@ -626,7 +626,7 @@ function DemoAgentCard({ agent }: { agent: typeof MOCK_AGENT_CARDS[number] }) {
             )}>
                 <span className={cn(
                     'h-1.5 w-1.5 rounded-full',
-                    agent.active ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
+                    agent.active ? 'bg-green-500 animate-pulse' : 'bg-gray-400 dark:bg-gray-500'
                 )} />
                 {agent.active ? 'Active' : 'Inactive'}
             </span>

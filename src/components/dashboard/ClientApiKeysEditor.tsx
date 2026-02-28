@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2, Key, Eye, EyeOff, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 interface ClientApiKeysEditorProps {
     clientId: string;
@@ -35,6 +36,7 @@ export function ClientApiKeysEditor({
     vapiApiKey,
     blandApiKey,
 }: ClientApiKeysEditorProps) {
+    const router = useRouter();
     const [saving, setSaving] = useState(false);
 
     // Map props to initial state: masked values are NOT real keys, so start empty
@@ -118,7 +120,7 @@ export function ClientApiKeysEditor({
             }
 
             toast.success('API keys updated');
-            window.location.reload();
+            router.refresh();
         } catch (err) {
             console.error('Failed to save API keys:', err);
             toast.error('Failed to save API keys', {

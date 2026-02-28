@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { generateScenariosStream } from '@/lib/testing/scenario-generator';
 import { getAgentPrompt } from '@/lib/testing/get-agent-prompt';
+import { isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -21,6 +22,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id: suiteId } = await params;
+        if (!isValidUuid(suiteId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         // Fetch suite with agent info

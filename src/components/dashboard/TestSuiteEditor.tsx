@@ -28,7 +28,7 @@ import {
     AlertTriangle,
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { PersonaSelector } from './PersonaSelector';
 import { CriteriaEditor } from './CriteriaEditor';
 import { TestCaseGeneratorDialog } from './TestCaseGeneratorDialog';
@@ -292,7 +292,7 @@ export function TestSuiteEditor({ suite, personas }: TestSuiteEditorProps) {
             }
         } catch {
             // Fallback to full page reload
-            window.location.reload();
+            router.refresh();
         }
     }, [suite.id]);
 

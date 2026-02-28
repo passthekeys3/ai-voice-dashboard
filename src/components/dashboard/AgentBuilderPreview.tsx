@@ -140,6 +140,7 @@ export function AgentBuilderPreview({
                                 value={draft.name}
                                 onChange={(e) => onDraftUpdate({ name: e.target.value })}
                                 placeholder="Agent name"
+                                maxLength={100}
                                 className="text-sm"
                             />
                         </Section>
@@ -196,7 +197,10 @@ export function AgentBuilderPreview({
                                     />
                                 ) : (
                                     <div
+                                        role="button"
+                                        tabIndex={0}
                                         onClick={() => setIsPromptExpanded(true)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsPromptExpanded(true); } }}
                                         className="text-xs font-mono text-muted-foreground bg-muted/50 rounded-lg p-3 cursor-pointer hover:bg-muted transition-colors line-clamp-3"
                                     >
                                         {draft.systemPrompt || 'No system prompt yet...'}

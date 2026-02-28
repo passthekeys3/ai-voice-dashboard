@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,7 +36,7 @@ const statusConfig: Record<string, { label: string; icon: React.ElementType; col
     in_progress: { label: 'In Progress', icon: Loader2, color: 'text-blue-500' },
     completed: { label: 'Completed', icon: CheckCircle, color: 'text-green-500' },
     failed: { label: 'Failed', icon: AlertCircle, color: 'text-red-500' },
-    cancelled: { label: 'Cancelled', icon: XCircle, color: 'text-gray-500' },
+    cancelled: { label: 'Cancelled', icon: XCircle, color: 'text-slate-500' },
 };
 
 function formatDateTime(dateString: string) {
@@ -63,6 +64,7 @@ function formatTimeUntil(dateString: string) {
 }
 
 export function ScheduledCallsList({ upcomingCalls, pastCalls }: ScheduledCallsListProps) {
+    const router = useRouter();
     const [cancelling, setCancelling] = useState<string | null>(null);
 
     const handleCancel = async (id: string) => {
@@ -75,7 +77,7 @@ export function ScheduledCallsList({ upcomingCalls, pastCalls }: ScheduledCallsL
                 const errData = await res.json().catch(() => ({}));
                 throw new Error(errData.error || 'Failed to cancel call');
             }
-            window.location.reload();
+            router.refresh();
         } catch (err) {
             console.error('Failed to cancel call:', err);
             alert(err instanceof Error ? err.message : 'Failed to cancel call');

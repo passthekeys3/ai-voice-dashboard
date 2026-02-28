@@ -190,24 +190,30 @@ export function externalServiceError(
 
 /**
  * 500 Database Error - Supabase/database errors
- * Sanitizes error messages for security
+ * Sanitizes error messages for security.
+ *
+ * IMPORTANT: Only `error.code` is used for branching/logging. The `error.message`
+ * field from Supabase contains internal SQL details (table names, constraints,
+ * failing queries) and must NEVER be included in the response body.
  */
 export function databaseError(error: { code?: string; message?: string }): NextResponse<ApiErrorResponse> {
+  const code = error?.code;
+
   // Check for specific database error codes
-  if (error.code === '23505') {
+  if (code === '23505') {
     return conflict('A record with this identifier already exists');
   }
 
-  if (error.code === '23503') {
+  if (code === '23503') {
     return badRequest('Referenced record does not exist');
   }
 
-  if (error.code === '42501') {
+  if (code === '42501') {
     return forbidden('Database permission denied');
   }
 
-  // Log the actual error for debugging (server-side only)
-  console.error('Database error:', error.code || 'unknown');
+  // Log only the error code for debugging (server-side only) — never log error.message
+  console.error('Database error:', code || 'unknown');
 
   // Return generic message to client
   return apiError('DATABASE_ERROR', 'A database error occurred');
@@ -395,7 +401,8 @@ export function validateRequest(
   }
 
   if (Object.keys(errors).length > 0) {
-    const firstError = Object.values(errors)[0][0];
+    const errorArrays = Object.values(errors);
+    const firstError = errorArrays[0]?.[0] || 'Validation failed';
     return validationError(firstError, errors);
   }
 

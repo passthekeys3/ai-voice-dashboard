@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getAgentPrompt } from '@/lib/testing/get-agent-prompt';
+import { isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -20,6 +21,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id: suiteId } = await params;
+        if (!isValidUuid(suiteId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         // Verify suite belongs to this agency
@@ -66,6 +70,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id: suiteId } = await params;
+        if (!isValidUuid(suiteId)) {
+            return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         // Fetch suite with agent info

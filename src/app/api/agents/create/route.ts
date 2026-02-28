@@ -4,6 +4,9 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { publishRetellAgent } from '@/lib/providers/retell';
 import { createVapiAssistant } from '@/lib/providers/vapi';
 import { createBlandPathway } from '@/lib/providers/bland';
+import { safeParseJson } from '@/lib/validation';
+
+const PROVIDER_API_TIMEOUT = 15_000;
 
 // POST /api/agents/create - Create a new agent on the selected provider
 export async function POST(request: NextRequest) {
@@ -17,7 +20,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const body = await request.json();
+        const bodyOrError = await safeParseJson(request);
+        if (bodyOrError instanceof NextResponse) return bodyOrError;
+        const body = bodyOrError as Record<string, any>;
         const {
             name,
             provider: requestedProvider,
@@ -114,6 +119,7 @@ export async function POST(request: NextRequest) {
                     model: 'gpt-4o',
                     start_speaker: 'agent',
                 }),
+                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
 
             if (!llmResponse.ok) {
@@ -143,6 +149,7 @@ export async function POST(request: NextRequest) {
                     webhook_url: `${appUrl}/api/webhooks/retell`,
                     webhook_events: ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'],
                 }),
+                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
 
             if (!retellResponse.ok) {
@@ -152,6 +159,7 @@ export async function POST(request: NextRequest) {
                     await fetch(`https://api.retellai.com/delete-retell-llm/${retellLlm.llm_id}`, {
                         method: 'DELETE',
                         headers: { 'Authorization': `Bearer ${apiKey}` },
+                        signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                     });
                 } catch (cleanupErr) {
                     console.error('Failed to clean up orphaned LLM:', cleanupErr instanceof Error ? cleanupErr.message : 'Unknown error');
@@ -163,7 +171,6 @@ export async function POST(request: NextRequest) {
 
             const retellAgent = await retellResponse.json();
             externalId = retellAgent.agent_id;
-            console.log('Retell agent created:', externalId);
 
             // Publish the agent so webhook config takes effect on live calls
             try {
@@ -191,7 +198,6 @@ export async function POST(request: NextRequest) {
                 });
 
                 externalId = vapiAssistant.id;
-                console.log('Vapi assistant created:', externalId);
             } catch (err) {
                 console.error('Vapi create assistant error:', err instanceof Error ? err.message : 'Unknown error');
                 return NextResponse.json({
@@ -211,7 +217,6 @@ export async function POST(request: NextRequest) {
                 });
 
                 externalId = blandPathway.id;
-                console.log('Bland pathway created:', externalId);
             } catch (err) {
                 console.error('Bland create pathway error:', err instanceof Error ? err.message : 'Unknown error');
                 return NextResponse.json({
@@ -270,6 +275,7 @@ export async function POST(request: NextRequest) {
                         body: JSON.stringify({
                             inbound_agent_id: externalId,
                         }),
+                        signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                     });
 
                     if (!phoneUpdateResponse.ok) {
@@ -283,6 +289,7 @@ export async function POST(request: NextRequest) {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({ assistantId: externalId }),
+                        signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                     });
 
                     if (!vapiPhoneRes.ok) {
@@ -296,6 +303,7 @@ export async function POST(request: NextRequest) {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({ pathway_id: externalId }),
+                        signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                     });
 
                     if (!blandPhoneRes.ok) {
