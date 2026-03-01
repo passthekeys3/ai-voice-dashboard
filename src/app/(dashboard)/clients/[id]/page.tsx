@@ -18,6 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Users, Bot, Phone, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { getTierFromPriceId } from '@/lib/billing/tiers';
+import { TierGate } from '@/components/ui/tier-gate';
 import { isValidUuid } from '@/lib/validation';
 import type { Profile, Client, Agent, Call } from '@/types';
 import { getClientPermissions } from '@/lib/permissions';
@@ -39,6 +41,8 @@ export default async function ClientDetailPage({
         notFound();
     }
     const user = await requireAgencyAdmin();
+    const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+    const currentTier = tierInfo?.tier ?? null;
     const supabase = await createClient();
 
     const { data: client, error } = await supabase
@@ -257,7 +261,9 @@ export default async function ClientDetailPage({
                 />
 
                 {/* Integrations Section */}
-                <ClientIntegrationsEditor clientId={id} />
+                <TierGate currentTier={currentTier} requiredFeature="crm_integrations" label="Client Integrations">
+                    <ClientIntegrationsEditor clientId={id} />
+                </TierGate>
 
                 {/* Billing Section */}
                 <ClientBillingEditor

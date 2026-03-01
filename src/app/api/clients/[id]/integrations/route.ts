@@ -10,6 +10,7 @@ import {
     maskIntegrationSecrets,
 } from '@/lib/integrations/validate-integrations';
 import { safeParseJson, isValidUuid } from '@/lib/validation';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 
 /**
  * GET /api/clients/[id]/integrations
@@ -30,6 +31,12 @@ export async function GET(
         const user = await getCurrentUser();
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Tier gate: CRM integrations require Growth+
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations');
+        if (tierError) {
+            return NextResponse.json({ error: tierError }, { status: 403 });
         }
 
         const isAdmin = isAgencyAdmin(user);
@@ -81,6 +88,12 @@ export async function PATCH(
         const user = await getCurrentUser();
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Tier gate: CRM integrations require Growth+
+        const patchTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations');
+        if (patchTierError) {
+            return NextResponse.json({ error: patchTierError }, { status: 403 });
         }
 
         const isAdmin = isAgencyAdmin(user);
@@ -183,6 +196,12 @@ export async function DELETE(
         const user = await getCurrentUser();
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Tier gate: CRM integrations require Growth+
+        const deleteTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations');
+        if (deleteTierError) {
+            return NextResponse.json({ error: deleteTierError }, { status: 403 });
         }
 
         const isAdmin = isAgencyAdmin(user);
