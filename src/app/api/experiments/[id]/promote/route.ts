@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { getRetellAgent, updateRetellLLM } from '@/lib/providers/retell';
 import { updateVapiAssistant, getVapiAssistant, usesVapiMessagesFormat } from '@/lib/providers/vapi';
 import type { VapiAssistant } from '@/lib/providers/vapi';
@@ -29,12 +29,9 @@ export async function POST(
         }
 
         // ---- Tier gate: Experiments require Growth+ ----
-        const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
-        if (!tierInfo || !hasFeature(tierInfo.tier, 'experiments')) {
-            return NextResponse.json(
-                { error: 'A/B Experiments require a Growth plan or higher. Please upgrade.' },
-                { status: 403 }
-            );
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'experiments');
+        if (tierError) {
+            return NextResponse.json({ error: tierError }, { status: 403 });
         }
 
         const { id } = await params;

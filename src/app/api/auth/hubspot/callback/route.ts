@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 import crypto from 'crypto';
 
 const HUBSPOT_CLIENT_ID = process.env.HUBSPOT_CLIENT_ID;
@@ -90,8 +90,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Defense-in-depth: re-verify tier in case agency downgraded during OAuth flow
-        const callbackTierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
-        if (!callbackTierInfo || !hasFeature(callbackTierInfo.tier, 'crm_integrations')) {
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations');
+        if (tierError) {
             return NextResponse.redirect(
                 new URL('/settings?hubspot=error&message=CRM+integrations+require+a+Growth+plan+or+higher', request.url)
             );

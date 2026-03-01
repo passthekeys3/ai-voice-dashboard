@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 import crypto from 'crypto';
 
 const GHL_CLIENT_ID = process.env.GHL_CLIENT_ID;
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
 
         const { data: agency } = await supabase
             .from('agencies')
-            .select('integrations, subscription_price_id')
+            .select('integrations, subscription_price_id, subscription_status')
             .eq('id', agencyId)
             .single();
 
@@ -155,8 +155,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Defense-in-depth: re-verify tier in case agency downgraded during OAuth flow
-        const callbackTierInfo = getTierFromPriceId(agency.subscription_price_id || '');
-        if (!callbackTierInfo || !hasFeature(callbackTierInfo.tier, 'crm_integrations')) {
+        const tierError = checkFeatureAccess(agency.subscription_price_id, agency.subscription_status, 'crm_integrations');
+        if (tierError) {
             return NextResponse.redirect(
                 new URL('/settings?ghl=error&message=CRM+integrations+require+a+Growth+plan+or+higher', request.url)
             );

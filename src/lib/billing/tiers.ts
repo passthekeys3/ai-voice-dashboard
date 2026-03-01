@@ -66,6 +66,31 @@ export function tierGateError(feature: TierFeature): string {
     return `${label} require${label.endsWith('s') ? '' : 's'} ${tierName} plan or higher. Please upgrade.`;
 }
 
+/** Subscription statuses that grant feature access */
+const ACTIVE_STATUSES = new Set(['active', 'trialing']);
+
+/**
+ * Check if an agency has access to a tier-gated feature.
+ * Validates both the subscription tier AND the subscription status
+ * (blocks past_due, canceled, incomplete, etc.).
+ *
+ * @returns `null` if access is granted, or an error message string if denied.
+ */
+export function checkFeatureAccess(
+    subscriptionPriceId: string | null | undefined,
+    subscriptionStatus: string | null | undefined,
+    feature: TierFeature,
+): string | null {
+    const tierInfo = getTierFromPriceId(subscriptionPriceId || '');
+    if (!tierInfo || !hasFeature(tierInfo.tier, feature)) {
+        return tierGateError(feature);
+    }
+    if (!subscriptionStatus || !ACTIVE_STATUSES.has(subscriptionStatus)) {
+        return 'Your subscription is not active. Please update your billing to continue using this feature.';
+    }
+    return null;
+}
+
 export interface TierLimits {
     maxAgents: number;
     maxCallMinutesPerMonth: number;

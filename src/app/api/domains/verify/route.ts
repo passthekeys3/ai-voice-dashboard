@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { verifyDomainOnVercel, isVercelConfigured } from '@/lib/vercel-domains';
 import dns from 'dns';
 import { promisify } from 'util';
@@ -93,12 +93,9 @@ export async function POST() {
         }
 
         // ---- Tier gate: Custom domains require Growth+ ----
-        const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
-        if (!tierInfo || !hasFeature(tierInfo.tier, 'white_label')) {
-            return NextResponse.json(
-                { error: 'Custom domains require a Growth plan or higher. Please upgrade.' },
-                { status: 403 }
-            );
+        const postTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'white_label');
+        if (postTierError) {
+            return NextResponse.json({ error: postTierError }, { status: 403 });
         }
 
         const supabase = await createClient();
@@ -221,12 +218,9 @@ export async function GET() {
         }
 
         // ---- Tier gate: Custom domains require Growth+ ----
-        const getTierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
-        if (!getTierInfo || !hasFeature(getTierInfo.tier, 'white_label')) {
-            return NextResponse.json(
-                { error: 'Custom domains require a Growth plan or higher. Please upgrade.' },
-                { status: 403 }
-            );
+        const getTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'white_label');
+        if (getTierError) {
+            return NextResponse.json({ error: getTierError }, { status: 403 });
         }
 
         const supabase = await createClient();

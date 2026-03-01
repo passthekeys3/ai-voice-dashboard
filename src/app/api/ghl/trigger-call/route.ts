@@ -17,7 +17,7 @@ import { detectTimezone, isWithinCallingWindow, getNextValidCallTime } from '@/l
 import { verifyGHLTriggerSignature, validateGHLTriggerPayload } from './validate';
 import { applyExperiment } from '@/lib/experiments/apply';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
-import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 
 export async function POST(request: NextRequest) {
     try {
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
         // Look up agency by GHL location_id
         const { data: agencies, error: agencyError } = await supabase
             .from('agencies')
-            .select('id, integrations, calling_window, retell_api_key, vapi_api_key, bland_api_key, subscription_price_id')
+            .select('id, integrations, calling_window, retell_api_key, vapi_api_key, bland_api_key, subscription_price_id, subscription_status')
             .filter('integrations->ghl->>location_id', 'eq', data.location_id);
 
         if (agencyError || !agencies || agencies.length === 0) {
@@ -65,10 +65,10 @@ export async function POST(request: NextRequest) {
         const agency = agencies[0];
 
         // ---- Tier gate: CRM integrations require Growth+ ----
-        const agencyTierInfo = getTierFromPriceId(agency.subscription_price_id || '');
-        if (!agencyTierInfo || !hasFeature(agencyTierInfo.tier, 'crm_integrations')) {
+        const tierError = checkFeatureAccess(agency.subscription_price_id, agency.subscription_status, 'crm_integrations');
+        if (tierError) {
             return NextResponse.json(
-                { error: 'CRM integrations require a Growth plan or higher. Please upgrade.' },
+                { error: tierError },
                 { status: 403 },
             );
         }

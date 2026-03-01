@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { safeParseJson } from '@/lib/validation';
 
 // GET /api/experiments - List all experiments
@@ -17,12 +17,9 @@ export async function GET(request: NextRequest) {
         }
 
         // ---- Tier gate: Experiments require Growth+ ----
-        const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
-        if (!tierInfo || !hasFeature(tierInfo.tier, 'experiments')) {
-            return NextResponse.json(
-                { error: 'A/B Experiments require a Growth plan or higher. Please upgrade.' },
-                { status: 403 }
-            );
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'experiments');
+        if (tierError) {
+            return NextResponse.json({ error: tierError }, { status: 403 });
         }
 
         const supabase = await createClient();
@@ -88,12 +85,9 @@ export async function POST(request: NextRequest) {
         }
 
         // ---- Tier gate: Experiments require Growth+ ----
-        const postTierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
-        if (!postTierInfo || !hasFeature(postTierInfo.tier, 'experiments')) {
-            return NextResponse.json(
-                { error: 'A/B Experiments require a Growth plan or higher. Please upgrade.' },
-                { status: 403 }
-            );
+        const postTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'experiments');
+        if (postTierError) {
+            return NextResponse.json({ error: postTierError }, { status: 403 });
         }
 
         const bodyOrError = await safeParseJson(request);

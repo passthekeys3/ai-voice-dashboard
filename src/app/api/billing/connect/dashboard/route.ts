@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { getStripe } from '@/lib/stripe';
 
 /**
@@ -18,12 +18,9 @@ export async function POST() {
         }
 
         // ---- Tier gate: Stripe Connect requires Growth+ ----
-        const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
-        if (!tierInfo || !hasFeature(tierInfo.tier, 'stripe_connect')) {
-            return NextResponse.json(
-                { error: 'Stripe Connect requires a Growth plan or higher. Please upgrade.' },
-                { status: 403 }
-            );
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'stripe_connect');
+        if (tierError) {
+            return NextResponse.json({ error: tierError }, { status: 403 });
         }
 
         const supabase = createServiceClient();

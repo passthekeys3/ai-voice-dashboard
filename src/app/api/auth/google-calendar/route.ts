@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 import crypto from 'crypto';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -49,6 +50,12 @@ export async function GET(request: NextRequest) {
                 .eq('id', user.agency.id);
 
             return NextResponse.redirect(new URL('/settings?google_calendar=disconnected', request.url));
+        }
+
+        // ---- Tier gate: CRM integrations require Growth+ ----
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations');
+        if (tierError) {
+            return NextResponse.json({ error: tierError }, { status: 403 });
         }
 
         // Check if Google OAuth is configured

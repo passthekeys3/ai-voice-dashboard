@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { safeParseJson, isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
@@ -22,12 +22,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         // ---- Tier gate: Experiments require Growth+ ----
-        const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
-        if (!tierInfo || !hasFeature(tierInfo.tier, 'experiments')) {
-            return NextResponse.json(
-                { error: 'A/B Experiments require a Growth plan or higher. Please upgrade.' },
-                { status: 403 }
-            );
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'experiments');
+        if (tierError) {
+            return NextResponse.json({ error: tierError }, { status: 403 });
         }
 
         const { id } = await params;
@@ -120,12 +117,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // ---- Tier gate: Experiments require Growth+ ----
-        const patchTierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
-        if (!patchTierInfo || !hasFeature(patchTierInfo.tier, 'experiments')) {
-            return NextResponse.json(
-                { error: 'A/B Experiments require a Growth plan or higher. Please upgrade.' },
-                { status: 403 }
-            );
+        const patchTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'experiments');
+        if (patchTierError) {
+            return NextResponse.json({ error: patchTierError }, { status: 403 });
         }
 
         const { id } = await params;
@@ -192,12 +186,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         }
 
         // ---- Tier gate: Experiments require Growth+ ----
-        const deleteTierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
-        if (!deleteTierInfo || !hasFeature(deleteTierInfo.tier, 'experiments')) {
-            return NextResponse.json(
-                { error: 'A/B Experiments require a Growth plan or higher. Please upgrade.' },
-                { status: 403 }
-            );
+        const deleteTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'experiments');
+        if (deleteTierError) {
+            return NextResponse.json({ error: deleteTierError }, { status: 403 });
         }
 
         const { id } = await params;

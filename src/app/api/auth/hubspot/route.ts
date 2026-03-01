@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 import crypto from 'crypto';
 
 const HUBSPOT_CLIENT_ID = process.env.HUBSPOT_CLIENT_ID;
@@ -59,12 +59,9 @@ export async function GET(request: NextRequest) {
         }
 
         // ---- Tier gate: CRM integrations require Growth+ ----
-        const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
-        if (!tierInfo || !hasFeature(tierInfo.tier, 'crm_integrations')) {
-            return NextResponse.json(
-                { error: 'CRM integrations require a Growth plan or higher. Please upgrade.' },
-                { status: 403 }
-            );
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations');
+        if (tierError) {
+            return NextResponse.json({ error: tierError }, { status: 403 });
         }
 
         // Check if HubSpot OAuth is configured

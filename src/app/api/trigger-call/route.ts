@@ -17,7 +17,7 @@ import { detectTimezone, isWithinCallingWindow, getNextValidCallTime } from '@/l
 import { validateApiTriggerPayload } from './validate';
 import { applyExperiment } from '@/lib/experiments/apply';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
-import { getTierFromPriceId, hasFeature } from '@/lib/billing/tiers';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 
 export async function OPTIONS() {
     return new NextResponse(null, {
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         // Look up agency by API key
         const { data: agencies, error: agencyError } = await supabase
             .from('agencies')
-            .select('id, integrations, calling_window, retell_api_key, vapi_api_key, bland_api_key, subscription_price_id')
+            .select('id, integrations, calling_window, retell_api_key, vapi_api_key, bland_api_key, subscription_price_id, subscription_status')
             .filter('integrations->api->>api_key', 'eq', apiKey);
 
         if (agencyError || !agencies || agencies.length === 0) {
@@ -88,10 +88,10 @@ export async function POST(request: NextRequest) {
         const agency = agencies[0];
 
         // ---- Tier gate: API access requires Agency plan ----
-        const agencyTierInfo = getTierFromPriceId(agency.subscription_price_id || '');
-        if (!agencyTierInfo || !hasFeature(agencyTierInfo.tier, 'api_access')) {
+        const tierError = checkFeatureAccess(agency.subscription_price_id, agency.subscription_status, 'api_access');
+        if (tierError) {
             return NextResponse.json(
-                { error: 'API access requires an Agency plan. Please upgrade.' },
+                { error: tierError },
                 { status: 403 },
             );
         }
