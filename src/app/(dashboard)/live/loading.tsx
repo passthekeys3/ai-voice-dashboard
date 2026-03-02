@@ -1,21 +1,55 @@
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent } from '@/components/ui/card';
+
 export default function LiveLoading() {
     return (
-        <div className="space-y-6 p-4 sm:p-6 animate-pulse">
-            {/* Header skeleton */}
-            <div className="space-y-2">
-                <div className="h-8 w-32 bg-slate-200 dark:bg-slate-800 rounded" />
-                <div className="h-4 w-48 bg-slate-100 dark:bg-slate-800/60 rounded" />
-            </div>
-
-            {/* 2 large cards split view */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-card p-6 space-y-4">
-                    <div className="h-5 w-28 bg-slate-200 dark:bg-slate-800 rounded" />
-                    <div className="h-64 bg-slate-100 dark:bg-slate-800/60 rounded" />
+        <div className="flex flex-col h-full">
+            {/* Header bar */}
+            <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200/50 dark:border-slate-800/50 px-4 sm:px-6">
+                <Skeleton className="h-5 w-24" />
+                <div className="flex items-center gap-2">
+                    <Skeleton className="h-9 w-9 rounded-md" />
+                    <Skeleton className="h-10 w-10 rounded-full" />
                 </div>
-                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-card p-6 space-y-4">
-                    <div className="h-5 w-28 bg-slate-200 dark:bg-slate-800 rounded" />
-                    <div className="h-64 bg-slate-100 dark:bg-slate-800/60 rounded" />
+            </header>
+
+            <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
+                {/* Page title */}
+                <div>
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-4 w-52 mt-2" />
+                </div>
+
+                {/* Status bar — matches ActiveCallsList status line */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="h-3 w-3 rounded-full" />
+                        <Skeleton className="h-4 w-28" />
+                    </div>
+                    <Skeleton className="h-9 w-24 rounded-md" />
+                </div>
+
+                {/* Active call cards — single-column list with green left border */}
+                <div className="space-y-4">
+                    {[1, 2].map((i) => (
+                        <Card key={i} className="border-l-4 border-l-green-500">
+                            <CardContent className="py-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div>
+                                            <Skeleton className="h-5 w-32" />
+                                            <Skeleton className="h-4 w-24 mt-1" />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <Skeleton className="h-5 w-16" />
+                                        <Skeleton className="h-9 w-20 rounded-md" />
+                                        <Skeleton className="h-9 w-24 rounded-md" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
                 </div>
             </div>
         </div>
