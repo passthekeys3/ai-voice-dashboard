@@ -68,8 +68,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
         }
 
-        // If already has active subscription, redirect to portal instead
-        if (agency.subscription_status === 'active' || agency.subscription_status === 'trialing') {
+        // If already has a real Stripe subscription, redirect to portal instead.
+        // Allow beta trial users (trialing with no subscription_id) to check out.
+        const hasRealSubscription = agency.subscription_id &&
+            (agency.subscription_status === 'active' || agency.subscription_status === 'trialing');
+        if (hasRealSubscription) {
             return NextResponse.json({
                 error: 'Agency already has an active subscription',
                 message: 'Use the billing portal to manage your subscription',
