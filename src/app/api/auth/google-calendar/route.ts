@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
                 })
                 .eq('id', user.agency.id);
 
-            return NextResponse.redirect(new URL('/settings?google_calendar=disconnected', request.url));
+            return NextResponse.redirect(new URL('/integrations?google_calendar=disconnected', request.url));
         }
 
         // ---- Tier gate: CRM integrations require Growth+ ----
