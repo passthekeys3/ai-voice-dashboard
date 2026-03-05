@@ -46,16 +46,6 @@ export default async function DashboardLayout({
     const permissions = getUserPermissions(user);
     const showAdminNav = isPlatformAdmin(user.email);
 
-    // TODO: Remove after verifying admin access works
-    console.log('[ADMIN DEBUG]', {
-        email: user.email,
-        role: user.profile.role,
-        isAdmin,
-        showAdminNav,
-        adminEmailsEnvSet: !!process.env.ADMIN_EMAILS,
-        adminEmailsRaw: process.env.ADMIN_EMAILS?.substring(0, 30),
-    });
-
     return (
         <ErrorBoundary>
             {isImpersonating && <ImpersonationBanner agencyName={user.agency.name} />}
