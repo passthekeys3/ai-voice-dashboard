@@ -22,6 +22,7 @@ import {
     Plug,
     Menu,
     X,
+    Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,8 @@ interface SidebarProps {
     branding?: Branding;
     permissions?: ClientPermissions;
     basePath?: string; // '/portal' for client users, undefined for agency
+    isPlatformAdmin?: boolean;
+    isImpersonating?: boolean;
 }
 
 const navigation = [
@@ -87,6 +90,7 @@ interface SidebarContentProps {
     onNavigate?: () => void;
     permissions?: ClientPermissions;
     basePath?: string;
+    isPlatformAdmin?: boolean;
 }
 
 function SidebarContent({
@@ -97,6 +101,7 @@ function SidebarContent({
     onNavigate,
     permissions,
     basePath,
+    isPlatformAdmin: isPlatformAdminProp,
 }: SidebarContentProps) {
     const pathname = usePathname();
 
@@ -129,6 +134,11 @@ function SidebarContent({
     const combinedNavigation = isAgencyAdmin
         ? [...filteredNavigation, ...adminNavigation]
         : filteredNavigation;
+
+    // Add "Managed" link for platform admins who are also agency admins
+    if (isPlatformAdminProp && isAgencyAdmin) {
+        combinedNavigation.push({ name: 'Managed', href: '/admin/accounts', icon: Building2 });
+    }
 
     // Apply basePath prefix for client portal navigation
     const allNavigation = basePath
@@ -217,7 +227,7 @@ function SidebarContent({
     );
 }
 
-export function Sidebar({ isAgencyAdmin, agencyName, branding, permissions, basePath }: SidebarProps) {
+export function Sidebar({ isAgencyAdmin, agencyName, branding, permissions, basePath, isPlatformAdmin: isPlatformAdminProp, isImpersonating }: SidebarProps) {
     const [mobileOpen, setMobileOpen] = useState(false);
 
     const displayName = branding?.company_name || agencyName;
@@ -227,7 +237,10 @@ export function Sidebar({ isAgencyAdmin, agencyName, branding, permissions, base
         <>
             {/* Mobile Header */}
             <div
-                className="md:hidden fixed top-0 left-0 right-0 z-40 flex h-14 items-center gap-4 px-4 border-b"
+                className={cn(
+                    'md:hidden fixed left-0 right-0 z-40 flex h-14 items-center gap-4 px-4 border-b',
+                    isImpersonating ? 'top-10' : 'top-0',
+                )}
                 style={{ backgroundColor: sidebarColor }}
             >
                 <Button
@@ -280,6 +293,7 @@ export function Sidebar({ isAgencyAdmin, agencyName, branding, permissions, base
                         onNavigate={() => setMobileOpen(false)}
                         permissions={permissions}
                         basePath={basePath}
+                        isPlatformAdmin={isPlatformAdminProp}
                     />
                 </SheetContent>
             </Sheet>
@@ -293,6 +307,7 @@ export function Sidebar({ isAgencyAdmin, agencyName, branding, permissions, base
                     sidebarColor={sidebarColor}
                     permissions={permissions}
                     basePath={basePath}
+                    isPlatformAdmin={isPlatformAdminProp}
                 />
             </div>
         </>

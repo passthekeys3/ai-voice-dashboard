@@ -391,12 +391,20 @@ export function getPerMinuteRate(): number {
     return PLATFORM_PER_MINUTE_RATE;
 }
 
+/** Synthetic price ID assigned to beta trial agencies for full Agency-tier access */
+export const BETA_PRICE_ID = 'beta_agency';
+
 /**
  * Reverse-lookup: map a Stripe price_id back to tier + plan type.
  * Checks new env vars first, then legacy env vars for backward compatibility.
  */
 export function getTierFromPriceId(priceId: string): { tier: PlanTier; planType: PlanType } | null {
     if (!priceId) return null;
+
+    // Beta trial agencies get full Agency-tier access
+    if (priceId === BETA_PRICE_ID) {
+        return { tier: 'agency', planType: 'self_service' };
+    }
 
     // Check new env vars (monthly + yearly)
     for (const planType of ['self_service', 'managed'] as PlanType[]) {

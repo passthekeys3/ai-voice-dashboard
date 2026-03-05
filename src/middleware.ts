@@ -199,7 +199,7 @@ export async function middleware(request: NextRequest) {
             const ADMIN_ONLY_PATHS = [
                 '/clients', '/phone-numbers', '/live', '/scheduled-calls',
                 '/insights', '/experiments', '/testing', '/settings',
-                '/workflows', '/agent-builder', '/billing',
+                '/workflows', '/agent-builder', '/billing', '/admin',
             ];
 
             const isAdminPath = ADMIN_ONLY_PATHS.some(

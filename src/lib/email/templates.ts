@@ -66,18 +66,38 @@ function layout(content: string): string {
 export function welcomeEmail(params: {
     userName: string;
     agencyName: string;
-    trialDays: number;
+    trialDays?: number;
+    isBeta?: boolean;
+    betaEndDate?: Date;
 }): { subject: string; html: string; text: string } {
-    const { userName, agencyName, trialDays } = params;
+    const { userName, agencyName, trialDays, isBeta, betaEndDate } = params;
     const safeUserName = escapeHtml(userName);
     const safeAgencyName = escapeHtml(agencyName);
 
+    const trialDescription = isBeta && betaEndDate
+        ? `<strong>full beta access</strong> until <strong>${betaEndDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>`
+        : `a <strong>${trialDays ?? 7}-day free trial</strong>`;
+
+    const trialDescriptionText = isBeta && betaEndDate
+        ? `full beta access until ${betaEndDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+        : `a ${trialDays ?? 7}-day free trial`;
+
+    const subject = isBeta
+        ? `Welcome to the ${APP_NAME} Beta!`
+        : `Welcome to ${APP_NAME} — your trial is active`;
+
     return {
-        subject: `Welcome to ${APP_NAME} — your trial is active`,
+        subject,
         html: layout(`
             <h2 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#0f172a;">Welcome, ${safeUserName}!</h2>
+            ${isBeta ? `
+            <div style="margin:0 0 16px;padding:12px 16px;background-color:#eff6ff;border-left:4px solid #3b82f6;border-radius:4px;">
+                <p style="margin:0;font-size:14px;font-weight:600;color:#1e40af;">Beta Program</p>
+                <p style="margin:4px 0 0;font-size:13px;color:#1e3a8a;">You have full access to all Agency-tier features during the beta period.</p>
+            </div>
+            ` : ''}
             <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.6;">
-                Your agency <strong>${safeAgencyName}</strong> is set up with a <strong>${trialDays}-day free trial</strong>. Here&rsquo;s how to get started:
+                Your agency <strong>${safeAgencyName}</strong> is set up with ${trialDescription}. Here&rsquo;s how to get started:
             </p>
             <ol style="margin:0 0 24px;padding-left:20px;font-size:15px;color:#334155;line-height:1.8;">
                 <li>Connect your voice provider (Retell, Vapi, or Bland)</li>
@@ -97,7 +117,7 @@ export function welcomeEmail(params: {
                 Need help? Reply to this email and we&rsquo;ll get back to you.
             </p>
         `),
-        text: `Welcome to ${APP_NAME}, ${userName}!\n\nYour agency "${agencyName}" is set up with a ${trialDays}-day free trial.\n\nGet started:\n1. Connect your voice provider (Retell, Vapi, or Bland)\n2. Import or create your first agent\n3. Make a test call\n\nSet up your account: ${APP_URL}/onboarding\n\nNeed help? Reply to this email.`,
+        text: `Welcome to ${APP_NAME}, ${userName}!\n\nYour agency "${agencyName}" is set up with ${trialDescriptionText}.\n\nGet started:\n1. Connect your voice provider (Retell, Vapi, or Bland)\n2. Import or create your first agent\n3. Make a test call\n\nSet up your account: ${APP_URL}/onboarding\n\nNeed help? Reply to this email.`,
     };
 }
 
@@ -131,6 +151,43 @@ export function trialEndingEmail(params: {
             </p>
         `),
         text: `Hi ${userName}, your ${APP_NAME} trial ends in ${daysRemaining} day(s). Subscribe to keep your agents running: ${APP_URL}/billing/upgrade`,
+    };
+}
+
+// ─── Beta Ending Soon ────────────────────────────────────────────
+
+export function betaEndingEmail(params: {
+    userName: string;
+    daysRemaining: number;
+}): { subject: string; html: string; text: string } {
+    const { userName, daysRemaining } = params;
+    const safeUserName = escapeHtml(userName);
+
+    return {
+        subject: `Your ${APP_NAME} beta access ends in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}`,
+        html: layout(`
+            <h2 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#0f172a;">Beta access ending soon</h2>
+            <div style="margin:0 0 16px;padding:12px 16px;background-color:#eff6ff;border-left:4px solid #3b82f6;border-radius:4px;">
+                <p style="margin:0;font-size:14px;font-weight:600;color:#1e40af;">Beta Program</p>
+                <p style="margin:4px 0 0;font-size:13px;color:#1e3a8a;">Your beta access expires in <strong>${daysRemaining} day${daysRemaining === 1 ? '' : 's'}</strong>.</p>
+            </div>
+            <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.6;">
+                Hi ${safeUserName}, your beta access to ${APP_NAME} is ending soon. Subscribe to a plan to keep your agents running and retain all your data.
+            </p>
+            <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                <tr>
+                    <td style="background-color:#0f172a;border-radius:8px;padding:12px 24px;">
+                        <a href="${APP_URL}/billing/upgrade" style="color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;display:inline-block;">
+                            Choose a plan &rarr;
+                        </a>
+                    </td>
+                </tr>
+            </table>
+            <p style="margin:0;font-size:14px;color:#64748b;">
+                After the beta ends, you&rsquo;ll lose access to the dashboard until you subscribe.
+            </p>
+        `),
+        text: `Hi ${userName}, your ${APP_NAME} beta access ends in ${daysRemaining} day(s). Subscribe to keep your agents running: ${APP_URL}/billing/upgrade`,
     };
 }
 

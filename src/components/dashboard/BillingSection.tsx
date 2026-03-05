@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { PlanTier, PlanType } from '@/types/database';
 
-type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused' | null;
+type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused' | 'expired' | null;
 
 interface BillingData {
     subscription: {
@@ -29,6 +29,8 @@ interface BillingData {
             additionalClientPrice?: number;
         } | null;
         per_minute_rate?: number | null;
+        is_beta?: boolean;
+        beta_ends_at?: string | null;
     };
     has_payment_method: boolean;
     usage: {
@@ -40,9 +42,13 @@ interface BillingData {
     };
 }
 
-function getStatusBadge(status: SubscriptionStatus) {
+function getStatusBadge(status: SubscriptionStatus, isBeta?: boolean) {
     if (!status) {
         return <Badge variant="outline">No subscription</Badge>;
+    }
+
+    if (isBeta && status === 'trialing') {
+        return <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Beta</Badge>;
     }
 
     const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
@@ -53,6 +59,7 @@ function getStatusBadge(status: SubscriptionStatus) {
         unpaid: { variant: 'destructive', label: 'Unpaid' },
         incomplete: { variant: 'outline', label: 'Incomplete' },
         incomplete_expired: { variant: 'outline', label: 'Expired' },
+        expired: { variant: 'destructive', label: 'Trial Expired' },
         paused: { variant: 'secondary', label: 'Paused' },
     };
 
@@ -184,7 +191,7 @@ export function BillingSection() {
                     <div className="flex items-center gap-2">
                         {getPlanTypeBadge(planType)}
                         {planName && <Badge variant="secondary">{planName}</Badge>}
-                        {billingData && getStatusBadge(billingData.subscription.status)}
+                        {billingData && getStatusBadge(billingData.subscription.status, billingData.subscription.is_beta)}
                     </div>
                 </div>
             </CardHeader>
@@ -206,9 +213,22 @@ export function BillingSection() {
                     <>
                         {hasActiveSubscription ? (
                             <div className="space-y-4">
+                                {billingData.subscription.is_beta && (
+                                    <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900/50">
+                                        <p className="font-medium text-blue-700 dark:text-blue-400">Beta Program</p>
+                                        <p className="text-sm text-blue-600 dark:text-blue-500 mt-1">
+                                            You have full access to all Agency-tier features.
+                                            {billingData.subscription.beta_ends_at && (
+                                                <> Beta access ends {formatDate(billingData.subscription.beta_ends_at)}.</>
+                                            )}
+                                        </p>
+                                    </div>
+                                )}
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <div>
-                                        <p className="text-sm text-muted-foreground">Current Period</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {billingData.subscription.is_beta ? 'Beta Period' : 'Current Period'}
+                                        </p>
                                         <p className="font-medium">
                                             {formatDate(billingData.subscription.current_period_start)} -{' '}
                                             {formatDate(billingData.subscription.current_period_end)}

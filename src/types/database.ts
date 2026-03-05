@@ -5,7 +5,7 @@ export type VoiceProvider = 'retell' | 'vapi' | 'bland';
 export type CallStatus = 'completed' | 'failed' | 'in_progress' | 'queued';
 export type CallSentiment = 'positive' | 'negative' | 'neutral';
 export type BillingType = 'subscription' | 'per_minute' | 'one_time';
-export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused';
+export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused' | 'expired';
 export type PlanTier = 'starter' | 'growth' | 'agency';
 export type PlanType = 'self_service' | 'managed';
 
@@ -43,6 +43,9 @@ export interface Agency {
     platform_fee_percent?: number;
     // Calling window (also in integrations.ghl, this is the top-level default)
     calling_window?: CallingWindowConfig;
+    // Beta trial
+    is_beta?: boolean;
+    beta_ends_at?: string;
     created_at: string;
     updated_at: string;
 }
@@ -379,6 +382,10 @@ export interface AuthUser {
     profile: Profile;
     agency: Agency;
     client?: Client;
+    /** True when a platform admin is impersonating this agency */
+    isImpersonating?: boolean;
+    /** The admin's real agency_id (only set during impersonation) */
+    realAgencyId?: string;
 }
 
 // API Trigger Log Types

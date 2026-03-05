@@ -4,6 +4,7 @@ import { waitUntil } from '@vercel/functions';
 import { sendEmail } from '@/lib/email/send';
 import { welcomeEmail } from '@/lib/email/templates';
 import { safeParseJson } from '@/lib/validation';
+import { BETA_PRICE_ID } from '@/lib/billing/tiers';
 
 // Use admin client to bypass RLS for signup
 const supabaseAdmin = createClient(
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     try {
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
-        const { email, password, fullName, agencyName } = bodyOrError;
+        const { email, password, fullName, agencyName, promoCode } = bodyOrError;
 
         if (!email || !password || !fullName || !agencyName) {
             return NextResponse.json(
@@ -92,26 +93,57 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
         }
 
-        // Create agency with a 14-day free trial so users can access the dashboard immediately
+        // Determine if this is a beta signup via promo code
+        const betaPromoCode = process.env.BETA_PROMO_CODE;
+        const betaEndDateStr = process.env.BETA_TRIAL_END_DATE; // e.g. "2026-04-30"
+        const isBeta = !!(
+            promoCode &&
+            typeof promoCode === 'string' &&
+            betaPromoCode &&
+            promoCode.trim().toLowerCase() === betaPromoCode.trim().toLowerCase()
+        );
+
+        if (promoCode && !isBeta) {
+            // Cleanup: delete the auth user since signup won't complete
+            await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+            return NextResponse.json({ error: 'Invalid promo code' }, { status: 400 });
+        }
+
+        // Create agency with free trial (7 days standard, or beta end date for beta users)
         const baseSlug = sanitizedAgencyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
         const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 8)}`;
-        const trialDays = parseInt(process.env.TRIAL_DAYS || '14', 10);
-        const trialEnd = new Date();
-        trialEnd.setDate(trialEnd.getDate() + trialDays);
+        const trialDays = parseInt(process.env.TRIAL_DAYS || '7', 10);
+
+        let trialEnd: Date;
+        if (isBeta && betaEndDateStr) {
+            trialEnd = new Date(betaEndDateStr + 'T23:59:59.999Z');
+        } else {
+            trialEnd = new Date();
+            trialEnd.setDate(trialEnd.getDate() + trialDays);
+        }
+
+        const agencyInsert: Record<string, unknown> = {
+            name: sanitizedAgencyName,
+            slug,
+            branding: {
+                primary_color: '#0f172a',
+                secondary_color: '#1e293b',
+                accent_color: '#3b82f6',
+                company_name: sanitizedAgencyName,
+            },
+            subscription_status: 'trialing',
+            subscription_current_period_end: trialEnd.toISOString(),
+        };
+
+        if (isBeta) {
+            agencyInsert.is_beta = true;
+            agencyInsert.beta_ends_at = trialEnd.toISOString();
+            agencyInsert.subscription_price_id = BETA_PRICE_ID;
+        }
+
         const { data: agency, error: agencyError } = await supabaseAdmin
             .from('agencies')
-            .insert({
-                name: sanitizedAgencyName,
-                slug,
-                branding: {
-                    primary_color: '#0f172a',
-                    secondary_color: '#1e293b',
-                    accent_color: '#3b82f6',
-                    company_name: sanitizedAgencyName,
-                },
-                subscription_status: 'trialing',
-                subscription_current_period_end: trialEnd.toISOString(),
-            })
+            .insert(agencyInsert)
             .select()
             .single();
 
@@ -147,7 +179,13 @@ export async function POST(request: NextRequest) {
         waitUntil(
             sendEmail({
                 to: email,
-                ...welcomeEmail({ userName: sanitizedName, agencyName: sanitizedAgencyName, trialDays }),
+                ...welcomeEmail({
+                    userName: sanitizedName,
+                    agencyName: sanitizedAgencyName,
+                    trialDays: isBeta ? undefined : trialDays,
+                    isBeta,
+                    betaEndDate: isBeta ? trialEnd : undefined,
+                }),
             }).catch(() => { /* logged inside sendEmail */ })
         );
 

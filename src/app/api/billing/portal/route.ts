@@ -98,7 +98,9 @@ export async function GET(_request: NextRequest) {
                 subscription_current_period_start,
                 subscription_current_period_end,
                 subscription_cancel_at_period_end,
-                plan_type
+                plan_type,
+                is_beta,
+                beta_ends_at
             `)
             .eq('id', user.agency.id)
             .single();
@@ -170,6 +172,8 @@ export async function GET(_request: NextRequest) {
                     plan_name: tierDef?.name || null,
                     limits: tierDef?.limits || null,
                     per_minute_rate: getPerMinuteRate(),
+                    is_beta: agency.is_beta || false,
+                    beta_ends_at: agency.beta_ends_at || null,
                 },
                 has_payment_method: !!agency.stripe_customer_id,
                 usage: usageData,

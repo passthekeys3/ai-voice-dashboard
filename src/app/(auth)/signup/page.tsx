@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Mail, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Mail, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 export default function SignupPage() {
@@ -15,6 +15,8 @@ export default function SignupPage() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [fullName, setFullName] = useState('');
     const [agencyName, setAgencyName] = useState('');
+    const [promoCode, setPromoCode] = useState('');
+    const [showPromo, setShowPromo] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -41,7 +43,7 @@ export default function SignupPage() {
             const response = await fetch('/api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, fullName, agencyName }),
+                body: JSON.stringify({ email, password, fullName, agencyName, ...(promoCode.trim() ? { promoCode: promoCode.trim() } : {}) }),
             });
 
             const data = await response.json();
@@ -176,6 +178,28 @@ export default function SignupPage() {
                     />
                     {confirmPassword.length > 0 && password !== confirmPassword && (
                         <p className="text-xs text-red-500">Passwords do not match</p>
+                    )}
+                </div>
+                <div>
+                    <button
+                        type="button"
+                        onClick={() => setShowPromo(!showPromo)}
+                        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                        {showPromo ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                        Have a promo code?
+                    </button>
+                    {showPromo && (
+                        <div className="mt-2">
+                            <Input
+                                id="promoCode"
+                                type="text"
+                                placeholder="Enter promo code"
+                                value={promoCode}
+                                onChange={(e) => setPromoCode(e.target.value)}
+                                autoComplete="off"
+                            />
+                        </div>
                     )}
                 </div>
                 <Button type="submit" className="w-full rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg" disabled={loading}>
