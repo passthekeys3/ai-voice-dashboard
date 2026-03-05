@@ -69,6 +69,10 @@ interface Integration {
     features: string[];
     configurable?: boolean;
     requiredFeature?: TierFeature;
+    /** OAuth URL to start the connect flow (for OAuth-based integrations) */
+    oauthUrl?: string;
+    /** Key to check connection status in the connectedIntegrations map */
+    connectionKey?: string;
 }
 
 const integrations: Integration[] = [
@@ -107,7 +111,10 @@ const integrations: Integration[] = [
         description: 'Check availability and book events automatically',
         logo: <GoogleCalendarLogo />,
         bgClassName: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
-        comingSoon: true,
+        comingSoon: false,
+        requiredFeature: 'crm_integrations',
+        oauthUrl: '/api/auth/google-calendar',
+        connectionKey: 'google_calendar',
         features: [
             'Check free/busy slots',
             'Create calendar events',
@@ -170,9 +177,11 @@ interface IntegrationsPageProps {
     agents?: { id: string; name: string; provider: string }[];
     appUrl?: string;
     currentTier?: PlanTier | null;
+    /** Map of integration keys to their connection status */
+    connectedIntegrations?: Record<string, boolean>;
 }
 
-export function IntegrationsPage({ apiConfig, agents = [], appUrl = '', currentTier = null }: IntegrationsPageProps) {
+export function IntegrationsPage({ apiConfig, agents = [], appUrl = '', currentTier = null, connectedIntegrations = {} }: IntegrationsPageProps) {
     const [apiDialogOpen, setApiDialogOpen] = useState(false);
 
     return (
@@ -183,7 +192,11 @@ export function IntegrationsPage({ apiConfig, agents = [], appUrl = '', currentT
                     const isLocked = integration.requiredFeature
                         ? !currentTier || !hasFeature(currentTier, integration.requiredFeature)
                         : false;
-                    const isClickable = integration.configurable && !isLocked;
+                    const isOAuthIntegration = !!integration.oauthUrl;
+                    const isOAuthConnected = integration.connectionKey
+                        ? !!connectedIntegrations[integration.connectionKey]
+                        : false;
+                    const isClickable = (integration.configurable || (isOAuthIntegration && !isOAuthConnected)) && !isLocked;
 
                     return (
                         <Card
@@ -193,11 +206,21 @@ export function IntegrationsPage({ apiConfig, agents = [], appUrl = '', currentT
                             } ${isLocked ? 'opacity-75' : ''}`}
                             role="listitem"
                             tabIndex={isClickable ? 0 : undefined}
-                            onClick={isClickable ? () => setApiDialogOpen(true) : undefined}
+                            onClick={isClickable ? () => {
+                                if (isOAuthIntegration && integration.oauthUrl) {
+                                    window.location.href = integration.oauthUrl;
+                                } else {
+                                    setApiDialogOpen(true);
+                                }
+                            } : undefined}
                             onKeyDown={isClickable ? (e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
-                                    setApiDialogOpen(true);
+                                    if (isOAuthIntegration && integration.oauthUrl) {
+                                        window.location.href = integration.oauthUrl;
+                                    } else {
+                                        setApiDialogOpen(true);
+                                    }
                                 }
                             } : undefined}
                         >
@@ -224,14 +247,14 @@ export function IntegrationsPage({ apiConfig, agents = [], appUrl = '', currentT
                                             </span>
                                         ) : !isLocked ? (
                                             <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                                apiConfig?.enabled && apiConfig?.api_key
+                                                (isOAuthIntegration ? isOAuthConnected : apiConfig?.enabled && apiConfig?.api_key)
                                                     ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                                                     : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                                             }`}>
-                                                {apiConfig?.enabled && apiConfig?.api_key ? (
+                                                {(isOAuthIntegration ? isOAuthConnected : apiConfig?.enabled && apiConfig?.api_key) ? (
                                                     <>
                                                         <CheckCircle2 className="h-3 w-3" />
-                                                        Active
+                                                        Connected
                                                     </>
                                                 ) : (
                                                     <>
@@ -268,6 +291,21 @@ export function IntegrationsPage({ apiConfig, agents = [], appUrl = '', currentT
                                     >
                                         <Settings2 className="h-4 w-4 mr-2" />
                                         {apiConfig?.enabled ? 'Manage API Settings' : 'Set Up API Access'}
+                                    </Button>
+                                )}
+                                {isOAuthIntegration && !isLocked && (
+                                    <Button
+                                        variant={isOAuthConnected ? 'outline' : 'default'}
+                                        size="sm"
+                                        className="w-full mt-4"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (integration.oauthUrl) {
+                                                window.location.href = integration.oauthUrl;
+                                            }
+                                        }}
+                                    >
+                                        {isOAuthConnected ? 'Reconnect' : 'Connect'}
                                     </Button>
                                 )}
                             </CardContent>

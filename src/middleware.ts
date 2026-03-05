@@ -4,7 +4,7 @@ import { checkRateLimitAsync, getRateLimitKey, RATE_LIMITS } from '@/lib/rate-li
 
 // Routes that don't require authentication
 const publicRoutes = [
-    '/login', '/signup', '/callback', '/forgot-password', '/reset-password',
+    '/login', '/signup', '/callback', '/forgot-password', '/reset-password', '/complete-signup',
     '/api/webhooks', '/api/auth', '/api/cron',
     '/api/ghl/trigger-call',
     '/api/hubspot/trigger-call',

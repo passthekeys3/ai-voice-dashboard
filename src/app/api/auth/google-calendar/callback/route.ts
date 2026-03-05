@@ -23,13 +23,13 @@ export async function GET(request: NextRequest) {
         if (error) {
             console.error('Google Calendar OAuth error:', error);
             return NextResponse.redirect(
-                new URL(`/settings?google_calendar=error&message=${encodeURIComponent(error)}`, request.url)
+                new URL(`/integrations?google_calendar=error&message=${encodeURIComponent(error)}`, request.url)
             );
         }
 
         if (!code || !state) {
             return NextResponse.redirect(
-                new URL('/settings?google_calendar=error&message=Missing+code+or+state', request.url)
+                new URL('/integrations?google_calendar=error&message=Missing+code+or+state', request.url)
             );
         }
 
@@ -64,12 +64,12 @@ export async function GET(request: NextRequest) {
             // Check timestamp (5 minute expiry)
             if (Date.now() - stateData.timestamp > 5 * 60 * 1000) {
                 return NextResponse.redirect(
-                    new URL('/settings?google_calendar=error&message=OAuth+session+expired', request.url)
+                    new URL('/integrations?google_calendar=error&message=OAuth+session+expired', request.url)
                 );
             }
         } catch {
             return NextResponse.redirect(
-                new URL('/settings?google_calendar=error&message=Invalid+state+parameter', request.url)
+                new URL('/integrations?google_calendar=error&message=Invalid+state+parameter', request.url)
             );
         }
 
@@ -79,13 +79,13 @@ export async function GET(request: NextRequest) {
         const user = await getCurrentUser();
         if (!user || !isAgencyAdmin(user)) {
             return NextResponse.redirect(
-                new URL('/settings?google_calendar=error&message=Session+expired+or+unauthorized', request.url)
+                new URL('/integrations?google_calendar=error&message=Session+expired+or+unauthorized', request.url)
             );
         }
         if (user.agency.id !== agencyId) {
             console.error(`Google Calendar OAuth: session agency ${user.agency.id} does not match state agency ${agencyId}`);
             return NextResponse.redirect(
-                new URL('/settings?google_calendar=error&message=Agency+mismatch', request.url)
+                new URL('/integrations?google_calendar=error&message=Agency+mismatch', request.url)
             );
         }
 
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
         const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations');
         if (tierError) {
             return NextResponse.redirect(
-                new URL('/settings?google_calendar=error&message=CRM+integrations+require+a+Growth+plan+or+higher', request.url)
+                new URL('/integrations?google_calendar=error&message=CRM+integrations+require+a+Growth+plan+or+higher', request.url)
             );
         }
 
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
         if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
             console.error('Google Calendar OAuth callback: missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET');
             return NextResponse.redirect(
-                new URL('/settings?google_calendar=error&message=Server+configuration+error', request.url)
+                new URL('/integrations?google_calendar=error&message=Server+configuration+error', request.url)
             );
         }
 
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
         if (!tokenResponse.ok) {
             console.error('Google Calendar token exchange error:', tokenResponse.status);
             return NextResponse.redirect(
-                new URL('/settings?google_calendar=error&message=Failed+to+exchange+code', request.url)
+                new URL('/integrations?google_calendar=error&message=Failed+to+exchange+code', request.url)
             );
         }
 
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
         if (!tokens.access_token || !tokens.refresh_token) {
             console.error('Google Calendar token exchange returned incomplete tokens');
             return NextResponse.redirect(
-                new URL('/settings?google_calendar=error&message=Incomplete+token+response', request.url)
+                new URL('/integrations?google_calendar=error&message=Incomplete+token+response', request.url)
             );
         }
 
@@ -173,17 +173,17 @@ export async function GET(request: NextRequest) {
         if (updateError) {
             console.error('Failed to store Google Calendar tokens:', updateError.code);
             return NextResponse.redirect(
-                new URL('/settings?google_calendar=error&message=Failed+to+save+tokens', request.url)
+                new URL('/integrations?google_calendar=error&message=Failed+to+save+tokens', request.url)
             );
         }
 
         return NextResponse.redirect(
-            new URL('/settings?google_calendar=connected', request.url)
+            new URL('/integrations?google_calendar=connected', request.url)
         );
     } catch (error) {
         console.error('Google Calendar OAuth callback error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.redirect(
-            new URL('/settings?google_calendar=error&message=Internal+error', request.url)
+            new URL('/integrations?google_calendar=error&message=Internal+error', request.url)
         );
     }
 }

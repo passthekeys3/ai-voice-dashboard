@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuthClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
     const { searchParams, origin } = new URL(request.url);
@@ -14,22 +15,36 @@ export async function GET(request: NextRequest) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (!error) {
-            // If this was an email verification (no explicit next destination),
-            // redirect to login with a success message
-            if (next === '/') {
-                const { data: { user } } = await supabase.auth.getUser();
-                // Check if user just confirmed their email (new signup)
-                if (user?.email_confirmed_at) {
-                    const confirmedAt = new Date(user.email_confirmed_at);
-                    const now = new Date();
-                    // If confirmed within the last 30 seconds, this is a fresh verification
-                    if (now.getTime() - confirmedAt.getTime() < 30000) {
-                        return NextResponse.redirect(
-                            `${origin}/login?message=email_verified`
-                        );
-                    }
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (user) {
+                // Check if user has a profile (Google OAuth users won't on first sign-in)
+                const serviceSupabase = createServiceClient();
+                const { data: profile } = await serviceSupabase
+                    .from('profiles')
+                    .select('id')
+                    .eq('id', user.id)
+                    .single();
+
+                if (!profile) {
+                    // New OAuth user — redirect to complete signup (agency name etc.)
+                    return NextResponse.redirect(`${origin}/complete-signup`);
                 }
             }
+
+            // If this was an email verification (no explicit next destination),
+            // redirect to login with a success message
+            if (next === '/' && user?.email_confirmed_at) {
+                const confirmedAt = new Date(user.email_confirmed_at);
+                const now = new Date();
+                // If confirmed within the last 30 seconds, this is a fresh verification
+                if (now.getTime() - confirmedAt.getTime() < 30000) {
+                    return NextResponse.redirect(
+                        `${origin}/login?message=email_verified`
+                    );
+                }
+            }
+
             return NextResponse.redirect(`${origin}${next}`);
         }
     }

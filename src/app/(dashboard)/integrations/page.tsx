@@ -39,6 +39,13 @@ export default async function IntegrationsRoute() {
     const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
     const currentTier = tierInfo?.tier ?? null;
 
+    // Check which OAuth integrations are connected
+    const connectedIntegrations: Record<string, boolean> = {};
+    const gcal = user.agency.integrations?.google_calendar;
+    if (gcal?.enabled && gcal?.access_token) {
+        connectedIntegrations.google_calendar = true;
+    }
+
     return (
         <div className="flex flex-col h-full">
             <Header
@@ -61,6 +68,7 @@ export default async function IntegrationsRoute() {
                     agents={agents || []}
                     appUrl={appUrl}
                     currentTier={currentTier}
+                    connectedIntegrations={connectedIntegrations}
                 />
             </div>
         </div>

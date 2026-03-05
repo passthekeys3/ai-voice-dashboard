@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Mail, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { GoogleIcon } from '@/components/icons/GoogleIcon';
 
 export default function SignupPage() {
     const [email, setEmail] = useState('');
@@ -20,6 +22,7 @@ export default function SignupPage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
 
@@ -99,6 +102,50 @@ export default function SignupPage() {
             </CardHeader>
 
             <CardContent>
+                {/* Google OAuth */}
+                <Button
+                    variant="outline"
+                    className="w-full rounded-full mb-4"
+                    disabled={loading || googleLoading}
+                    onClick={async () => {
+                        setGoogleLoading(true);
+                        setError(null);
+                        try {
+                            const supabase = createClient();
+                            const { error: oauthError } = await supabase.auth.signInWithOAuth({
+                                provider: 'google',
+                                options: {
+                                    redirectTo: `${window.location.origin}/callback`,
+                                },
+                            });
+                            if (oauthError) {
+                                setError('Failed to sign up with Google. Please try again.');
+                                setGoogleLoading(false);
+                            }
+                        } catch {
+                            setError('Failed to sign up with Google. Please try again.');
+                            setGoogleLoading(false);
+                        }
+                    }}
+                >
+                    {googleLoading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                        <GoogleIcon className="h-4 w-4 mr-2" />
+                    )}
+                    Sign up with Google
+                </Button>
+
+                {/* Divider */}
+                <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">or</span>
+                    </div>
+                </div>
+
             <form onSubmit={handleSignup} className="space-y-5">
                 {error && (
                     <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-md">

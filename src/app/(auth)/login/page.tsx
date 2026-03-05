@@ -9,12 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { GoogleIcon } from '@/components/icons/GoogleIcon';
 
 function LoginForm() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const searchParams = useSearchParams();
     const rawRedirect = searchParams.get('redirect') || '/';
@@ -132,6 +134,50 @@ function LoginForm() {
                         )}
                     </Button>
                 </form>
+
+                {/* Divider */}
+                <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">or</span>
+                    </div>
+                </div>
+
+                {/* Google OAuth */}
+                <Button
+                    variant="outline"
+                    className="w-full rounded-full"
+                    disabled={loading || googleLoading}
+                    onClick={async () => {
+                        setGoogleLoading(true);
+                        setError(null);
+                        try {
+                            const supabase = createClient();
+                            const { error: oauthError } = await supabase.auth.signInWithOAuth({
+                                provider: 'google',
+                                options: {
+                                    redirectTo: `${window.location.origin}/callback?next=${encodeURIComponent(redirect)}`,
+                                },
+                            });
+                            if (oauthError) {
+                                setError('Failed to sign in with Google. Please try again.');
+                                setGoogleLoading(false);
+                            }
+                        } catch {
+                            setError('Failed to sign in with Google. Please try again.');
+                            setGoogleLoading(false);
+                        }
+                    }}
+                >
+                    {googleLoading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                        <GoogleIcon className="h-4 w-4 mr-2" />
+                    )}
+                    Continue with Google
+                </Button>
 
                 <div className="mt-8 border-t border-border pt-6 text-center text-sm text-muted-foreground">
                     Don&apos;t have an account?{' '}
