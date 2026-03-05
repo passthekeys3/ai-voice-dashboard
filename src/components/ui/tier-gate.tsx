@@ -54,7 +54,7 @@ export function TierGate({ currentTier, requiredFeature, children, label }: Tier
             </CardHeader>
             <CardContent className="flex justify-center pb-6">
                 <Button asChild>
-                    <Link href="/billing">
+                    <Link href="/billing/upgrade">
                         Upgrade Plan
                         <ArrowUpRight className="ml-2 h-4 w-4" />
                     </Link>
@@ -89,7 +89,7 @@ export function TierGateCard({ currentTier: _currentTier, requiredFeature, label
             </CardHeader>
             <CardContent className="flex justify-center pb-6">
                 <Button asChild>
-                    <Link href="/billing">
+                    <Link href="/billing/upgrade">
                         Upgrade Plan
                         <ArrowUpRight className="ml-2 h-4 w-4" />
                     </Link>
