@@ -6,6 +6,31 @@ import { isValidUuid } from '@/lib/validation';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
+// Simple in-memory rate limiter: max 5 calls per user per 60 seconds
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 5;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(userId: string): boolean {
+    const now = Date.now();
+
+    // Prune expired entries when map grows large
+    if (rateLimitMap.size > 100) {
+        for (const [key, val] of rateLimitMap) {
+            if (now > val.resetAt) rateLimitMap.delete(key);
+        }
+    }
+
+    const entry = rateLimitMap.get(userId);
+    if (!entry || now > entry.resetAt) {
+        rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+        return true;
+    }
+    if (entry.count >= RATE_LIMIT_MAX) return false;
+    entry.count++;
+    return true;
+}
+
 interface RouteParams {
     params: Promise<{ id: string }>;
 }
@@ -20,6 +45,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         if (!isAgencyAdmin(user)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        if (!checkRateLimit(user.id)) {
+            return NextResponse.json(
+                { error: 'Too many test calls. Please wait a minute before trying again.' },
+                { status: 429 }
+            );
         }
 
         const { id: agentId } = await params;
@@ -77,6 +109,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 }
             });
         } else if (agent.provider === 'vapi') {
+            if (!providerKey) {
+                return NextResponse.json({ error: 'No Vapi API key configured' }, { status: 400 });
+            }
+
             // Vapi public key is not part of resolve-keys; fetch from agency directly
             const { data: agency } = await supabase
                 .from('agencies')

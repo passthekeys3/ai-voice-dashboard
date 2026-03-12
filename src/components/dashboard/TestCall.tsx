@@ -39,6 +39,7 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
     const [transcript, setTranscript] = useState<{ role: string; content: string }[]>([]);
     const [error, setError] = useState<string | null>(null);
     const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isCallInFlightRef = useRef(false);
 
     // Bland outbound call state
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -92,12 +93,10 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
 
     const startRetellCall = useCallback(async () => {
         const response = await fetch(`/api/agents/${agentId}/webcall`, { method: 'POST' });
-        if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.error || 'Failed to create call');
-        }
-
         const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to create call');
+        }
         const accessToken = result.data?.access_token;
         const _callId = result.data?.call_id;
 
@@ -137,6 +136,7 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
         client.on('call_ended', () => {
             setIsCallActive(false);
             setIsConnecting(false);
+            isCallInFlightRef.current = false;
         });
 
         client.on('error', (err: Error) => {
@@ -144,6 +144,7 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
             setError(err.message || 'Call failed');
             setIsCallActive(false);
             setIsConnecting(false);
+            isCallInFlightRef.current = false;
         });
 
         client.on('update', (update: { transcript?: { role: string; content: string }[] }) => {
@@ -158,12 +159,10 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
     const startVapiCall = useCallback(async () => {
         // Get the public key and assistant ID from our API
         const response = await fetch(`/api/agents/${agentId}/webcall`, { method: 'POST' });
-        if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.error || 'Failed to create call');
-        }
-
         const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to create call');
+        }
         const publicKey = result.data?.vapi_public_key;
         const assistantId = result.data?.assistant_id;
 
@@ -204,6 +203,7 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
         vapiClient.on('call-end', () => {
             setIsCallActive(false);
             setIsConnecting(false);
+            isCallInFlightRef.current = false;
         });
 
         vapiClient.on('error', (err: unknown) => {
@@ -212,6 +212,7 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
             setError(errorMsg || 'Call failed');
             setIsCallActive(false);
             setIsConnecting(false);
+            isCallInFlightRef.current = false;
         });
 
         vapiClient.on('message', (message: unknown) => {
@@ -242,18 +243,21 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
             body: JSON.stringify({ phone_number: phoneNumber.trim() }),
         });
 
+        const result = await response.json();
         if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.error || 'Failed to initiate call');
+            throw new Error(result.error || 'Failed to initiate call');
         }
 
-        const result = await response.json();
         setBlandCallId(result.data?.call_id || null);
         setBlandCallStatus(result.data?.status || 'queued');
         setIsCallActive(true);
     }, [agentId, phoneNumber]);
 
     const startCall = async () => {
+        // Ref-based guard prevents concurrent calls even with stale closures
+        if (isCallInFlightRef.current) return;
+        isCallInFlightRef.current = true;
+
         setIsConnecting(true);
         setError(null);
         setTranscript([]);
@@ -274,10 +278,16 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
             console.error('[TestCall] Error:', err);
             setError(err instanceof Error ? err.message : 'Failed to start call');
             setIsConnecting(false);
+            isCallInFlightRef.current = false;
         }
     };
 
     const endCall = () => {
+        // Clear any pending connection timeout
+        if (connectionTimeoutRef.current) {
+            clearTimeout(connectionTimeoutRef.current);
+            connectionTimeoutRef.current = null;
+        }
         if (provider === 'retell') {
             retellClientRef.current?.stopCall();
         } else if (provider === 'vapi') {
@@ -288,6 +298,7 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
         // Bland calls can't be ended from the browser (they end when the phone hangs up)
         setIsCallActive(false);
         setIsConnecting(false);
+        isCallInFlightRef.current = false;
     };
 
     const toggleMute = () => {
@@ -402,6 +413,7 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
                                         setIsCallActive(false);
                                         setBlandCallId(null);
                                         setBlandCallStatus(null);
+                                        isCallInFlightRef.current = false;
                                     }}
                                     variant="outline"
                                 >

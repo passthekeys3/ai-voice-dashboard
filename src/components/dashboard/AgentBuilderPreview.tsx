@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
     Bot, Mic, MessageSquare, Code2, ChevronDown, ChevronUp,
     Rocket, Loader2, Zap, CheckCircle2, Phone, ExternalLink,
@@ -55,11 +55,31 @@ export function AgentBuilderPreview({
 }: AgentBuilderPreviewProps) {
     const [isPromptExpanded, setIsPromptExpanded] = useState(false);
     const [selectedClientId, setSelectedClientId] = useState<string>('');
+    // Only show phone numbers not already assigned to another agent
+    const availablePhoneNumbers = useMemo(
+        () => phoneNumbers.filter(p => !p.agent_id),
+        [phoneNumbers]
+    );
     const [selectedPhoneId, setSelectedPhoneId] = useState<string>(() => {
         // Auto-select phone number if there's exactly one available
-        return phoneNumbers.length === 1 ? phoneNumbers[0].id : '';
+        return availablePhoneNumbers.length === 1 ? availablePhoneNumbers[0].id : '';
     });
     const [showConfirmation, setShowConfirmation] = useState(false);
+
+    // Re-sync selection when available phone numbers change
+    useEffect(() => {
+        setSelectedPhoneId(prev => {
+            // If current selection is no longer available, reset
+            if (prev && !availablePhoneNumbers.find(p => p.id === prev)) {
+                return availablePhoneNumbers.length === 1 ? availablePhoneNumbers[0].id : '';
+            }
+            // If no selection and exactly one available, auto-select
+            if (!prev && availablePhoneNumbers.length === 1) {
+                return availablePhoneNumbers[0].id;
+            }
+            return prev;
+        });
+    }, [availablePhoneNumbers]);
     const [createError, setCreateError] = useState<string | null>(null);
 
     const hasContent = !!(draft.name || draft.systemPrompt || draft.firstMessage || draft.voiceId);
@@ -342,10 +362,10 @@ export function AgentBuilderPreview({
                                 </select>
                             </div>
                         )}
-                        {phoneNumbers.length > 0 && (
+                        {availablePhoneNumbers.length > 0 && (
                             <div>
                                 <Label htmlFor="builder-phone-select" className="text-xs text-muted-foreground mb-1 block">
-                                    Phone {phoneNumbers.length === 1 ? '(auto-selected)' : '(optional)'}
+                                    Phone {availablePhoneNumbers.length === 1 ? '(auto-selected)' : '(optional)'}
                                 </Label>
                                 <select
                                     id="builder-phone-select"
@@ -354,7 +374,7 @@ export function AgentBuilderPreview({
                                     className="w-full text-xs px-2 py-1.5 rounded-md border border-input bg-background"
                                 >
                                     <option value="">None</option>
-                                    {phoneNumbers.map(p => (
+                                    {availablePhoneNumbers.map(p => (
                                         <option key={p.id} value={p.id}>
                                             {p.nickname || p.phone_number}
                                         </option>

@@ -143,12 +143,14 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
                     if (!template) return null;
                     // Pick the best CRM for this specific template based on which has actions
                     let crm = primaryCrm;
-                    if (template.actions[primaryCrm].length === 0) {
+                    const primaryActions = template.actions[primaryCrm as keyof typeof template.actions];
+                    if (!primaryActions || primaryActions.length === 0) {
                         // Fallback: find first integration that has actions for this template
                         const fallbacks: IntegrationSelection['crm'][] = ['ghl', 'hubspot', 'gcal', 'calendly', 'slack'];
                         const contextMap: Record<string, boolean> = { ghl: context.hasGHL, hubspot: context.hasHubSpot, gcal: context.hasGCal, calendly: context.hasCalendly, slack: context.hasSlack };
                         for (const fb of fallbacks) {
-                            if (contextMap[fb] && template.actions[fb].length > 0) {
+                            const fbActions = template.actions[fb as keyof typeof template.actions];
+                            if (contextMap[fb] && fbActions && fbActions.length > 0) {
                                 crm = fb;
                                 break;
                             }
@@ -249,6 +251,38 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
             let buffer = '';
             let fullMessage = '';
 
+            const processLine = (line: string) => {
+                if (!line.trim()) return;
+                try {
+                    const chunk = JSON.parse(line);
+
+                    if (chunk.type === 'text_delta') {
+                        fullMessage += chunk.text;
+                        // Update assistant message with streaming text
+                        setMessages(prev => {
+                            const updated = [...prev];
+                            const last = updated[updated.length - 1];
+                            if (last?.role === 'assistant') {
+                                updated[updated.length - 1] = {
+                                    ...last,
+                                    content: fullMessage,
+                                };
+                            }
+                            return updated;
+                        });
+                    } else if (chunk.type === 'result') {
+                        const result = chunk.data as LLMBuilderResponse;
+                        handleLLMResult(result, assistantMessageId);
+                    } else if (chunk.type === 'error') {
+                        throw new Error(chunk.error);
+                    }
+                } catch (parseError) {
+                    // Skip malformed chunks
+                    if (parseError instanceof SyntaxError) return;
+                    throw parseError;
+                }
+            };
+
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
@@ -258,36 +292,13 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
                 buffer = lines.pop() || '';
 
                 for (const line of lines) {
-                    if (!line.trim()) continue;
-                    try {
-                        const chunk = JSON.parse(line);
-
-                        if (chunk.type === 'text_delta') {
-                            fullMessage += chunk.text;
-                            // Update assistant message with streaming text
-                            setMessages(prev => {
-                                const updated = [...prev];
-                                const last = updated[updated.length - 1];
-                                if (last?.role === 'assistant') {
-                                    updated[updated.length - 1] = {
-                                        ...last,
-                                        content: fullMessage,
-                                    };
-                                }
-                                return updated;
-                            });
-                        } else if (chunk.type === 'result') {
-                            const result = chunk.data as LLMBuilderResponse;
-                            handleLLMResult(result, assistantMessageId);
-                        } else if (chunk.type === 'error') {
-                            throw new Error(chunk.error);
-                        }
-                    } catch (parseError) {
-                        // Skip malformed chunks
-                        if (parseError instanceof SyntaxError) continue;
-                        throw parseError;
-                    }
+                    processLine(line);
                 }
+            }
+
+            // Process any remaining data in the buffer after stream ends
+            if (buffer.trim()) {
+                processLine(buffer);
             }
         } catch (err) {
             // Ignore abort errors (user navigated away or sent new message)
