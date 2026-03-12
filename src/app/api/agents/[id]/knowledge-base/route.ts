@@ -274,28 +274,28 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: `No ${agent.provider} API key configured` }, { status: 400 });
         }
 
-        // Delete from provider
-        try {
-            if (agent.provider === 'retell') {
-                await retell.deleteRetellKnowledgeBase(apiKey, kbId);
-            } else if (agent.provider === 'vapi') {
-                // Delete the KB and its files
-                const kb = await vapiKb.getVapiKnowledgeBase(apiKey, kbId);
-                await vapiKb.deleteVapiKnowledgeBase(apiKey, kbId);
-                // Clean up orphaned files
-                if (kb.fileIds) {
-                    for (const fileId of kb.fileIds) {
-                        try { await vapiKb.deleteVapiFile(apiKey, fileId); } catch { /* best effort */ }
-                    }
-                }
-            } else if (agent.provider === 'bland') {
-                // Delete all Bland KBs associated with this agent
-                for (const id of blandKbIds) {
-                    try { await blandKb.deleteBlandKnowledgeBase(apiKey, id); } catch { /* best effort */ }
+        // Delete from provider — fail the request if the primary deletion fails
+        // to avoid orphaning resources on the provider side
+        if (agent.provider === 'retell') {
+            await retell.deleteRetellKnowledgeBase(apiKey, kbId);
+        } else if (agent.provider === 'vapi') {
+            // Delete the KB first (must succeed), then clean up files (best effort)
+            const kb = await vapiKb.getVapiKnowledgeBase(apiKey, kbId);
+            await vapiKb.deleteVapiKnowledgeBase(apiKey, kbId);
+            if (kb.fileIds) {
+                for (const fileId of kb.fileIds) {
+                    try { await vapiKb.deleteVapiFile(apiKey, fileId); } catch { /* best effort */ }
                 }
             }
-        } catch (err) {
-            console.error('Error deleting KB from provider:', err instanceof Error ? err.message : 'Unknown error');
+        } else if (agent.provider === 'bland') {
+            // Delete all Bland KBs — collect failures but still clean up config
+            const failures: string[] = [];
+            for (const id of blandKbIds) {
+                try { await blandKb.deleteBlandKnowledgeBase(apiKey, id); } catch { failures.push(id); }
+            }
+            if (failures.length > 0) {
+                console.warn(`Failed to delete ${failures.length} Bland KBs: ${failures.join(', ')}`);
+            }
         }
 
         // Remove KB IDs from agent config

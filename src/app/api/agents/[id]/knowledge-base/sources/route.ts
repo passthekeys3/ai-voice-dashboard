@@ -24,28 +24,21 @@ function validateUrl(url: string): string | null {
         if (urlObj.protocol !== 'https:' && urlObj.protocol !== 'http:') {
             return 'URL must use HTTP or HTTPS protocol';
         }
+        // Block credentials in URL (user:pass@host)
+        if (urlObj.username || urlObj.password) {
+            return 'URLs with embedded credentials are not allowed';
+        }
         const hostname = urlObj.hostname.toLowerCase();
         const blockedHosts = ['localhost', '127.0.0.1', '::1', '0.0.0.0', '[::1]'];
         if (blockedHosts.includes(hostname)) {
             return 'Cannot add localhost or loopback URLs';
         }
-        // Block private IP ranges (IPv4)
-        const ipv4Match = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-        if (ipv4Match) {
-            const [, a, b] = ipv4Match.map(Number);
-            if (a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254)) {
-                return 'Cannot add private IP addresses';
-            }
-        }
-        // Block IPv6 private/reserved ranges
+        // Block bare IP addresses entirely — only allow domain names.
+        // This prevents IPv4 bypass via octal (0177.0.0.1), decimal (2130706433),
+        // IPv4-mapped IPv6 (::ffff:127.0.0.1), and 0.0.0.0/8 range.
         const bareHost = hostname.replace(/^\[|\]$/g, '');
-        if (bareHost.includes(':')) {
-            const lowerIpv6 = bareHost.toLowerCase();
-            if (lowerIpv6 === '::1' || lowerIpv6 === '::' ||
-                lowerIpv6.startsWith('fe80') || lowerIpv6.startsWith('fc') ||
-                lowerIpv6.startsWith('fd') || lowerIpv6.startsWith('::ffff:')) {
-                return 'Cannot add private IP addresses';
-            }
+        if (/^[\d.]+$/.test(bareHost) || bareHost.includes(':')) {
+            return 'Direct IP addresses are not allowed. Use a domain name instead.';
         }
     } catch {
         return 'Invalid URL format';
@@ -154,11 +147,22 @@ async function handleFileUpload(
         return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Validate file type
-    if (!ALLOWED_FILE_TYPES.includes(file.type) && !file.name.match(/\.(pdf|docx?|txt|csv|md|tsv|json|xml)$/i)) {
+    // Validate file type — require BOTH valid MIME type AND valid extension
+    // to prevent extension spoofing (e.g., malicious.exe with spoofed MIME)
+    const hasValidMime = ALLOWED_FILE_TYPES.includes(file.type);
+    const hasValidExt = /\.(pdf|docx?|txt|csv|md|tsv|json|xml)$/i.test(file.name);
+    if (!hasValidMime && !hasValidExt) {
         return NextResponse.json({
             error: 'Unsupported file type. Supported: PDF, DOCX, DOC, TXT, CSV, MD, TSV, JSON, XML'
         }, { status: 400 });
+    }
+    // Block double extensions that could indicate masquerading (e.g., "report.exe.pdf")
+    const nameParts = file.name.split('.');
+    if (nameParts.length > 2) {
+        const suspiciousExts = ['exe', 'bat', 'cmd', 'sh', 'ps1', 'msi', 'dll', 'scr', 'com', 'vbs', 'js', 'jar'];
+        if (nameParts.slice(1, -1).some(ext => suspiciousExts.includes(ext.toLowerCase()))) {
+            return NextResponse.json({ error: 'Suspicious file name detected' }, { status: 400 });
+        }
     }
 
     // Validate file size
@@ -215,17 +219,7 @@ async function handleFileUpload(
         });
 
         // Store the new KB ID in the agent's bland_kb_ids array
-        const existingIds: string[] = (agent.config?.bland_kb_ids as string[]) || [];
-        const updatedConfig = {
-            ...agent.config,
-            bland_kb_ids: [...existingIds, blandResult.id],
-        };
-
-        await supabase
-            .from('agents')
-            .update({ config: updatedConfig })
-            .eq('id', agentId)
-            .eq('agency_id', agent.agency_id);
+        await appendBlandKbId(supabase, agentId, agent.agency_id, blandResult.id);
 
         return NextResponse.json({
             data: { source_id: blandResult.id, source_type: 'file', source_name: file.name },
@@ -234,6 +228,42 @@ async function handleFileUpload(
     }
 
     return NextResponse.json({ error: `File upload not supported for ${agent.provider}` }, { status: 400 });
+}
+
+// ============================================
+// BLAND KB ID PERSISTENCE HELPER
+// ============================================
+
+/**
+ * Re-reads the agent's latest config before appending a new Bland KB ID.
+ * This narrows the race window vs. using the stale `agent.config` from
+ * the initial query (which may be seconds old after a provider API call).
+ */
+async function appendBlandKbId(
+    supabase: ReturnType<typeof createServiceClient>,
+    agentId: string,
+    agencyId: string,
+    newKbId: string,
+): Promise<void> {
+    // Re-read latest config to minimize race window
+    const { data: freshAgent } = await supabase
+        .from('agents')
+        .select('config')
+        .eq('id', agentId)
+        .eq('agency_id', agencyId)
+        .single();
+
+    const freshConfig = (freshAgent?.config as Record<string, unknown>) || {};
+    const existingIds: string[] = (freshConfig.bland_kb_ids as string[]) || [];
+
+    // Deduplicate in case of concurrent writes
+    if (existingIds.includes(newKbId)) return;
+
+    await supabase
+        .from('agents')
+        .update({ config: { ...freshConfig, bland_kb_ids: [...existingIds, newKbId] } })
+        .eq('id', agentId)
+        .eq('agency_id', agencyId);
 }
 
 // ============================================
@@ -281,13 +311,7 @@ async function handleTextOrUrl(
                 name: title || 'Text Source',
                 text: content,
             });
-            // Store KB ID
-            const existingIds: string[] = (agent.config?.bland_kb_ids as string[]) || [];
-            await supabase
-                .from('agents')
-                .update({ config: { ...agent.config, bland_kb_ids: [...existingIds, blandResult.id] } })
-                .eq('id', agentId)
-                .eq('agency_id', agent.agency_id);
+            await appendBlandKbId(supabase, agentId, agent.agency_id, blandResult.id);
             return NextResponse.json({
                 data: { source_id: blandResult.id, source_type: 'text', source_name: title || 'Text Source' },
                 message: 'Text source added'
@@ -314,12 +338,7 @@ async function handleTextOrUrl(
                 name: `Web: ${new URL(url!).hostname}`,
                 urls: [url!],
             });
-            const existingIds: string[] = (agent.config?.bland_kb_ids as string[]) || [];
-            await supabase
-                .from('agents')
-                .update({ config: { ...agent.config, bland_kb_ids: [...existingIds, blandResult.id] } })
-                .eq('id', agentId)
-                .eq('agency_id', agent.agency_id);
+            await appendBlandKbId(supabase, agentId, agent.agency_id, blandResult.id);
             return NextResponse.json({
                 data: { source_id: blandResult.id, source_type: 'url', source_name: url },
                 message: 'URL source added'

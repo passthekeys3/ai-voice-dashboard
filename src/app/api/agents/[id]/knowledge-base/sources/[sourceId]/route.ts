@@ -68,13 +68,21 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             try { await vapiKb.deleteVapiFile(apiKey, sourceId); } catch { /* best effort */ }
 
         } else if (agent.provider === 'bland') {
-            // Bland: delete the individual KB and remove from config
-            try { await blandKb.deleteBlandKnowledgeBase(apiKey, sourceId); } catch { /* best effort */ }
-            const existingIds: string[] = (agent.config?.bland_kb_ids as string[]) || [];
+            // Bland: delete the provider KB first, then remove ID from config
+            await blandKb.deleteBlandKnowledgeBase(apiKey, sourceId);
+            // Re-read latest config to minimize race window
+            const { data: freshAgent } = await supabase
+                .from('agents')
+                .select('config')
+                .eq('id', agentId)
+                .eq('agency_id', user.agency.id)
+                .single();
+            const freshConfig = (freshAgent?.config as Record<string, unknown>) || {};
+            const existingIds: string[] = (freshConfig.bland_kb_ids as string[]) || [];
             const updatedIds = existingIds.filter(id => id !== sourceId);
             await supabase
                 .from('agents')
-                .update({ config: { ...agent.config, bland_kb_ids: updatedIds } })
+                .update({ config: { ...freshConfig, bland_kb_ids: updatedIds } })
                 .eq('id', agentId)
                 .eq('agency_id', user.agency.id);
         }
