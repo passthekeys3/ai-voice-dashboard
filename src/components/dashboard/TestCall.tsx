@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Phone, PhoneOff, Mic, MicOff, Loader2 } from 'lucide-react';
+import { Phone, PhoneOff, Mic, MicOff, Loader2, PhoneOutgoing, CheckCircle2 } from 'lucide-react';
 import type { RetellWebClient as BaseRetellWebClient } from 'retell-client-js-sdk';
 
 // Extend the SDK type with methods that exist at runtime but aren't in the type definitions
@@ -25,7 +26,7 @@ interface VapiInstance {
 interface TestCallProps {
     agentId: string;
     agentName: string;
-    provider: 'retell' | 'vapi';
+    provider: 'retell' | 'vapi' | 'bland';
 }
 
 export function TestCall({ agentId, agentName, provider }: TestCallProps) {
@@ -39,6 +40,14 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
     const [error, setError] = useState<string | null>(null);
     const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Bland outbound call state
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [blandCallId, setBlandCallId] = useState<string | null>(null);
+    const [blandCallStatus, setBlandCallStatus] = useState<string | null>(null);
+
+    const isBland = provider === 'bland';
+    const supportsBrowserCall = provider === 'retell' || provider === 'vapi';
+
     // Load the appropriate SDK on mount
     useEffect(() => {
         const loadSDK = async () => {
@@ -50,6 +59,9 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
                 } else if (provider === 'vapi') {
                     // Vapi SDK is loaded lazily when the call starts
                     // (it needs the public key which comes from the API)
+                    setSdkLoaded(true);
+                } else if (provider === 'bland') {
+                    // Bland uses outbound phone calls — no client SDK needed
                     setSdkLoaded(true);
                 }
             } catch (err) {
@@ -219,17 +231,44 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
         await vapiClient.start(assistantId);
     }, [agentId]);
 
+    const startBlandCall = useCallback(async () => {
+        if (!phoneNumber.trim()) {
+            throw new Error('Please enter a phone number');
+        }
+
+        const response = await fetch(`/api/agents/${agentId}/webcall`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone_number: phoneNumber.trim() }),
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Failed to initiate call');
+        }
+
+        const result = await response.json();
+        setBlandCallId(result.data?.call_id || null);
+        setBlandCallStatus(result.data?.status || 'queued');
+        setIsCallActive(true);
+    }, [agentId, phoneNumber]);
+
     const startCall = async () => {
         setIsConnecting(true);
         setError(null);
         setTranscript([]);
         setIsMuted(false);
+        setBlandCallId(null);
+        setBlandCallStatus(null);
 
         try {
             if (provider === 'retell') {
                 await startRetellCall();
             } else if (provider === 'vapi') {
                 await startVapiCall();
+            } else if (provider === 'bland') {
+                await startBlandCall();
+                setIsConnecting(false);
             }
         } catch (err) {
             console.error('[TestCall] Error:', err);
@@ -246,6 +285,7 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
             vapiClientRef.current?.removeAllListeners();
             vapiClientRef.current = null;
         }
+        // Bland calls can't be ended from the browser (they end when the phone hangs up)
         setIsCallActive(false);
         setIsConnecting(false);
     };
@@ -278,59 +318,109 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
                     Test Call
                 </CardTitle>
                 <CardDescription>
-                    Make a test call to {agentName}
+                    {isBland
+                        ? `Call your phone from ${agentName}`
+                        : `Make a test call to ${agentName}`
+                    }
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+                {/* Bland: Phone number input */}
+                {isBland && !isCallActive && (
+                    <div className="space-y-2">
+                        <Input
+                            type="tel"
+                            placeholder="+1 (555) 123-4567"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            disabled={isConnecting}
+                            className="text-sm"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Enter your phone number and the agent will call you
+                        </p>
+                    </div>
+                )}
+
                 {/* Controls */}
                 <div className="flex items-center gap-4">
                     {!isCallActive ? (
                         <Button
                             onClick={startCall}
-                            disabled={isConnecting || !sdkLoaded}
+                            disabled={isConnecting || !sdkLoaded || (isBland && !phoneNumber.trim())}
                             variant="default"
                             className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700"
                         >
                             {isConnecting ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Connecting...
+                                    {isBland ? 'Calling...' : 'Connecting...'}
                                 </>
                             ) : (
                                 <>
-                                    <Phone className="mr-2 h-4 w-4" />
-                                    Start Test Call
+                                    {isBland ? (
+                                        <PhoneOutgoing className="mr-2 h-4 w-4" />
+                                    ) : (
+                                        <Phone className="mr-2 h-4 w-4" />
+                                    )}
+                                    {isBland ? 'Call My Phone' : 'Start Test Call'}
                                 </>
                             )}
                         </Button>
                     ) : (
                         <>
-                            <Button
-                                onClick={endCall}
-                                variant="destructive"
-                            >
-                                <PhoneOff className="mr-2 h-4 w-4" />
-                                End Call
-                            </Button>
-                            <Button
-                                onClick={toggleMute}
-                                variant="outline"
-                            >
-                                {isMuted ? (
-                                    <>
-                                        <MicOff className="mr-2 h-4 w-4" />
-                                        Unmute
-                                    </>
-                                ) : (
-                                    <>
-                                        <Mic className="mr-2 h-4 w-4" />
-                                        Mute
-                                    </>
-                                )}
-                            </Button>
+                            {supportsBrowserCall && (
+                                <>
+                                    <Button
+                                        onClick={endCall}
+                                        variant="destructive"
+                                    >
+                                        <PhoneOff className="mr-2 h-4 w-4" />
+                                        End Call
+                                    </Button>
+                                    <Button
+                                        onClick={toggleMute}
+                                        variant="outline"
+                                    >
+                                        {isMuted ? (
+                                            <>
+                                                <MicOff className="mr-2 h-4 w-4" />
+                                                Unmute
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Mic className="mr-2 h-4 w-4" />
+                                                Mute
+                                            </>
+                                        )}
+                                    </Button>
+                                </>
+                            )}
+                            {isBland && (
+                                <Button
+                                    onClick={() => {
+                                        setIsCallActive(false);
+                                        setBlandCallId(null);
+                                        setBlandCallStatus(null);
+                                    }}
+                                    variant="outline"
+                                >
+                                    Done
+                                </Button>
+                            )}
                         </>
                     )}
                 </div>
+
+                {/* Bland call status */}
+                {isBland && isCallActive && blandCallId && (
+                    <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <span className="text-muted-foreground">
+                            Call initiated ({blandCallStatus}). Your phone should ring shortly.
+                        </span>
+                    </div>
+                )}
 
                 {/* Error */}
                 {error && (
@@ -339,8 +429,8 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
                     </div>
                 )}
 
-                {/* Live Transcript */}
-                {(isCallActive || transcript.length > 0) && (
+                {/* Live Transcript (browser calls only) */}
+                {supportsBrowserCall && (isCallActive || transcript.length > 0) && (
                     <div className="space-y-2">
                         <p className="text-sm font-medium">Live Transcript</p>
                         <div className="max-h-48 overflow-y-auto bg-slate-50 dark:bg-slate-900 rounded-lg p-3 space-y-2">
@@ -362,8 +452,8 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
                     </div>
                 )}
 
-                {/* Status Indicator */}
-                {isCallActive && (
+                {/* Status Indicator (browser calls only) */}
+                {supportsBrowserCall && isCallActive && (
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
                         <span className="text-sm text-muted-foreground">Call in progress</span>

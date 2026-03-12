@@ -63,7 +63,7 @@ export function AgentBuilderPreview({
     const [createError, setCreateError] = useState<string | null>(null);
 
     const hasContent = !!(draft.name || draft.systemPrompt || draft.firstMessage || draft.voiceId);
-    const showTestCall = draft.provider === 'retell' || draft.provider === 'vapi';
+    const showTestCall = draft.provider === 'retell' || draft.provider === 'vapi' || draft.provider === 'bland';
 
     const handleCreate = useCallback(async () => {
         setCreateError(null);
@@ -142,7 +142,7 @@ export function AgentBuilderPreview({
                         <TestCall
                             agentId={createdAgent.agent_id}
                             agentName={draft.name}
-                            provider={draft.provider as 'retell' | 'vapi'}
+                            provider={draft.provider as 'retell' | 'vapi' | 'bland'}
                         />
                     )}
 

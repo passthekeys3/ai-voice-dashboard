@@ -99,6 +99,62 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                     assistant_id: agent.external_id,
                 }
             });
+        } else if (agent.provider === 'bland') {
+            if (!providerKey) {
+                return NextResponse.json({ error: 'No Bland API key configured' }, { status: 400 });
+            }
+
+            // Bland has no browser SDK — outbound phone call only.
+            // Requires a phone_number in the request body.
+            let body: { phone_number?: string } = {};
+            try {
+                body = await request.json();
+            } catch {
+                // Empty body is fine — we'll return an error below
+            }
+
+            const phoneNumber = body.phone_number;
+            if (!phoneNumber || typeof phoneNumber !== 'string') {
+                return NextResponse.json({
+                    error: 'Bland agents require a phone number for test calls. Provide phone_number in the request body.'
+                }, { status: 400 });
+            }
+
+            // Validate phone format (E.164-ish: starts with + and digits, or just digits)
+            const cleaned = phoneNumber.replace(/[\s\-()]/g, '');
+            if (!/^\+?\d{10,15}$/.test(cleaned)) {
+                return NextResponse.json({ error: 'Invalid phone number format' }, { status: 400 });
+            }
+
+            // Initiate outbound call via Bland API
+            const blandResponse = await fetch('https://api.bland.ai/v1/calls', {
+                method: 'POST',
+                headers: {
+                    'authorization': providerKey,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    phone_number: cleaned,
+                    pathway_id: agent.external_id,
+                    wait_for_greeting: true,
+                }),
+                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
+            });
+
+            if (!blandResponse.ok) {
+                console.error('Bland outbound call error:', blandResponse.status);
+                return NextResponse.json({ error: 'Failed to initiate test call' }, { status: 500 });
+            }
+
+            const blandCall = await blandResponse.json();
+
+            return NextResponse.json({
+                data: {
+                    provider: 'bland',
+                    call_id: blandCall.call_id,
+                    status: blandCall.status || 'queued',
+                }
+            });
         } else {
             return NextResponse.json({
                 error: `Web calls are not yet supported for ${agent.provider} agents`
