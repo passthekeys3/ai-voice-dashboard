@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Trash2, FileText, Link, Type, Database } from 'lucide-react';
+import { Loader2, Plus, Trash2, FileText, Link, Type, Database, Upload } from 'lucide-react';
 
 interface KBSource {
     source_id: string;
@@ -28,9 +28,24 @@ interface KnowledgeBase {
 
 interface KnowledgeBaseEditorProps {
     agentId: string;
+    provider: 'retell' | 'vapi' | 'bland';
 }
 
-export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
+const PROVIDER_LABELS: Record<string, string> = {
+    retell: 'Retell',
+    vapi: 'Vapi',
+    bland: 'Bland',
+};
+
+const FILE_SIZE_LIMITS: Record<string, { max: number; label: string }> = {
+    retell: { max: 50 * 1024 * 1024, label: '50MB' },
+    vapi: { max: 10 * 1024 * 1024, label: '10MB' },
+    bland: { max: 10 * 1024 * 1024, label: '10MB' },
+};
+
+const ACCEPTED_FILE_TYPES = '.pdf,.docx,.doc,.txt,.csv,.md,.tsv,.json,.xml';
+
+export function KnowledgeBaseEditor({ agentId, provider }: KnowledgeBaseEditorProps) {
     const [kb, setKb] = useState<KnowledgeBase | null>(null);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
@@ -43,6 +58,16 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
     const [textContent, setTextContent] = useState('');
     const [url, setUrl] = useState('');
     const [autoRefresh, setAutoRefresh] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Provider capabilities
+    const supportsText = provider === 'retell' || provider === 'bland';
+    const supportsUrl = provider === 'retell' || provider === 'bland';
+    const supportsFile = true; // All providers support file upload
+
+    // Calculate tab count for grid layout
+    const tabCount = 1 + (supportsText ? 1 : 0) + (supportsUrl ? 1 : 0) + (supportsFile ? 1 : 0);
 
     const fetchKB = useCallback(async () => {
         try {
@@ -155,6 +180,42 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
         }
     };
 
+    const uploadFile = async () => {
+        if (!selectedFile) return;
+
+        // Client-side file size validation
+        const limit = FILE_SIZE_LIMITS[provider];
+        if (selectedFile.size > limit.max) {
+            setError(`File too large. Maximum size for ${PROVIDER_LABELS[provider]} is ${limit.label}.`);
+            return;
+        }
+
+        setAddingSource(true);
+        setError(null);
+        try {
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            const response = await fetch(`/api/agents/${agentId}/knowledge-base/sources`, {
+                method: 'POST',
+                body: formData,
+            });
+            if (response.ok) {
+                setSelectedFile(null);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+                fetchKB();
+            } else {
+                const data = await response.json();
+                setError(data.error || 'Failed to upload file');
+            }
+        } catch (err) {
+            console.error('Error uploading file:', err);
+            setError(err instanceof Error ? err.message : 'Failed to upload file');
+        } finally {
+            setAddingSource(false);
+        }
+    };
+
     const deleteSource = async (sourceId: string) => {
         setDeletingSource(sourceId);
         try {
@@ -236,10 +297,11 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
                     </div>
                 )}
                 <Tabs defaultValue="sources" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
+                    <TabsList className={`grid w-full`} style={{ gridTemplateColumns: `repeat(${tabCount}, 1fr)` }}>
                         <TabsTrigger value="sources">Sources</TabsTrigger>
-                        <TabsTrigger value="add-text">Add Text</TabsTrigger>
-                        <TabsTrigger value="add-url">Add URL</TabsTrigger>
+                        {supportsText && <TabsTrigger value="add-text">Add Text</TabsTrigger>}
+                        {supportsUrl && <TabsTrigger value="add-url">Add URL</TabsTrigger>}
+                        {supportsFile && <TabsTrigger value="add-file">Upload File</TabsTrigger>}
                     </TabsList>
 
                     <TabsContent value="sources" className="space-y-4">
@@ -281,79 +343,135 @@ export function KnowledgeBaseEditor({ agentId }: KnowledgeBaseEditorProps) {
                             </div>
                         ) : (
                             <p className="text-sm text-muted-foreground text-center py-4">
-                                No sources added yet. Add text or URLs to train your agent.
+                                No sources added yet.
+                                {provider === 'vapi'
+                                    ? ' Upload files to train your agent.'
+                                    : ' Add text, URLs, or files to train your agent.'}
                             </p>
                         )}
                     </TabsContent>
 
-                    <TabsContent value="add-text" className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="text-title">Title</Label>
-                            <Input
-                                id="text-title"
-                                value={textTitle}
-                                onChange={(e) => setTextTitle(e.target.value)}
-                                placeholder="e.g., Company FAQ, Product Info"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="text-content">Content</Label>
-                            <Textarea
-                                id="text-content"
-                                value={textContent}
-                                onChange={(e) => setTextContent(e.target.value)}
-                                placeholder="Enter the knowledge content here..."
-                                rows={6}
-                            />
-                        </div>
-                        <Button onClick={addTextSource} disabled={addingSource || !textTitle || !textContent}>
-                            {addingSource ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Adding...
-                                </>
-                            ) : (
-                                <>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add Text
-                                </>
-                            )}
-                        </Button>
-                    </TabsContent>
+                    {supportsText && (
+                        <TabsContent value="add-text" className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="text-title">Title</Label>
+                                <Input
+                                    id="text-title"
+                                    value={textTitle}
+                                    onChange={(e) => setTextTitle(e.target.value)}
+                                    placeholder="e.g., Company FAQ, Product Info"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="text-content">Content</Label>
+                                <Textarea
+                                    id="text-content"
+                                    value={textContent}
+                                    onChange={(e) => setTextContent(e.target.value)}
+                                    placeholder="Enter the knowledge content here..."
+                                    rows={6}
+                                />
+                            </div>
+                            <Button onClick={addTextSource} disabled={addingSource || !textTitle || !textContent}>
+                                {addingSource ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Adding...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Add Text
+                                    </>
+                                )}
+                            </Button>
+                        </TabsContent>
+                    )}
 
-                    <TabsContent value="add-url" className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="url">URL</Label>
-                            <Input
-                                id="url"
-                                type="url"
-                                value={url}
-                                onChange={(e) => setUrl(e.target.value)}
-                                placeholder="https://example.com/page"
-                            />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Switch
-                                id="auto-refresh"
-                                checked={autoRefresh}
-                                onCheckedChange={setAutoRefresh}
-                            />
-                            <Label htmlFor="auto-refresh">Auto-refresh every 12-24 hours</Label>
-                        </div>
-                        <Button onClick={addUrlSource} disabled={addingSource || !url}>
-                            {addingSource ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Adding...
-                                </>
-                            ) : (
-                                <>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add URL
-                                </>
+                    {supportsUrl && (
+                        <TabsContent value="add-url" className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="url">URL</Label>
+                                <Input
+                                    id="url"
+                                    type="url"
+                                    value={url}
+                                    onChange={(e) => setUrl(e.target.value)}
+                                    placeholder="https://example.com/page"
+                                />
+                            </div>
+                            {provider === 'retell' && (
+                                <div className="flex items-center space-x-2">
+                                    <Switch
+                                        id="auto-refresh"
+                                        checked={autoRefresh}
+                                        onCheckedChange={setAutoRefresh}
+                                    />
+                                    <Label htmlFor="auto-refresh">Auto-refresh every 12-24 hours</Label>
+                                </div>
                             )}
-                        </Button>
-                    </TabsContent>
+                            {provider === 'bland' && (
+                                <p className="text-xs text-muted-foreground">
+                                    Bland will scrape the page content and add it to your knowledge base.
+                                </p>
+                            )}
+                            <Button onClick={addUrlSource} disabled={addingSource || !url}>
+                                {addingSource ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Adding...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Add URL
+                                    </>
+                                )}
+                            </Button>
+                        </TabsContent>
+                    )}
+
+                    {supportsFile && (
+                        <TabsContent value="add-file" className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="file-upload">File</Label>
+                                <Input
+                                    ref={fileInputRef}
+                                    id="file-upload"
+                                    type="file"
+                                    accept={ACCEPTED_FILE_TYPES}
+                                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                                    className="cursor-pointer"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Supported: PDF, DOCX, TXT, CSV, MD, JSON, XML.
+                                    Max size: {FILE_SIZE_LIMITS[provider].label} ({PROVIDER_LABELS[provider]}).
+                                </p>
+                            </div>
+                            {selectedFile && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <FileText className="h-4 w-4" />
+                                    <span>{selectedFile.name}</span>
+                                    <span className="text-xs">
+                                        ({(selectedFile.size / 1024).toFixed(0)} KB)
+                                    </span>
+                                </div>
+                            )}
+                            <Button onClick={uploadFile} disabled={addingSource || !selectedFile}>
+                                {addingSource ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Uploading...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Upload className="mr-2 h-4 w-4" />
+                                        Upload File
+                                    </>
+                                )}
+                            </Button>
+                        </TabsContent>
+                    )}
                 </Tabs>
             </CardContent>
         </Card>

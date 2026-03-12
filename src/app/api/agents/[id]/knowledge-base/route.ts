@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 import * as retell from '@/lib/providers/retell';
+import * as vapiKb from '@/lib/providers/vapi-kb';
+import * as blandKb from '@/lib/providers/bland-kb';
 import { isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
+}
+
+/** Normalized KB shape returned to the client */
+interface NormalizedKB {
+    knowledge_base_id: string;
+    knowledge_base_name: string;
+    status: string;
+    knowledge_base_sources?: Array<{
+        source_id: string;
+        source_type: 'file' | 'url' | 'text';
+        source_name?: string;
+        source_url?: string;
+        status?: string;
+    }>;
 }
 
 // GET /api/agents/[id]/knowledge-base - Get KB for agent
@@ -39,36 +56,81 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'You do not have access to this agent' }, { status: 403 });
         }
 
-        // Get agency API key
-        const { data: agency } = await supabase
-            .from('agencies')
-            .select('retell_api_key')
-            .eq('id', user.agency.id)
-            .single();
+        // Resolve provider API key
+        const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, agent.client_id);
+        const apiKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
 
-        if (!agency?.retell_api_key) {
-            return NextResponse.json({ error: 'No Retell API key configured' }, { status: 400 });
+        if (!apiKey) {
+            return NextResponse.json({ error: `No ${agent.provider} API key configured` }, { status: 400 });
         }
 
         // Check if agent has a knowledge base ID in config
         const kbId = agent.config?.knowledge_base_id;
+        // Bland stores multiple KB IDs
+        const blandKbIds: string[] = agent.config?.bland_kb_ids || [];
 
-        if (!kbId) {
+        if (!kbId && blandKbIds.length === 0) {
             return NextResponse.json({
                 data: null,
                 message: 'No knowledge base configured for this agent'
             });
         }
 
-        // Fetch KB from Retell
         try {
-            const kb = await retell.getRetellKnowledgeBase(agency.retell_api_key, kbId);
-            return NextResponse.json({ data: kb });
+            let normalized: NormalizedKB;
+
+            if (agent.provider === 'retell') {
+                const kb = await retell.getRetellKnowledgeBase(apiKey, kbId);
+                normalized = {
+                    knowledge_base_id: kb.knowledge_base_id,
+                    knowledge_base_name: kb.knowledge_base_name,
+                    status: kb.status,
+                    knowledge_base_sources: kb.knowledge_base_sources?.map(s => ({
+                        source_id: s.source_id,
+                        source_type: s.source_type,
+                        source_name: s.source_name,
+                        source_url: s.source_url,
+                        status: s.status,
+                    })),
+                };
+            } else if (agent.provider === 'vapi') {
+                const kb = await vapiKb.getVapiKBNormalized(apiKey, kbId);
+                normalized = {
+                    knowledge_base_id: kb.id,
+                    knowledge_base_name: kb.name,
+                    status: kb.status,
+                    knowledge_base_sources: kb.sources.map(s => ({
+                        source_id: s.source_id,
+                        source_type: s.source_type,
+                        source_name: s.source_name,
+                        status: s.status,
+                    })),
+                };
+            } else if (agent.provider === 'bland') {
+                const ids = blandKbIds.length > 0 ? blandKbIds : (kbId ? [kbId] : []);
+                const kb = await blandKb.getBlandKBsNormalized(apiKey, ids);
+                normalized = {
+                    knowledge_base_id: kb.id,
+                    knowledge_base_name: kb.name,
+                    status: kb.status,
+                    knowledge_base_sources: kb.sources.map(s => ({
+                        source_id: s.source_id,
+                        source_type: s.source_type,
+                        source_name: s.source_name,
+                        source_url: s.source_url,
+                        status: s.status,
+                    })),
+                };
+            } else {
+                return NextResponse.json({ error: `Knowledge bases not supported for ${agent.provider}` }, { status: 400 });
+            }
+
+            return NextResponse.json({ data: normalized });
         } catch (err) {
             console.error('Error fetching KB:', err instanceof Error ? err.message : 'Unknown error');
             return NextResponse.json({
                 data: null,
-                message: 'Knowledge base not found in Retell'
+                message: 'Knowledge base not found'
             });
         }
     } catch (error) {
@@ -98,7 +160,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         // Verify agent
         const { data: agent } = await supabase
             .from('agents')
-            .select('id, name, agency_id, config')
+            .select('id, name, agency_id, client_id, provider, config')
             .eq('id', agentId)
             .eq('agency_id', user.agency.id)
             .single();
@@ -107,27 +169,41 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
         }
 
-        // Get agency API key
-        const { data: agency } = await supabase
-            .from('agencies')
-            .select('retell_api_key')
-            .eq('id', user.agency.id)
-            .single();
+        // Resolve provider API key
+        const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, agent.client_id);
+        const apiKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
 
-        if (!agency?.retell_api_key) {
-            return NextResponse.json({ error: 'No Retell API key configured' }, { status: 400 });
+        if (!apiKey) {
+            return NextResponse.json({ error: `No ${agent.provider} API key configured` }, { status: 400 });
         }
 
-        // Create KB in Retell (name must be ≤40 chars)
         const kbName = `${agent.name} KB`.slice(0, 40);
-        const kb = await retell.createRetellKnowledgeBase(agency.retell_api_key, {
-            knowledge_base_name: kbName,
-        });
+        let kbIdToStore: string;
+
+        if (agent.provider === 'retell') {
+            const kb = await retell.createRetellKnowledgeBase(apiKey, {
+                knowledge_base_name: kbName,
+            });
+            kbIdToStore = kb.knowledge_base_id;
+        } else if (agent.provider === 'vapi') {
+            // Vapi: create an empty KB (files added via sources endpoint)
+            const kb = await vapiKb.createVapiKnowledgeBase(apiKey, {
+                name: kbName,
+                fileIds: [],
+            });
+            kbIdToStore = kb.id;
+        } else if (agent.provider === 'bland') {
+            // Bland: each source is its own KB, so we just mark the agent as KB-enabled
+            // The actual KB IDs are stored in bland_kb_ids array when sources are added
+            kbIdToStore = '__bland_kb_enabled__';
+        } else {
+            return NextResponse.json({ error: `Knowledge bases not supported for ${agent.provider}` }, { status: 400 });
+        }
 
         // Update agent config with KB ID
         const updatedConfig = {
             ...agent.config,
-            knowledge_base_id: kb.knowledge_base_id,
+            knowledge_base_id: kbIdToStore,
         };
 
         const { error: updateError } = await supabase
@@ -142,7 +218,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         return NextResponse.json({
-            data: kb,
+            data: {
+                knowledge_base_id: kbIdToStore,
+                knowledge_base_name: kbName,
+                status: 'in_progress',
+            },
             message: 'Knowledge base created successfully'
         });
     } catch (error: unknown) {
@@ -171,7 +251,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         const { data: agent } = await supabase
             .from('agents')
-            .select('id, config, agency_id')
+            .select('id, config, agency_id, client_id, provider')
             .eq('id', agentId)
             .eq('agency_id', user.agency.id)
             .single();
@@ -181,30 +261,47 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         }
 
         const kbId = agent.config?.knowledge_base_id;
-        if (!kbId) {
+        const blandKbIds: string[] = agent.config?.bland_kb_ids || [];
+
+        if (!kbId && blandKbIds.length === 0) {
             return NextResponse.json({ error: 'No knowledge base to delete' }, { status: 400 });
         }
 
-        const { data: agency } = await supabase
-            .from('agencies')
-            .select('retell_api_key')
-            .eq('id', user.agency.id)
-            .single();
+        const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, agent.client_id);
+        const apiKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
 
-        if (!agency?.retell_api_key) {
-            return NextResponse.json({ error: 'No Retell API key configured' }, { status: 400 });
+        if (!apiKey) {
+            return NextResponse.json({ error: `No ${agent.provider} API key configured` }, { status: 400 });
         }
 
-        // Delete from Retell
+        // Delete from provider
         try {
-            await retell.deleteRetellKnowledgeBase(agency.retell_api_key, kbId);
+            if (agent.provider === 'retell') {
+                await retell.deleteRetellKnowledgeBase(apiKey, kbId);
+            } else if (agent.provider === 'vapi') {
+                // Delete the KB and its files
+                const kb = await vapiKb.getVapiKnowledgeBase(apiKey, kbId);
+                await vapiKb.deleteVapiKnowledgeBase(apiKey, kbId);
+                // Clean up orphaned files
+                if (kb.fileIds) {
+                    for (const fileId of kb.fileIds) {
+                        try { await vapiKb.deleteVapiFile(apiKey, fileId); } catch { /* best effort */ }
+                    }
+                }
+            } else if (agent.provider === 'bland') {
+                // Delete all Bland KBs associated with this agent
+                for (const id of blandKbIds) {
+                    try { await blandKb.deleteBlandKnowledgeBase(apiKey, id); } catch { /* best effort */ }
+                }
+            }
         } catch (err) {
-            console.error('Error deleting KB from Retell:', err instanceof Error ? err.message : 'Unknown error');
+            console.error('Error deleting KB from provider:', err instanceof Error ? err.message : 'Unknown error');
         }
 
-        // Remove KB ID from agent config
+        // Remove KB IDs from agent config
         const updatedConfig = { ...agent.config };
         delete updatedConfig.knowledge_base_id;
+        delete updatedConfig.bland_kb_ids;
 
         const { error: updateError } = await supabase
             .from('agents')

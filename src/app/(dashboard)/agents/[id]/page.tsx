@@ -175,10 +175,11 @@ export default async function AgentDetailPage({
                             />
                         )}
 
-                        {isAdmin && agent.provider === 'retell' && (
+                        {isAdmin && (agent.provider === 'retell' || agent.provider === 'vapi' || agent.provider === 'bland') && (
                             <>
                                 <KnowledgeBaseEditor
                                     agentId={agent.id}
+                                    provider={agent.provider as 'retell' | 'vapi' | 'bland'}
                                 />
                                 <WidgetSettings
                                     agentId={agent.id}
