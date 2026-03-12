@@ -219,7 +219,7 @@ export function KnowledgeBaseEditor({ agentId, provider }: KnowledgeBaseEditorPr
     const deleteSource = async (sourceId: string) => {
         setDeletingSource(sourceId);
         try {
-            const response = await fetch(`/api/agents/${agentId}/knowledge-base/sources/${sourceId}`, {
+            const response = await fetch(`/api/agents/${agentId}/knowledge-base/sources/${encodeURIComponent(sourceId)}`, {
                 method: 'DELETE',
             });
             if (response.ok) {

@@ -222,15 +222,17 @@ export async function getBlandKBsNormalized(
     apiKey: string,
     kbIds: string[],
 ): Promise<NormalizedBlandKB> {
-    const kbs: BlandKnowledgeBase[] = [];
-    for (const id of kbIds) {
-        try {
-            const kb = await getBlandKnowledgeBase(apiKey, id);
-            kbs.push(kb);
-        } catch {
-            // Skip KBs that no longer exist
-        }
+    if (kbIds.length === 0) {
+        return { id: '', name: 'Knowledge Base', status: 'complete', sources: [] };
     }
+
+    // Fetch all KBs concurrently
+    const results = await Promise.allSettled(
+        kbIds.map(id => getBlandKnowledgeBase(apiKey, id))
+    );
+    const kbs = results
+        .filter((r): r is PromiseFulfilledResult<BlandKnowledgeBase> => r.status === 'fulfilled')
+        .map(r => r.value);
 
     const overallStatus: NormalizedBlandKB['status'] =
         kbs.some(kb => kb.status === 'FAILED') ? 'error'
@@ -238,7 +240,7 @@ export async function getBlandKBsNormalized(
                 : 'complete';
 
     return {
-        id: kbIds[0] || '',
+        id: kbIds[0],
         name: 'Knowledge Base',
         status: overallStatus,
         sources: kbs.map(kb => ({

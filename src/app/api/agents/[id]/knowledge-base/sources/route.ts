@@ -141,7 +141,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
 async function handleFileUpload(
     request: NextRequest,
-    agent: { id: string; name: string; config: Record<string, unknown>; provider: string },
+    agent: { id: string; name: string; config: Record<string, unknown>; agency_id: string; provider: string },
     apiKey: string,
     kbId: string,
     supabase: ReturnType<typeof createServiceClient>,
@@ -169,38 +169,23 @@ async function handleFileUpload(
     }
 
     if (agent.provider === 'retell') {
-        // Retell: add file to existing KB via multipart
-        const result = await retell.addRetellKBSources(apiKey, kbId, {
-            // The retell SDK accepts files but we need to pass the raw file
-            // For now, convert file to text if it's a text-based format
-            // TODO: Support binary file upload via retellMultipartPost
-            knowledge_base_texts: [],
-        });
-        // Retell file upload needs the multipart endpoint directly
-        // Use the SDK's file upload path
-        const form = new FormData();
-        form.append('knowledge_base_files', file, file.name);
-        const retellResult = await retell.addRetellKBSources(apiKey, kbId, {});
-        void retellResult; // Placeholder — actual file upload handled below
+        // Retell: upload file to existing KB via multipart POST
+        const fd = new FormData();
+        fd.append('knowledge_base_files', file, file.name);
 
-        // Direct multipart call for file
         const response = await fetch(`https://api.retellai.com/add-knowledge-base-sources/${encodeURIComponent(kbId)}`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${apiKey}` },
-            body: (() => {
-                const fd = new FormData();
-                fd.append('knowledge_base_files', file, file.name);
-                return fd;
-            })(),
-            signal: AbortSignal.timeout(30_000),
+            body: fd,
+            signal: AbortSignal.timeout(60_000),
         });
 
         if (!response.ok) {
-            console.error('Retell file upload error:', response.status);
+            const errText = await response.text().catch(() => '');
+            console.error('Retell file upload error:', response.status, errText);
             return NextResponse.json({ error: 'Failed to upload file to Retell' }, { status: 500 });
         }
 
-        void result; // Previous calls were setup; this is the real result
         const uploadResult = await response.json();
         return NextResponse.json({ data: uploadResult, message: 'File uploaded successfully' });
 
@@ -240,7 +225,7 @@ async function handleFileUpload(
             .from('agents')
             .update({ config: updatedConfig })
             .eq('id', agentId)
-            .eq('agency_id', (agent.config as Record<string, unknown>).agency_id || '');
+            .eq('agency_id', agent.agency_id);
 
         return NextResponse.json({
             data: { source_id: blandResult.id, source_type: 'file', source_name: file.name },
@@ -257,7 +242,7 @@ async function handleFileUpload(
 
 async function handleTextOrUrl(
     request: NextRequest,
-    agent: { id: string; name: string; config: Record<string, unknown>; provider: string },
+    agent: { id: string; name: string; config: Record<string, unknown>; agency_id: string; provider: string },
     apiKey: string,
     kbId: string,
     supabase: ReturnType<typeof createServiceClient>,
@@ -301,7 +286,8 @@ async function handleTextOrUrl(
             await supabase
                 .from('agents')
                 .update({ config: { ...agent.config, bland_kb_ids: [...existingIds, blandResult.id] } })
-                .eq('id', agentId);
+                .eq('id', agentId)
+                .eq('agency_id', agent.agency_id);
             return NextResponse.json({
                 data: { source_id: blandResult.id, source_type: 'text', source_name: title || 'Text Source' },
                 message: 'Text source added'
@@ -332,7 +318,8 @@ async function handleTextOrUrl(
             await supabase
                 .from('agents')
                 .update({ config: { ...agent.config, bland_kb_ids: [...existingIds, blandResult.id] } })
-                .eq('id', agentId);
+                .eq('id', agentId)
+                .eq('agency_id', agent.agency_id);
             return NextResponse.json({
                 data: { source_id: blandResult.id, source_type: 'url', source_name: url },
                 message: 'URL source added'

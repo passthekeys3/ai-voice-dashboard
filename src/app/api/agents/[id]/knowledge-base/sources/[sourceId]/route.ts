@@ -28,7 +28,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Invalid agent ID format' }, { status: 400 });
         }
         // sourceId may not be a UUID for all providers (Vapi uses custom IDs, Bland uses kb_ prefix)
-        if (!sourceId || sourceId.length > 200) {
+        if (!sourceId || sourceId.length > 200 || !/^[a-zA-Z0-9_\-:.]+$/.test(sourceId)) {
             return NextResponse.json({ error: 'Invalid source ID' }, { status: 400 });
         }
 
