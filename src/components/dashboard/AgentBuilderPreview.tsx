@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
     Bot, Mic, MessageSquare, Code2, ChevronDown, ChevronUp,
     Rocket, Loader2, Zap, CheckCircle2, Phone, ExternalLink,
@@ -60,26 +60,20 @@ export function AgentBuilderPreview({
         () => phoneNumbers.filter(p => !p.agent_id),
         [phoneNumbers]
     );
-    const [selectedPhoneId, setSelectedPhoneId] = useState<string>(() => {
-        // Auto-select phone number if there's exactly one available
-        return availablePhoneNumbers.length === 1 ? availablePhoneNumbers[0].id : '';
-    });
+    const [selectedPhoneIdRaw, setSelectedPhoneId] = useState<string>('');
     const [showConfirmation, setShowConfirmation] = useState(false);
 
-    // Re-sync selection when available phone numbers change
-    useEffect(() => {
-        setSelectedPhoneId(prev => {
-            // If current selection is no longer available, reset
-            if (prev && !availablePhoneNumbers.find(p => p.id === prev)) {
-                return availablePhoneNumbers.length === 1 ? availablePhoneNumbers[0].id : '';
-            }
-            // If no selection and exactly one available, auto-select
-            if (!prev && availablePhoneNumbers.length === 1) {
-                return availablePhoneNumbers[0].id;
-            }
-            return prev;
-        });
-    }, [availablePhoneNumbers]);
+    // Derive effective phone ID: auto-select if exactly one available,
+    // clear if current selection is no longer available
+    const selectedPhoneId = useMemo(() => {
+        if (selectedPhoneIdRaw && availablePhoneNumbers.find(p => p.id === selectedPhoneIdRaw)) {
+            return selectedPhoneIdRaw;
+        }
+        if (availablePhoneNumbers.length === 1) {
+            return availablePhoneNumbers[0].id;
+        }
+        return '';
+    }, [selectedPhoneIdRaw, availablePhoneNumbers]);
     const [createError, setCreateError] = useState<string | null>(null);
 
     const hasContent = !!(draft.name || draft.systemPrompt || draft.firstMessage || draft.voiceId);
