@@ -15,6 +15,15 @@ import type {
 import { getAvailableTemplates } from '@/lib/agent-builder/templates';
 import { matchVoicesToDescription } from '@/lib/agent-builder/llm';
 
+/** Data returned from the apply API after successful agent creation */
+export interface CreatedAgentData {
+    agent_id: string;
+    external_id: string;
+    provider: string;
+    workflows_created: number;
+    phone_number?: string;
+}
+
 interface AgentBuilderProps {
     clients: { id: string; name: string; hasRetellKey?: boolean; hasVapiKey?: boolean; hasBlandKey?: boolean }[];
     phoneNumbers: { id: string; phone_number: string; nickname?: string; agent_id?: string | null }[];
@@ -43,6 +52,7 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
     const [isStreaming, setIsStreaming] = useState(false);
     const [voiceRecommendations, setVoiceRecommendations] = useState<VoiceRecommendation[]>([]);
     const [isCreating, setIsCreating] = useState(false);
+    const [createdAgent, setCreatedAgent] = useState<CreatedAgentData | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     // Refs for latest state (avoids stale closures in async callbacks)
@@ -361,7 +371,16 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
             }
 
             const { data } = await response.json();
-            window.location.href = '/agents';
+
+            // Find the assigned phone number label for the success screen
+            const assignedPhone = phoneNumberId
+                ? phoneNumbers.find(p => p.id === phoneNumberId)
+                : undefined;
+
+            setCreatedAgent({
+                ...data,
+                phone_number: assignedPhone?.nickname || assignedPhone?.phone_number,
+            });
 
             return data;
         } catch (err) {
@@ -403,6 +422,7 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
                     context={context}
                     availableTemplates={availableTemplates}
                     availableProviders={availableProviders}
+                    createdAgent={createdAgent}
                 />
             </div>
         </div>

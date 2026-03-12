@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
     Bot, Mic, MessageSquare, Code2, ChevronDown, ChevronUp,
-    Rocket, Loader2, Zap,
+    Rocket, Loader2, Zap, CheckCircle2, Phone, ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,8 +13,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { AgentBuilderIntegrationCard } from './AgentBuilderIntegrationCard';
 import { AgentBuilderVoicePicker } from './AgentBuilderVoicePicker';
-import type { AgentDraft, BuilderContext, IntegrationSelection } from '@/lib/agent-builder/types';
+import { TestCall } from './TestCall';
+import type { AgentDraft, BuilderContext } from '@/lib/agent-builder/types';
 import type { WorkflowTemplate } from '@/lib/agent-builder/templates';
+import type { CreatedAgentData } from './AgentBuilder';
+import Link from 'next/link';
 
 const PROVIDER_LABELS: Record<string, string> = {
     retell: 'Retell AI',
@@ -33,6 +36,8 @@ interface AgentBuilderPreviewProps {
     context: BuilderContext;
     availableTemplates: WorkflowTemplate[];
     availableProviders: ('retell' | 'vapi' | 'bland')[];
+    /** Set after successful agent creation — triggers the success/test state */
+    createdAgent?: CreatedAgentData | null;
 }
 
 export function AgentBuilderPreview({
@@ -46,13 +51,19 @@ export function AgentBuilderPreview({
     context,
     availableTemplates,
     availableProviders,
+    createdAgent,
 }: AgentBuilderPreviewProps) {
     const [isPromptExpanded, setIsPromptExpanded] = useState(false);
     const [selectedClientId, setSelectedClientId] = useState<string>('');
-    const [selectedPhoneId, setSelectedPhoneId] = useState<string>('');
+    const [selectedPhoneId, setSelectedPhoneId] = useState<string>(() => {
+        // Auto-select phone number if there's exactly one available
+        return phoneNumbers.length === 1 ? phoneNumbers[0].id : '';
+    });
+    const [showConfirmation, setShowConfirmation] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
 
     const hasContent = !!(draft.name || draft.systemPrompt || draft.firstMessage || draft.voiceId);
+    const showTestCall = draft.provider === 'retell' || draft.provider === 'vapi';
 
     const handleCreate = useCallback(async () => {
         setCreateError(null);
@@ -80,6 +91,79 @@ export function AgentBuilderPreview({
         if (!draft.systemPrompt) missing.push('System prompt');
         return missing.length > 0 ? `${missing.join(', ')} still needed` : '';
     }, [draft.name, draft.voiceId, draft.systemPrompt]);
+
+    // ── Post-creation success state ──
+    if (createdAgent) {
+        return (
+            <div className="flex flex-col h-full">
+                <div className="flex-shrink-0 px-6 py-4 border-b border-border bg-white dark:bg-slate-900">
+                    <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <h2 className="font-semibold text-sm">Agent Created</h2>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    {/* Success summary card */}
+                    <Card className="border-green-500/30 bg-gradient-to-r from-green-500/5 to-emerald-500/5">
+                        <CardContent className="p-4 space-y-3">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/40">
+                                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-sm">{draft.name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {PROVIDER_LABELS[draft.provider] || draft.provider}
+                                        {draft.voiceName && ` · ${draft.voiceName}`}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {createdAgent.phone_number && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <Phone className="h-3.5 w-3.5" />
+                                    <span>Assigned to <strong className="text-foreground">{createdAgent.phone_number}</strong></span>
+                                    <Badge variant="success" className="text-[10px] px-1.5 py-0">Live</Badge>
+                                </div>
+                            )}
+
+                            {createdAgent.workflows_created > 0 && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <Zap className="h-3.5 w-3.5" />
+                                    <span>{createdAgent.workflows_created} workflow{createdAgent.workflows_created > 1 ? 's' : ''} created</span>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Inline test call */}
+                    {showTestCall && (
+                        <TestCall
+                            agentId={createdAgent.agent_id}
+                            agentName={draft.name}
+                            provider={draft.provider as 'retell' | 'vapi'}
+                        />
+                    )}
+
+                    {/* Navigation links */}
+                    <div className="space-y-2">
+                        <Button asChild className="w-full" variant="default">
+                            <Link href={`/agents/${createdAgent.agent_id}`}>
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                View Agent Details
+                            </Link>
+                        </Button>
+                        <Button asChild className="w-full" variant="outline">
+                            <Link href="/agents">
+                                View All Agents
+                            </Link>
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full">
@@ -260,7 +344,9 @@ export function AgentBuilderPreview({
                         )}
                         {phoneNumbers.length > 0 && (
                             <div>
-                                <Label htmlFor="builder-phone-select" className="text-xs text-muted-foreground mb-1 block">Phone (optional)</Label>
+                                <Label htmlFor="builder-phone-select" className="text-xs text-muted-foreground mb-1 block">
+                                    Phone {phoneNumbers.length === 1 ? '(auto-selected)' : '(optional)'}
+                                </Label>
                                 <select
                                     id="builder-phone-select"
                                     value={selectedPhoneId}
@@ -282,32 +368,93 @@ export function AgentBuilderPreview({
                         <p role="alert" className="text-xs text-red-500">{createError}</p>
                     )}
 
-                    <Card className="border-violet-500/20 bg-gradient-to-r from-violet-500/5 to-purple-500/5">
-                        <CardContent className="p-3">
-                            <Button
-                                onClick={handleCreate}
-                                disabled={!isReady || isCreating}
-                                className="w-full bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white"
-                            >
-                                {isCreating ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Creating Agent...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Rocket className="h-4 w-4 mr-2" />
-                                        Create Agent
-                                    </>
+                    {/* Confirmation summary */}
+                    {showConfirmation && isReady ? (
+                        <Card className="border-violet-500/30 bg-gradient-to-r from-violet-500/5 to-purple-500/5">
+                            <CardContent className="p-4 space-y-3">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Confirm Agent</p>
+                                <div className="space-y-1.5 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Name</span>
+                                        <span className="font-medium">{draft.name}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Provider</span>
+                                        <span className="font-medium">{PROVIDER_LABELS[draft.provider] || draft.provider}</span>
+                                    </div>
+                                    {draft.voiceName && (
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Voice</span>
+                                            <span className="font-medium">{draft.voiceName}</span>
+                                        </div>
+                                    )}
+                                    {selectedPhoneId && (
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Phone</span>
+                                            <span className="font-medium">
+                                                {phoneNumbers.find(p => p.id === selectedPhoneId)?.nickname
+                                                    || phoneNumbers.find(p => p.id === selectedPhoneId)?.phone_number
+                                                    || 'Selected'}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {draft.integrations.filter(i => i.enabled).length > 0 && (
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Workflows</span>
+                                            <span className="font-medium">{draft.integrations.filter(i => i.enabled).length}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex gap-2 pt-1">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex-1"
+                                        onClick={() => setShowConfirmation(false)}
+                                        disabled={isCreating}
+                                    >
+                                        Back
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        className="flex-1 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white"
+                                        onClick={handleCreate}
+                                        disabled={isCreating}
+                                    >
+                                        {isCreating ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                Creating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Rocket className="h-4 w-4 mr-2" />
+                                                Confirm
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Card className="border-violet-500/20 bg-gradient-to-r from-violet-500/5 to-purple-500/5">
+                            <CardContent className="p-3">
+                                <Button
+                                    onClick={() => setShowConfirmation(true)}
+                                    disabled={!isReady || isCreating}
+                                    className="w-full bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white"
+                                >
+                                    <Rocket className="h-4 w-4 mr-2" />
+                                    Create Agent
+                                </Button>
+                                {!isReady && missingFieldsText && (
+                                    <p className="text-xs text-muted-foreground text-center mt-2">
+                                        {missingFieldsText}
+                                    </p>
                                 )}
-                            </Button>
-                            {!isReady && missingFieldsText && (
-                                <p className="text-xs text-muted-foreground text-center mt-2">
-                                    {missingFieldsText}
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             )}
         </div>
