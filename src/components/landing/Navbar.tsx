@@ -11,6 +11,7 @@ const navLinks = [
     { label: 'Features', href: '#features' },
     { label: 'Pricing', href: '#pricing' },
     { label: 'FAQ', href: '#faq' },
+    { label: 'Docs', href: 'https://docs.buildvoiceai.com', external: true },
 ];
 
 export function Navbar() {
@@ -53,7 +54,8 @@ export function Navbar() {
                             <a
                                 key={link.href}
                                 href={link.href}
-                                onClick={(e) => handleNavClick(e, link.href)}
+                                onClick={(e) => !link.external && handleNavClick(e, link.href)}
+                                {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 {link.label}
@@ -86,7 +88,8 @@ export function Navbar() {
                                 <a
                                     key={link.href}
                                     href={link.href}
-                                    onClick={(e) => handleNavClick(e, link.href)}
+                                    onClick={(e) => !link.external && handleNavClick(e, link.href)}
+                                    {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                                     className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
                                 >
                                     {link.label}

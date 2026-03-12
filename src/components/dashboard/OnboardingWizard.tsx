@@ -14,6 +14,8 @@ import {
     Sparkles,
     Phone,
     Bot,
+    BookOpen,
+    ExternalLink,
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
@@ -187,6 +189,17 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                     </div>
                                 </div>
                             </div>
+
+                            <a
+                                href="https://docs.buildvoiceai.com/docs/getting-started"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-sm text-primary hover:underline"
+                            >
+                                <BookOpen className="h-4 w-4" />
+                                Read the getting started guide
+                                <ExternalLink className="h-3 w-3" />
+                            </a>
 
                             <div className="flex gap-3">
                                 <Button variant="outline" className="flex-1 rounded-full" onClick={handleSkip}>
@@ -386,6 +399,16 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                 Go to Dashboard
                                 <ArrowRight className="h-4 w-4 ml-2" />
                             </Button>
+                            <a
+                                href="https://docs.buildvoiceai.com/docs"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                <BookOpen className="h-4 w-4" />
+                                Explore the documentation
+                                <ExternalLink className="h-3 w-3" />
+                            </a>
                         </CardContent>
                     </>
                 )}

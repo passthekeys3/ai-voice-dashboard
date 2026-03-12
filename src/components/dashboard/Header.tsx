@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { BookOpen } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     DropdownMenu,
@@ -11,7 +12,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Sun, Moon, Settings, LogOut } from 'lucide-react';
+import { RefreshCw, Sun, Moon, Settings, LogOut, HelpCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase/client';
@@ -72,6 +73,19 @@ export function Header({ title = 'Dashboard', userName, userEmail, userAvatar, o
                     </Button>
                 )}
 
+                {/* Docs link */}
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    aria-label="Documentation"
+                    asChild
+                >
+                    <a href="https://docs.buildvoiceai.com" target="_blank" rel="noopener noreferrer">
+                        <HelpCircle className="h-4 w-4" />
+                    </a>
+                </Button>
+
                 {/* Dark mode toggle */}
                 <Button
                     variant="ghost"
@@ -108,6 +122,12 @@ export function Header({ title = 'Dashboard', userName, userEmail, userAvatar, o
                                 <Settings className="mr-2 h-4 w-4" />
                                 Settings
                             </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <a href="https://docs.buildvoiceai.com" target="_blank" rel="noopener noreferrer" className="flex items-center cursor-pointer">
+                                <BookOpen className="mr-2 h-4 w-4" />
+                                Documentation
+                            </a>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem

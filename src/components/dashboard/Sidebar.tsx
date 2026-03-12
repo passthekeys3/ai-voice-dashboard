@@ -23,6 +23,7 @@ import {
     Menu,
     X,
     Building2,
+    BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -212,8 +213,17 @@ function SidebarContent({
                 })}
             </nav>
 
-            {/* Logout */}
-            <div className="relative z-10 border-t border-white/10 p-3 bg-gradient-to-t from-black/10 to-transparent">
+            {/* Docs & Logout */}
+            <div className="relative z-10 border-t border-white/10 p-3 bg-gradient-to-t from-black/10 to-transparent space-y-1">
+                <a
+                    href="https://docs.buildvoiceai.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200"
+                >
+                    <BookOpen className="h-5 w-5 text-white/60 group-hover:text-white transition-colors duration-200" />
+                    Documentation
+                </a>
                 <Button
                     variant="ghost"
                     className="group w-full justify-start text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"

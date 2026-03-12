@@ -10,6 +10,12 @@ const productLinks = [
     { label: 'Agent builder', href: '/signup' },
 ];
 
+const resourceLinks = [
+    { label: 'Documentation', href: 'https://docs.buildvoiceai.com', external: true },
+    { label: 'Getting Started', href: 'https://docs.buildvoiceai.com/docs/getting-started', external: true },
+    { label: 'API Reference', href: 'https://docs.buildvoiceai.com/docs/reference', external: true },
+];
+
 const companyLinks = [
     { label: 'Log in', href: '/login' },
     { label: 'Sign up', href: '/signup' },
@@ -26,7 +32,7 @@ export function Footer() {
     return (
         <footer ref={ref} className="border-t border-border">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8">
                     <div className={`space-y-2 animate-on-scroll stagger-1 ${isInView ? 'is-visible' : ''}`}>
                         <Link href="/" className="flex items-center">
                             <Logo variant="full" size="md" />
@@ -76,6 +82,26 @@ export function Footer() {
 
                     <div className={`animate-on-scroll stagger-3 ${isInView ? 'is-visible' : ''}`}>
                         <p className="text-xs font-medium text-foreground uppercase tracking-widest mb-3">
+                            Resources
+                        </p>
+                        <ul className="space-y-2">
+                            {resourceLinks.map((link) => (
+                                <li key={link.label}>
+                                    <a
+                                        href={link.href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        {link.label}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div className={`animate-on-scroll stagger-4 ${isInView ? 'is-visible' : ''}`}>
+                        <p className="text-xs font-medium text-foreground uppercase tracking-widest mb-3">
                             Company
                         </p>
                         <ul className="space-y-2">
@@ -92,7 +118,7 @@ export function Footer() {
                         </ul>
                     </div>
 
-                    <div className={`animate-on-scroll stagger-4 ${isInView ? 'is-visible' : ''}`}>
+                    <div className={`animate-on-scroll stagger-5 ${isInView ? 'is-visible' : ''}`}>
                         <p className="text-xs font-medium text-foreground uppercase tracking-widest mb-3">
                             Legal
                         </p>
@@ -112,7 +138,7 @@ export function Footer() {
                 </div>
 
                 <div
-                    className={`mt-12 pt-8 border-t border-border text-sm text-muted-foreground animate-on-scroll stagger-5 ${isInView ? 'is-visible' : ''}`}
+                    className={`mt-12 pt-8 border-t border-border text-sm text-muted-foreground animate-on-scroll stagger-6 ${isInView ? 'is-visible' : ''}`}
                 >
                     &copy; {new Date().getFullYear()} BuildVoiceAI
                 </div>
