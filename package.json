@@ -28,6 +28,7 @@
     "@sentry/nextjs": "^10.39.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",
+    "@tailwindcss/typography": "^0.5.19",
     "@vapi-ai/web": "^2.5.2",
     "@vercel/functions": "^3.4.1",
     "class-variance-authority": "^0.7.1",
