@@ -13,6 +13,7 @@ const publicRoutes = [
     '/api/widget',    // Widget session API
     '/landing',       // Public marketing landing page
     '/api/landing',   // Public agent preview API
+    '/blog',          // Public blog
     '/privacy',       // Public legal pages
     '/terms',
     '/icon',          // Auto-generated images (favicon, apple icon, OG, logo)
