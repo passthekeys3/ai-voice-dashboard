@@ -13,9 +13,11 @@ function formatDate(dateStr: string): string {
 export function PostLayout({
     meta,
     children,
+    relatedPosts,
 }: {
     meta: PostMeta;
     children: React.ReactNode;
+    relatedPosts?: PostMeta[];
 }) {
     return (
         <article className="max-w-2xl mx-auto">
@@ -64,6 +66,28 @@ export function PostLayout({
             <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-headings:font-semibold prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-lg prose-pre:bg-muted">
                 {children}
             </div>
+
+            {relatedPosts && relatedPosts.length > 0 && (
+                <aside className="mt-12 pt-8 border-t border-border">
+                    <h2 className="text-lg font-semibold text-foreground mb-4">Related posts</h2>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {relatedPosts.map((post) => (
+                            <Link
+                                key={post.slug}
+                                href={`/blog/${post.slug}`}
+                                className="group block rounded-lg border border-border p-4 hover:border-primary/30 hover:shadow-sm transition-all"
+                            >
+                                <h3 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                                    {post.title}
+                                </h3>
+                                <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                                    {post.description}
+                                </p>
+                            </Link>
+                        ))}
+                    </div>
+                </aside>
+            )}
 
             <footer className="mt-12 pt-8 border-t border-border">
                 <div className="flex items-center justify-between">

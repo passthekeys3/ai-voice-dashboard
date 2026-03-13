@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
-import { getAllSlugs, getPostBySlug } from '@/lib/blog';
+import { getAllSlugs, getPostBySlug, getRelatedPosts } from '@/lib/blog';
 import { PostLayout } from '@/components/blog/PostLayout';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
@@ -27,6 +27,7 @@ export async function generateMetadata({
         title: `${post.title} - BuildVoiceAI`,
         description: post.description,
         alternates: { canonical: url },
+        robots: { index: true, follow: true },
         openGraph: {
             title: post.title,
             description: post.description,
@@ -35,6 +36,7 @@ export async function generateMetadata({
             type: 'article',
             publishedTime: post.date,
             authors: [post.author],
+            images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630 }],
         },
         twitter: {
             card: 'summary_large_image',
@@ -53,12 +55,16 @@ export default async function BlogPostPage({
     const post = getPostBySlug(slug);
     if (!post) notFound();
 
+    const relatedPosts = getRelatedPosts(slug, post.tags);
+
     const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'BlogPosting',
         headline: post.title,
         description: post.description,
         datePublished: post.date,
+        dateModified: post.date,
+        image: `${SITE_URL}/opengraph-image`,
         author: {
             '@type': 'Person',
             name: post.author,
@@ -80,7 +86,7 @@ export default async function BlogPostPage({
             />
 
             <main className="pt-28 pb-20 px-4 sm:px-6">
-                <PostLayout meta={post}>
+                <PostLayout meta={post} relatedPosts={relatedPosts}>
                     <MDXRemote source={post.content} />
                 </PostLayout>
             </main>

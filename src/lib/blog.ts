@@ -65,6 +65,17 @@ export function getPostBySlug(slug: string): Post | null {
     };
 }
 
+export function getRelatedPosts(currentSlug: string, tags: string[], count = 3): PostMeta[] {
+    const all = getAllPosts().filter((p) => p.slug !== currentSlug);
+    // Score by shared tags
+    const scored = all.map((post) => ({
+        post,
+        score: post.tags.filter((t) => tags.includes(t)).length,
+    }));
+    scored.sort((a, b) => b.score - a.score || new Date(b.post.date).getTime() - new Date(a.post.date).getTime());
+    return scored.slice(0, count).map((s) => s.post);
+}
+
 export function getAllSlugs(): string[] {
     if (!fs.existsSync(CONTENT_DIR)) return [];
     return fs

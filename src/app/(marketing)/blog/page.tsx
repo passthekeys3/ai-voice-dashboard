@@ -13,12 +13,19 @@ export const metadata: Metadata = {
     alternates: {
         canonical: `${SITE_URL}/blog`,
     },
+    robots: { index: true, follow: true },
     openGraph: {
         title: 'Blog - BuildVoiceAI',
         description: 'Insights, guides, and strategies for building AI voice agent businesses.',
         url: `${SITE_URL}/blog`,
         siteName: 'BuildVoiceAI',
         type: 'website',
+        images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630 }],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Blog - BuildVoiceAI',
+        description: 'Insights, guides, and strategies for building AI voice agent businesses.',
     },
 };
 
@@ -36,6 +43,14 @@ export default function BlogPage() {
             name: 'BuildVoiceAI',
             url: SITE_URL,
         },
+        blogPost: posts.map((post) => ({
+            '@type': 'BlogPosting',
+            headline: post.title,
+            description: post.description,
+            datePublished: post.date,
+            url: `${SITE_URL}/blog/${post.slug}`,
+            author: { '@type': 'Person', name: post.author },
+        })),
     };
 
     return (
