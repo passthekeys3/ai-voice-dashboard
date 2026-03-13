@@ -4,7 +4,10 @@ description: "How to set up automated workflows that trigger after every AI voic
 date: "2026-03-01"
 author: "BuildVoiceAI Team"
 tags: ["technical", "workflows"]
+lastModified: "2026-03-01"
 ---
+
+> **TL;DR:** Post-call workflows automate the actions that happen after every AI voice call — CRM updates, appointment booking, team notifications, and follow-up sequences. A well-configured workflow system eliminates manual data entry, ensures no lead falls through the cracks, and turns voice agents from a communication tool into a full business automation platform.
 
 An AI voice agent that can have a conversation is useful. An AI voice agent that can have a conversation *and then automatically take action* is transformative.
 
@@ -164,3 +167,25 @@ Most workflow failures come from:
 Post-call workflows turn AI voice agents from a communication tool into a business automation platform. The call itself is just the beginning — the real value comes from what happens next.
 
 When every call automatically updates the CRM, books appointments, notifies the team, and triggers follow-up sequences, you've built a system that runs itself. That's the promise of voice AI, and workflows are how you deliver it.
+
+## Frequently Asked Questions
+
+### What CRMs do post-call workflows integrate with?
+
+The most common integrations are HubSpot and GoHighLevel (GHL), which together cover the majority of agencies and SMBs. Many platforms also support webhook-based integrations with Zapier, Make, and n8n, allowing you to connect to virtually any CRM or tool in your stack including Salesforce, Pipedrive, and Close.
+
+### Can workflows run different actions based on call outcome?
+
+Yes. Conditions are the key to routing workflows. You can set conditions based on call duration, sentiment, direction (inbound/outbound), call status, and even specific keywords mentioned in the transcript. For example, positive-sentiment calls over 60 seconds could trigger a "hot lead" notification, while short calls get logged but don't alert the team.
+
+### How do I debug a workflow that isn't working?
+
+Check the execution log first — it shows which workflows triggered, which conditions matched, and whether each action succeeded or failed. The most common failures are expired OAuth tokens (reconnect the integration), missing required fields (ensure the agent captures the data), and API rate limits (space out actions).
+
+### Do workflows add delay after the call?
+
+Workflows execute asynchronously after the call ends, so they don't affect the call experience. Most actions (CRM updates, notifications) complete within 1-5 seconds of the call ending. Calendar bookings and email sends may take slightly longer depending on the third-party service.
+
+### How many workflows can I have per agent?
+
+There's typically no hard limit. However, best practice is to keep workflows focused — one workflow per distinct outcome rather than one massive workflow trying to do everything. Most agents use 2-4 workflows: a primary CRM logging workflow, a notification workflow, and optionally a booking or follow-up workflow.

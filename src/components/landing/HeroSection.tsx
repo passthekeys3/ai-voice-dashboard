@@ -39,10 +39,15 @@ export function HeroSection() {
                 >
                     Describe it in plain English. We&apos;ll build the rest.
                 </p>
+                <p
+                    className={`text-sm text-muted-foreground/70 max-w-xl mx-auto animate-on-scroll stagger-3 ${isInView ? 'is-visible' : ''}`}
+                >
+                    BuildVoiceAI is a white-label AI voice agent platform for agencies and businesses, featuring multi-provider support (Retell AI, Vapi, Bland), CRM integrations, and post-call workflow automation.
+                </p>
             </div>
 
             <div
-                className={`relative z-10 w-full max-w-2xl mx-auto animate-on-scroll-scale stagger-3 ${isInView ? 'is-visible' : ''}`}
+                className={`relative z-10 w-full max-w-2xl mx-auto animate-on-scroll-scale stagger-4 ${isInView ? 'is-visible' : ''}`}
             >
                 <AgentPreviewDemo />
             </div>

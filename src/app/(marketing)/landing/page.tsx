@@ -14,8 +14,10 @@ import { FinalCTA } from '@/components/landing/FinalCTA';
 import { Footer } from '@/components/landing/Footer';
 
 export const metadata: Metadata = {
-    title: 'Build Voice AI Agents for Your Clients',
-    description: 'White-label voice AI platform for agencies. Build, deploy, and manage AI voice agents with custom branding.',
+    title: 'BuildVoiceAI — AI Voice Agent Platform for Agencies & Businesses',
+    description:
+        'BuildVoiceAI is a white-label AI voice agent platform for agencies. Build voice agents from natural language, deploy in 30 minutes, integrate with GoHighLevel and HubSpot. Plans from $67/month.',
+    robots: { index: true, follow: true },
 };
 
 const SITE_URL = 'https://buildvoiceai.com';
@@ -27,8 +29,11 @@ const organizationJsonLd = {
     url: SITE_URL,
     logo: `${SITE_URL}/logo`,
     description:
-        'Build AI voice agents from natural language descriptions. White-label platform for agencies.',
-    sameAs: [],
+        'BuildVoiceAI is a white-label AI voice agent platform that lets agencies and businesses build, deploy, and manage AI-powered phone agents from natural language descriptions.',
+    sameAs: [
+        'https://twitter.com/buildvoiceai',
+        'https://linkedin.com/company/buildvoiceai',
+    ],
 };
 
 const websiteJsonLd = {
@@ -48,7 +53,18 @@ const softwareJsonLd = {
     operatingSystem: 'Web',
     url: SITE_URL,
     description:
-        'Build AI voice agents from natural language descriptions. White-label platform for agencies. Manage calls, analytics, workflows, and phone numbers.',
+        'BuildVoiceAI is a white-label AI voice agent platform for agencies and businesses. Build AI phone agents from natural language descriptions in under 30 minutes. Supports Retell AI, Vapi, and Bland providers with GoHighLevel and HubSpot CRM integrations.',
+    featureList: [
+        'Natural language AI agent builder',
+        'Multi-provider support (Retell AI, Vapi, Bland)',
+        'White-label client portals with custom domains',
+        'GoHighLevel and HubSpot CRM integrations',
+        'Post-call workflow automation',
+        'Real-time call analytics and transcripts',
+        'Phone number management via Twilio',
+        'Stripe Connect client billing',
+    ],
+    screenshot: `${SITE_URL}/opengraph-image`,
     offers: [
         {
             '@type': 'Offer',
@@ -113,67 +129,96 @@ const faqJsonLd = {
     mainEntity: [
         {
             '@type': 'Question',
-            name: 'What is BuildVoiceAI?',
+            name: 'How long does it take to set up a voice agent?',
             acceptedAnswer: {
                 '@type': 'Answer',
-                text: 'BuildVoiceAI is a platform that lets you create AI-powered phone agents using plain English. You describe what the agent should do — answer questions, book appointments, qualify leads — and the platform builds, deploys, and manages it for you.',
+                text: 'Most agents are live within 30 minutes. Describe what your agent should do, pick a voice, and connect your phone number. The platform generates the conversation flow automatically.',
             },
         },
         {
             '@type': 'Question',
-            name: 'Who is this for?',
+            name: 'Can I use my own phone numbers?',
             acceptedAnswer: {
                 '@type': 'Answer',
-                text: 'Marketing agencies, call centers, and service businesses that want to automate phone interactions without building from scratch. Whether you handle 50 or 50,000 calls a month, the platform scales with you.',
+                text: 'Yes. You can bring existing numbers from Twilio or purchase new ones directly through the platform. Porting takes a few minutes.',
             },
         },
         {
             '@type': 'Question',
-            name: 'How does the AI agent builder work?',
+            name: 'Which CRMs do you integrate with?',
             acceptedAnswer: {
                 '@type': 'Answer',
-                text: 'You type a natural-language description of what your agent should do. The system generates the conversation flow, selects a voice, and configures the phone number. You can test it immediately and refine from there.',
+                text: 'GoHighLevel and HubSpot are natively supported. When a call ends, the agent can update contacts, create deals, book appointments, and trigger workflows automatically. We also support Calendly and Slack.',
             },
         },
         {
             '@type': 'Question',
-            name: 'Can I white-label this for my clients?',
+            name: 'How does white-labeling work?',
             acceptedAnswer: {
                 '@type': 'Answer',
-                text: 'Yes. Growth and Agency plans include white-label client portals. Your clients see your brand, your domain, and only the data you choose to share — calls, analytics, and recordings scoped to their account.',
+                text: 'On the Growth and Agency plans, you get a fully branded dashboard — your logo, your colors, your domain. Your clients log into their own portal and only see their data. They never see BuildVoiceAI.',
             },
         },
         {
             '@type': 'Question',
-            name: 'Which voice providers do you support?',
+            name: 'What do the voices sound like?',
             acceptedAnswer: {
                 '@type': 'Answer',
-                text: 'We integrate with Retell AI, Vapi, and Bland. You can pick the provider that fits your use case, or run A/B experiments across providers to find the best performer.',
+                text: 'The platform uses the latest neural voice models. Voices sound natural and conversational — not robotic. You can preview every voice before going live and choose from dozens of options across accents and tones.',
             },
         },
         {
             '@type': 'Question',
-            name: 'What CRM integrations are available?',
+            name: 'Is my data private and secure?',
             acceptedAnswer: {
                 '@type': 'Answer',
-                text: 'GoHighLevel and HubSpot are supported natively. Post-call workflows can update contacts, create deals, send follow-ups, and trigger automations in your CRM automatically.',
+                text: 'All data is encrypted at rest and in transit. Call recordings and transcripts are scoped per account with row-level security. We never share your data or use it to train models.',
             },
         },
         {
             '@type': 'Question',
-            name: 'How does billing work?',
+            name: "What happens if the AI can't answer a question?",
             acceptedAnswer: {
                 '@type': 'Answer',
-                text: 'Choose Self-Service (bring your own API keys) or Managed (done-for-you with platform-hosted keys at $0.15/min). Each plan includes a set number of clients — additional clients are available at a per-client overage rate. Annual plans save 2 months. You can upgrade, downgrade, or cancel anytime.',
+                text: 'You define fallback behavior when building your agent. It can transfer to a human, take a message, or schedule a callback. You stay in control of every edge case.',
             },
         },
         {
             '@type': 'Question',
-            name: 'Is there a free trial?',
+            name: 'Can I try it before committing to a plan?',
             acceptedAnswer: {
                 '@type': 'Answer',
-                text: 'Yes. The Starter plan includes a free trial period so you can test the platform with real calls before committing.',
+                text: 'Every plan includes a 14-day free trial. You can build agents, make test calls, and explore the full platform before entering payment details.',
             },
+        },
+        {
+            '@type': 'Question',
+            name: 'What happens if I go over my included minutes?',
+            acceptedAnswer: {
+                '@type': 'Answer',
+                text: 'Overages are billed at per-minute rates that vary by voice provider — typically $0.05–$0.12/min. You can see real-time cost tracking in your dashboard and set monthly spending limits to avoid surprises.',
+            },
+        },
+        {
+            '@type': 'Question',
+            name: 'Is the platform HIPAA or SOC 2 compliant?',
+            acceptedAnswer: {
+                '@type': 'Answer',
+                text: 'We take compliance seriously. Call data is encrypted at rest and in transit, and access controls are enforced at the row level. For healthcare or regulated industries, contact us to discuss BAA arrangements and our compliance roadmap.',
+            },
+        },
+    ],
+};
+
+const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+        {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: SITE_URL,
         },
     ],
 };
@@ -197,6 +242,10 @@ export default function LandingPage() {
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
             />
 
             <Navbar />

@@ -10,9 +10,15 @@ export interface PostMeta {
     title: string;
     description: string;
     date: string;
+    lastModified: string;
     author: string;
     tags: string[];
     readingTime: string;
+}
+
+export interface FAQItem {
+    question: string;
+    answer: string;
 }
 
 export interface Post extends PostMeta {
@@ -36,6 +42,7 @@ export function getAllPosts(): PostMeta[] {
             title: data.title || slug,
             description: data.description || '',
             date: data.date || '',
+            lastModified: data.lastModified || data.date || '',
             author: data.author || 'BuildVoiceAI Team',
             tags: data.tags || [],
             readingTime: stats.text,
@@ -58,11 +65,40 @@ export function getPostBySlug(slug: string): Post | null {
         title: data.title || slug,
         description: data.description || '',
         date: data.date || '',
+        lastModified: data.lastModified || data.date || '',
         author: data.author || 'BuildVoiceAI Team',
         tags: data.tags || [],
         readingTime: stats.text,
         content,
     };
+}
+
+/** Extract FAQ Q&A pairs from MDX content (looks for ### headings under ## Frequently Asked Questions) */
+export function extractFAQs(content: string): FAQItem[] {
+    const faqSection = content.split(/^## Frequently Asked Questions\s*$/m)[1];
+    if (!faqSection) return [];
+
+    const faqs: FAQItem[] = [];
+    const blocks = faqSection.split(/^### /m).filter(Boolean);
+
+    for (const block of blocks) {
+        const lines = block.trim().split('\n');
+        const question = lines[0]?.trim();
+        if (!question) continue;
+        // Stop if we hit another h2 section
+        if (question.startsWith('## ')) break;
+        const answer = lines
+            .slice(1)
+            .join('\n')
+            .trim()
+            .split(/^## /m)[0]
+            .trim();
+        if (answer) {
+            faqs.push({ question, answer });
+        }
+    }
+
+    return faqs;
 }
 
 export function getRelatedPosts(currentSlug: string, tags: string[], count = 3): PostMeta[] {

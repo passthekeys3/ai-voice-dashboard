@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
-import { getAllSlugs, getPostBySlug, getRelatedPosts } from '@/lib/blog';
+import { getAllSlugs, getPostBySlug, getRelatedPosts, extractFAQs } from '@/lib/blog';
 import { PostLayout } from '@/components/blog/PostLayout';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
@@ -56,6 +56,7 @@ export default async function BlogPostPage({
     if (!post) notFound();
 
     const relatedPosts = getRelatedPosts(slug, post.tags);
+    const faqs = extractFAQs(post.content);
 
     const jsonLd = {
         '@context': 'https://schema.org',
@@ -63,7 +64,7 @@ export default async function BlogPostPage({
         headline: post.title,
         description: post.description,
         datePublished: post.date,
-        dateModified: post.date,
+        dateModified: post.lastModified || post.date,
         image: `${SITE_URL}/opengraph-image`,
         author: {
             '@type': 'Person',
@@ -77,13 +78,46 @@ export default async function BlogPostPage({
         url: `${SITE_URL}/blog/${slug}`,
     };
 
+    const breadcrumbJsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: `${SITE_URL}/blog` },
+            { '@type': 'ListItem', position: 3, name: post.title, item: `${SITE_URL}/blog/${slug}` },
+        ],
+    };
+
+    const faqJsonLd = faqs.length > 0 ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqs.map((faq) => ({
+            '@type': 'Question',
+            name: faq.question,
+            acceptedAnswer: {
+                '@type': 'Answer',
+                text: faq.answer,
+            },
+        })),
+    } : null;
+
     return (
         <>
             <Navbar />
             <script
                 type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+            />
+            <script
+                type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
+            {faqJsonLd && (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+                />
+            )}
 
             <main className="pt-28 pb-20 px-4 sm:px-6">
                 <PostLayout meta={post} relatedPosts={relatedPosts}>

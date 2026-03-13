@@ -32,6 +32,15 @@ export const metadata: Metadata = {
 export default function BlogPage() {
     const posts = getAllPosts();
 
+    const breadcrumbJsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: `${SITE_URL}/blog` },
+        ],
+    };
+
     const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'Blog',
@@ -56,6 +65,10 @@ export default function BlogPage() {
     return (
         <>
             <Navbar />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+            />
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

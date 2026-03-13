@@ -3,25 +3,27 @@ import type { Metadata } from 'next';
 const SITE_URL = 'https://buildvoiceai.com';
 
 export const metadata: Metadata = {
-    title: 'BuildVoiceAI - AI Voice Agents for Agencies & Businesses',
+    title: 'BuildVoiceAI — AI Voice Agent Platform for Agencies & Businesses',
     description:
-        'Build AI voice agents from natural language descriptions. White-label platform for agencies. Manage calls, analytics, workflows, and phone numbers.',
+        'BuildVoiceAI is a white-label AI voice agent platform. Build phone agents from natural language in 30 minutes. Supports Retell AI, Vapi, and Bland with GoHighLevel and HubSpot integrations. Plans from $67/month.',
     alternates: {
         canonical: SITE_URL,
     },
+    robots: { index: true, follow: true },
     openGraph: {
-        title: 'BuildVoiceAI - AI Voice Agents for Agencies & Businesses',
-        description: 'Build AI voice agents from natural language descriptions. White-label platform for agencies.',
+        title: 'BuildVoiceAI — AI Voice Agent Platform for Agencies & Businesses',
+        description:
+            'Build AI voice agents from natural language descriptions. White-label platform for agencies with CRM integrations and post-call automation.',
         siteName: 'BuildVoiceAI',
         type: 'website',
         url: SITE_URL,
-        // OG image auto-injected from src/app/opengraph-image.tsx
+        images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630 }],
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'BuildVoiceAI - AI Voice Agents for Agencies & Businesses',
-        description: 'Build AI voice agents from natural language descriptions. White-label platform for agencies.',
-        // Twitter image auto-injected from src/app/opengraph-image.tsx
+        title: 'BuildVoiceAI — AI Voice Agent Platform for Agencies & Businesses',
+        description:
+            'Build AI voice agents from natural language descriptions. White-label platform for agencies with CRM integrations and post-call automation.',
     },
 };
 
