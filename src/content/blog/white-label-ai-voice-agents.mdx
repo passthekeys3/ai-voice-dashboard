@@ -1,0 +1,158 @@
+---
+title: "How to White-Label AI Voice Agents for Your Agency Clients"
+description: "Learn how to offer AI voice agents under your own brand. Set up white-label portals, configure custom domains, and manage multiple clients from a single platform."
+date: "2026-03-05"
+author: "BuildVoiceAI Team"
+tags: ["guides", "agencies"]
+---
+
+White-labeling is what separates agencies that resell a product from agencies that own a product. When you white-label AI voice agents, your clients see your brand, your domain, and your interface — not the platform behind it.
+
+Here's how to set up a fully white-labeled AI voice agent offering.
+
+## What White-Labeling Actually Means
+
+When you white-label AI voice agents, your clients experience:
+
+- **Your brand** — Your logo, colors, and company name throughout the dashboard
+- **Your domain** — Clients access their portal at `ai.youragency.com`, not a third-party URL
+- **Your pricing** — You set what clients pay, with margins you control
+- **Your support** — Clients come to you for help, not the platform vendor
+
+Behind the scenes, you're using a platform like BuildVoiceAI to power everything. But from the client's perspective, it's entirely your product.
+
+## Step 1: Configure Your Agency Brand
+
+Start with the visual identity your clients will see:
+
+- **Logo upload** — Your agency logo appears in the sidebar, login page, and portal
+- **Color scheme** — Primary and accent colors that match your brand guidelines
+- **Company name** — Displayed in the header, emails, and throughout the UI
+- **Support information** — Your support email and links, not the platform's
+
+This takes about five minutes and immediately transforms the generic platform into something that looks custom-built.
+
+## Step 2: Set Up Your Custom Domain
+
+A custom domain is the single most impactful white-label feature. Instead of clients logging in at a generic URL, they'll access their dashboard at your domain.
+
+The setup process:
+1. Choose a subdomain (e.g., `portal.youragency.com` or `ai.youragency.com`)
+2. Add a CNAME record pointing to the platform's DNS
+3. Add a TXT record for domain verification
+4. Wait for DNS propagation (usually 15-30 minutes)
+5. The platform automatically provisions an SSL certificate
+
+Once configured, everything from login to the client portal runs on your domain.
+
+## Step 3: Create Client Accounts
+
+Each of your clients gets their own isolated environment:
+
+- **Separate agent lists** — Each client only sees their own agents
+- **Isolated call history** — No cross-client data exposure
+- **Individual billing** — Track usage and costs per client
+- **Custom permissions** — Control what each client can see and do
+
+When creating a client, you assign:
+- A name and primary contact
+- Which agents belong to them
+- Which phone numbers they use
+- What features they can access (analytics, transcripts, integrations, etc.)
+
+## Step 4: Configure Client Permissions
+
+Not every client needs access to everything. Granular permissions let you control the experience:
+
+| Permission | What It Controls |
+|-----------|-----------------|
+| **View costs** | Whether clients can see per-minute costs and spending |
+| **View transcripts** | Access to full call transcripts |
+| **View analytics** | Access to the analytics dashboard |
+| **Playback recordings** | Ability to listen to call recordings |
+| **Manage integrations** | Connect their own CRM, calendar, etc. |
+| **Edit agents** | Modify agent prompts and settings |
+| **Manage users** | Invite team members to their portal |
+| **View API keys** | Access API credentials |
+
+Set sensible defaults at the agency level, then override per-client as needed. For example, you might hide costs from clients on flat-rate plans but show them to clients on usage-based billing.
+
+## Step 5: Set Up Client Billing
+
+You have several options for billing your clients:
+
+**Flat monthly retainer:**
+- Simple to understand and predict
+- Charge $500-2,000/month depending on volume
+- You absorb the per-minute costs and keep the margin
+
+**Usage-based billing:**
+- Charge per minute of AI call time (e.g., $0.35-0.50/min)
+- More transparent but less predictable for clients
+- Use Stripe Connect to automate invoicing
+
+**Hybrid model:**
+- Base monthly fee + overage charges above a certain minute threshold
+- Best of both worlds — predictable for clients, profitable for you
+
+## Step 6: Invite Client Users
+
+Give your clients access to their portal:
+
+1. Create user accounts with email invitations
+2. Assign roles (Admin or Member)
+3. Clients log in at your custom domain
+4. They see only their agents, calls, and analytics
+
+Admins can invite additional team members and manage their organization. Members get read-only access to the features you've enabled.
+
+## Common White-Label Setups
+
+**The "Managed Service" Agency:**
+- Hides all technical settings from clients
+- Clients only see call history and analytics
+- Agency handles all agent creation and management
+- Highest touch, highest margin
+
+**The "Platform" Agency:**
+- Gives clients full access to build their own agents
+- Enables all permissions and features
+- Acts more like a SaaS reseller
+- Lower touch, scalable
+
+**The "Hybrid" Agency:**
+- Agency builds and optimizes agents
+- Clients monitor performance and view results
+- Some editing capabilities for minor adjustments
+- Best balance of service quality and scalability
+
+## Pricing Your White-Label Service
+
+Here's how successful agencies typically structure pricing:
+
+| Tier | Monthly Price | What's Included |
+|------|--------------|-----------------|
+| Basic | $497/mo | 1 agent, 500 minutes, basic analytics |
+| Professional | $997/mo | 3 agents, 1,500 minutes, CRM integration |
+| Enterprise | $1,997/mo | Unlimited agents, 5,000 minutes, custom workflows |
+
+Your actual costs on a platform like BuildVoiceAI at $0.15/min:
+- 500 minutes = $75/mo cost → $422 margin
+- 1,500 minutes = $225/mo cost → $772 margin
+- 5,000 minutes = $750/mo cost → $1,247 margin
+
+The margins speak for themselves.
+
+## Launch Checklist
+
+Before onboarding your first client:
+
+- [ ] Upload your agency logo and set brand colors
+- [ ] Configure your custom domain with SSL
+- [ ] Set default client permissions
+- [ ] Create a demo agent to show prospects
+- [ ] Set up your billing structure
+- [ ] Prepare a client onboarding document
+- [ ] Test the full client experience end-to-end
+
+White-labeling turns a technology platform into your own product. Your clients get a polished, branded experience. You get a high-margin, scalable service. Everyone wins.

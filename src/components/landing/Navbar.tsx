@@ -11,6 +11,7 @@ const navLinks = [
     { label: 'Features', href: '#features' },
     { label: 'Pricing', href: '#pricing' },
     { label: 'FAQ', href: '#faq' },
+    { label: 'Blog', href: '/blog' },
     { label: 'Docs', href: 'https://docs.buildvoiceai.com', external: true },
 ];
 

@@ -1,0 +1,166 @@
+---
+title: "Automating Post-Call Workflows: CRM Updates, Bookings, and Notifications"
+description: "How to set up automated workflows that trigger after every AI voice call — from CRM updates and calendar bookings to email notifications and Slack alerts."
+date: "2026-03-01"
+author: "BuildVoiceAI Team"
+tags: ["technical", "workflows"]
+---
+
+An AI voice agent that can have a conversation is useful. An AI voice agent that can have a conversation *and then automatically take action* is transformative.
+
+Post-call workflows are the bridge between a phone call and a business outcome. Here's how to build them.
+
+## What Are Post-Call Workflows?
+
+A post-call workflow is a sequence of automated actions that execute after an AI voice call ends. Instead of manually reviewing every call and taking action, workflows handle the follow-up automatically.
+
+A typical workflow might:
+1. **Trigger** when a call ends with a "completed" status
+2. **Check conditions** — was the call longer than 30 seconds? Did the caller express interest?
+3. **Execute actions** — log the call in the CRM, book an appointment, send a notification
+
+The result: every call generates immediate follow-up without any human intervention.
+
+## Anatomy of a Workflow
+
+Every workflow has three components:
+
+### Triggers
+The event that starts the workflow. The most common trigger is "post-call" — the workflow runs after every completed call for a specific agent. You can scope triggers to specific agents so different agents have different follow-up processes.
+
+### Conditions
+Optional filters that determine whether the actions should execute. Common conditions include:
+
+| Condition | Operator | Example |
+|-----------|----------|---------|
+| Call duration | Greater than | Only process calls longer than 30 seconds |
+| Call status | Equals | Only process completed calls (not failed/missed) |
+| Sentiment | Equals | Only trigger for positive or neutral sentiment |
+| Direction | Equals | Only trigger for inbound calls |
+| Custom field | Contains | Only trigger when the transcript mentions "appointment" |
+
+Conditions prevent workflows from running on hang-ups, wrong numbers, and other non-productive calls.
+
+### Actions
+The actual work the workflow performs. Actions execute in sequence, and you can chain as many as you need.
+
+## Essential Workflow Recipes
+
+### Recipe 1: CRM Contact + Call Log
+
+**Goal:** After every qualified call, create or update the contact in your CRM and log the call details.
+
+**Setup:**
+1. Trigger: Post-call on your inbound agent
+2. Condition: Call duration > 30 seconds
+3. Action 1: Create/update contact in HubSpot (or GoHighLevel)
+   - Map caller phone number to contact
+   - Set first name and other details from the conversation
+4. Action 2: Log the call activity
+   - Attach call recording URL
+   - Include transcript summary
+   - Set call outcome (interested, not interested, follow-up needed)
+
+**Why it matters:** Your CRM always has the latest information without anyone manually entering data. Sales teams can see exactly what was discussed and take appropriate next steps.
+
+### Recipe 2: Appointment Booking
+
+**Goal:** When the AI agent books an appointment during the call, automatically create a calendar event.
+
+**Setup:**
+1. Trigger: Post-call on your booking agent
+2. Condition: Call status = completed
+3. Action 1: Create Google Calendar event
+   - Title: "Meeting with [caller name]"
+   - Duration: 30 minutes (configurable)
+   - Include call summary in event description
+4. Action 2: Send confirmation email to the caller
+   - Include date, time, and location
+   - Add calendar invite attachment
+
+**Why it matters:** No double-booking, no manual calendar entry, no forgotten appointments.
+
+### Recipe 3: Team Notifications
+
+**Goal:** Alert your team about important calls in real-time.
+
+**Setup:**
+1. Trigger: Post-call on all agents
+2. Condition: Sentiment = positive AND duration > 60 seconds
+3. Action 1: Send Slack message
+   - Channel: #new-leads
+   - Include caller name, phone, summary, and sentiment
+4. Action 2: Send email summary to the account manager
+   - Include full transcript link
+   - Include recommended follow-up actions
+
+**Why it matters:** Hot leads get immediate attention. No lead sits in a queue waiting to be reviewed.
+
+### Recipe 4: Multi-Channel Follow-Up
+
+**Goal:** After a sales call, trigger a multi-step follow-up sequence.
+
+**Setup:**
+1. Trigger: Post-call on your sales agent
+2. Condition: Call status = completed AND direction = inbound
+3. Action 1: Create contact in GoHighLevel
+4. Action 2: Add contact to nurture workflow in GoHighLevel
+5. Action 3: Send SMS thank-you message
+   - "Thanks for calling [business name]! We'll follow up within 24 hours."
+6. Action 4: Post webhook to Zapier
+   - Trigger additional automations in your existing tech stack
+
+**Why it matters:** Every caller enters a consistent follow-up process, regardless of when they call or who's available.
+
+## Building Effective Conditions
+
+The difference between a useful workflow and a noisy one is the conditions. Here are patterns that work well:
+
+**Filter out noise:**
+```
+Duration > 30 seconds (removes hang-ups and wrong numbers)
+Status = completed (removes failed calls)
+```
+
+**Target high-value calls:**
+```
+Sentiment = positive
+Duration > 120 seconds (longer calls indicate real interest)
+Direction = inbound (they called you)
+```
+
+**Route by type:**
+```
+Agent = "Sales Agent" → CRM + notification workflow
+Agent = "Support Agent" → Ticket creation workflow
+Agent = "Booking Agent" → Calendar + confirmation workflow
+```
+
+## Debugging Workflows
+
+When a workflow doesn't behave as expected, check the execution log:
+
+1. **View the run history** — see which workflows triggered and when
+2. **Check condition evaluation** — did the conditions match or filter out the call?
+3. **Review action results** — did each action succeed or fail?
+4. **Check error messages** — common issues include expired API tokens, rate limits, or missing required fields
+
+Most workflow failures come from:
+- **Expired OAuth tokens** — reconnect the integration
+- **Missing contact fields** — ensure the agent captures required information
+- **Rate limits** — space out actions or reduce trigger frequency
+- **Incorrect field mappings** — verify that workflow fields match CRM fields
+
+## Performance Tips
+
+1. **Start simple** — Begin with one trigger, one condition, and one action. Add complexity only when needed.
+2. **Use conditions aggressively** — Every unnecessary workflow run wastes API calls and can create noise.
+3. **Monitor the execution log** — Check it weekly to catch failures early.
+4. **Test with real calls** — Make test calls and verify the full chain works before going live.
+5. **Document your workflows** — When you have dozens of workflows across multiple clients, documentation saves hours of debugging.
+
+## The Bigger Picture
+
+Post-call workflows turn AI voice agents from a communication tool into a business automation platform. The call itself is just the beginning — the real value comes from what happens next.
+
+When every call automatically updates the CRM, books appointments, notifies the team, and triggers follow-up sequences, you've built a system that runs itself. That's the promise of voice AI, and workflows are how you deliver it.

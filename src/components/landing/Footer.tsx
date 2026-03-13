@@ -11,6 +11,7 @@ const productLinks = [
 ];
 
 const resourceLinks = [
+    { label: 'Blog', href: '/blog' },
     { label: 'Documentation', href: 'https://docs.buildvoiceai.com', external: true },
     { label: 'Getting Started', href: 'https://docs.buildvoiceai.com/docs/getting-started', external: true },
     { label: 'API Reference', href: 'https://docs.buildvoiceai.com/docs/reference', external: true },
