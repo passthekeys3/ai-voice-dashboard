@@ -151,7 +151,7 @@ async function handleFileUpload(
     // to prevent extension spoofing (e.g., malicious.exe with spoofed MIME)
     const hasValidMime = ALLOWED_FILE_TYPES.includes(file.type);
     const hasValidExt = /\.(pdf|docx?|txt|csv|md|tsv|json|xml)$/i.test(file.name);
-    if (!hasValidMime && !hasValidExt) {
+    if (!hasValidMime || !hasValidExt) {
         return NextResponse.json({
             error: 'Unsupported file type. Supported: PDF, DOCX, DOC, TXT, CSV, MD, TSV, JSON, XML'
         }, { status: 400 });

@@ -16,7 +16,16 @@ export async function POST(request: NextRequest) {
     try {
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
-        const { email, password, fullName, agencyName, promoCode } = bodyOrError;
+        const { email, password, fullName, agencyName, promoCode, _hp, _t } = bodyOrError;
+
+        // Honeypot field — if filled, silently reject (bots auto-fill hidden fields)
+        // Timing check — real users take at least 3 seconds to fill a signup form
+        if (_hp || (typeof _t === 'number' && _t < 3)) {
+            const reason = _hp ? 'honeypot' : 'timing';
+            console.warn(`[SIGNUP BOT BLOCKED] reason=${reason} email=${typeof email === 'string' ? email : 'unknown'} elapsed=${_t}s`);
+            // Return fake success to not tip off the bot
+            return NextResponse.json({ success: true, message: 'Please check your email to verify your account' });
+        }
 
         if (!email || !password || !fullName || !agencyName) {
             return NextResponse.json(

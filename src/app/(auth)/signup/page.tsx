@@ -24,6 +24,7 @@ export default function SignupPage() {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [formLoadedAt] = useState(() => Date.now());
     const router = useRouter();
 
     const handleSignup = async (e: React.FormEvent) => {
@@ -48,10 +49,20 @@ export default function SignupPage() {
         setLoading(true);
 
         try {
+            // Read honeypot field — if filled, it's a bot
+            const honeypot = (document.getElementById('company_website') as HTMLInputElement)?.value;
+            // Time elapsed since form loaded (bots submit in < 3 seconds)
+            const elapsed = Math.floor((Date.now() - formLoadedAt) / 1000);
+
             const response = await fetch('/api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, fullName, agencyName, ...(promoCode.trim() ? { promoCode: promoCode.trim() } : {}) }),
+                body: JSON.stringify({
+                    email, password, fullName, agencyName,
+                    ...(promoCode.trim() ? { promoCode: promoCode.trim() } : {}),
+                    ...(honeypot ? { _hp: honeypot } : {}),
+                    _t: elapsed,
+                }),
             });
 
             const data = await response.json();
@@ -152,6 +163,17 @@ export default function SignupPage() {
                 </div>
 
             <form onSubmit={handleSignup} className="space-y-5">
+                {/* Honeypot — hidden from real users, bots auto-fill it */}
+                <div aria-hidden="true" tabIndex={-1} style={{ position: 'absolute', left: '-9999px', top: '-9999px', height: 0, overflow: 'hidden' }}>
+                    <label htmlFor="company_website">Website</label>
+                    <input
+                        type="text"
+                        id="company_website"
+                        name="company_website"
+                        autoComplete="off"
+                        tabIndex={-1}
+                    />
+                </div>
                 {error && (
                     <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-md">
                         {error}
