@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
+import { decrypt } from '@/lib/crypto';
 
 // GET /api/phone-numbers/available - Search available phone numbers
 export async function GET(request: NextRequest) {
@@ -25,6 +26,11 @@ export async function GET(request: NextRequest) {
             .select('retell_api_key')
             .eq('id', user.agency.id)
             .single();
+
+        // Decrypt API keys from DB
+        if (agency) {
+            agency.retell_api_key = decrypt(agency.retell_api_key) ?? agency.retell_api_key;
+        }
 
         if (!agency?.retell_api_key) {
             return NextResponse.json({ error: 'Retell API key not configured' }, { status: 400 });

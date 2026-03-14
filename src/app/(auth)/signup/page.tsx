@@ -35,6 +35,11 @@ export default function SignupPage() {
             return;
         }
 
+        if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+            setError('Password must include uppercase, lowercase, and a number');
+            return;
+        }
+
         if (password !== confirmPassword) {
             setError('Passwords do not match');
             return;
@@ -208,8 +213,8 @@ export default function SignupPage() {
                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                     </div>
-                    <p className={`text-xs ${password.length > 0 && password.length < 8 ? 'text-red-500' : 'text-muted-foreground'}`}>
-                        Must be at least 8 characters
+                    <p className={`text-xs ${password.length > 0 && (password.length < 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) ? 'text-red-500' : 'text-muted-foreground'}`}>
+                        Min 8 characters with uppercase, lowercase, and a number
                     </p>
                 </div>
                 <div className="space-y-2">

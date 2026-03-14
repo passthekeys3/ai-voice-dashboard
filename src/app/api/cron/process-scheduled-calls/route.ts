@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { initiateCall, type CallInitiationParams } from '@/lib/calls/initiate';
 import { isWithinCallingWindow, getNextValidCallTime } from '@/lib/timezone/detector';
 import { applyExperiment } from '@/lib/experiments/apply';
+import { decrypt } from '@/lib/crypto';
 
 // This endpoint should be called by a cron job every minute
 // Example: Vercel Cron, or external service like cron-job.org
@@ -104,11 +105,12 @@ export async function POST(request: NextRequest) {
                 // Determine provider and API key
                 const provider = call.agent?.provider || 'retell';
                 const externalAgentId = call.agent?.external_id;
-                const providerApiKey = provider === 'vapi'
+                const rawKey = provider === 'vapi'
                     ? call.agent?.agencies?.vapi_api_key
                     : provider === 'bland'
                     ? call.agent?.agencies?.bland_api_key
                     : call.agent?.agencies?.retell_api_key;
+                const providerApiKey = decrypt(rawKey) ?? rawKey;
 
                 if (!providerApiKey || !externalAgentId) {
                     throw new Error(`Missing ${provider} API key or agent external ID`);

@@ -5,6 +5,7 @@ import { getProviderClient, type NormalizedAgent } from '@/lib/providers';
 import { listRetellAgents, ensureAgentWebhookConfig, REQUIRED_WEBHOOK_EVENTS } from '@/lib/providers/retell';
 import { listVapiAssistants, updateVapiAssistant } from '@/lib/providers/vapi';
 import type { VoiceProvider } from '@/types';
+import { decrypt } from '@/lib/crypto';
 const PROVIDER_API_TIMEOUT = 15_000;
 
 /** One workspace to sync: a provider + API key + optional client scope */
@@ -80,9 +81,10 @@ export async function POST(request: NextRequest) {
                 const syncEntries: SyncEntry[] = [];
                 const seenApiKeys = new Set<string>();
 
-                // Agency-level keys first
+                // Agency-level keys first (decrypt from DB)
                 for (const { field, provider } of KEY_FIELDS) {
-                    const key = agency[field];
+                    const raw = agency[field];
+                    const key = decrypt(raw) ?? raw;
                     if (key) {
                         syncEntries.push({ provider, apiKey: key, clientId: null, label: `agency ${agency.id}` });
                         seenApiKeys.add(key);
@@ -99,7 +101,8 @@ export async function POST(request: NextRequest) {
 
                 for (const clientRecord of clientsWithKeys || []) {
                     for (const { field, provider } of KEY_FIELDS) {
-                        const key = clientRecord[field];
+                        const raw = clientRecord[field];
+                        const key = decrypt(raw) ?? raw;
                         if (key && !seenApiKeys.has(key)) {
                             syncEntries.push({ provider, apiKey: key, clientId: clientRecord.id, label: `client "${clientRecord.name}"` });
                             seenApiKeys.add(key);

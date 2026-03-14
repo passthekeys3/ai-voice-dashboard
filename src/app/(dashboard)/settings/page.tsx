@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Brain } from 'lucide-react';
 import type { Agency, AgencyIntegrations } from '@/types';
 import { getTierFromPriceId } from '@/lib/billing/tiers';
+import { decrypt } from '@/lib/crypto';
 
 function BillingSkeleton() {
     return (
@@ -75,9 +76,16 @@ async function AIUsageCard({ agencyId }: { agencyId: string }) {
 
 export const metadata: Metadata = { title: 'Settings' };
 
-/** Mask a secret string for safe display: "...last4" or undefined */
+/** Mask a secret string for safe display: "...last4" or undefined.
+ *  Handles both encrypted ("enc:...") and legacy plaintext values. */
 function mask(value: string | undefined): string | undefined {
-    return value ? '...' + value.slice(-4) : undefined;
+    if (!value) return undefined;
+    try {
+        const plain = decrypt(value) || value;
+        return '...' + plain.slice(-4);
+    } catch {
+        return '...****';
+    }
 }
 
 /** Strip all raw secrets from the agency object before passing to client components */

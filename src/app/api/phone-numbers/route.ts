@@ -4,6 +4,7 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { purchaseBlandInboundNumber } from '@/lib/providers/bland';
 import { safeParseJson } from '@/lib/validation';
 import { PHONE_NUMBER_MONTHLY_COST_CENTS } from '@/lib/billing/tiers';
+import { decrypt } from '@/lib/crypto';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
@@ -108,6 +109,13 @@ export async function POST(request: NextRequest) {
             .select('retell_api_key, vapi_api_key, bland_api_key')
             .eq('id', user.agency.id)
             .single();
+
+        // Decrypt API keys from DB
+        if (agency) {
+            agency.retell_api_key = decrypt(agency.retell_api_key) ?? agency.retell_api_key;
+            agency.vapi_api_key = decrypt(agency.vapi_api_key) ?? agency.vapi_api_key;
+            agency.bland_api_key = decrypt(agency.bland_api_key) ?? agency.bland_api_key;
+        }
 
         // Determine which provider to use
         const provider = requestedProvider || (agency?.retell_api_key ? 'retell' : agency?.vapi_api_key ? 'vapi' : agency?.bland_api_key ? 'bland' : null);

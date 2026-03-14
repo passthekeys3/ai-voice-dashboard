@@ -4,6 +4,7 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { listVapiPhoneNumbers } from '@/lib/providers/vapi';
 import { listBlandPhoneNumbers } from '@/lib/providers/bland';
 import { PHONE_NUMBER_MONTHLY_COST_CENTS } from '@/lib/billing/tiers';
+import { decrypt } from '@/lib/crypto';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
@@ -27,6 +28,13 @@ export async function POST(_request: NextRequest) {
             .select('retell_api_key, vapi_api_key, bland_api_key')
             .eq('id', user.agency.id)
             .single();
+
+        // Decrypt API keys from DB
+        if (agency) {
+            agency.retell_api_key = decrypt(agency.retell_api_key) ?? agency.retell_api_key;
+            agency.vapi_api_key = decrypt(agency.vapi_api_key) ?? agency.vapi_api_key;
+            agency.bland_api_key = decrypt(agency.bland_api_key) ?? agency.bland_api_key;
+        }
 
         if (!agency?.retell_api_key && !agency?.vapi_api_key && !agency?.bland_api_key) {
             return NextResponse.json({ error: 'No API keys configured' }, { status: 400 });

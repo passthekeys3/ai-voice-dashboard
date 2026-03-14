@@ -6,6 +6,7 @@ import {
     sanitizeIntegrations,
     validateIntegrationUpdates,
 } from '@/lib/integrations/validate-integrations';
+import { encrypt } from '@/lib/crypto';
 
 export async function PATCH(request: NextRequest) {
     try {
@@ -158,10 +159,10 @@ export async function PATCH(request: NextRequest) {
         if (name !== undefined) updatePayload.name = name;
         if (branding !== undefined) updatePayload.branding = branding;
         if (calling_window !== undefined) updatePayload.calling_window = calling_window;
-        if (retell_api_key !== undefined) updatePayload.retell_api_key = retell_api_key || null;
-        if (vapi_api_key !== undefined) updatePayload.vapi_api_key = vapi_api_key || null;
-        if (vapi_public_key !== undefined) updatePayload.vapi_public_key = vapi_public_key || null;
-        if (bland_api_key !== undefined) updatePayload.bland_api_key = bland_api_key || null;
+        if (retell_api_key !== undefined) updatePayload.retell_api_key = encrypt(retell_api_key) ?? null;
+        if (vapi_api_key !== undefined) updatePayload.vapi_api_key = encrypt(vapi_api_key) ?? null;
+        if (vapi_public_key !== undefined) updatePayload.vapi_public_key = encrypt(vapi_public_key) ?? null;
+        if (bland_api_key !== undefined) updatePayload.bland_api_key = encrypt(bland_api_key) ?? null;
 
         // Deep merge integrations to prevent overwriting sibling/nested keys
         if (integrations !== undefined) {

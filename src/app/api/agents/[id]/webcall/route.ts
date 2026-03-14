@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 import { isValidUuid } from '@/lib/validation';
+import { decrypt } from '@/lib/crypto';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
@@ -120,7 +121,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 .eq('id', user.agency.id)
                 .single();
 
-            if (!agency?.vapi_public_key) {
+            const vapiPublicKey = decrypt(agency?.vapi_public_key) ?? agency?.vapi_public_key;
+            if (!vapiPublicKey) {
                 return NextResponse.json({
                     error: 'Vapi Public Key is required for test calls. Add it in Settings under "Vapi Public Key".'
                 }, { status: 400 });
@@ -131,7 +133,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({
                 data: {
                     provider: 'vapi',
-                    vapi_public_key: agency.vapi_public_key,
+                    vapi_public_key: vapiPublicKey,
                     assistant_id: agent.external_id,
                 }
             });

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { listBlandActiveCalls } from '@/lib/providers/bland';
 import { listVapiCalls } from '@/lib/providers/vapi';
+import { decrypt } from '@/lib/crypto';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
@@ -16,12 +17,18 @@ export async function GET(_request: NextRequest) {
 
         const supabase = await createClient();
 
-        // Get agency's API keys for all providers
-        const { data: agency } = await supabase
+        // Get agency's API keys for all providers (decrypt from DB)
+        const { data: agencyRaw } = await supabase
             .from('agencies')
             .select('retell_api_key, vapi_api_key, bland_api_key')
             .eq('id', user.agency.id)
             .single();
+
+        const agency = agencyRaw ? {
+            retell_api_key: decrypt(agencyRaw.retell_api_key) ?? agencyRaw.retell_api_key,
+            vapi_api_key: decrypt(agencyRaw.vapi_api_key) ?? agencyRaw.vapi_api_key,
+            bland_api_key: decrypt(agencyRaw.bland_api_key) ?? agencyRaw.bland_api_key,
+        } : null;
 
         if (!agency?.retell_api_key && !agency?.vapi_api_key && !agency?.bland_api_key) {
             return NextResponse.json({ data: [] });

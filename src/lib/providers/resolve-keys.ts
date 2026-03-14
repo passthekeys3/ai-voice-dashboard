@@ -8,6 +8,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { VoiceProvider } from '@/types';
+import { decrypt } from '@/lib/crypto';
 
 export type KeySource = 'client' | 'agency' | 'platform' | null;
 
@@ -71,8 +72,9 @@ export async function resolveProviderApiKeys(
         agencyKey: string | null | undefined,
         platformKey: string | null,
     ): { key: string | null; source: KeySource } => {
-        if (clientKey) return { key: clientKey, source: 'client' };
-        if (agencyKey) return { key: agencyKey, source: 'agency' };
+        // Decrypt handles both encrypted ("enc:...") and legacy plaintext values
+        if (clientKey) return { key: decrypt(clientKey), source: 'client' };
+        if (agencyKey) return { key: decrypt(agencyKey), source: 'agency' };
         if (platformKey) return { key: platformKey, source: 'platform' };
         return { key: null, source: null };
     };
@@ -118,4 +120,25 @@ export function autoSelectProvider(
     if (keys.vapi_api_key) return { provider: 'vapi', apiKey: keys.vapi_api_key };
     if (keys.bland_api_key) return { provider: 'bland', apiKey: keys.bland_api_key };
     return null;
+}
+
+/**
+ * Build a ResolvedApiKeys object from raw agency DB fields, decrypting as needed.
+ * Use this in fallback paths that bypass resolveProviderApiKeys().
+ */
+export function decryptAgencyKeys(agency: {
+    retell_api_key?: string | null;
+    vapi_api_key?: string | null;
+    bland_api_key?: string | null;
+}): ResolvedApiKeys {
+    return {
+        retell_api_key: decrypt(agency.retell_api_key) ?? null,
+        vapi_api_key: decrypt(agency.vapi_api_key) ?? null,
+        bland_api_key: decrypt(agency.bland_api_key) ?? null,
+        source: {
+            retell: agency.retell_api_key ? 'agency' : null,
+            vapi: agency.vapi_api_key ? 'agency' : null,
+            bland: agency.bland_api_key ? 'agency' : null,
+        },
+    };
 }

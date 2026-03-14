@@ -4,6 +4,7 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getProviderClient, type NormalizedAgent, type NormalizedCall } from '@/lib/providers';
 import { listRetellAgents, ensureAgentWebhookConfig, REQUIRED_WEBHOOK_EVENTS } from '@/lib/providers/retell';
 import type { VoiceProvider } from '@/types';
+import { decrypt } from '@/lib/crypto';
 
 /** One workspace to sync: a provider + API key + optional client scope */
 interface SyncEntry {
@@ -48,9 +49,10 @@ export async function POST() {
             { field: 'bland_api_key', provider: 'bland' },
         ];
 
-        // Agency-level keys
+        // Agency-level keys (decrypt from DB)
         for (const { field, provider } of keyFields) {
-            const key = agency[field];
+            const raw = agency[field];
+            const key = decrypt(raw) ?? raw;
             if (key) {
                 syncEntries.push({ provider, apiKey: key, clientId: null, label: 'agency' });
                 seenApiKeys.add(key);
@@ -66,7 +68,8 @@ export async function POST() {
 
         for (const clientRecord of clientsWithKeys || []) {
             for (const { field, provider } of keyFields) {
-                const key = clientRecord[field];
+                const raw = clientRecord[field];
+                const key = decrypt(raw) ?? raw;
                 if (key && !seenApiKeys.has(key)) {
                     syncEntries.push({ provider, apiKey: key, clientId: clientRecord.id, label: clientRecord.name });
                     seenApiKeys.add(key);

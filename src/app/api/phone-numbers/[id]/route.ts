@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { safeParseJson, isValidUuid } from '@/lib/validation';
+import { decrypt } from '@/lib/crypto';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -121,6 +122,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                 .select('retell_api_key, vapi_api_key, bland_api_key')
                 .eq('id', user.agency.id)
                 .single();
+
+            // Decrypt API keys from DB
+            if (agency) {
+                agency.retell_api_key = decrypt(agency.retell_api_key) ?? agency.retell_api_key;
+                agency.vapi_api_key = decrypt(agency.vapi_api_key) ?? agency.vapi_api_key;
+                agency.bland_api_key = decrypt(agency.bland_api_key) ?? agency.bland_api_key;
+            }
 
             // Helper: resolve agent's external_id by our internal ID
             const resolveAgentExternalId = async (agentId: string | null | undefined): Promise<string | null> => {
@@ -260,6 +268,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             .select('retell_api_key, vapi_api_key, bland_api_key')
             .eq('id', user.agency.id)
             .single();
+
+        // Decrypt API keys from DB
+        if (agency) {
+            agency.retell_api_key = decrypt(agency.retell_api_key) ?? agency.retell_api_key;
+            agency.vapi_api_key = decrypt(agency.vapi_api_key) ?? agency.vapi_api_key;
+            agency.bland_api_key = decrypt(agency.bland_api_key) ?? agency.bland_api_key;
+        }
 
         if (phoneNumber.external_id) {
             try {

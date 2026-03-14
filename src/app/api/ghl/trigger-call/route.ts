@@ -16,7 +16,7 @@ import { initiateCall, type CallInitiationParams } from '@/lib/calls/initiate';
 import { detectTimezone, isWithinCallingWindow, getNextValidCallTime } from '@/lib/timezone/detector';
 import { verifyGHLTriggerSignature, validateGHLTriggerPayload } from './validate';
 import { applyExperiment } from '@/lib/experiments/apply';
-import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
+import { resolveProviderApiKeys, getProviderKey, decryptAgencyKeys } from '@/lib/providers/resolve-keys';
 import { checkFeatureAccess } from '@/lib/billing/tiers';
 
 export async function POST(request: NextRequest) {
@@ -182,12 +182,7 @@ export async function POST(request: NextRequest) {
         // Resolve provider API key (client key → agency key fallback)
         const resolvedKeys = agentRecord.client_id
             ? await resolveProviderApiKeys(supabase, agency.id, agentRecord.client_id)
-            : {
-                retell_api_key: agency.retell_api_key || null,
-                vapi_api_key: agency.vapi_api_key || null,
-                bland_api_key: agency.bland_api_key || null,
-                source: { retell: 'agency' as const, vapi: 'agency' as const, bland: 'agency' as const },
-            };
+            : decryptAgencyKeys(agency);
         const providerApiKey = getProviderKey(resolvedKeys, agentRecord.provider as 'retell' | 'vapi' | 'bland');
 
         if (!providerApiKey) {

@@ -74,8 +74,9 @@ export async function POST(request: NextRequest) {
         }
 
         // Create agency
-        const baseSlug = sanitizedAgencyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-        const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 8)}`;
+        const baseSlug = sanitizedAgencyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'agency';
+        const generateSlug = () => `${baseSlug}-${Math.random().toString(36).slice(2, 10)}`;
+        const slug = generateSlug();
         const trialDays = parseInt(process.env.TRIAL_DAYS || '7', 10);
 
         let trialEnd: Date;
@@ -105,14 +106,28 @@ export async function POST(request: NextRequest) {
             agencyInsert.subscription_price_id = BETA_PRICE_ID;
         }
 
-        const { data: agency, error: agencyError } = await supabase
-            .from('agencies')
-            .insert(agencyInsert)
-            .select()
-            .single();
+        // Retry with new slug on unique constraint violation
+        let agency: Record<string, unknown> | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+            if (attempt > 0) agencyInsert.slug = generateSlug();
+            const { data, error: agencyError } = await supabase
+                .from('agencies')
+                .insert(agencyInsert)
+                .select()
+                .single();
 
-        if (agencyError) {
+            if (!agencyError) {
+                agency = data;
+                break;
+            }
+
+            if (agencyError.code === '23505' && attempt < 2) continue;
+
             console.error('[COMPLETE-SIGNUP] Agency creation failed:', agencyError.code);
+            return NextResponse.json({ error: 'Failed to create agency' }, { status: 500 });
+        }
+
+        if (!agency) {
             return NextResponse.json({ error: 'Failed to create agency' }, { status: 500 });
         }
 

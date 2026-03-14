@@ -15,6 +15,7 @@ import {
 } from '@/lib/api/response';
 import { getStripe } from '@/lib/stripe';
 import { isValidUuid } from '@/lib/validation';
+import { encrypt, decrypt } from '@/lib/crypto';
 
 // Admin client for auth user deletion (same pattern as invite route)
 const supabaseAdmin = createSupabaseAdmin(
@@ -63,7 +64,8 @@ export const GET = withErrorHandling(async (
     const API_KEY_FIELDS = ['retell_api_key', 'vapi_api_key', 'bland_api_key'] as const;
     for (const k of API_KEY_FIELDS) {
         if (masked[k]) {
-            masked[k] = '...' + (masked[k] as string).slice(-4);
+            const plain = decrypt(masked[k] as string) ?? (masked[k] as string);
+            masked[k] = '...' + plain.slice(-4);
         }
     }
 
@@ -118,7 +120,7 @@ export const PATCH = withErrorHandling(async (
                 if (!API_KEY_PATTERN.test(body[keyField])) {
                     return validationError(`${keyField} has an invalid format`);
                 }
-                updateData[keyField] = body[keyField];
+                updateData[keyField] = encrypt(body[keyField]) ?? body[keyField];
             }
         }
     }
@@ -144,7 +146,8 @@ export const PATCH = withErrorHandling(async (
     const KEY_FIELDS = ['retell_api_key', 'vapi_api_key', 'bland_api_key'] as const;
     for (const k of KEY_FIELDS) {
         if (masked[k]) {
-            masked[k] = '...' + (masked[k] as string).slice(-4);
+            const plain = decrypt(masked[k] as string) ?? (masked[k] as string);
+            masked[k] = '...' + plain.slice(-4);
         }
     }
 

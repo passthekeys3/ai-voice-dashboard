@@ -65,6 +65,28 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Password complexity: require at least one uppercase, one lowercase, one number
+        if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+            return NextResponse.json(
+                { error: 'Password must include uppercase, lowercase, and a number' },
+                { status: 400 }
+            );
+        }
+
+        // Validate promo code BEFORE creating auth user to avoid cleanup race conditions
+        const betaPromoCode = process.env.BETA_PROMO_CODE;
+        const betaEndDateStr = process.env.BETA_TRIAL_END_DATE; // e.g. "2026-04-30"
+        const isBeta = !!(
+            promoCode &&
+            typeof promoCode === 'string' &&
+            betaPromoCode &&
+            promoCode.trim().toLowerCase() === betaPromoCode.trim().toLowerCase()
+        );
+
+        if (promoCode && !isBeta) {
+            return NextResponse.json({ error: 'Invalid promo code' }, { status: 400 });
+        }
+
         // Create user with admin client
         // email_confirm: true = auto-confirmed (no verification email needed)
         // email_confirm: false = unconfirmed (must verify via email before login)
@@ -93,25 +115,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
         }
 
-        // Determine if this is a beta signup via promo code
-        const betaPromoCode = process.env.BETA_PROMO_CODE;
-        const betaEndDateStr = process.env.BETA_TRIAL_END_DATE; // e.g. "2026-04-30"
-        const isBeta = !!(
-            promoCode &&
-            typeof promoCode === 'string' &&
-            betaPromoCode &&
-            promoCode.trim().toLowerCase() === betaPromoCode.trim().toLowerCase()
-        );
-
-        if (promoCode && !isBeta) {
-            // Cleanup: delete the auth user since signup won't complete
-            await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-            return NextResponse.json({ error: 'Invalid promo code' }, { status: 400 });
-        }
-
         // Create agency with free trial (7 days standard, or beta end date for beta users)
-        const baseSlug = sanitizedAgencyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-        const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 8)}`;
+        const baseSlug = sanitizedAgencyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'agency';
+        const generateSlug = () => `${baseSlug}-${Math.random().toString(36).slice(2, 10)}`;
+        const slug = generateSlug();
         const trialDays = parseInt(process.env.TRIAL_DAYS || '7', 10);
 
         let trialEnd: Date;
@@ -141,19 +148,35 @@ export async function POST(request: NextRequest) {
             agencyInsert.subscription_price_id = BETA_PRICE_ID;
         }
 
-        const { data: agency, error: agencyError } = await supabaseAdmin
-            .from('agencies')
-            .insert(agencyInsert)
-            .select()
-            .single();
+        // Retry with new slug on unique constraint violation
+        let agency: Record<string, unknown> | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+            if (attempt > 0) agencyInsert.slug = generateSlug();
+            const { data, error: agencyError } = await supabaseAdmin
+                .from('agencies')
+                .insert(agencyInsert)
+                .select()
+                .single();
 
-        if (agencyError) {
+            if (!agencyError) {
+                agency = data;
+                break;
+            }
+
+            // Retry on unique constraint violation (slug collision)
+            if (agencyError.code === '23505' && attempt < 2) continue;
+
             // Cleanup: delete the user if agency creation fails
             await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
             return NextResponse.json(
                 { error: 'Failed to create agency' },
                 { status: 500 }
             );
+        }
+
+        if (!agency) {
+            await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+            return NextResponse.json({ error: 'Failed to create agency' }, { status: 500 });
         }
 
         // Create profile
