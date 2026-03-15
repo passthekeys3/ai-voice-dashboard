@@ -40,7 +40,7 @@ export default async function LiveCallPage({
     const { data: call } = await supabase
         .from('calls')
         .select('id')
-        .eq('call_id', callId)
+        .eq('external_id', callId)
         .in('agent_id', agentIds.map(a => a.id))
         .single();
 

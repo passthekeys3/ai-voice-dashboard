@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, isAgencyAdmin, isClientUser } from '@/lib/auth';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 import { getBlandCall } from '@/lib/providers/bland';
 import { isValidUuid } from '@/lib/validation';
@@ -24,6 +24,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
         }
         const providerHint = request.nextUrl.searchParams.get('provider') || 'retell';
+        if (!['retell', 'vapi', 'bland'].includes(providerHint)) {
+            return NextResponse.json({ error: 'Invalid provider. Must be retell, vapi, or bland.' }, { status: 400 });
+        }
         const supabase = await createClient();
 
         // Try DB lookup first (covers all providers, has live transcript from webhook)
@@ -34,9 +37,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             .single();
 
         if (callRecord) {
-            // Verify ownership
+            // Verify ownership — agency scoping
             const agentData = callRecord.agents as unknown as { name: string; agency_id: string; client_id: string | null };
             if (agentData.agency_id !== user.agency.id) {
+                return NextResponse.json({ error: 'Call not found' }, { status: 404 });
+            }
+
+            // Client scoping — client users can only see calls for their own agents
+            if (isClientUser(user) && user.client) {
+                if (agentData.client_id !== user.client.id) {
+                    return NextResponse.json({ error: 'Call not found' }, { status: 404 });
+                }
+            } else if (isClientUser(user) && !user.client) {
                 return NextResponse.json({ error: 'Call not found' }, { status: 404 });
             }
 

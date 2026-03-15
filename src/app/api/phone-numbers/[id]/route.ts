@@ -91,10 +91,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             return !!agent;
         };
 
-        if (body.nickname !== undefined) updateData.nickname = body.nickname;
+        if (body.nickname !== undefined) {
+            if (typeof body.nickname !== 'string' || body.nickname.length > 100) {
+                return NextResponse.json({ error: 'Nickname must be a string under 100 characters' }, { status: 400 });
+            }
+            updateData.nickname = body.nickname;
+        }
         // Support both old agent_id and new inbound/outbound agent IDs
         // Validate agent ownership before allowing assignment
         if (body.agent_id !== undefined) {
+            if (body.agent_id && !isValidUuid(body.agent_id)) {
+                return NextResponse.json({ error: 'Invalid agent_id format' }, { status: 400 });
+            }
             if (body.agent_id && !(await validateAgentOwnership(body.agent_id))) {
                 return NextResponse.json({ error: 'Agent not found in your agency' }, { status: 400 });
             }
@@ -102,6 +110,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             updateData.inbound_agent_id = body.agent_id || null;
         }
         if (body.inbound_agent_id !== undefined) {
+            if (body.inbound_agent_id && !isValidUuid(body.inbound_agent_id)) {
+                return NextResponse.json({ error: 'Invalid inbound_agent_id format' }, { status: 400 });
+            }
             if (body.inbound_agent_id && !(await validateAgentOwnership(body.inbound_agent_id))) {
                 return NextResponse.json({ error: 'Inbound agent not found in your agency' }, { status: 400 });
             }
@@ -109,6 +120,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             updateData.agent_id = body.inbound_agent_id || null; // Keep backwards compat
         }
         if (body.outbound_agent_id !== undefined) {
+            if (body.outbound_agent_id && !isValidUuid(body.outbound_agent_id)) {
+                return NextResponse.json({ error: 'Invalid outbound_agent_id format' }, { status: 400 });
+            }
             if (body.outbound_agent_id && !(await validateAgentOwnership(body.outbound_agent_id))) {
                 return NextResponse.json({ error: 'Outbound agent not found in your agency' }, { status: 400 });
             }

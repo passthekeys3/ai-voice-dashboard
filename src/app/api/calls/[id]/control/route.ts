@@ -28,6 +28,7 @@ function isValidVapiControlUrl(url: string): boolean {
     try {
         const parsed = new URL(url);
         return parsed.protocol === 'https:' &&
+            (parsed.port === '' || parsed.port === '443') &&
             (parsed.hostname === 'vapi.ai' || parsed.hostname.endsWith('.vapi.ai'));
     } catch {
         return false;
