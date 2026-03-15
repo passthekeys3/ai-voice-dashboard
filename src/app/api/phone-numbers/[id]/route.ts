@@ -313,6 +313,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
                         signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                     });
                     if (!deleteRes.ok) console.error('Bland phone delete failed:', deleteRes.status);
+                } else {
+                    console.warn(`Phone number ${id} has unknown provider "${phoneNumber.provider}" or missing API key — skipping provider release`);
                 }
             } catch (providerErr) {
                 console.error('Provider phone delete error:', providerErr instanceof Error ? providerErr.message : 'Unknown error');
