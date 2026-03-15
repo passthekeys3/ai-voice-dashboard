@@ -4,7 +4,7 @@ import { executeWorkflows } from '@/lib/workflows/executor';
 import { broadcastCallUpdate } from '@/lib/realtime/broadcast';
 import { detectTimezone } from '@/lib/timezone/detector';
 import { accumulateUsage } from '@/lib/billing/usage';
-import { calculateCallScore } from '@/lib/scoring/call-score';
+import { calculateCallScore, inferBasicSentiment } from '@/lib/scoring/call-score';
 import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-analyzer';
 import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
 import { resolveIntegrations, createTokenRefreshCallback } from '@/lib/integrations/resolve';
@@ -182,15 +182,6 @@ export async function POST(request: NextRequest) {
         // Detect voicemail calls — Bland provides answered_by: 'human' | 'voicemail' | null
         const isVoicemail = payload.answered_by === 'voicemail';
 
-        // Calculate call quality score (voicemail = 0, not a meaningful interaction)
-        const callScore = status === 'completed'
-            ? (isVoicemail ? 0 : calculateCallScore({
-                sentiment: undefined,
-                durationSeconds,
-                status,
-            }))
-            : null;
-
         // Build timestamps
         const startedAt = payload.started_at || payload.created_at || new Date().toISOString();
         const endedAt = payload.end_at || null;
@@ -211,6 +202,19 @@ export async function POST(request: NextRequest) {
             transcript = transcript.slice(0, MAX_TRANSCRIPT_LENGTH);
         }
 
+        // Infer basic sentiment from transcript for initial scoring
+        // (AI analysis will refine this later if enabled)
+        const inferredSentiment = isVoicemail ? 'neutral' : inferBasicSentiment(transcript);
+
+        // Calculate call quality score (voicemail = 0, not a meaningful interaction)
+        const callScore = status === 'completed'
+            ? (isVoicemail ? 0 : calculateCallScore({
+                sentiment: inferredSentiment,
+                durationSeconds,
+                status,
+            }))
+            : null;
+
         // Upsert call
         const { error } = await supabase
             .from('calls')
@@ -229,7 +233,7 @@ export async function POST(request: NextRequest) {
                     transcript,
                     audio_url: payload.recording_url,
                     summary: payload.summary,
-                    sentiment: isVoicemail ? 'neutral' : null,
+                    sentiment: inferredSentiment || null,
                     call_score: callScore,
                     started_at: startedAt,
                     ended_at: endedAt,
@@ -271,6 +275,13 @@ export async function POST(request: NextRequest) {
 
                     const analysis = await analyzeCallTranscript(transcript, agent.name);
                     if (analysis) {
+                        // Fetch current metadata to avoid overwriting enriched fields
+                        const { data: currentCall } = await supabase
+                            .from('calls')
+                            .select('metadata')
+                            .eq('external_id', payload.call_id)
+                            .single();
+
                         const { error: updateError } = await supabase
                             .from('calls')
                             .update({
@@ -280,9 +291,7 @@ export async function POST(request: NextRequest) {
                                 topics: analysis.topics,
                                 objections: analysis.objections,
                                 metadata: {
-                                    ...(payload.variables || {}),
-                                    ...(payload.metadata || {}),
-                                    answered_by: payload.answered_by,
+                                    ...((currentCall?.metadata as Record<string, unknown>) || {}),
                                     ai_analysis: {
                                         sentiment_score: analysis.sentiment_score,
                                         action_items: analysis.action_items,

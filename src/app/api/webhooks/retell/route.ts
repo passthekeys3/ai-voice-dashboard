@@ -288,16 +288,21 @@ export async function POST(request: NextRequest) {
 
                     const analysis = await analyzeCallTranscript(callTranscript, agent.name);
                     if (analysis) {
+                        // Fetch current metadata to avoid overwriting enriched fields
+                        const { data: currentCall } = await supabase
+                            .from('calls')
+                            .select('metadata')
+                            .eq('external_id', payload.call.call_id)
+                            .single();
+
                         // Update the call record with AI-enriched fields
-                        // Use only columns guaranteed to exist (call_score, topics, objections may not be migrated yet)
                         const { error: updateError } = await supabase
                             .from('calls')
                             .update({
                                 sentiment: analysis.sentiment,
                                 summary: analysis.summary,
                                 metadata: {
-                                    ...(payload.call.metadata || {}),
-                                    ...(payload.call.call_cost?.product_costs ? { cost_breakdown: payload.call.call_cost.product_costs } : {}),
+                                    ...((currentCall?.metadata as Record<string, unknown>) || {}),
                                     ai_analysis: {
                                         sentiment_score: analysis.sentiment_score,
                                         action_items: analysis.action_items,
