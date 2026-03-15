@@ -157,9 +157,13 @@ function parseEvaluationResponse(
 
         // If LLM missed some criteria, add them as unevaluated
         for (const expected of expectedCriteria) {
-            const found = criteriaResults.find(cr =>
-                cr.criterion.toLowerCase().includes(expected.criterion.toLowerCase().slice(0, 30))
-            );
+            const expectedLower = expected.criterion.toLowerCase();
+            const found = criteriaResults.find(cr => {
+                const crLower = cr.criterion.toLowerCase();
+                // Check both directions for substring match (handles LLM rephrasing)
+                return crLower.includes(expectedLower.slice(0, 40))
+                    || expectedLower.includes(crLower.slice(0, 40));
+            });
             if (!found) {
                 criteriaResults.push({
                     criterion: expected.criterion,

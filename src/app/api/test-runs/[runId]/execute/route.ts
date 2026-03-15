@@ -101,24 +101,34 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                         sendEvent({ type: 'done' });
                         controller.close();
                     })
-                    .catch((err) => {
+                    .catch(async (err) => {
                         console.error('Test run execution error:', err instanceof Error ? err.message : 'Unknown error');
                         sendEvent({
                             type: 'error',
                             message: err instanceof Error ? err.message : 'Execution failed',
                         });
 
+                        // Mark any remaining pending results as errored
+                        await supabase
+                            .from('test_results')
+                            .update({
+                                status: 'errored',
+                                error_message: 'Run failed before this case could execute',
+                                completed_at: new Date().toISOString(),
+                            })
+                            .eq('test_run_id', runId)
+                            .eq('status', 'pending');
+
                         // Mark run as failed
-                        supabase
+                        await supabase
                             .from('test_runs')
                             .update({
                                 status: 'failed',
                                 completed_at: new Date().toISOString(),
                             })
-                            .eq('id', runId)
-                            .then(() => {
-                                controller.close();
-                            });
+                            .eq('id', runId);
+
+                        controller.close();
                     });
             },
         });

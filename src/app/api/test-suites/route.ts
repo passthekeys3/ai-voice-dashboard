@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { checkFeatureAccess } from '@/lib/billing/tiers';
+import { decrypt } from '@/lib/crypto';
 import { getAgentPrompt } from '@/lib/testing/get-agent-prompt';
 import { safeParseJson } from '@/lib/validation';
 
@@ -127,11 +128,13 @@ export async function POST(request: NextRequest) {
                 .eq('id', user.agency.id)
                 .single();
 
-            const apiKey = agent.provider === 'retell'
-                ? agency?.retell_api_key
-                : agent.provider === 'bland'
-                ? agency?.bland_api_key
-                : agency?.vapi_api_key;
+            const apiKey = decrypt(
+                agent.provider === 'retell'
+                    ? agency?.retell_api_key
+                    : agent.provider === 'bland'
+                    ? agency?.bland_api_key
+                    : agency?.vapi_api_key
+            );
 
             if (apiKey && agent.config?.external_id) {
                 const result = await getAgentPrompt({

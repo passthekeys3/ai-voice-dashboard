@@ -10,10 +10,11 @@ import { simulateConversation } from './simulator';
 import { evaluateConversation, determinePassFail } from './evaluator';
 import type { TestCase, TestPersona, TestProgressUpdate } from '@/types';
 
-// Haiku pricing (per million tokens) — for cost estimation
-// https://docs.anthropic.com/en/docs/about-claude/models — Claude Haiku
-const HAIKU_INPUT_PRICE_PER_M = 1.0;
-const HAIKU_OUTPUT_PRICE_PER_M = 5.0;
+// Claude pricing (per million tokens) — for cost estimation
+// Simulator uses Haiku, Evaluator uses Sonnet — blended rate approximation
+// https://docs.anthropic.com/en/docs/about-claude/models
+const BLENDED_INPUT_PRICE_PER_M = 2.0;   // ~70% Haiku ($1) + ~30% Sonnet ($3)
+const BLENDED_OUTPUT_PRICE_PER_M = 10.0;  // ~70% Haiku ($5) + ~30% Sonnet ($15)
 
 const MAX_CONCURRENCY = 3;
 const PER_CASE_TIMEOUT_MS = 60_000; // 60 seconds per test case
@@ -207,8 +208,8 @@ export async function executeTestRun(params: RunParams): Promise<void> {
     // Compute aggregate stats
     const avgScore = scoredCount > 0 ? Math.round((totalScore / scoredCount) * 100) / 100 : null;
     const estimatedCostCents = Math.ceil(
-        (totalInputTokens * HAIKU_INPUT_PRICE_PER_M / 1_000_000 +
-         totalOutputTokens * HAIKU_OUTPUT_PRICE_PER_M / 1_000_000) * 100
+        (totalInputTokens * BLENDED_INPUT_PRICE_PER_M / 1_000_000 +
+         totalOutputTokens * BLENDED_OUTPUT_PRICE_PER_M / 1_000_000) * 100
     );
     const durationMs = Date.now() - startTime;
 
