@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         // ---- Tier gate: Agent Testing requires Agency ----
-        const getRunTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        const getRunTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing', user.agency.beta_ends_at);
         if (getRunTierError) {
             return NextResponse.json({ error: getRunTierError }, { status: 403 });
         }
@@ -87,7 +87,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // ---- Tier gate: Agent Testing requires Agency ----
-        const patchRunTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        const patchRunTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing', user.agency.beta_ends_at);
         if (patchRunTierError) {
             return NextResponse.json({ error: patchRunTierError }, { status: 403 });
         }

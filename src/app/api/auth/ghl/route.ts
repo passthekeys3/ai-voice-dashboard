@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
         }
 
         // ---- Tier gate: CRM integrations require Growth+ ----
-        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations');
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations', user.agency.beta_ends_at);
         if (tierError) {
             return NextResponse.json({ error: tierError }, { status: 403 });
         }

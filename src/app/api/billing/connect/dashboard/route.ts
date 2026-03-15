@@ -18,7 +18,7 @@ export async function POST() {
         }
 
         // ---- Tier gate: Stripe Connect requires Growth+ ----
-        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'stripe_connect');
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'stripe_connect', user.agency.beta_ends_at);
         if (tierError) {
             return NextResponse.json({ error: tierError }, { status: 403 });
         }

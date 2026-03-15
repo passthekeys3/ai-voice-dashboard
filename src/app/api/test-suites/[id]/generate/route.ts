@@ -24,7 +24,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         // ---- Tier gate: Agent Testing requires Agency ----
-        const genTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        const genTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing', user.agency.beta_ends_at);
         if (genTierError) {
             return NextResponse.json({ error: genTierError }, { status: 403 });
         }

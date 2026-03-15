@@ -56,10 +56,29 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
         .single();
 
     if (agencyError || !agency) {
-        // Try to get agency_id from subscription metadata
+        // Fallback: use agency_id from subscription metadata (set by our checkout code).
+        // This handles the first subscription event before stripe_customer_id is stored.
+        // Safe because Stripe webhook signatures prevent external spoofing of metadata.
         const agencyId = subscription.metadata?.agency_id;
         if (!agencyId) {
             console.error(`No agency found for Stripe customer ${customerId}`);
+            return;
+        }
+
+        // Defense-in-depth: verify the target agency doesn't already belong to a different Stripe customer
+        const { data: targetAgency } = await supabase
+            .from('agencies')
+            .select('id, stripe_customer_id')
+            .eq('id', agencyId)
+            .single();
+
+        if (!targetAgency) {
+            console.error(`Agency ${agencyId} from subscription metadata not found`);
+            return;
+        }
+
+        if (targetAgency.stripe_customer_id && targetAgency.stripe_customer_id !== customerId) {
+            console.error(`SECURITY: Agency ${agencyId} already has stripe_customer_id ${targetAgency.stripe_customer_id}, refusing to overwrite with ${customerId}`);
             return;
         }
 

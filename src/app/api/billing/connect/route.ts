@@ -15,7 +15,7 @@ export async function GET() {
         }
 
         // ---- Tier gate: Stripe Connect requires Growth+ ----
-        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'stripe_connect');
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'stripe_connect', user.agency.beta_ends_at);
         if (tierError) {
             return NextResponse.json({ error: tierError }, { status: 403 });
         }
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         }
 
         // ---- Tier gate: Stripe Connect requires Growth+ ----
-        const postTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'stripe_connect');
+        const postTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'stripe_connect', user.agency.beta_ends_at);
         if (postTierError) {
             return NextResponse.json({ error: postTierError }, { status: 403 });
         }
@@ -192,7 +192,7 @@ export async function PATCH(request: NextRequest) {
         }
 
         // ---- Tier gate: Stripe Connect requires Growth+ ----
-        const patchTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'stripe_connect');
+        const patchTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'stripe_connect', user.agency.beta_ends_at);
         if (patchTierError) {
             return NextResponse.json({ error: patchTierError }, { status: 403 });
         }

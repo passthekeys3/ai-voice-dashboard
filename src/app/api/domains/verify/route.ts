@@ -93,7 +93,7 @@ export async function POST() {
         }
 
         // ---- Tier gate: Custom domains require Growth+ ----
-        const postTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'white_label');
+        const postTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'white_label', user.agency.beta_ends_at);
         if (postTierError) {
             return NextResponse.json({ error: postTierError }, { status: 403 });
         }
@@ -218,7 +218,7 @@ export async function GET() {
         }
 
         // ---- Tier gate: Custom domains require Growth+ ----
-        const getTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'white_label');
+        const getTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'white_label', user.agency.beta_ends_at);
         if (getTierError) {
             return NextResponse.json({ error: getTierError }, { status: 403 });
         }

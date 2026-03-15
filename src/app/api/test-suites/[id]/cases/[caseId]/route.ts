@@ -21,7 +21,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // ---- Tier gate: Agent Testing requires Agency ----
-        const patchCaseTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        const patchCaseTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing', user.agency.beta_ends_at);
         if (patchCaseTierError) {
             return NextResponse.json({ error: patchCaseTierError }, { status: 403 });
         }
@@ -134,7 +134,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         }
 
         // ---- Tier gate: Agent Testing requires Agency ----
-        const deleteCaseTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        const deleteCaseTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing', user.agency.beta_ends_at);
         if (deleteCaseTierError) {
             return NextResponse.json({ error: deleteCaseTierError }, { status: 403 });
         }

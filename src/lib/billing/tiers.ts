@@ -76,13 +76,25 @@ const ACTIVE_STATUSES = new Set(['active', 'trialing']);
  * Validates both the subscription tier AND the subscription status
  * (blocks past_due, canceled, incomplete, etc.).
  *
+ * For beta agencies (`subscription_price_id === 'beta_agency'`),
+ * also checks that `betaEndsAt` hasn't passed. Expired betas
+ * are denied access to all tier-gated features.
+ *
  * @returns `null` if access is granted, or an error message string if denied.
  */
 export function checkFeatureAccess(
     subscriptionPriceId: string | null | undefined,
     subscriptionStatus: string | null | undefined,
     feature: TierFeature,
+    betaEndsAt?: string | null,
 ): string | null {
+    // Beta expiry check — deny access if trial period has ended
+    if (subscriptionPriceId === BETA_PRICE_ID && betaEndsAt) {
+        if (new Date(betaEndsAt) < new Date()) {
+            return 'Your beta trial has expired. Please subscribe to a paid plan to continue using this feature.';
+        }
+    }
+
     const tierInfo = getTierFromPriceId(subscriptionPriceId || '');
     if (!tierInfo || !hasFeature(tierInfo.tier, feature)) {
         return tierGateError(feature);

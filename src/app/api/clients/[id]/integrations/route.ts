@@ -34,7 +34,7 @@ export async function GET(
         }
 
         // Tier gate: CRM integrations require Growth+
-        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations');
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations', user.agency.beta_ends_at);
         if (tierError) {
             return NextResponse.json({ error: tierError }, { status: 403 });
         }
@@ -91,7 +91,7 @@ export async function PATCH(
         }
 
         // Tier gate: CRM integrations require Growth+
-        const patchTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations');
+        const patchTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations', user.agency.beta_ends_at);
         if (patchTierError) {
             return NextResponse.json({ error: patchTierError }, { status: 403 });
         }
@@ -199,7 +199,7 @@ export async function DELETE(
         }
 
         // Tier gate: CRM integrations require Growth+
-        const deleteTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations');
+        const deleteTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations', user.agency.beta_ends_at);
         if (deleteTierError) {
             return NextResponse.json({ error: deleteTierError }, { status: 403 });
         }

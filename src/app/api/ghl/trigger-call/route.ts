@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
         // Look up agency by GHL location_id
         const { data: agencies, error: agencyError } = await supabase
             .from('agencies')
-            .select('id, integrations, calling_window, retell_api_key, vapi_api_key, bland_api_key, subscription_price_id, subscription_status')
+            .select('id, integrations, calling_window, retell_api_key, vapi_api_key, bland_api_key, subscription_price_id, subscription_status, beta_ends_at')
             .filter('integrations->ghl->>location_id', 'eq', data.location_id);
 
         if (agencyError || !agencies || agencies.length === 0) {
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         const agency = agencies[0];
 
         // ---- Tier gate: CRM integrations require Growth+ ----
-        const tierError = checkFeatureAccess(agency.subscription_price_id, agency.subscription_status, 'crm_integrations');
+        const tierError = checkFeatureAccess(agency.subscription_price_id, agency.subscription_status, 'crm_integrations', agency.beta_ends_at);
         if (tierError) {
             return NextResponse.json(
                 { error: tierError },

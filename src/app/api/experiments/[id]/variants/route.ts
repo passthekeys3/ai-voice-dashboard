@@ -21,7 +21,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         // ---- Tier gate: Experiments require Growth+ ----
-        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'experiments');
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'experiments', user.agency.beta_ends_at);
         if (tierError) {
             return NextResponse.json({ error: tierError }, { status: 403 });
         }
@@ -94,7 +94,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // ---- Tier gate: Experiments require Growth+ ----
-        const patchTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'experiments');
+        const patchTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'experiments', user.agency.beta_ends_at);
         if (patchTierError) {
             return NextResponse.json({ error: patchTierError }, { status: 403 });
         }

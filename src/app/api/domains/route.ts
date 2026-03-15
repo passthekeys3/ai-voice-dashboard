@@ -21,7 +21,7 @@ export async function GET() {
         }
 
         // ---- Tier gate: Custom domains require Growth+ ----
-        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'white_label');
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'white_label', user.agency.beta_ends_at);
         if (tierError) {
             return NextResponse.json({ error: tierError }, { status: 403 });
         }
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         }
 
         // ---- Tier gate: Custom domains require Growth+ ----
-        const postTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'white_label');
+        const postTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'white_label', user.agency.beta_ends_at);
         if (postTierError) {
             return NextResponse.json({ error: postTierError }, { status: 403 });
         }

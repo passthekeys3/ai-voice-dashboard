@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
 
         const { data: agency } = await supabase
             .from('agencies')
-            .select('integrations, subscription_price_id, subscription_status')
+            .select('integrations, subscription_price_id, subscription_status, beta_ends_at')
             .eq('id', agencyId)
             .single();
 
@@ -155,7 +155,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Defense-in-depth: re-verify tier in case agency downgraded during OAuth flow
-        const tierError = checkFeatureAccess(agency.subscription_price_id, agency.subscription_status, 'crm_integrations');
+        const tierError = checkFeatureAccess(agency.subscription_price_id, agency.subscription_status, 'crm_integrations', agency.beta_ends_at);
         if (tierError) {
             return NextResponse.redirect(
                 new URL('/settings?ghl=error&message=CRM+integrations+require+a+Growth+plan+or+higher', request.url)

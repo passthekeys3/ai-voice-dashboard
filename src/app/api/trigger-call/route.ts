@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         // Look up agency by API key
         const { data: agencies, error: agencyError } = await supabase
             .from('agencies')
-            .select('id, integrations, calling_window, retell_api_key, vapi_api_key, bland_api_key, subscription_price_id, subscription_status')
+            .select('id, integrations, calling_window, retell_api_key, vapi_api_key, bland_api_key, subscription_price_id, subscription_status, beta_ends_at')
             .filter('integrations->api->>api_key', 'eq', apiKey);
 
         if (agencyError || !agencies || agencies.length === 0) {
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         const agency = agencies[0];
 
         // ---- Tier gate: API access requires Agency plan ----
-        const tierError = checkFeatureAccess(agency.subscription_price_id, agency.subscription_status, 'api_access');
+        const tierError = checkFeatureAccess(agency.subscription_price_id, agency.subscription_status, 'api_access', agency.beta_ends_at);
         if (tierError) {
             return NextResponse.json(
                 { error: tierError },

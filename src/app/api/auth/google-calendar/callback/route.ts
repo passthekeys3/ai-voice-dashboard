@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Defense-in-depth: re-verify tier in case agency downgraded during OAuth flow
-        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations');
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations', user.agency.beta_ends_at);
         if (tierError) {
             return NextResponse.redirect(
                 new URL('/integrations?google_calendar=error&message=CRM+integrations+require+a+Growth+plan+or+higher', request.url)

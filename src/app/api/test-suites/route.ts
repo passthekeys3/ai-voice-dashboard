@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
         }
 
         // ---- Tier gate: Agent Testing requires Agency ----
-        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing', user.agency.beta_ends_at);
         if (tierError) {
             return NextResponse.json({ error: tierError }, { status: 403 });
         }
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
         }
 
         // ---- Tier gate: Agent Testing requires Agency ----
-        const postTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        const postTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing', user.agency.beta_ends_at);
         if (postTierError) {
             return NextResponse.json({ error: postTierError }, { status: 403 });
         }
