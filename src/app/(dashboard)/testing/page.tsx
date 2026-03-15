@@ -4,6 +4,8 @@ import { requireAgencyAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
 import { TestSuitesList } from '@/components/dashboard/TestSuitesList';
+import { TierGate } from '@/components/ui/tier-gate';
+import { getTierFromPriceId } from '@/lib/billing/tiers';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
@@ -13,6 +15,10 @@ export const metadata: Metadata = { title: 'Testing' };
 export default async function TestingPage() {
     const user = await requireAgencyAdmin();
     const supabase = await createClient();
+
+    // Resolve current tier for feature gating
+    const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+    const currentTier = tierInfo?.tier ?? null;
 
     // Fetch test suites with case count and latest run
     const { data: suites } = await supabase
@@ -38,22 +44,24 @@ export default async function TestingPage() {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h2 className="text-2xl font-bold tracking-tight">Agent Testing</h2>
-                        <p className="text-muted-foreground">
-                            Validate agent behavior with AI-powered test simulations before deploying
-                        </p>
+                <TierGate currentTier={currentTier} requiredFeature="agent_testing" label="Agent Testing">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 className="text-2xl font-bold tracking-tight">Agent Testing</h2>
+                            <p className="text-muted-foreground">
+                                Validate agent behavior with AI-powered test simulations before deploying
+                            </p>
+                        </div>
+                        <Button asChild>
+                            <Link href="/testing/new">
+                                <Plus className="mr-2 h-4 w-4" />
+                                New Test Suite
+                            </Link>
+                        </Button>
                     </div>
-                    <Button asChild>
-                        <Link href="/testing/new">
-                            <Plus className="mr-2 h-4 w-4" />
-                            New Test Suite
-                        </Link>
-                    </Button>
-                </div>
 
-                <TestSuitesList suites={suites || []} />
+                    <TestSuitesList suites={suites || []} />
+                </TierGate>
             </div>
         </div>
     );

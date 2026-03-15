@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { safeParseJson, isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
@@ -17,6 +18,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         if (!isAgencyAdmin(user)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // ---- Tier gate: Agent Testing requires Agency ----
+        const patchCaseTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        if (patchCaseTierError) {
+            return NextResponse.json({ error: patchCaseTierError }, { status: 403 });
         }
 
         const { id: suiteId, caseId } = await params;
@@ -124,6 +131,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         if (!isAgencyAdmin(user)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // ---- Tier gate: Agent Testing requires Agency ----
+        const deleteCaseTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        if (deleteCaseTierError) {
+            return NextResponse.json({ error: deleteCaseTierError }, { status: 403 });
         }
 
         const { id: suiteId, caseId } = await params;

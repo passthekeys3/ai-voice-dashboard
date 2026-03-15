@@ -4,6 +4,8 @@ import { requireAgencyAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
 import { TestSuiteEditor } from '@/components/dashboard/TestSuiteEditor';
+import { TierGate } from '@/components/ui/tier-gate';
+import { getTierFromPriceId } from '@/lib/billing/tiers';
 import { notFound } from 'next/navigation';
 import { isValidUuid } from '@/lib/validation';
 
@@ -20,6 +22,10 @@ export default async function TestSuiteDetailPage({ params }: PageProps) {
     }
     const user = await requireAgencyAdmin();
     const supabase = await createClient();
+
+    // Resolve current tier for feature gating
+    const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
+    const currentTier = tierInfo?.tier ?? null;
 
     // Fetch suite with cases, personas, and recent runs
     const { data: suite } = await supabase
@@ -62,9 +68,11 @@ export default async function TestSuiteDetailPage({ params }: PageProps) {
             />
 
             <div className="flex-1 p-6 overflow-auto">
-                <div className="max-w-4xl mx-auto">
-                    <TestSuiteEditor suite={suite} personas={personas || []} />
-                </div>
+                <TierGate currentTier={currentTier} requiredFeature="agent_testing" label="Agent Testing">
+                    <div className="max-w-4xl mx-auto">
+                        <TestSuiteEditor suite={suite} personas={personas || []} />
+                    </div>
+                </TierGate>
             </div>
         </div>
     );

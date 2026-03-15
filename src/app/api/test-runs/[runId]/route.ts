@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { safeParseJson, isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
@@ -17,6 +18,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         if (!isAgencyAdmin(user)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // ---- Tier gate: Agent Testing requires Agency ----
+        const getRunTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        if (getRunTierError) {
+            return NextResponse.json({ error: getRunTierError }, { status: 403 });
         }
 
         const { runId } = await params;
@@ -77,6 +84,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         if (!isAgencyAdmin(user)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // ---- Tier gate: Agent Testing requires Agency ----
+        const patchRunTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        if (patchRunTierError) {
+            return NextResponse.json({ error: patchRunTierError }, { status: 403 });
         }
 
         const { runId } = await params;

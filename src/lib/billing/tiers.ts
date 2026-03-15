@@ -22,13 +22,14 @@ export type TierFeature =
     | 'white_label'         // Custom domains + branding
     | 'stripe_connect'      // Client billing via Stripe Connect
     | 'experiments'          // A/B testing
+    | 'agent_testing'        // AI-powered agent test suites
     | 'api_access';         // External trigger API
 
 /** Which features are available on each tier (Agency inherits all Growth features) */
 const TIER_FEATURES: Record<PlanTier, TierFeature[]> = {
     starter: [],
     growth: ['crm_integrations', 'white_label', 'stripe_connect', 'experiments'],
-    agency: ['crm_integrations', 'white_label', 'stripe_connect', 'experiments', 'api_access'],
+    agency: ['crm_integrations', 'white_label', 'stripe_connect', 'experiments', 'agent_testing', 'api_access'],
 };
 
 /** Check if a tier has access to a specific feature */
@@ -50,6 +51,7 @@ export function featureLabel(feature: TierFeature): string {
         white_label: 'White-Label & Custom Domains',
         stripe_connect: 'Stripe Connect Billing',
         experiments: 'A/B Experiments',
+        agent_testing: 'Agent Testing',
         api_access: 'API Access',
     };
     return labels[feature];

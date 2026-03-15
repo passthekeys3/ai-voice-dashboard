@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
@@ -17,6 +18,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         if (!isAgencyAdmin(user)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // ---- Tier gate: Agent Testing requires Agency ----
+        const getTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        if (getTierError) {
+            return NextResponse.json({ error: getTierError }, { status: 403 });
         }
 
         const { id } = await params;
@@ -67,6 +74,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
+        // ---- Tier gate: Agent Testing requires Agency ----
+        const patchTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        if (patchTierError) {
+            return NextResponse.json({ error: patchTierError }, { status: 403 });
+        }
+
         const { id } = await params;
         if (!isValidUuid(id)) {
             return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
@@ -115,6 +128,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         if (!isAgencyAdmin(user)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // ---- Tier gate: Agent Testing requires Agency ----
+        const deleteTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        if (deleteTierError) {
+            return NextResponse.json({ error: deleteTierError }, { status: 403 });
         }
 
         const { id } = await params;

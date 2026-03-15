@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { safeParseJson, isValidUuid } from '@/lib/validation';
 
 interface RouteParams {
@@ -17,6 +18,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         if (!isAgencyAdmin(user)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // ---- Tier gate: Agent Testing requires Agency ----
+        const getCasesTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        if (getCasesTierError) {
+            return NextResponse.json({ error: getCasesTierError }, { status: 403 });
         }
 
         const { id: suiteId } = await params;
@@ -66,6 +73,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         if (!isAgencyAdmin(user)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // ---- Tier gate: Agent Testing requires Agency ----
+        const postCasesTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'agent_testing');
+        if (postCasesTierError) {
+            return NextResponse.json({ error: postCasesTierError }, { status: 403 });
         }
 
         const { id: suiteId } = await params;
