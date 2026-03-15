@@ -371,7 +371,7 @@ export async function POST(request: NextRequest) {
                             .update({
                                 sentiment: analysis.sentiment,
                                 summary: analysis.summary,
-                                call_score: analysis.lead_score,
+                                // Preserve deterministic call_score — store AI lead_score in metadata only
                                 topics: analysis.topics,
                                 objections: analysis.objections,
                                 metadata: {

@@ -3,6 +3,8 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { executeWorkflows } from '@/lib/workflows/executor';
 import { broadcastCallUpdate, broadcastTranscriptUpdate } from '@/lib/realtime/broadcast';
 import { accumulateUsage } from '@/lib/billing/usage';
+import { calculateCallScore, inferBasicSentiment } from '@/lib/scoring/call-score';
+import { detectTimezone } from '@/lib/timezone/detector';
 import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-analyzer';
 import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
 import { resolveIntegrations, createTokenRefreshCallback } from '@/lib/integrations/resolve';
@@ -228,6 +230,25 @@ export async function POST(request: NextRequest) {
         // Cap transcript length
         const callTranscript = payload.call.transcript?.slice(0, MAX_TRANSCRIPT_LENGTH);
 
+        // Use Retell's native sentiment if available, otherwise infer from transcript
+        const nativeSentiment = payload.call.call_analysis?.user_sentiment;
+        const sentiment = nativeSentiment
+            || (status === 'completed' && callTranscript ? inferBasicSentiment(callTranscript) : null)
+            || null;
+
+        // Calculate deterministic call quality score (consistent with Vapi/Bland)
+        const callScore = status === 'completed' ? calculateCallScore({
+            sentiment: sentiment || undefined,
+            durationSeconds,
+            status,
+        }) : null;
+
+        // Detect lead timezone from phone number
+        const leadPhone = direction === 'inbound'
+            ? payload.call.from_number
+            : payload.call.to_number;
+        const leadTimezone = leadPhone ? detectTimezone(leadPhone) : null;
+
         // Upsert call
         const { error } = await supabase
             .from('calls')
@@ -246,7 +267,8 @@ export async function POST(request: NextRequest) {
                     transcript: callTranscript,
                     audio_url: payload.call.recording_url,
                     summary: payload.call.call_analysis?.call_summary,
-                    sentiment: payload.call.call_analysis?.user_sentiment,
+                    sentiment,
+                    call_score: callScore,
                     started_at: new Date(payload.call.start_timestamp).toISOString(),
                     ended_at: payload.call.end_timestamp
                         ? new Date(payload.call.end_timestamp).toISOString()
@@ -257,6 +279,7 @@ export async function POST(request: NextRequest) {
                     },
                     experiment_id: experimentId,
                     variant_id: variantId,
+                    lead_timezone: leadTimezone,
                 },
                 { onConflict: 'external_id' }
             );
@@ -296,11 +319,14 @@ export async function POST(request: NextRequest) {
                             .single();
 
                         // Update the call record with AI-enriched fields
+                        // Preserve deterministic call_score — store AI lead_score in metadata only
                         const { error: updateError } = await supabase
                             .from('calls')
                             .update({
                                 sentiment: analysis.sentiment,
                                 summary: analysis.summary,
+                                topics: analysis.topics,
+                                objections: analysis.objections,
                                 metadata: {
                                     ...((currentCall?.metadata as Record<string, unknown>) || {}),
                                     ai_analysis: {
@@ -308,8 +334,6 @@ export async function POST(request: NextRequest) {
                                         action_items: analysis.action_items,
                                         call_outcome: analysis.call_outcome,
                                         lead_score: analysis.lead_score,
-                                        topics: analysis.topics,
-                                        objections: analysis.objections,
                                         analyzed_at: new Date().toISOString(),
                                     },
                                 },

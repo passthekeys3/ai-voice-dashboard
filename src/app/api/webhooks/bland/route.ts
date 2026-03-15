@@ -287,7 +287,7 @@ export async function POST(request: NextRequest) {
                             .update({
                                 sentiment: analysis.sentiment,
                                 summary: analysis.summary,
-                                call_score: analysis.lead_score,
+                                // Preserve deterministic call_score — store AI lead_score in metadata only
                                 topics: analysis.topics,
                                 objections: analysis.objections,
                                 metadata: {
@@ -340,7 +340,7 @@ export async function POST(request: NextRequest) {
                 transcript,
                 cost_cents: costCents,
                 summary: payload.summary,
-                sentiment: undefined,
+                sentiment: inferredSentiment,
             },
         }).catch(err => console.error('Failed to broadcast Bland call update:', err instanceof Error ? err.message : 'Unknown error')));
 
