@@ -93,7 +93,7 @@ export const POST = withErrorHandling(async (
         existingUser = authUser?.user || null;
     }
 
-    // Create the user with a cryptographically secure temporary password
+    // Supabase requires a password for createUser — user will set their own via invite link
     const tempPassword = randomBytes(16).toString('base64').slice(0, 16) + 'Aa1!';
 
     let authUserId: string;

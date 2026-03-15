@@ -15,7 +15,8 @@ import {
 } from '@/lib/api/response';
 import { getStripe } from '@/lib/stripe';
 import { isValidUuid } from '@/lib/validation';
-import { encrypt, decrypt } from '@/lib/crypto';
+import { encrypt } from '@/lib/crypto';
+import { maskClientApiKeys } from '@/lib/clients/mask-keys';
 
 // Admin client for auth user deletion (same pattern as invite route)
 const supabaseAdmin = createSupabaseAdmin(
@@ -59,17 +60,7 @@ export const GET = withErrorHandling(async (
         return notFound('Client');
     }
 
-    // Mask API keys — never return raw keys to the frontend
-    const masked = { ...client };
-    const API_KEY_FIELDS = ['retell_api_key', 'vapi_api_key', 'bland_api_key'] as const;
-    for (const k of API_KEY_FIELDS) {
-        if (masked[k]) {
-            const plain = decrypt(masked[k] as string) ?? (masked[k] as string);
-            masked[k] = '...' + plain.slice(-4);
-        }
-    }
-
-    return apiSuccess(masked);
+    return apiSuccess(maskClientApiKeys(client));
 });
 
 export const PATCH = withErrorHandling(async (
@@ -141,17 +132,7 @@ export const PATCH = withErrorHandling(async (
         return notFound('Client');
     }
 
-    // Mask API keys — never return raw keys to the frontend
-    const masked = { ...client };
-    const KEY_FIELDS = ['retell_api_key', 'vapi_api_key', 'bland_api_key'] as const;
-    for (const k of KEY_FIELDS) {
-        if (masked[k]) {
-            const plain = decrypt(masked[k] as string) ?? (masked[k] as string);
-            masked[k] = '...' + plain.slice(-4);
-        }
-    }
-
-    return apiSuccess(masked);
+    return apiSuccess(maskClientApiKeys(client));
 });
 
 export const DELETE = withErrorHandling(async (

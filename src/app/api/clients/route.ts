@@ -13,6 +13,7 @@ import {
 } from '@/lib/api/response';
 import { VALID_BILLING_TYPES } from '@/lib/constants/config';
 import { getTierFromPriceId, getTierConfig } from '@/lib/billing/tiers';
+import { maskClientApiKeys } from '@/lib/clients/mask-keys';
 
 export const GET = withErrorHandling(async () => {
     const user = await getCurrentUser();
@@ -38,15 +39,7 @@ export const GET = withErrorHandling(async () => {
     }
 
     // Mask API keys — never return raw keys to the frontend
-    const safeClients = (clients || []).map((c) => {
-        const masked = { ...c };
-        for (const k of ['retell_api_key', 'vapi_api_key', 'bland_api_key'] as const) {
-            if (masked[k]) {
-                masked[k] = '...' + (masked[k] as string).slice(-4);
-            }
-        }
-        return masked;
-    });
+    const safeClients = (clients || []).map(maskClientApiKeys);
 
     return apiSuccess(safeClients);
 });

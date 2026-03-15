@@ -33,18 +33,19 @@ export async function GET(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Tier gate: CRM integrations require Growth+
-        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations', user.agency.beta_ends_at);
-        if (tierError) {
-            return NextResponse.json({ error: tierError }, { status: 403 });
-        }
-
+        // Permission check first — so users know they lack access before hitting tier gate
         const isAdmin = isAgencyAdmin(user);
         const isOwnClient = isClientUser(user) && user.client?.id === clientId;
         const permissions = getUserPermissions(user);
 
         if (!isAdmin && !(isOwnClient && permissions.can_manage_integrations)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // Tier gate: CRM integrations require Growth+
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations', user.agency.beta_ends_at);
+        if (tierError) {
+            return NextResponse.json({ error: tierError }, { status: 403 });
         }
 
         const supabase = await createClient();
@@ -90,18 +91,19 @@ export async function PATCH(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Tier gate: CRM integrations require Growth+
-        const patchTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations', user.agency.beta_ends_at);
-        if (patchTierError) {
-            return NextResponse.json({ error: patchTierError }, { status: 403 });
-        }
-
+        // Permission check first — so users know they lack access before hitting tier gate
         const isAdmin = isAgencyAdmin(user);
         const isOwnClient = isClientUser(user) && user.client?.id === clientId;
         const permissions = getUserPermissions(user);
 
         if (!isAdmin && !(isOwnClient && permissions.can_manage_integrations)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // Tier gate: CRM integrations require Growth+
+        const patchTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations', user.agency.beta_ends_at);
+        if (patchTierError) {
+            return NextResponse.json({ error: patchTierError }, { status: 403 });
         }
 
         const bodyOrError = await safeParseJson(request);
@@ -198,18 +200,19 @@ export async function DELETE(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Tier gate: CRM integrations require Growth+
-        const deleteTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations', user.agency.beta_ends_at);
-        if (deleteTierError) {
-            return NextResponse.json({ error: deleteTierError }, { status: 403 });
-        }
-
+        // Permission check first — so users know they lack access before hitting tier gate
         const isAdmin = isAgencyAdmin(user);
         const isOwnClient = isClientUser(user) && user.client?.id === clientId;
         const permissions = getUserPermissions(user);
 
         if (!isAdmin && !(isOwnClient && permissions.can_manage_integrations)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // Tier gate: CRM integrations require Growth+
+        const deleteTierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations', user.agency.beta_ends_at);
+        if (deleteTierError) {
+            return NextResponse.json({ error: deleteTierError }, { status: 403 });
         }
 
         const integrationKey = request.nextUrl.searchParams.get('key');

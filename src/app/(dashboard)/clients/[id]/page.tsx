@@ -23,13 +23,9 @@ import { TierGate } from '@/components/ui/tier-gate';
 import { isValidUuid } from '@/lib/validation';
 import type { Profile, Client, Agent, Call } from '@/types';
 import { getClientPermissions } from '@/lib/permissions';
+import { maskClientApiKeys } from '@/lib/clients/mask-keys';
 
 export const metadata: Metadata = { title: 'Client Details' };
-
-/** Mask an API key for safe display: "...last4" or null */
-function maskKey(key: string | null | undefined): string | null {
-    return key ? '...' + key.slice(-4) : null;
-}
 
 export default async function ClientDetailPage({
     params,
@@ -55,6 +51,9 @@ export default async function ClientDetailPage({
     if (error || !client) {
         notFound();
     }
+
+    // Mask API keys for safe display (decrypts enc: prefix first)
+    const safeClient = maskClientApiKeys(client);
 
     // Check if agency has Stripe Connect set up
     const agencyHasConnect = !!(user.agency.stripe_connect_account_id && user.agency.stripe_connect_charges_enabled);
@@ -255,9 +254,9 @@ export default async function ClientDetailPage({
                 {/* Voice Provider API Keys */}
                 <ClientApiKeysEditor
                     clientId={id}
-                    retellApiKey={maskKey((client as Client).retell_api_key)}
-                    vapiApiKey={maskKey((client as Client).vapi_api_key)}
-                    blandApiKey={maskKey((client as Client).bland_api_key)}
+                    retellApiKey={(safeClient as Client).retell_api_key || null}
+                    vapiApiKey={(safeClient as Client).vapi_api_key || null}
+                    blandApiKey={(safeClient as Client).bland_api_key || null}
                 />
 
                 {/* Integrations Section */}
