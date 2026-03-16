@@ -207,6 +207,7 @@ export async function POST(request: NextRequest) {
             }
         } else if (provider === 'vapi') {
             // Vapi agent creation
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`;
             const vapiResponse = await fetch('https://api.vapi.ai/assistant', {
                 method: 'POST',
                 headers: {
@@ -227,6 +228,7 @@ export async function POST(request: NextRequest) {
                             },
                         ],
                     },
+                    serverUrl: `${appUrl}/api/webhooks/vapi`,
                 }),
                 signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
@@ -271,6 +273,18 @@ export async function POST(request: NextRequest) {
         }
 
         // Store in database
+        const agentConfig: Record<string, unknown> = {
+            voice_id: draft.voiceId,
+            voice_name: safeVoiceName,
+            system_prompt: safeSystemPrompt,
+            first_message: safeFirstMessage || undefined,
+            language: safeLanguage,
+        };
+        // Vapi needs the voice provider stored for future updates
+        if (provider === 'vapi') {
+            agentConfig.voice_provider = '11labs';
+        }
+
         const { data: agent, error: dbError } = await supabase
             .from('agents')
             .insert({
@@ -280,13 +294,7 @@ export async function POST(request: NextRequest) {
                 external_id: externalId,
                 provider,
                 is_active: true,
-                config: {
-                    voice_id: draft.voiceId,
-                    voice_name: safeVoiceName,
-                    system_prompt: safeSystemPrompt,
-                    first_message: safeFirstMessage || undefined,
-                    language: safeLanguage,
-                },
+                config: agentConfig,
             })
             .select()
             .single();

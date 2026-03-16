@@ -22,7 +22,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Plus, Loader2, Bot, Volume2, Play, Pause, Info } from 'lucide-react';
+import { Plus, Loader2, Bot, Volume2, Play, Pause } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 interface Voice {
@@ -77,8 +77,8 @@ export function CreateAgentButton({ clients, phoneNumbers, availableProviders, b
     const [clientId, setClientId] = useState('');
     const [phoneNumberId, setPhoneNumberId] = useState('');
 
-    // Whether the current provider supports voice selection
-    const supportsVoiceSelection = provider === 'retell' || provider === 'bland';
+    // All providers now support voice selection
+    const supportsVoiceSelection = provider === 'retell' || provider === 'vapi' || provider === 'bland';
 
     const fetchVoices = useCallback(async (forProvider: string) => {
         setLoadingVoices(true);
@@ -346,16 +346,6 @@ export function CreateAgentButton({ clients, phoneNumbers, availableProviders, b
                                     })()}
                                 </div>
                             )}
-                        </div>
-                    )}
-
-                    {/* Vapi voice info */}
-                    {provider === 'vapi' && (
-                        <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/50">
-                            <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                            <p className="text-sm text-muted-foreground">
-                                Voice can be configured after creation in agent settings. Vapi supports ElevenLabs, PlayHT, and other TTS providers.
-                            </p>
                         </div>
                     )}
 

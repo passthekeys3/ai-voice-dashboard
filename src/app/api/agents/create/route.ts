@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
         } else if (provider === 'vapi') {
             // Create a Vapi assistant
             try {
-                const vapiAssistant = await createVapiAssistant(apiKey, {
+                const vapiConfig: Parameters<typeof createVapiAssistant>[1] = {
                     name: name.trim(),
                     model: {
                         provider: 'openai',
@@ -194,7 +194,12 @@ export async function POST(request: NextRequest) {
                     },
                     firstMessage: first_message || undefined,
                     serverUrl: `${appUrl}/api/webhooks/vapi`,
-                });
+                };
+                // Include voice if provided (ElevenLabs default)
+                if (voice_id) {
+                    vapiConfig.voice = { provider: '11labs', voiceId: voice_id };
+                }
+                const vapiAssistant = await createVapiAssistant(apiKey, vapiConfig);
 
                 externalId = vapiAssistant.id;
             } catch (err) {
@@ -206,6 +211,10 @@ export async function POST(request: NextRequest) {
 
             agentConfig.system_prompt = system_prompt;
             agentConfig.first_message = first_message;
+            if (voice_id) {
+                agentConfig.voice_id = voice_id;
+                agentConfig.voice_provider = '11labs';
+            }
 
         } else if (provider === 'bland') {
             // Create a Bland pathway
