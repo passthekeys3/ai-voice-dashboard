@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { requireAgencyAdmin } from '@/lib/auth';
+import { requireAuth, isAgencyAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Header } from '@/components/dashboard/Header';
 import { LiveTranscript } from '@/components/dashboard/LiveTranscript';
@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { isValidUuid } from '@/lib/validation';
 
 export const metadata: Metadata = { title: 'Live Call' };
 
@@ -20,23 +19,36 @@ export default async function LiveCallPage({
     searchParams: Promise<{ provider?: string }>;
 }) {
     const { callId } = await params;
-    if (!isValidUuid(callId)) {
+    // External IDs from providers can be any format (not necessarily UUIDs)
+    if (!callId || callId.length > 200) {
         notFound();
     }
     const { provider } = await searchParams;
-    const user = await requireAgencyAdmin();
+    const user = await requireAuth();
+    const isAdmin = isAgencyAdmin(user);
 
-    // Validate that the call belongs to this agency (prevents cross-tenant access)
+    // Build agent query scoped to agency — further scoped to client for non-admins
     const supabase = await createClient();
-    const { data: agentIds } = await supabase
+    let agentsQuery = supabase
         .from('agents')
         .select('id')
         .eq('agency_id', user.agency.id);
+
+    if (!isAdmin) {
+        if (user.client) {
+            agentsQuery = agentsQuery.eq('client_id', user.client.id);
+        } else {
+            notFound();
+        }
+    }
+
+    const { data: agentIds } = await agentsQuery;
 
     if (!agentIds || agentIds.length === 0) {
         notFound();
     }
 
+    // Validate the call belongs to one of the user's agents
     const { data: call } = await supabase
         .from('calls')
         .select('id')

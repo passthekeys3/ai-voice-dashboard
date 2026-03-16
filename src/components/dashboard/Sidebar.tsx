@@ -66,6 +66,7 @@ const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Agents', href: '/agents', icon: Bot },
     { name: 'Calls', href: '/calls', icon: Phone },
+    { name: 'Live', href: '/live', icon: Radio },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     { name: 'Billing', href: '/billing', icon: CreditCard },
 ];
@@ -73,7 +74,6 @@ const navigation = [
 const adminNavigation = [
     { name: 'Clients', href: '/clients', icon: Users },
     { name: 'Numbers', href: '/phone-numbers', icon: PhoneForwarded },
-    { name: 'Live', href: '/live', icon: Radio },
     { name: 'Scheduled', href: '/scheduled-calls', icon: CalendarClock },
     { name: 'Insights', href: '/insights', icon: Lightbulb },
     { name: 'Experiments', href: '/experiments', icon: FlaskConical },

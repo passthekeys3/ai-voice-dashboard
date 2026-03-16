@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 
-import { requireAgencyAdmin } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
 import { Header } from '@/components/dashboard/Header';
 import { ActiveCallsList } from '@/components/dashboard/ActiveCallsList';
 
 export const metadata: Metadata = { title: 'Live Calls' };
 
 export default async function LiveCallsPage() {
-    const user = await requireAgencyAdmin();
+    const user = await requireAuth();
 
     return (
         <div className="flex flex-col h-full">
