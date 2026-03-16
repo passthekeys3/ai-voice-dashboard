@@ -119,7 +119,7 @@ export function ClientUsersList({ clientId, clientName, users }: ClientUsersList
                         <AlertDialogTitle>Remove User</AlertDialogTitle>
                         <AlertDialogDescription>
                             Are you sure you want to remove <strong>{confirmUser?.full_name}</strong> ({confirmUser?.email}) from {clientName}?
-                            This will permanently delete their account and they will lose all access.
+                            They will lose access to this client&apos;s portal and data.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -228,7 +228,7 @@ export function DeleteClientButton({ clientId, clientName, userCount }: DeleteCl
                     <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 px-2">
                         <li>All call history and recordings</li>
                         <li>All usage and billing data</li>
-                        <li>{userCount} user account{userCount !== 1 ? 's' : ''} (permanently deleted)</li>
+                        <li>{userCount} user{userCount !== 1 ? 's' : ''} will lose portal access</li>
                         <li>All integration overrides</li>
                     </ul>
                     <p className="text-sm font-medium text-red-600 dark:text-red-400 mt-2">

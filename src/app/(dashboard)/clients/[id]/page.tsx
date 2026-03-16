@@ -10,12 +10,16 @@ import { ClientIntegrationsEditor } from '@/components/dashboard/ClientIntegrati
 import { ClientBillingEditor } from '@/components/dashboard/ClientBillingEditor';
 import { ClientUsageDashboard } from '@/components/dashboard/ClientUsageDashboard';
 import { ClientUsersList, DeleteClientButton } from '@/components/dashboard/ClientUsersList';
+import { ClientWorkflows } from '@/components/dashboard/ClientWorkflows';
 import { AgentCard } from '@/components/dashboard/AgentCard';
 import { CallsTable } from '@/components/dashboard/CallsTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Users, Bot, Phone, ArrowRight } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { ClientHeaderEditor } from '@/components/dashboard/ClientHeaderEditor';
+import { ClientBrandingEditor } from '@/components/dashboard/ClientBrandingEditor';
+import { CopyableId } from '@/components/dashboard/CopyableId';
+import { ArrowLeft, Users, Bot, Phone, ArrowRight, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTierFromPriceId } from '@/lib/billing/tiers';
@@ -98,6 +102,21 @@ export default async function ClientDetailPage({
         .eq('agency_id', user.agency.id)
         .order('created_at', { ascending: false });
 
+    // Fetch workflows for this client's agents + global workflows
+    const { data: workflows } = agentIds.length > 0
+        ? await supabase
+            .from('workflows')
+            .select('*, agent:agents(name)')
+            .eq('agency_id', user.agency.id)
+            .or(`agent_id.in.(${agentIds.join(',')}),agent_id.is.null`)
+            .order('name')
+        : await supabase
+            .from('workflows')
+            .select('*, agent:agents(name)')
+            .eq('agency_id', user.agency.id)
+            .is('agent_id', null)
+            .order('name');
+
     const agentsCount = agents?.length || 0;
 
     return (
@@ -110,55 +129,74 @@ export default async function ClientDetailPage({
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" asChild>
-                        <Link href="/clients" aria-label="Back to clients">
-                            <ArrowLeft className="h-4 w-4" />
-                        </Link>
-                    </Button>
-                    <div className="flex items-center gap-3">
-                        <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <Button variant="ghost" size="icon" className="shrink-0" asChild>
+                            <Link href="/clients" aria-label="Back to clients">
+                                <ArrowLeft className="h-4 w-4" />
+                            </Link>
+                        </Button>
+                        <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800 shrink-0 hidden sm:block">
                             <Users className="h-6 w-6 text-slate-600 dark:text-slate-400" />
                         </div>
-                        <div>
-                            <h2 className="text-2xl font-bold tracking-tight">{client.name}</h2>
-                            <p className="text-muted-foreground">{client.email}</p>
-                        </div>
+                        <ClientHeaderEditor
+                            clientId={id}
+                            initialName={client.name}
+                            initialEmail={client.email}
+                            initialIsActive={client.is_active}
+                        />
                     </div>
-                    <Badge variant={client.is_active ? 'default' : 'secondary'}>
-                        {client.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                    <div className="ml-auto">
+                    <div className="sm:ml-auto shrink-0">
                         <InviteClientUserDialog clientId={id} clientName={client.name} />
                     </div>
                 </div>
 
+                {/* Client metadata bar */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <CopyableId label="Client ID" value={id} />
+                    <span className="hidden sm:inline text-border">|</span>
+                    <span>Created {new Date(client.created_at).toLocaleDateString()}</span>
+                    {client.stripe_customer_id && (
+                        <>
+                            <span className="hidden sm:inline text-border">|</span>
+                            <CopyableId label="Stripe" value={client.stripe_customer_id} />
+                        </>
+                    )}
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-3">
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">
-                                Agents
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{agentsCount || 0}</div>
-                        </CardContent>
-                    </Card>
+                    <Link href={`/agents?client_id=${id}`} className="block group">
+                        <Card className="transition-colors group-hover:border-primary/30">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                                    <Bot className="h-3.5 w-3.5" />
+                                    Agents
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{agentsCount || 0}</div>
+                            </CardContent>
+                        </Card>
+                    </Link>
+
+                    <Link href={`/calls?client_id=${id}`} className="block group">
+                        <Card className="transition-colors group-hover:border-primary/30">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                                    <Phone className="h-3.5 w-3.5" />
+                                    Total Calls
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{callsCount || 0}</div>
+                            </CardContent>
+                        </Card>
+                    </Link>
 
                     <Card>
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">
-                                Total Calls
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{callsCount || 0}</div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                                <Users className="h-3.5 w-3.5" />
                                 Users
                             </CardTitle>
                         </CardHeader>
@@ -176,7 +214,7 @@ export default async function ClientDetailPage({
                             Assigned Agents
                         </CardTitle>
                         <Button variant="ghost" size="sm" asChild>
-                            <Link href="/agents">
+                            <Link href={`/agents?client_id=${id}`}>
                                 Manage Agents <ArrowRight className="ml-1 h-4 w-4" />
                             </Link>
                         </Button>
@@ -197,7 +235,7 @@ export default async function ClientDetailPage({
                                 {agents.length > 6 && (
                                     <div className="mt-4 text-center">
                                         <Button variant="ghost" size="sm" asChild>
-                                            <Link href="/agents">
+                                            <Link href={`/agents?client_id=${id}`}>
                                                 View all {agents.length} agents &rarr;
                                             </Link>
                                         </Button>
@@ -221,7 +259,7 @@ export default async function ClientDetailPage({
                             Recent Calls
                         </CardTitle>
                         <Button variant="ghost" size="sm" asChild>
-                            <Link href="/calls">
+                            <Link href={`/calls?client_id=${id}`}>
                                 View All Calls <ArrowRight className="ml-1 h-4 w-4" />
                             </Link>
                         </Button>
@@ -236,12 +274,26 @@ export default async function ClientDetailPage({
                     </CardContent>
                 </Card>
 
+                {/* Workflows */}
+                <ClientWorkflows
+                    workflows={(workflows || []) as import('@/types').Workflow[]}
+                    clientId={id}
+                    clientAgentIds={agentIds}
+                />
+
                 {/* Users Section */}
                 <ClientUsersList
                     clientId={id}
                     clientName={client.name}
                     users={(clientUsers || []) as Profile[]}
                 />
+
+                {/* ── Configuration ─────────────────────────────── */}
+                <div className="flex items-center gap-3 pt-4">
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Configuration</h3>
+                    <Separator className="flex-1" />
+                </div>
 
                 {/* Permissions Section */}
                 <ClientPermissionsEditor
@@ -250,19 +302,6 @@ export default async function ClientDetailPage({
                     isAgencyDefault={false}
                     clientId={id}
                 />
-
-                {/* Voice Provider API Keys */}
-                <ClientApiKeysEditor
-                    clientId={id}
-                    retellApiKey={(safeClient as Client).retell_api_key || null}
-                    vapiApiKey={(safeClient as Client).vapi_api_key || null}
-                    blandApiKey={(safeClient as Client).bland_api_key || null}
-                />
-
-                {/* Integrations Section */}
-                <TierGate currentTier={currentTier} requiredFeature="crm_integrations" label="Client Integrations">
-                    <ClientIntegrationsEditor clientId={id} />
-                </TierGate>
 
                 {/* Billing Section */}
                 <ClientBillingEditor
@@ -281,44 +320,24 @@ export default async function ClientDetailPage({
                     <ClientUsageDashboard clientId={id} />
                 )}
 
-                <div className="grid gap-4 md:grid-cols-2">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Client Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <p className="text-sm text-muted-foreground">Created</p>
-                                <p className="font-medium">
-                                    {new Date(client.created_at).toLocaleDateString()}
-                                </p>
-                            </div>
-                            {client.stripe_customer_id && (
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Stripe Customer</p>
-                                    <p className="font-mono text-sm">{client.stripe_customer_id}</p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                {/* Voice Provider API Keys */}
+                <ClientApiKeysEditor
+                    clientId={id}
+                    retellApiKey={(safeClient as Client).retell_api_key || null}
+                    vapiApiKey={(safeClient as Client).vapi_api_key || null}
+                    blandApiKey={(safeClient as Client).bland_api_key || null}
+                />
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Branding</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {client.branding && Object.keys(client.branding).length > 0 ? (
-                                <pre className="text-sm bg-slate-100 dark:bg-slate-800 p-4 rounded-lg overflow-auto">
-                                    {JSON.stringify(client.branding, null, 2)}
-                                </pre>
-                            ) : (
-                                <p className="text-muted-foreground">
-                                    No custom branding configured. Using agency defaults.
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
+                {/* Integrations Section */}
+                <TierGate currentTier={currentTier} requiredFeature="crm_integrations" label="Client Integrations">
+                    <ClientIntegrationsEditor clientId={id} />
+                </TierGate>
+
+                {/* Branding */}
+                <ClientBrandingEditor
+                    clientId={id}
+                    branding={(client as Client).branding || null}
+                />
 
                 {/* Danger Zone */}
                 <DeleteClientButton

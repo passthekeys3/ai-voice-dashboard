@@ -11,9 +11,11 @@ import { DeleteAccountSection } from '@/components/dashboard/DeleteAccountSectio
 import { DEFAULT_CLIENT_PERMISSIONS } from '@/types/database';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Brain } from 'lucide-react';
+import { Brain, Plug } from 'lucide-react';
 import type { Agency, AgencyIntegrations } from '@/types';
 import { getTierFromPriceId } from '@/lib/billing/tiers';
+import { TierGate } from '@/components/ui/tier-gate';
+import { IntegrationsPage } from '@/components/dashboard/IntegrationsPage';
 import { decrypt } from '@/lib/crypto';
 
 function BillingSkeleton() {
@@ -159,10 +161,33 @@ function sanitizeAgencyForClient(agency: Agency): Agency {
 export default async function SettingsPage() {
     const user = await requireAgencyAdmin();
     const safeAgency = sanitizeAgencyForClient(user.agency);
+    const supabase = await createClient();
 
     // Resolve current tier for feature gating
     const tierInfo = getTierFromPriceId(user.agency.subscription_price_id || '');
     const currentTier = tierInfo?.tier ?? null;
+
+    // Fetch agents for integration defaults (API default agent selector)
+    const { data: agents } = await supabase
+        .from('agents')
+        .select('id, name, provider')
+        .eq('agency_id', user.agency.id)
+        .order('name');
+
+    // Prepare integration defaults data
+    const rawApiConfig = user.agency.integrations?.api;
+    const apiConfig = rawApiConfig ? {
+        api_key: mask(rawApiConfig.api_key),
+        enabled: rawApiConfig.enabled,
+        default_agent_id: rawApiConfig.default_agent_id,
+        webhook_url: rawApiConfig.webhook_url,
+    } : undefined;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+    const connectedIntegrations: Record<string, boolean> = {};
+    const gcal = user.agency.integrations?.google_calendar;
+    if (gcal?.enabled && gcal?.access_token) {
+        connectedIntegrations.google_calendar = true;
+    }
 
     return (
         <div className="flex flex-col h-full">
@@ -200,6 +225,32 @@ export default async function SettingsPage() {
                     agencyId={user.agency.id}
                     isAgencyDefault={true}
                 />
+
+                {/* Integration Defaults */}
+                {user.profile.role === 'agency_admin' && (
+                    <TierGate currentTier={currentTier} requiredFeature="crm_integrations" label="Integration Defaults">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Plug className="h-5 w-5" />
+                                    Integration Defaults
+                                </CardTitle>
+                                <CardDescription>
+                                    Default CRM and tool connections inherited by all clients unless overridden
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <IntegrationsPage
+                                    apiConfig={apiConfig}
+                                    agents={agents || []}
+                                    appUrl={appUrl}
+                                    currentTier={currentTier}
+                                    connectedIntegrations={connectedIntegrations}
+                                />
+                            </CardContent>
+                        </Card>
+                    </TierGate>
+                )}
 
                 {/* Danger Zone — account deletion (agency admins only) */}
                 {user.profile.role === 'agency_admin' && (

@@ -16,10 +16,13 @@ export const metadata: Metadata = { title: 'Edit Workflow' };
 
 export default async function EditWorkflowPage({
     params,
+    searchParams,
 }: {
     params: Promise<{ id: string }>;
+    searchParams: Promise<{ client_id?: string }>;
 }) {
     const { id } = await params;
+    const { client_id: clientId } = await searchParams;
     if (!isValidUuid(id)) {
         notFound();
     }
@@ -38,12 +41,17 @@ export default async function EditWorkflowPage({
         notFound();
     }
 
-    // Fetch agents for the dropdown
-    const { data: agents } = await supabase
+    // Fetch agents for the dropdown — scoped to client if client_id provided
+    let agentsQuery = supabase
         .from('agents')
         .select('id, name')
-        .eq('agency_id', user.agency.id)
-        .order('name');
+        .eq('agency_id', user.agency.id);
+
+    if (clientId) {
+        agentsQuery = agentsQuery.eq('client_id', clientId);
+    }
+
+    const { data: agents } = await agentsQuery.order('name');
 
     return (
         <div className="flex flex-col h-full">
@@ -57,7 +65,7 @@ export default async function EditWorkflowPage({
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href="/workflows" aria-label="Back to workflows">
+                        <Link href={clientId ? `/clients/${clientId}` : '/workflows'} aria-label="Go back">
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>

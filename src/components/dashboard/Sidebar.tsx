@@ -12,7 +12,6 @@ import {
     Settings,
     LogOut,
     CreditCard,
-    Zap,
     FlaskConical,
     TestTube2,
     Lightbulb,
@@ -78,8 +77,6 @@ const adminNavigation = [
     { name: 'Insights', href: '/insights', icon: Lightbulb },
     { name: 'Experiments', href: '/experiments', icon: FlaskConical },
     { name: 'Testing', href: '/testing', icon: TestTube2 },
-    { name: 'Workflows', href: '/workflows', icon: Zap },
-    { name: 'Integrations', href: '/integrations', icon: Plug },
     { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

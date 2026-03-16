@@ -28,7 +28,14 @@ import {
 import { toast } from '@/lib/toast';
 import type { ActiveCall, ConnectionStatus as ConnectionStatusType } from '@/types/realtime';
 
-export function ActiveCallsList() {
+interface ActiveCallsListProps {
+    /** Base path for navigation (e.g. "/portal" for client users) */
+    basePath?: string;
+    /** Whether the user can end calls (default: true, set false for client users) */
+    canEndCalls?: boolean;
+}
+
+export function ActiveCallsList({ basePath = '', canEndCalls = true }: ActiveCallsListProps) {
     const router = useRouter();
     const [calls, setCalls] = useState<ActiveCall[]>([]);
     const [loading, setLoading] = useState(true);
@@ -196,28 +203,30 @@ export function ActiveCallsList() {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => router.push(`/live/${call.external_id}?provider=${call.provider}`)}
+                                            onClick={() => router.push(`${basePath}/live/${call.external_id}?provider=${call.provider}`)}
                                             className="sm:size-default"
                                         >
                                             <Eye className="h-4 w-4 sm:mr-2" />
                                             <span className="hidden sm:inline">View Live</span>
                                         </Button>
-                                        <Button
-                                            variant="destructive"
-                                            size="sm"
-                                            onClick={() => setEndConfirmCallId(call.id)}
-                                            disabled={ending === call.id}
-                                            className="sm:size-default"
-                                        >
-                                            {ending === call.id ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <>
-                                                    <PhoneOff className="h-4 w-4 sm:mr-2" />
-                                                    <span className="hidden sm:inline">End Call</span>
-                                                </>
-                                            )}
-                                        </Button>
+                                        {canEndCalls && (
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() => setEndConfirmCallId(call.id)}
+                                                disabled={ending === call.id}
+                                                className="sm:size-default"
+                                            >
+                                                {ending === call.id ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <>
+                                                        <PhoneOff className="h-4 w-4 sm:mr-2" />
+                                                        <span className="hidden sm:inline">End Call</span>
+                                                    </>
+                                                )}
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
                             </CardContent>

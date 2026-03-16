@@ -10,16 +10,26 @@ import Link from 'next/link';
 
 export const metadata: Metadata = { title: 'New Workflow' };
 
-export default async function NewWorkflowPage() {
+export default async function NewWorkflowPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ client_id?: string }>;
+}) {
+    const { client_id: clientId } = await searchParams;
     const user = await requireAgencyAdmin();
     const supabase = await createClient();
 
-    // Fetch agents for the dropdown
-    const { data: agents } = await supabase
+    // Fetch agents for the dropdown — scoped to client if client_id provided
+    let agentsQuery = supabase
         .from('agents')
         .select('id, name')
-        .eq('agency_id', user.agency.id)
-        .order('name');
+        .eq('agency_id', user.agency.id);
+
+    if (clientId) {
+        agentsQuery = agentsQuery.eq('client_id', clientId);
+    }
+
+    const { data: agents } = await agentsQuery.order('name');
 
     const context = {
         hasGHL: !!user.agency.integrations?.ghl?.enabled,
@@ -41,7 +51,7 @@ export default async function NewWorkflowPage() {
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href="/workflows" aria-label="Back to workflows">
+                        <Link href={clientId ? `/clients/${clientId}` : '/workflows'} aria-label="Go back">
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>
