@@ -129,7 +129,7 @@ export async function GET(
         const client = getClient();
 
         const response = await client.messages.create({
-            model: 'claude-haiku-4-20250514',
+            model: 'claude-haiku-4-5',
             max_tokens: 1024,
             system: `You are an expert at optimizing AI voice agent prompts. Analyze the agent's recent call data and current system prompt, then provide specific, actionable suggestions to improve performance.
 

@@ -9,7 +9,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { TranscriptMessage, SuccessCriterion, CriterionResult } from '@/types';
 
-const CLAUDE_MODEL = 'claude-sonnet-4-6-20250514';
+const CLAUDE_MODEL = 'claude-sonnet-4-6';
 const MAX_EVAL_TOKENS = 1024;
 
 let anthropicClient: Anthropic | null = null;

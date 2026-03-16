@@ -10,7 +10,7 @@ import { BUILDER_SYSTEM_PROMPT, buildMessages } from './prompts';
 import type { LLMBuilderResponse, Voice, VoiceCharacteristics, VoiceRecommendation } from './types';
 
 // --- Configuration constants ---
-const CLAUDE_MODEL = 'claude-sonnet-4-6-20250514';
+const CLAUDE_MODEL = 'claude-sonnet-4-6';
 const MAX_OUTPUT_TOKENS = 4096;
 const TOP_VOICES_COUNT = 3;
 
@@ -86,9 +86,18 @@ export async function generateAgentConfigStream(
 
                 controller.close();
             } catch (error) {
+                // Log full error details for debugging (visible in Vercel logs)
+                if (error instanceof APIError) {
+                    console.error(`Agent builder Claude API error: status=${error.status} message=${error.message}`);
+                } else {
+                    console.error('Agent builder stream error:', error instanceof Error ? error.message : error);
+                }
+
                 const errorMessage = error instanceof APIError
                     ? getAPIErrorMessage(error)
-                    : 'Failed to generate response';
+                    : error instanceof Error
+                        ? error.message
+                        : 'Failed to generate response';
 
                 controller.enqueue(
                     encoder.encode(
@@ -169,9 +178,11 @@ function sanitizeLLMResponse(raw: unknown): LLMBuilderResponse {
  */
 function getAPIErrorMessage(error: APIError): string {
     if (error.status === 401) return 'AI service authentication failed. Check your API key.';
+    if (error.status === 400) return 'AI service rejected the request. The model or parameters may be invalid.';
+    if (error.status === 404) return 'AI model not found. The model ID may need updating.';
     if (error.status === 429) return 'Too many requests. Please wait a moment and try again.';
     if (error.status === 529) return 'AI service is temporarily overloaded. Please try again.';
-    return 'Failed to generate response. Please try again.';
+    return `AI service error (${error.status}). Please try again.`;
 }
 
 /**

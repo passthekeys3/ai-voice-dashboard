@@ -11,7 +11,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { TestPersona, TranscriptMessage } from '@/types';
 
-const HAIKU_MODEL = 'claude-haiku-4-20250514';
+const HAIKU_MODEL = 'claude-haiku-4-5';
 const MAX_TOKENS_PER_TURN = 256; // Keep responses concise like real speech
 
 let anthropicClient: Anthropic | null = null;

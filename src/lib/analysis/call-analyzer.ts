@@ -11,7 +11,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 
 // Use Haiku for cost efficiency — transcripts can be long
-const CLAUDE_MODEL = 'claude-haiku-4-20250514';
+const CLAUDE_MODEL = 'claude-haiku-4-5';
 const MAX_TRANSCRIPT_CHARS = 30000; // ~7.5k tokens
 const MAX_OUTPUT_TOKENS = 512;      // Actual responses are ~200 tokens; reduced from 1024
 const ANALYSIS_TIMEOUT_MS = 30000;  // 30 seconds
