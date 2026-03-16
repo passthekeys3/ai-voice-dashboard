@@ -58,6 +58,11 @@ export async function POST(request: NextRequest) {
         if (draft.voiceId.length > MAX_VOICE_ID_LENGTH) {
             return NextResponse.json({ error: 'Invalid voice ID' }, { status: 400 });
         }
+        // Reject voice IDs that contain characters invalid for all providers
+        // (prevents injection via crafted voice IDs)
+        if (!/^[a-zA-Z0-9_\-.:]+$/.test(draft.voiceId)) {
+            return NextResponse.json({ error: 'Invalid voice ID format' }, { status: 400 });
+        }
         if (!draft?.systemPrompt || typeof draft.systemPrompt !== 'string' || !draft.systemPrompt.trim()) {
             return NextResponse.json({ error: 'System prompt is required' }, { status: 400 });
         }

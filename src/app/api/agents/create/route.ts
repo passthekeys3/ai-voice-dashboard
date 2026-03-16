@@ -106,6 +106,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Voice is required for Retell agents' }, { status: 400 });
         }
 
+        // Validate voice ID format if provided
+        if (voice_id && (typeof voice_id !== 'string' || voice_id.length > 200 || !/^[a-zA-Z0-9_\-.:]+$/.test(voice_id))) {
+            return NextResponse.json({ error: 'Invalid voice ID format' }, { status: 400 });
+        }
+
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`;
         let externalId: string;
         const agentConfig: Record<string, unknown> = {};
