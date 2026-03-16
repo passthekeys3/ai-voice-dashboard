@@ -167,21 +167,21 @@ export function ActiveCallsList() {
                     {calls.map((call) => (
                         <Card key={call.id} className="border-l-4 border-l-green-500 animate-in fade-in slide-in-from-top-2 duration-300">
                             <CardContent className="py-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="relative">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                        <div className="relative shrink-0">
                                             <Radio className="h-8 w-8 text-green-500" />
                                             <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-500 animate-pulse"></span>
                                         </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <Bot className="h-4 w-4 text-muted-foreground" />
-                                                <span className="font-medium">{call.agent_name}</span>
+                                        <div className="min-w-0">
+                                            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                                                <Bot className="h-4 w-4 text-muted-foreground shrink-0" />
+                                                <span className="font-medium truncate">{call.agent_name}</span>
                                                 <span className="text-muted-foreground">→</span>
-                                                <Phone className="h-4 w-4 text-muted-foreground" />
-                                                <span>{formatPhoneNumber(call) || 'Unknown'}</span>
+                                                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                                                <span className="truncate">{formatPhoneNumber(call) || 'Unknown'}</span>
                                             </div>
-                                            <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1 text-sm text-muted-foreground">
                                                 <Badge variant="outline" className="text-green-600 tabular-nums">
                                                     {formatDuration(call.duration_seconds)} elapsed
                                                 </Badge>
@@ -192,25 +192,29 @@ export function ActiveCallsList() {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-2 shrink-0">
                                         <Button
                                             variant="outline"
+                                            size="sm"
                                             onClick={() => router.push(`/live/${call.id}?provider=${call.provider}`)}
+                                            className="sm:size-default"
                                         >
-                                            <Eye className="h-4 w-4 mr-2" />
-                                            View Live
+                                            <Eye className="h-4 w-4 sm:mr-2" />
+                                            <span className="hidden sm:inline">View Live</span>
                                         </Button>
                                         <Button
                                             variant="destructive"
+                                            size="sm"
                                             onClick={() => setEndConfirmCallId(call.id)}
                                             disabled={ending === call.id}
+                                            className="sm:size-default"
                                         >
                                             {ending === call.id ? (
                                                 <Loader2 className="h-4 w-4 animate-spin" />
                                             ) : (
                                                 <>
-                                                    <PhoneOff className="h-4 w-4 mr-2" />
-                                                    End Call
+                                                    <PhoneOff className="h-4 w-4 sm:mr-2" />
+                                                    <span className="hidden sm:inline">End Call</span>
                                                 </>
                                             )}
                                         </Button>

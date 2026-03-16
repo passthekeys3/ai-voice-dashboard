@@ -80,23 +80,23 @@ export function FilterableClientGrid({ clients }: FilterableClientGridProps) {
                                 className="block"
                             >
                                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                                    <CardHeader className="flex flex-row items-start justify-between pb-2">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800">
+                                    <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 shrink-0">
                                                 <Users className="h-5 w-5 text-slate-600 dark:text-slate-400" />
                                             </div>
-                                            <div>
-                                                <CardTitle className="text-lg">{client.name}</CardTitle>
-                                                <p className="text-sm text-muted-foreground">{client.email}</p>
+                                            <div className="min-w-0">
+                                                <CardTitle className="text-lg truncate">{client.name}</CardTitle>
+                                                <p className="text-sm text-muted-foreground truncate">{client.email}</p>
                                             </div>
                                         </div>
-                                        <Badge variant={client.is_active ? 'default' : 'secondary'}>
+                                        <Badge variant={client.is_active ? 'default' : 'secondary'} className="shrink-0">
                                             {client.is_active ? 'Active' : 'Inactive'}
                                         </Badge>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-3 text-sm text-muted-foreground min-w-0">
                                                 <div className="flex items-center gap-1.5">
                                                     <Bot className="h-3.5 w-3.5" />
                                                     <span>{agentCount} agent{agentCount !== 1 ? 's' : ''}</span>

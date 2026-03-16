@@ -70,16 +70,16 @@ export function ClientUsersList({ clientId, clientName, users }: ClientUsersList
                             {users.map((profile) => (
                                 <div
                                     key={profile.id}
-                                    className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"
+                                    className="flex items-center justify-between gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <UserCircle className="h-8 w-8 text-slate-400" />
-                                        <div>
-                                            <p className="font-medium">{profile.full_name}</p>
-                                            <p className="text-sm text-muted-foreground">{profile.email}</p>
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <UserCircle className="h-8 w-8 text-slate-400 shrink-0" />
+                                        <div className="min-w-0">
+                                            <p className="font-medium truncate">{profile.full_name}</p>
+                                            <p className="text-sm text-muted-foreground truncate">{profile.email}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 shrink-0">
                                         <Badge variant="outline">
                                             {profile.role === 'client_admin' ? 'Admin' : 'Member'}
                                         </Badge>

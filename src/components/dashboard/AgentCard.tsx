@@ -152,7 +152,7 @@ export function AgentCard({ agent, phoneNumber, showDelete = true, configBasePat
                             {agent.is_active ? 'Active' : 'Inactive'}
                         </span>
                     </div>
-                    <div className="flex items-center gap-2 sm:gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                         {showDelete && (
                             <AlertDialog onOpenChange={(open: boolean) => { if (!open) setDeleteFromProvider(false); }}>
                                 <AlertDialogTrigger asChild>
