@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Phone, Clock, DollarSign, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatDuration } from '@/lib/utils';
 
 interface AnalyticsCardsProps {
     totalCalls: number;
@@ -150,8 +150,8 @@ export function AnalyticsCards({
             href: links?.totalCalls,
         },
         {
-            title: 'Total Minutes',
-            value: totalMinutes.toFixed(1),
+            title: 'Total Duration',
+            value: formatDuration(totalMinutes * 60),
             current: totalMinutes,
             previous: previousPeriod?.totalMinutes,
             icon: Clock,

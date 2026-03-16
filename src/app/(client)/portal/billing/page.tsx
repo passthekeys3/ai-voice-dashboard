@@ -6,6 +6,7 @@ import { Header } from '@/components/dashboard/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { getUserPermissions } from '@/lib/permissions';
 import { redirect } from 'next/navigation';
+import { formatDuration } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'Billing' };
 
@@ -54,7 +55,7 @@ export default async function ClientBillingPage() {
 
     const totalCalls = calls.length;
     const totalSeconds = calls.reduce((sum, c) => sum + (c.duration_seconds || 0), 0);
-    const totalMinutes = Math.round(totalSeconds / 60 * 100) / 100;
+    const totalDuration = formatDuration(totalSeconds);
     const totalCostCents = calls.reduce((sum, c) => sum + (c.cost_cents || 0), 0);
     const totalCost = totalCostCents / 100;
 
@@ -69,7 +70,7 @@ export default async function ClientBillingPage() {
                 userAvatar={user.profile.avatar_url}
             />
 
-            <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
+            <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto overflow-x-hidden">
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight">Billing</h2>
                     <p className="text-muted-foreground">
@@ -90,8 +91,8 @@ export default async function ClientBillingPage() {
                                 <p className="text-3xl font-bold">{totalCalls}</p>
                             </div>
                             <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground">Total Minutes</p>
-                                <p className="text-3xl font-bold">{totalMinutes}</p>
+                                <p className="text-sm text-muted-foreground">Total Duration</p>
+                                <p className="text-3xl font-bold">{totalDuration}</p>
                             </div>
                             <div className="space-y-1">
                                 <p className="text-sm text-muted-foreground">Cost (Provider)</p>

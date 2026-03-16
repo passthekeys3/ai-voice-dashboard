@@ -226,22 +226,24 @@ export function StripeConnectSection({ currentTier }: { currentTier?: PlanTier |
     return (
         <Card>
             <CardHeader>
-                <div className="flex items-center justify-between">
-                    <div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="min-w-0">
                         <CardTitle className="flex items-center gap-2">
-                            <Link2 className="h-5 w-5" />
-                            Stripe Connect — Client Billing
+                            <Link2 className="h-5 w-5 shrink-0" />
+                            <span className="truncate">Stripe Connect — Client Billing</span>
                         </CardTitle>
                         <CardDescription>
                             Connect your Stripe account to collect payments from your clients directly
                         </CardDescription>
                     </div>
-                    {isFullyActive && <Badge variant="default">Connected</Badge>}
-                    {isConnected && !isFullyActive && !isOnboardingIncomplete && (
-                        <Badge variant="secondary">Restricted</Badge>
-                    )}
-                    {isOnboardingIncomplete && <Badge variant="outline">Setup Incomplete</Badge>}
-                    {!isConnected && <Badge variant="outline">Not Connected</Badge>}
+                    <div className="shrink-0">
+                        {isFullyActive && <Badge variant="default">Connected</Badge>}
+                        {isConnected && !isFullyActive && !isOnboardingIncomplete && (
+                            <Badge variant="secondary">Restricted</Badge>
+                        )}
+                        {isOnboardingIncomplete && <Badge variant="outline">Setup Incomplete</Badge>}
+                        {!isConnected && <Badge variant="outline">Not Connected</Badge>}
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="space-y-6">

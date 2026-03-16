@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { PlanTier, PlanType } from '@/types/database';
+import { formatDuration } from '@/lib/utils';
 
 type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused' | 'expired' | null;
 
@@ -297,8 +298,8 @@ export function BillingSection() {
                                             <p className="text-xs sm:text-sm text-muted-foreground">Total Calls</p>
                                         </div>
                                         <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
-                                            <p className="text-xl sm:text-2xl font-bold">{billingData.usage.total_minutes.toFixed(1)}</p>
-                                            <p className="text-xs sm:text-sm text-muted-foreground">Minutes Used</p>
+                                            <p className="text-xl sm:text-2xl font-bold">{formatDuration(billingData.usage.total_minutes * 60)}</p>
+                                            <p className="text-xs sm:text-sm text-muted-foreground">Duration Used</p>
                                         </div>
                                         <div className="col-span-2 sm:col-span-1 p-3 sm:p-4 bg-muted/50 rounded-lg">
                                             <p className="text-xl sm:text-2xl font-bold">${billingData.usage.total_cost.toFixed(2)}</p>

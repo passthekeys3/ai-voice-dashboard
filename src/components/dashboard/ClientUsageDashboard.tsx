@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Phone, Clock, DollarSign, TrendingUp, Loader2 } from 'lucide-react';
+import { formatDuration } from '@/lib/utils';
 
 interface UsageData {
     usage: {
@@ -91,8 +92,8 @@ export function ClientUsageDashboard({ clientId }: ClientUsageDashboardProps) {
                             <Clock className="h-4 w-4 text-green-600 dark:text-green-400" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Total Minutes</p>
-                            <p className="text-xl font-bold">{Number(usage.total_minutes).toFixed(1)}</p>
+                            <p className="text-sm text-muted-foreground">Total Duration</p>
+                            <p className="text-xl font-bold">{formatDuration(Number(usage.total_minutes) * 60)}</p>
                         </div>
                     </div>
 
