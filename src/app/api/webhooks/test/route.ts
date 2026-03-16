@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { forwardToWebhook } from '@/lib/webhooks/forward';
@@ -9,7 +9,7 @@ import { forwardToWebhook } from '@/lib/webhooks/forward';
  * Sends a test webhook payload to the configured webhook URL.
  * Useful for validating Zapier/Make/n8n integrations before a real call.
  */
-export async function POST(request: NextRequest) {
+export async function POST() {
     try {
         const user = await getCurrentUser();
         if (!user || !isAgencyAdmin(user)) {
