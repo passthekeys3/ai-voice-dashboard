@@ -7,6 +7,7 @@ import {
     validateIntegrationUpdates,
 } from '@/lib/integrations/validate-integrations';
 import { encrypt } from '@/lib/crypto';
+import crypto from 'crypto';
 
 export async function PATCH(request: NextRequest) {
     try {
@@ -175,7 +176,15 @@ export async function PATCH(request: NextRequest) {
                 .single();
 
             const existingIntegrations = (current?.integrations as Record<string, unknown>) || {};
-            updatePayload.integrations = deepMerge(existingIntegrations, sanitized);
+            const merged = deepMerge(existingIntegrations, sanitized);
+
+            // Auto-generate webhook signing secret when API key is created and no secret exists yet
+            const mergedApi = (merged as Record<string, Record<string, unknown>>).api;
+            if (mergedApi?.api_key && !mergedApi.webhook_signing_secret) {
+                mergedApi.webhook_signing_secret = crypto.randomBytes(32).toString('hex');
+            }
+
+            updatePayload.integrations = merged;
         }
 
         const { error } = await supabase

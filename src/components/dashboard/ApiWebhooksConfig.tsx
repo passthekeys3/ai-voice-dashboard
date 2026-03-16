@@ -57,6 +57,19 @@ interface ApiConfig {
     enabled?: boolean;
     default_agent_id?: string;
     webhook_url?: string;
+    webhook_signing_secret?: string;
+}
+
+interface WebhookDelivery {
+    id: string;
+    call_id?: string;
+    event: string;
+    webhook_url: string;
+    status_code?: number;
+    success: boolean;
+    error_message?: string;
+    attempt: number;
+    created_at: string;
 }
 
 interface ApiWebhooksConfigProps {
@@ -97,6 +110,12 @@ export function ApiWebhooksConfig({
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [showRegenConfirm, setShowRegenConfirm] = useState(false);
+    const [signingSecret, setSigningSecret] = useState(apiConfig?.webhook_signing_secret ?? '');
+    const [showSigningSecret, setShowSigningSecret] = useState(false);
+    const [testing, setTesting] = useState(false);
+    const [testResult, setTestResult] = useState<{ success: boolean; status_code?: number; error?: string } | null>(null);
+    const [deliveries, setDeliveries] = useState<WebhookDelivery[]>([]);
+    const [loadingDeliveries, setLoadingDeliveries] = useState(false);
     const successTimerRef = useRef<NodeJS.Timeout | null>(null);
     const copyTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -106,6 +125,46 @@ export function ApiWebhooksConfig({
             if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
         };
     }, []);
+
+    // Fetch delivery log when dialog opens
+    useEffect(() => {
+        if (open && webhookUrl) {
+            fetchDeliveries();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
+
+    const fetchDeliveries = async () => {
+        setLoadingDeliveries(true);
+        try {
+            const res = await fetch('/api/webhook-deliveries');
+            if (res.ok) {
+                const data = await res.json();
+                setDeliveries(data.deliveries || []);
+            }
+        } catch {
+            // Silent fail — delivery log is informational
+        } finally {
+            setLoadingDeliveries(false);
+        }
+    };
+
+    const handleTestWebhook = async () => {
+        setTesting(true);
+        setTestResult(null);
+        setError(null);
+        try {
+            const res = await fetch('/api/webhooks/test', { method: 'POST' });
+            const data = await res.json();
+            setTestResult(data);
+            // Refresh deliveries after test
+            fetchDeliveries();
+        } catch {
+            setTestResult({ success: false, error: 'Request failed' });
+        } finally {
+            setTesting(false);
+        }
+    };
 
     const hasKey = !!maskedKey || !!newKey;
 
@@ -430,7 +489,7 @@ Auth: Bearer Token (your API key)`;
                             <div className="space-y-2">
                                 <Label className="text-sm font-medium">Webhook URL</Label>
                                 <p className="text-xs text-muted-foreground">
-                                    Receive call data (call_ended events) at this URL. Works with
+                                    Receive call data (call_started + call_ended events) at this URL. Works with
                                     Make, Zapier, n8n, or any HTTPS endpoint.
                                 </p>
                                 <div className="flex items-center gap-2">
@@ -449,12 +508,136 @@ Auth: Bearer Token (your API key)`;
                                     >
                                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
                                     </Button>
+                                    {webhookUrl && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleTestWebhook}
+                                            disabled={testing || saving}
+                                        >
+                                            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Test'}
+                                        </Button>
+                                    )}
                                 </div>
+                                {testResult && (
+                                    <div className={`text-xs px-2 py-1 rounded ${testResult.success ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400'}`}>
+                                        {testResult.success
+                                            ? `✓ Test webhook delivered (HTTP ${testResult.status_code})`
+                                            : `✗ Test failed: ${testResult.error || `HTTP ${testResult.status_code}`}`
+                                        }
+                                    </div>
+                                )}
                                 <p className="text-xs text-muted-foreground">
                                     Clients can override this with their own webhook URL in their integration settings.
                                     Leave blank to disable.
                                 </p>
                             </div>
+
+                            {/* Webhook Signing Secret */}
+                            {signingSecret && (
+                                <>
+                                    <Separator />
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium">Webhook Signing Secret</Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Verify webhook authenticity by checking the <code className="text-[11px] bg-muted px-1 rounded">X-Prosody-Signature</code> header.
+                                            Signature = HMAC-SHA256(secret, &quot;{'{timestamp}.{body}'}&quot;).
+                                        </p>
+                                        <div className="flex items-center gap-2">
+                                            <code className="flex-1 rounded-md border bg-muted/50 px-3 py-1.5 text-sm font-mono truncate">
+                                                {showSigningSecret ? signingSecret : '••••••••••••••••'}
+                                            </code>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() => setShowSigningSecret(!showSigningSecret)}
+                                                title={showSigningSecret ? 'Hide secret' : 'Show secret'}
+                                            >
+                                                {showSigningSecret ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() => handleCopy(signingSecret, 'signing-secret')}
+                                                title="Copy signing secret"
+                                            >
+                                                {copiedItem === 'signing-secret' ? (
+                                                    <Check className="h-3.5 w-3.5 text-green-500" />
+                                                ) : (
+                                                    <Copy className="h-3.5 w-3.5" />
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Recent Webhook Deliveries */}
+                            {webhookUrl && (
+                                <>
+                                    <Separator />
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-sm font-medium">Recent Deliveries</Label>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 text-xs"
+                                                onClick={fetchDeliveries}
+                                                disabled={loadingDeliveries}
+                                            >
+                                                {loadingDeliveries ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                                            </Button>
+                                        </div>
+                                        {deliveries.length === 0 ? (
+                                            <p className="text-xs text-muted-foreground py-2">
+                                                No webhook deliveries yet. Send a test or wait for a call to complete.
+                                            </p>
+                                        ) : (
+                                            <div className="rounded-md border overflow-hidden">
+                                                <table className="w-full text-xs">
+                                                    <thead>
+                                                        <tr className="bg-muted/50 border-b">
+                                                            <th className="text-left px-2 py-1.5 font-medium">Event</th>
+                                                            <th className="text-left px-2 py-1.5 font-medium">Status</th>
+                                                            <th className="text-left px-2 py-1.5 font-medium">Time</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y">
+                                                        {deliveries.slice(0, 10).map((d) => (
+                                                            <tr key={d.id}>
+                                                                <td className="px-2 py-1.5 font-mono">{d.event}</td>
+                                                                <td className="px-2 py-1.5">
+                                                                    {d.success ? (
+                                                                        <Badge variant="default" className="bg-green-600 text-white text-[10px] px-1 py-0">
+                                                                            {d.status_code || 'OK'}
+                                                                        </Badge>
+                                                                    ) : (
+                                                                        <Badge variant="destructive" className="text-[10px] px-1 py-0">
+                                                                            {d.status_code || 'Error'}
+                                                                        </Badge>
+                                                                    )}
+                                                                    {d.error_message && !d.success && (
+                                                                        <span className="ml-1 text-muted-foreground">{d.error_message}</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-2 py-1.5 text-muted-foreground">
+                                                                    {new Date(d.created_at).toLocaleString(undefined, {
+                                                                        month: 'short', day: 'numeric',
+                                                                        hour: '2-digit', minute: '2-digit',
+                                                                    })}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
                         </div>
                     ) : (
                         /* API Documentation Tab */

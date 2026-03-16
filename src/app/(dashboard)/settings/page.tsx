@@ -181,6 +181,7 @@ export default async function SettingsPage() {
         enabled: rawApiConfig.enabled,
         default_agent_id: rawApiConfig.default_agent_id,
         webhook_url: rawApiConfig.webhook_url,
+        webhook_signing_secret: rawApiConfig.webhook_signing_secret,
     } : undefined;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
     const connectedIntegrations: Record<string, boolean> = {};

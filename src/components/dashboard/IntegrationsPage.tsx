@@ -173,6 +173,7 @@ interface IntegrationsPageProps {
         enabled?: boolean;
         default_agent_id?: string;
         webhook_url?: string;
+        webhook_signing_secret?: string;
     };
     agents?: { id: string; name: string; provider: string }[];
     appUrl?: string;

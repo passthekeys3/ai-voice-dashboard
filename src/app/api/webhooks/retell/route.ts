@@ -9,10 +9,10 @@ import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-an
 import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
 import { resolveIntegrations, createTokenRefreshCallback } from '@/lib/integrations/resolve';
 import { isValidWebhookUrl } from '@/lib/webhooks/validation';
+import { forwardToWebhook } from '@/lib/webhooks/forward';
 import { waitUntil } from '@vercel/functions';
 import type { Workflow } from '@/types';
 import Retell from 'retell-sdk';
-const WEBHOOK_FWD_TIMEOUT = 10_000;
 
 // Retell webhook payload types
 interface RetellWebhookPayload {
@@ -50,23 +50,6 @@ interface RetellWebhookPayload {
 // Max transcript length to store in DB (≈100k words — generous for any real call, prevents abuse)
 const MAX_TRANSCRIPT_LENGTH = 500_000;
 
-// Forward call data to agent's webhook URL
-async function forwardToWebhook(webhookUrl: string, callData: Record<string, unknown>) {
-    if (!isValidWebhookUrl(webhookUrl)) {
-        console.error('Blocked webhook forwarding to invalid/private URL');
-        return;
-    }
-    try {
-        await fetch(webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(callData),
-            signal: AbortSignal.timeout(WEBHOOK_FWD_TIMEOUT),
-        });
-    } catch (err) {
-        console.error('Failed to forward webhook:', err instanceof Error ? err.message : 'Unknown error');
-    }
-}
 
 export async function POST(request: NextRequest) {
     try {
@@ -500,31 +483,44 @@ export async function POST(request: NextRequest) {
             })());
         }
 
-        // Forward to agent's webhook if configured and call ended
-        if (agent.webhook_url && payload.event === 'call_ended') {
-            const webhookPayload = {
-                event: 'call_ended',
+        // Forward to agent's webhook if configured (call_started + call_ended)
+        const isRetellCallStarted = payload.event === 'call_started';
+        const isRetellCallEnded = payload.event === 'call_ended';
+        const retellDirection = payload.call.direction || 'outbound';
+
+        if (agent.webhook_url && (isRetellCallStarted || isRetellCallEnded)) {
+            const webhookPayload: Record<string, unknown> = {
+                event: isRetellCallStarted ? 'call_started' : 'call_ended',
                 call_id: payload.call.call_id,
                 agent_id: agent.id,
+                agent_name: agent.name,
                 status,
-                direction: payload.call.direction || 'outbound',
+                direction: retellDirection,
                 duration_seconds: durationSeconds,
                 cost_cents: costCents,
                 from_number: payload.call.from_number,
                 to_number: payload.call.to_number,
-                transcript: callTranscript,
-                recording_url: payload.call.recording_url,
-                summary: payload.call.call_analysis?.call_summary,
-                sentiment: payload.call.call_analysis?.user_sentiment,
+                ...(isRetellCallEnded ? {
+                    transcript: callTranscript,
+                    recording_url: payload.call.recording_url,
+                    summary: payload.call.call_analysis?.call_summary,
+                    sentiment: payload.call.call_analysis?.user_sentiment,
+                } : {}),
                 started_at: new Date(payload.call.start_timestamp).toISOString(),
                 ended_at: payload.call.end_timestamp
                     ? new Date(payload.call.end_timestamp).toISOString()
                     : null,
                 metadata: payload.call.metadata,
+                provider: 'retell',
             };
 
-            // Use waitUntil to ensure webhook forwarding completes after response
-            waitUntil(forwardToWebhook(agent.webhook_url, webhookPayload));
+            waitUntil(forwardToWebhook(supabase, {
+                webhookUrl: agent.webhook_url,
+                payload: webhookPayload,
+                agencyId: agent.agency_id,
+                callId: payload.call.call_id,
+                event: isRetellCallStarted ? 'call_started' : 'call_ended',
+            }));
         }
 
         // Accumulate usage for per-minute billing (client-level)
@@ -582,6 +578,40 @@ export async function POST(request: NextRequest) {
         // but executeWorkflows itself is wrapped in waitUntil to guarantee completion after response.
         // Moving the entire block into waitUntil would be ideal but risks subtle breakage
         // since the response depends on none of these operations failing with an unhandled exception.
+        // Forward call_started to client/agency API webhook
+        if (isRetellCallStarted) {
+            waitUntil((async () => {
+                try {
+                    const { integrations: startedIntegrations } = await resolveIntegrations(supabase, agent.agency_id, agent.client_id);
+                    if (startedIntegrations.api?.enabled && startedIntegrations.api.webhook_url) {
+                        const startedEvent = retellDirection === 'inbound' ? 'inbound_call_started' : 'call_started';
+                        await forwardToWebhook(supabase, {
+                            webhookUrl: startedIntegrations.api.webhook_url,
+                            payload: {
+                                event: startedEvent,
+                                call_id: payload.call.call_id,
+                                agent_id: agent.id,
+                                agent_name: agent.name,
+                                status,
+                                direction: retellDirection,
+                                from_number: payload.call.from_number,
+                                to_number: payload.call.to_number,
+                                started_at: new Date(payload.call.start_timestamp).toISOString(),
+                                metadata: payload.call.metadata,
+                                provider: 'retell',
+                            },
+                            signingSecret: startedIntegrations.api.webhook_signing_secret,
+                            agencyId: agent.agency_id,
+                            callId: payload.call.call_id,
+                            event: startedEvent,
+                        });
+                    }
+                } catch (err) {
+                    console.error('Retell call_started webhook forwarding error:', err instanceof Error ? err.message : 'Unknown error');
+                }
+            })());
+        }
+
         if (payload.event === 'call_ended') {
             // Resolve integrations (client overrides → agency fallback)
             const { integrations: resolvedIntegrations, source: integrationSource } = await resolveIntegrations(supabase, agent.agency_id, agent.client_id);
@@ -589,13 +619,14 @@ export async function POST(request: NextRequest) {
             // Forward to client/agency webhook URL (API integration setting)
             // Fires independently from the per-agent webhook — both can trigger for the same call.
             if (resolvedIntegrations.api?.enabled && resolvedIntegrations.api.webhook_url) {
+                const endedEvent = retellDirection === 'inbound' ? 'inbound_call_ended' : 'call_ended';
                 const clientWebhookPayload = {
-                    event: 'call_ended',
+                    event: endedEvent,
                     call_id: payload.call.call_id,
                     agent_id: agent.id,
                     agent_name: agent.name,
                     status,
-                    direction: payload.call.direction || 'outbound',
+                    direction: retellDirection,
                     duration_seconds: durationSeconds,
                     cost_cents: costCents,
                     from_number: payload.call.from_number,
@@ -611,7 +642,14 @@ export async function POST(request: NextRequest) {
                     metadata: payload.call.metadata,
                     provider: 'retell',
                 };
-                waitUntil(forwardToWebhook(resolvedIntegrations.api.webhook_url, clientWebhookPayload));
+                waitUntil(forwardToWebhook(supabase, {
+                    webhookUrl: resolvedIntegrations.api.webhook_url,
+                    payload: clientWebhookPayload,
+                    signingSecret: resolvedIntegrations.api.webhook_signing_secret,
+                    agencyId: agent.agency_id,
+                    callId: payload.call.call_id,
+                    event: endedEvent,
+                }));
             }
 
             // Fetch matching workflows (both generic call_ended AND direction-specific inbound_call_ended)

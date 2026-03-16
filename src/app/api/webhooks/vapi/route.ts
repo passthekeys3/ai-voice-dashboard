@@ -9,10 +9,10 @@ import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-an
 import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
 import { resolveIntegrations, createTokenRefreshCallback } from '@/lib/integrations/resolve';
 import { isValidWebhookUrl } from '@/lib/webhooks/validation';
+import { forwardToWebhook } from '@/lib/webhooks/forward';
 import { waitUntil } from '@vercel/functions';
 import type { Workflow } from '@/types';
 import crypto from 'crypto';
-const WEBHOOK_FWD_TIMEOUT = 10_000;
 
 // Max transcript length to store in DB (≈100k words — generous for any real call, prevents abuse)
 const MAX_TRANSCRIPT_LENGTH = 500_000;
@@ -34,23 +34,6 @@ function verifyVapiSignature(body: string, signature: string | null, apiKey: str
 
 
 
-// Forward call data to agent's webhook URL
-async function forwardToWebhook(webhookUrl: string, callData: Record<string, unknown>) {
-    if (!isValidWebhookUrl(webhookUrl)) {
-        console.error('Blocked webhook forwarding to invalid/private URL');
-        return;
-    }
-    try {
-        await fetch(webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(callData),
-            signal: AbortSignal.timeout(WEBHOOK_FWD_TIMEOUT),
-        });
-    } catch (err) {
-        console.error('Failed to forward Vapi webhook:', err instanceof Error ? err.message : 'Unknown error');
-    }
-}
 
 // Vapi webhook payload types
 interface VapiWebhookPayload {
@@ -428,27 +411,37 @@ export async function POST(request: NextRequest) {
             },
         }).catch(err => console.error('Failed to broadcast Vapi call update:', err instanceof Error ? err.message : 'Unknown error')));
 
-        // Forward to agent's webhook if configured and call ended
-        if (agent.webhook_url && isCallEnded) {
-            const webhookPayload = {
-                event: 'call_ended',
+        // Forward to agent's webhook if configured (call_started + call_ended)
+        if (agent.webhook_url && (isCallStarted || isCallEnded)) {
+            const webhookPayload: Record<string, unknown> = {
+                event: isCallStarted ? 'call_started' : 'call_ended',
                 call_id: call.id,
                 agent_id: agent.id,
+                agent_name: agent.name,
                 status,
                 direction,
                 duration_seconds: durationSeconds,
                 cost_cents: costCents,
                 from_number: direction === 'inbound' ? call.customer?.number : call.phoneNumber?.number,
                 to_number: direction === 'inbound' ? call.phoneNumber?.number : call.customer?.number,
-                transcript: callTranscript,
-                recording_url: call.recordingUrl,
-                summary: call.analysis?.summary || call.summary,
+                ...(isCallEnded ? {
+                    transcript: callTranscript,
+                    recording_url: call.recordingUrl,
+                    summary: call.analysis?.summary || call.summary,
+                } : {}),
                 started_at: startedAt,
                 ended_at: endedAt,
                 metadata: call.metadata,
+                provider: 'vapi',
             };
 
-            waitUntil(forwardToWebhook(agent.webhook_url, webhookPayload));
+            waitUntil(forwardToWebhook(supabase, {
+                webhookUrl: agent.webhook_url,
+                payload: webhookPayload,
+                agencyId: agent.agency_id,
+                callId: call.id,
+                event: isCallStarted ? 'call_started' : 'call_ended',
+            }));
         }
 
         // Accumulate usage for per-minute billing (client-level)
@@ -619,6 +612,40 @@ export async function POST(request: NextRequest) {
             })());
         }
 
+        // Forward call_started to client/agency API webhook (all directions)
+        if (isCallStarted) {
+            waitUntil((async () => {
+                try {
+                    const { integrations: startedIntegrations } = await resolveIntegrations(supabase, agent.agency_id, agent.client_id);
+                    if (startedIntegrations.api?.enabled && startedIntegrations.api.webhook_url) {
+                        const startedEvent = direction === 'inbound' ? 'inbound_call_started' : 'call_started';
+                        await forwardToWebhook(supabase, {
+                            webhookUrl: startedIntegrations.api.webhook_url,
+                            payload: {
+                                event: startedEvent,
+                                call_id: call.id,
+                                agent_id: agent.id,
+                                agent_name: agent.name,
+                                status,
+                                direction,
+                                from_number: direction === 'inbound' ? call.customer?.number : call.phoneNumber?.number,
+                                to_number: direction === 'inbound' ? call.phoneNumber?.number : call.customer?.number,
+                                started_at: startedAt,
+                                metadata: call.metadata,
+                                provider: 'vapi',
+                            },
+                            signingSecret: startedIntegrations.api.webhook_signing_secret,
+                            agencyId: agent.agency_id,
+                            callId: call.id,
+                            event: startedEvent,
+                        });
+                    }
+                } catch (err) {
+                    console.error('Vapi call_started webhook forwarding error:', err instanceof Error ? err.message : 'Unknown error');
+                }
+            })());
+        }
+
         // ======================================
         // Execute workflows for all call_ended events
         // ======================================
@@ -633,8 +660,9 @@ export async function POST(request: NextRequest) {
                 // Forward to client/agency webhook URL (API integration setting)
                 // Fires independently from the per-agent webhook — both can trigger for the same call.
                 if (resolvedIntegrations.api?.enabled && resolvedIntegrations.api.webhook_url) {
+                    const endedEvent = direction === 'inbound' ? 'inbound_call_ended' : 'call_ended';
                     const clientWebhookPayload = {
-                        event: 'call_ended',
+                        event: endedEvent,
                         call_id: call.id,
                         agent_id: agent.id,
                         agent_name: agent.name,
@@ -654,7 +682,14 @@ export async function POST(request: NextRequest) {
                         provider: 'vapi',
                     };
                     // Forward webhook in background — don't block CRM/workflow processing
-                    waitUntil(forwardToWebhook(resolvedIntegrations.api.webhook_url, clientWebhookPayload));
+                    waitUntil(forwardToWebhook(supabase, {
+                        webhookUrl: resolvedIntegrations.api.webhook_url,
+                        payload: clientWebhookPayload,
+                        signingSecret: resolvedIntegrations.api.webhook_signing_secret,
+                        agencyId: agent.agency_id,
+                        callId: call.id,
+                        event: endedEvent,
+                    }));
                 }
 
                 const ghlInteg = resolvedIntegrations.ghl;

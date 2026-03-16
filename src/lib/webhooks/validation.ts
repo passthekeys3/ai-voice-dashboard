@@ -1,9 +1,26 @@
 /**
- * Webhook URL validation utilities.
+ * Webhook URL validation and signing utilities.
  *
  * Defense-in-depth against SSRF: validates webhook URLs before forwarding
  * call data to prevent requests to internal/private addresses.
+ *
+ * HMAC signing for outbound webhooks: allows recipients (Zapier, Make, n8n)
+ * to verify payloads authentically came from Prosody.
  */
+
+import crypto from 'crypto';
+
+/**
+ * Sign a webhook payload using HMAC-SHA256.
+ * Format mirrors Stripe: signature = HMAC-SHA256(secret, "${timestamp}.${body}")
+ * Recipients verify by recomputing the hash and comparing.
+ */
+export function signWebhookPayload(body: string, secret: string, timestamp: number): string {
+    return crypto
+        .createHmac('sha256', secret)
+        .update(`${timestamp}.${body}`)
+        .digest('hex');
+}
 
 /**
  * Validate that a webhook URL is safe to forward data to.

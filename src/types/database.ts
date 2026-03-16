@@ -169,6 +169,7 @@ export interface AgencyIntegrations {
         enabled?: boolean;
         default_agent_id?: string;
         webhook_url?: string;   // Forwards call data to external systems (Make, Zapier, n8n)
+        webhook_signing_secret?: string; // HMAC-SHA256 secret for signing outbound webhooks
     };
     slack?: {
         webhook_url?: string;
@@ -670,4 +671,17 @@ export interface HubSpotTriggerLog {
     created_at: string;
     // Joined data
     agent?: { name: string };
+}
+
+export interface WebhookDeliveryLog {
+    id: string;
+    agency_id: string;
+    call_id?: string;
+    event: string;
+    webhook_url: string;
+    status_code?: number;
+    success: boolean;
+    error_message?: string;
+    attempt: number;
+    created_at: string;
 }

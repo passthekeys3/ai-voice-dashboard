@@ -9,10 +9,10 @@ import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-an
 import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
 import { resolveIntegrations, createTokenRefreshCallback } from '@/lib/integrations/resolve';
 import { isValidWebhookUrl } from '@/lib/webhooks/validation';
+import { forwardToWebhook } from '@/lib/webhooks/forward';
 import { waitUntil } from '@vercel/functions';
 import crypto from 'crypto';
 import type { Workflow } from '@/types';
-const WEBHOOK_FWD_TIMEOUT = 10_000;
 
 // Max transcript length to store in DB (≈100k words — generous for any real call, prevents abuse)
 const MAX_TRANSCRIPT_LENGTH = 500_000;
@@ -63,23 +63,6 @@ interface BlandWebhookPayload {
     end_at?: string;
 }
 
-// Forward call data to agent's webhook URL
-async function forwardToWebhook(webhookUrl: string, callData: Record<string, unknown>) {
-    if (!isValidWebhookUrl(webhookUrl)) {
-        console.error('Blocked webhook forwarding to invalid/private URL');
-        return;
-    }
-    try {
-        await fetch(webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(callData),
-            signal: AbortSignal.timeout(WEBHOOK_FWD_TIMEOUT),
-        });
-    } catch (err) {
-        console.error('Failed to forward Bland webhook:', err instanceof Error ? err.message : 'Unknown error');
-    }
-}
 
 export async function POST(request: NextRequest) {
     try {
@@ -346,10 +329,11 @@ export async function POST(request: NextRequest) {
 
         // Forward to agent's webhook if configured
         if (agent.webhook_url && isCallEnded) {
-            const webhookPayload = {
+            const webhookPayload: Record<string, unknown> = {
                 event: 'call_ended',
                 call_id: payload.call_id,
                 agent_id: agent.id,
+                agent_name: agent.name,
                 status,
                 direction,
                 duration_seconds: durationSeconds,
@@ -362,9 +346,16 @@ export async function POST(request: NextRequest) {
                 started_at: startedAt,
                 ended_at: endedAt,
                 metadata: payload.metadata,
+                provider: 'bland',
             };
 
-            waitUntil(forwardToWebhook(agent.webhook_url, webhookPayload));
+            waitUntil(forwardToWebhook(supabase, {
+                webhookUrl: agent.webhook_url,
+                payload: webhookPayload,
+                agencyId: agent.agency_id,
+                callId: payload.call_id,
+                event: 'call_ended',
+            }));
         }
 
         // Accumulate usage for per-minute billing (client-level)
@@ -424,8 +415,9 @@ export async function POST(request: NextRequest) {
             // Forward to client/agency webhook URL (API integration setting)
             // Fires independently from the per-agent webhook — both can trigger for the same call.
             if (resolvedIntegrations.api?.enabled && resolvedIntegrations.api.webhook_url) {
+                const endedEvent = direction === 'inbound' ? 'inbound_call_ended' : 'call_ended';
                 const clientWebhookPayload = {
-                    event: 'call_ended',
+                    event: endedEvent,
                     call_id: payload.call_id,
                     agent_id: agent.id,
                     agent_name: agent.name,
@@ -443,7 +435,14 @@ export async function POST(request: NextRequest) {
                     metadata: payload.metadata,
                     provider: 'bland',
                 };
-                waitUntil(forwardToWebhook(resolvedIntegrations.api.webhook_url, clientWebhookPayload));
+                waitUntil(forwardToWebhook(supabase, {
+                    webhookUrl: resolvedIntegrations.api.webhook_url,
+                    payload: clientWebhookPayload,
+                    signingSecret: resolvedIntegrations.api.webhook_signing_secret,
+                    agencyId: agent.agency_id,
+                    callId: payload.call_id,
+                    event: endedEvent,
+                }));
             }
 
             const { data: workflows } = await supabase

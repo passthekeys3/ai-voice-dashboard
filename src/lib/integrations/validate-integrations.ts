@@ -224,6 +224,11 @@ export function validateIntegrationUpdates(
                 return 'Invalid default agent ID';
             }
         }
+        if (api.webhook_signing_secret !== undefined && api.webhook_signing_secret !== null) {
+            if (typeof api.webhook_signing_secret !== 'string' || !/^[a-f0-9]{64}$/.test(api.webhook_signing_secret as string)) {
+                return 'Invalid webhook signing secret format';
+            }
+        }
     }
 
     return null;
@@ -272,6 +277,7 @@ export function maskIntegrationSecrets(
         const api = { ...(result.api as Record<string, unknown>) };
         if (api.api_key) api.api_key = mask(api.api_key);
         if (api.webhook_url) api.webhook_url = mask(api.webhook_url);
+        if (api.webhook_signing_secret) api.webhook_signing_secret = mask(api.webhook_signing_secret);
         result.api = api;
     }
 
