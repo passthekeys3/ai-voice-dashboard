@@ -196,7 +196,7 @@ export function ActiveCallsList() {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => router.push(`/live/${call.id}?provider=${call.provider}`)}
+                                            onClick={() => router.push(`/live/${call.external_id}?provider=${call.provider}`)}
                                             className="sm:size-default"
                                         >
                                             <Eye className="h-4 w-4 sm:mr-2" />
