@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
                 },
                 body: JSON.stringify({
                     name: safeName,
-                    voice: { voiceId: draft.voiceId },
+                    voice: { provider: '11labs', voiceId: draft.voiceId },
                     firstMessage: safeFirstMessage || undefined,
                     model: {
                         provider: 'openai',

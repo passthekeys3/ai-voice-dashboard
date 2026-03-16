@@ -5,6 +5,45 @@ import { listBlandVoices } from '@/lib/providers/bland';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
+/**
+ * Curated ElevenLabs voices available on Vapi by default.
+ * Vapi doesn't expose a list-voices API — it relies on third-party TTS providers.
+ * These are ElevenLabs' most popular pre-made voices that work out of the box.
+ * Voice IDs sourced from ElevenLabs' public voice library.
+ */
+const VAPI_ELEVENLABS_VOICES: Array<{
+    id: string;
+    name: string;
+    provider: string;
+    gender?: string;
+    accent?: string;
+    age?: string;
+    preview_url?: string;
+}> = [
+    { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', provider: 'vapi', gender: 'female', accent: 'American', age: 'young' },
+    { id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi', provider: 'vapi', gender: 'female', accent: 'American', age: 'young' },
+    { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah', provider: 'vapi', gender: 'female', accent: 'American', age: 'young' },
+    { id: 'MF3mGyEYCl7XYWbV9V6O', name: 'Elli', provider: 'vapi', gender: 'female', accent: 'American', age: 'young' },
+    { id: 'XB0fDUnXU5powFXDhCwa', name: 'Charlotte', provider: 'vapi', gender: 'female', accent: 'British', age: 'middle-aged' },
+    { id: 'Xb7hH8MSUJpSbSDYk0k2', name: 'Alice', provider: 'vapi', gender: 'female', accent: 'British', age: 'middle-aged' },
+    { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Lily', provider: 'vapi', gender: 'female', accent: 'British', age: 'middle-aged' },
+    { id: 'jBpfuIE2acCO8z3wKNLl', name: 'Gigi', provider: 'vapi', gender: 'female', accent: 'American', age: 'young' },
+    { id: 'jsCqWAovK2LkecY7zXl4', name: 'Freya', provider: 'vapi', gender: 'female', accent: 'American', age: 'young' },
+    { id: 'z9fAnlkpzviPz146aGWa', name: 'Glinda', provider: 'vapi', gender: 'female', accent: 'American', age: 'middle-aged' },
+    { id: 'ErXwobaYiN019PkySvjV', name: 'Antoni', provider: 'vapi', gender: 'male', accent: 'American', age: 'young' },
+    { id: 'VR6AewLTigWG4xSOukaG', name: 'Arnold', provider: 'vapi', gender: 'male', accent: 'American', age: 'middle-aged' },
+    { id: 'pNInz6obpgDQGcFmaJgB', name: 'Adam', provider: 'vapi', gender: 'male', accent: 'American', age: 'middle-aged' },
+    { id: 'yoZ06aMxZJJ28mfd3POQ', name: 'Sam', provider: 'vapi', gender: 'male', accent: 'American', age: 'young' },
+    { id: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh', provider: 'vapi', gender: 'male', accent: 'American', age: 'young' },
+    { id: 'IKne3meq5aSn9XLyUdCD', name: 'Charlie', provider: 'vapi', gender: 'male', accent: 'Australian', age: 'middle-aged' },
+    { id: 'TX3LPaxmHKxFdv7VOQHJ', name: 'Liam', provider: 'vapi', gender: 'male', accent: 'American', age: 'young' },
+    { id: 'ZQe5CZNOzWyzPSCn5a3c', name: 'James', provider: 'vapi', gender: 'male', accent: 'Australian', age: 'mature' },
+    { id: 'bIHbv24MWmeRgasZH58o', name: 'Will', provider: 'vapi', gender: 'male', accent: 'American', age: 'young' },
+    { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel', provider: 'vapi', gender: 'male', accent: 'British', age: 'middle-aged' },
+    { id: 'N2lVS1w4EoAxEBqZHePr', name: 'Callum', provider: 'vapi', gender: 'male', accent: 'British', age: 'middle-aged' },
+    { id: 'ODq5zmih8GrVes37Dizd', name: 'Patrick', provider: 'vapi', gender: 'male', accent: 'American', age: 'middle-aged' },
+];
+
 // GET /api/voices - List available voices from configured providers
 export async function GET(request: NextRequest) {
     try {
@@ -82,8 +121,14 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // Note: Vapi voices depend on the TTS provider (ElevenLabs, PlayHT, etc.)
-        // They don't have a simple list-voices endpoint
+        // Vapi voices: Vapi uses third-party TTS providers (ElevenLabs, PlayHT, etc.)
+        // and has no list-voices endpoint. We provide curated ElevenLabs defaults
+        // that work out of the box with any Vapi account.
+        if (agency?.vapi_api_key && (!providerParam || providerParam === 'vapi')) {
+            for (const voice of VAPI_ELEVENLABS_VOICES) {
+                allVoices.push(voice);
+            }
+        }
 
         if (allVoices.length === 0 && !agency?.retell_api_key && !agency?.vapi_api_key && !agency?.bland_api_key) {
             return NextResponse.json({ error: 'No voice provider API key configured' }, { status: 400 });
