@@ -4,7 +4,7 @@ description: "How to set up automated workflows that trigger after every AI voic
 date: "2026-03-01"
 author: "BuildVoiceAI Team"
 tags: ["technical", "workflows"]
-lastModified: "2026-03-01"
+lastModified: "2026-03-16"
 ---
 
 > **TL;DR:** Post-call workflows automate the actions that happen after every AI voice call — CRM updates, appointment booking, team notifications, and follow-up sequences. A well-configured workflow system eliminates manual data entry, ensures no lead falls through the cracks, and turns voice agents from a communication tool into a full business automation platform.
@@ -110,8 +110,9 @@ The actual work the workflow performs. Actions execute in sequence, and you can 
 4. Action 2: Add contact to nurture workflow in GoHighLevel
 5. Action 3: Send SMS thank-you message
    - "Thanks for calling [business name]! We'll follow up within 24 hours."
-6. Action 4: Post webhook to Zapier
-   - Trigger additional automations in your existing tech stack
+6. Action 4: Post webhook to Zapier, Make, or n8n
+   - Forward structured call data to any of 5,000+ apps in your tech stack
+   - Includes transcript, summary, sentiment, and recording URL
 
 **Why it matters:** Every caller enters a consistent follow-up process, regardless of when they call or who's available.
 
@@ -172,7 +173,7 @@ When every call automatically updates the CRM, books appointments, notifies the 
 
 ### What CRMs do post-call workflows integrate with?
 
-The most common integrations are HubSpot and GoHighLevel (GHL), which together cover the majority of agencies and SMBs. Many platforms also support webhook-based integrations with Zapier, Make, and n8n, allowing you to connect to virtually any CRM or tool in your stack including Salesforce, Pipedrive, and Close.
+The most common direct integrations are HubSpot and GoHighLevel (GHL), which handle CRM updates, contact creation, and call logging natively. For everything else, webhook integrations with Zapier, Make, and n8n let you connect to virtually any tool — Salesforce, Pipedrive, Close, Slack, Google Sheets, and thousands more. Webhooks forward structured call data (transcript, summary, sentiment, recording URL) in real-time, so your automations trigger the moment a call ends.
 
 ### Can workflows run different actions based on call outcome?
 

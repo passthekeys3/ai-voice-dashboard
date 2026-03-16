@@ -1,0 +1,174 @@
+---
+title: "How to Connect AI Voice Agents to Zapier, Make, and n8n"
+description: "Step-by-step guide to connecting your AI voice agents to 5,000+ apps using webhook integrations with Zapier, Make (Integromat), and n8n."
+date: "2026-03-16"
+author: "BuildVoiceAI Team"
+tags: ["technical", "workflows"]
+lastModified: "2026-03-16"
+---
+
+> **TL;DR:** Webhook integrations let your AI voice agents talk to any app in your tech stack. Configure a webhook URL in your dashboard, and every call event is automatically forwarded to Zapier, Make, n8n, or any custom endpoint. No code required. Includes HMAC signing for security, automatic retries for reliability, and a delivery log so you never lose data.
+
+Your AI voice agent just finished a call. The caller wants to schedule a consultation, and the agent captured their name, phone number, and preferred time. Now what?
+
+If the answer is "someone on your team manually enters that into the CRM, then checks the calendar, then sends a confirmation email," you're doing it wrong. Webhook integrations eliminate that entire chain of manual work.
+
+## What Webhooks Do (In Plain English)
+
+A webhook is a real-time notification. When something happens in Prosody — a call starts, a call ends — your dashboard automatically sends the call data to whatever tool you connect. That tool can then do anything: update a CRM, send a Slack message, create a calendar event, trigger an email sequence, or add a row to a spreadsheet.
+
+The key difference from traditional integrations: webhooks push data to your tools in real-time, rather than your tools pulling data on a schedule.
+
+## What Gets Sent
+
+Every webhook payload includes structured call data that your automation tools can immediately use:
+
+**When a call starts** (`call_started`):
+- Agent name and ID
+- Caller and recipient phone numbers
+- Call direction (inbound or outbound)
+- Timestamp
+
+**When a call ends** (`call_ended`):
+- Everything from `call_started`, plus:
+- Full conversation transcript
+- AI-generated call summary
+- Call duration and cost
+- Sentiment analysis (positive, neutral, negative)
+- Recording URL
+- Call status (completed, failed, no-answer)
+
+This structured data means your automation tools can make smart decisions. Route positive-sentiment calls to a "hot leads" pipeline. Only create CRM contacts for calls longer than 30 seconds. Send different Slack notifications based on call direction.
+
+## Setting Up Your First Integration
+
+The setup takes about five minutes regardless of which tool you use.
+
+### Step 1: Get Your Webhook URL
+
+Create a webhook trigger in your automation tool of choice. Zapier calls it "Catch Hook," Make calls it "Custom webhook," and n8n has a "Webhook" trigger node. Each gives you a unique URL.
+
+### Step 2: Add It to Your Dashboard
+
+Open Settings in your Prosody dashboard, scroll to the API & Webhooks section, and paste the URL. Save. That's it — your integration is live.
+
+### Step 3: Test It
+
+Click the "Send Test Webhook" button. This sends a sample call payload to your automation tool so you can verify the connection and see exactly what data fields are available. The test payload mirrors a real `call_ended` event with a `"test": true` flag so your automation can tell the difference.
+
+## Real-World Automation Recipes
+
+### Lead Capture to CRM
+
+**Tool:** Zapier or Make
+**Trigger:** `call_ended` webhook
+**Actions:**
+1. Filter: only process calls where `duration_seconds > 30` and `status = completed`
+2. Search for existing contact by `from_number` in HubSpot/Salesforce/Pipedrive
+3. If found, update the contact with call notes from the `summary` field
+4. If not found, create a new contact with the phone number
+5. Log the call as an activity with the transcript attached
+
+### Real-Time Team Alerts
+
+**Tool:** n8n or Zapier
+**Trigger:** `call_ended` webhook
+**Actions:**
+1. Filter: only process calls where `sentiment = positive` and `duration_seconds > 60`
+2. Send a Slack message to #new-leads with the caller's number, summary, and sentiment
+3. Send an email to the account manager with the full transcript
+
+### Appointment Booking
+
+**Tool:** Make
+**Trigger:** `call_ended` webhook
+**Actions:**
+1. Parse the `summary` field for appointment details
+2. Check Google Calendar for availability
+3. Create a calendar event
+4. Send a confirmation SMS via Twilio
+5. Add a follow-up task in your project management tool
+
+### Spreadsheet Logging
+
+**Tool:** Zapier
+**Trigger:** `call_ended` webhook
+**Actions:**
+1. Add a row to Google Sheets with: date, caller number, agent name, duration, sentiment, summary
+2. Useful for clients who want simple reporting without logging into a dashboard
+
+## Securing Your Webhooks
+
+For production use, Prosody supports HMAC-SHA256 webhook signing. When enabled, every webhook includes a cryptographic signature that proves the data came from Prosody and hasn't been tampered with.
+
+Your dashboard auto-generates a signing secret when you save your webhook configuration. Each webhook request includes two headers — a signature and a timestamp — that your receiving endpoint can verify. This follows the same pattern used by Stripe and other major platforms, so most automation tools have built-in support.
+
+## Reliability Built In
+
+Webhooks in production need to be reliable. Prosody handles this with:
+
+- **Automatic retries** — Failed deliveries are retried up to 3 times with exponential backoff (1 second, then 2 seconds)
+- **Smart retry logic** — Only server errors (5xx) and rate limits (429) are retried. Client errors (400, 401, 404) fail immediately since retrying won't help
+- **Delivery log** — Every delivery attempt is logged with status code, success/failure, and error message. View the log in Settings to debug issues
+- **10-second timeout** — If your endpoint doesn't respond within 10 seconds, the request is treated as a failure and retried
+
+## Client-Level vs. Agency-Level Webhooks
+
+You can configure webhooks at two levels:
+
+- **Agency-level** (Settings page): The default webhook URL for all agents
+- **Client-level** (Client detail page): Override the agency default for a specific client's agents
+
+This is useful when managing multiple clients with different tech stacks. Client A might use Zapier while Client B uses Make. Each client's call events go to their own webhook endpoint automatically.
+
+## Choosing Your Automation Tool
+
+All three major platforms work equally well with Prosody webhooks. The right choice depends on your existing stack:
+
+**Zapier** is the easiest to use. Best if you're non-technical and want the simplest setup. The free tier supports basic automations.
+
+**Make** (formerly Integromat) offers the most visual workflow builder and is more cost-effective at higher volumes. Best for complex multi-step automations with branching logic.
+
+**n8n** is open-source and self-hostable. Best for technical teams who want full control, no per-execution costs, and the ability to run automations on their own infrastructure.
+
+You can also send webhooks to any custom HTTPS endpoint if you're building your own integration.
+
+## Common Questions
+
+### Do I need Zapier/Make/n8n if I already have CRM integrations?
+
+Not necessarily. If you've already connected HubSpot or GoHighLevel directly in Prosody, those integrations handle CRM updates automatically. Webhook integrations are for connecting to tools beyond your CRM — Slack, Google Sheets, email platforms, project management tools, or custom internal systems.
+
+### Can I send webhooks to multiple URLs?
+
+Currently, you configure one webhook URL per level (agency or client). If you need to fan out to multiple destinations, use your automation tool's built-in branching. For example, a single Zapier webhook can trigger multiple parallel actions.
+
+### What happens if my webhook endpoint is down?
+
+Prosody retries failed deliveries up to 3 times with exponential backoff. If all attempts fail, the delivery is logged as failed in your delivery log. You can review failed deliveries in Settings and manually retry or investigate the issue.
+
+### Is there a rate limit on webhooks?
+
+No artificial rate limit from Prosody's side. Webhooks fire in real-time as calls start and end. If you're making hundreds of calls simultaneously, your receiving endpoint should be able to handle the volume.
+
+## Frequently Asked Questions
+
+### How do I connect AI voice agents to Zapier?
+
+In your Prosody dashboard, go to Settings, scroll to API & Webhooks, and paste the webhook URL from your Zapier "Catch Hook" trigger. Click Save, then use the "Send Test Webhook" button to verify the connection. Zapier will automatically detect the data fields and let you map them to any of its 5,000+ app integrations.
+
+### What data does the webhook send after each call?
+
+The `call_ended` webhook includes the full conversation transcript, an AI-generated summary, caller and recipient phone numbers, call duration, cost, sentiment analysis (positive/neutral/negative), recording URL, call direction, and metadata. The `call_started` event includes a subset of these fields (phone numbers, direction, agent info) since the call hasn't completed yet.
+
+### Can I use webhooks with n8n self-hosted?
+
+Yes. n8n self-hosted works the same as n8n cloud. Create a Webhook trigger node, set the method to POST, and use the production URL. The only requirement is that your n8n instance must be publicly accessible via HTTPS so Prosody can reach it. If your instance is behind a firewall, you'll need to expose it via a reverse proxy or tunnel service.
+
+### Are webhook deliveries reliable?
+
+Prosody includes automatic retries with exponential backoff (up to 3 attempts), SSRF protection, and a delivery log that tracks every attempt. Failed deliveries are logged with status codes and error messages so you can diagnose issues. For critical automations, we recommend building idempotency into your receiving workflow using the `call_id` field as a dedup key.
+
+### Do I need to verify webhook signatures?
+
+Signature verification is optional but recommended for production. Without verification, anyone who discovers your webhook URL could send fake payloads. With HMAC-SHA256 signing enabled, your receiving endpoint can cryptographically verify that each payload came from Prosody and hasn't been tampered with. The signing follows the same pattern as Stripe webhooks.
