@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
+import { decrypt } from '@/lib/crypto';
 import { listBlandVoices } from '@/lib/providers/bland';
 
 const PROVIDER_API_TIMEOUT = 15_000;
@@ -61,6 +62,11 @@ export async function GET(request: NextRequest) {
             .eq('id', user.agency.id)
             .single();
 
+        // Decrypt API keys (stored encrypted in DB)
+        const retellKey = agency?.retell_api_key ? decrypt(agency.retell_api_key) : null;
+        const vapiKey = agency?.vapi_api_key ? decrypt(agency.vapi_api_key) : null;
+        const blandKey = agency?.bland_api_key ? decrypt(agency.bland_api_key) : null;
+
         // Check for provider query param to fetch a specific provider's voices
         const providerParam = request.nextUrl.searchParams.get('provider');
 
@@ -75,12 +81,12 @@ export async function GET(request: NextRequest) {
         }> = [];
 
         // Fetch Retell voices
-        if (agency?.retell_api_key && (!providerParam || providerParam === 'retell')) {
+        if (retellKey && (!providerParam || providerParam === 'retell')) {
             try {
                 const retellResponse = await fetch('https://api.retellai.com/list-voices', {
                     method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${agency.retell_api_key}`,
+                        'Authorization': `Bearer ${retellKey}`,
                     },
                     signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                 });
@@ -105,9 +111,9 @@ export async function GET(request: NextRequest) {
         }
 
         // Fetch Bland voices
-        if (agency?.bland_api_key && (!providerParam || providerParam === 'bland')) {
+        if (blandKey && (!providerParam || providerParam === 'bland')) {
             try {
-                const blandVoices = await listBlandVoices(agency.bland_api_key);
+                const blandVoices = await listBlandVoices(blandKey);
                 for (const voice of blandVoices) {
                     allVoices.push({
                         id: voice.voice_id,
@@ -124,13 +130,13 @@ export async function GET(request: NextRequest) {
         // Vapi voices: Vapi uses third-party TTS providers (ElevenLabs, PlayHT, etc.)
         // and has no list-voices endpoint. We provide curated ElevenLabs defaults
         // that work out of the box with any Vapi account.
-        if (agency?.vapi_api_key && (!providerParam || providerParam === 'vapi')) {
+        if (vapiKey && (!providerParam || providerParam === 'vapi')) {
             for (const voice of VAPI_ELEVENLABS_VOICES) {
                 allVoices.push(voice);
             }
         }
 
-        if (allVoices.length === 0 && !agency?.retell_api_key && !agency?.vapi_api_key && !agency?.bland_api_key) {
+        if (allVoices.length === 0 && !retellKey && !vapiKey && !blandKey) {
             return NextResponse.json({ error: 'No voice provider API key configured' }, { status: 400 });
         }
 
