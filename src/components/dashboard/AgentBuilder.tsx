@@ -257,19 +257,10 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
                     const chunk = JSON.parse(line);
 
                     if (chunk.type === 'text_delta') {
+                        // Accumulate raw text but don't display it —
+                        // Claude returns JSON, not user-facing prose.
+                        // The clean message is extracted from the 'result' event.
                         fullMessage += chunk.text;
-                        // Update assistant message with streaming text
-                        setMessages(prev => {
-                            const updated = [...prev];
-                            const last = updated[updated.length - 1];
-                            if (last?.role === 'assistant') {
-                                updated[updated.length - 1] = {
-                                    ...last,
-                                    content: fullMessage,
-                                };
-                            }
-                            return updated;
-                        });
                     } else if (chunk.type === 'result') {
                         const result = chunk.data as LLMBuilderResponse;
                         handleLLMResult(result, assistantMessageId);

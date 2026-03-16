@@ -203,14 +203,6 @@ export function AgentBuilderChat({
                             </div>
                         ))}
 
-                        {/* Streaming indicator */}
-                        {isStreaming && messages[messages.length - 1]?.content === '' && (
-                            <div className="flex items-center gap-2 text-muted-foreground pl-10">
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                                <span className="text-xs">Thinking...</span>
-                            </div>
-                        )}
-
                         <div ref={messagesEndRef} />
                     </>
                 )}
@@ -297,7 +289,10 @@ function MessageBubble({ message }: { message: BuilderMessage }) {
                 }`}
             >
                 {message.content || (
-                    <span className="text-muted-foreground italic">Generating...</span>
+                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Building your agent...
+                    </span>
                 )}
             </div>
         </div>
