@@ -24,8 +24,9 @@ function getKey(): Buffer | null {
 
     const raw = process.env.ENCRYPTION_KEY;
     if (!raw) {
-        // No encryption key configured — encryption/decryption will be no-ops.
-        // This is acceptable in development but should be set in production.
+        if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') {
+            console.error('[SECURITY] ENCRYPTION_KEY is not set in production — API keys will be stored in plaintext!');
+        }
         return null;
     }
 

@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
                     : provider === 'bland'
                     ? call.agent?.agencies?.bland_api_key
                     : call.agent?.agencies?.retell_api_key;
-                const providerApiKey = decrypt(rawKey) ?? rawKey;
+                const providerApiKey = rawKey ? decrypt(rawKey) : null;
 
                 if (!providerApiKey || !externalAgentId) {
                     throw new Error(`Missing ${provider} API key or agent external ID`);

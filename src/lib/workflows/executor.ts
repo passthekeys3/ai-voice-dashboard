@@ -68,12 +68,16 @@ function resolveTemplate(template: string, callData: CallData): string {
         '{{status}}': callData.status || '',
         '{{direction}}': callData.direction || '',
         '{{duration}}': String(callData.duration_seconds || 0),
+        '{{duration_seconds}}': String(callData.duration_seconds || 0),
         '{{duration_minutes}}': String(Math.round((callData.duration_seconds || 0) / 60)),
         '{{from_number}}': callData.from_number || '',
         '{{to_number}}': callData.to_number || '',
         '{{summary}}': callData.summary || '',
         '{{sentiment}}': callData.sentiment || '',
         '{{recording_url}}': callData.recording_url || '',
+        '{{transcript}}': callData.transcript || '',
+        '{{started_at}}': callData.started_at || '',
+        '{{ended_at}}': callData.ended_at || '',
     };
     let result = template;
     for (const [key, value] of Object.entries(vars)) {

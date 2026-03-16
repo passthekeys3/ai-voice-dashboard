@@ -87,12 +87,40 @@ export const PATCH = withErrorHandling(async (
 
     // Build update object with only provided fields
     const updateData: Record<string, unknown> = {};
-    if (body.name !== undefined) updateData.name = body.name;
-    if (body.email !== undefined) updateData.email = body.email;
+
+    // Validate name if provided
+    if (body.name !== undefined) {
+        if (typeof body.name !== 'string' || body.name.trim().length === 0 || body.name.length > 200) {
+            return badRequest('Name must be between 1 and 200 characters');
+        }
+        updateData.name = body.name.trim();
+    }
+
+    // Validate email if provided
+    if (body.email !== undefined) {
+        if (typeof body.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
+            return badRequest('Invalid email format');
+        }
+        updateData.email = body.email.toLowerCase().trim();
+    }
+
     if (body.branding !== undefined) updateData.branding = body.branding;
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
-    if (body.billing_type !== undefined) updateData.billing_type = body.billing_type;
-    if (body.billing_amount_cents !== undefined) updateData.billing_amount_cents = body.billing_amount_cents;
+
+    // Validate billing fields
+    const VALID_BILLING_TYPES = ['subscription', 'per_minute', 'one_time'];
+    if (body.billing_type !== undefined) {
+        if (body.billing_type !== null && !VALID_BILLING_TYPES.includes(body.billing_type)) {
+            return badRequest(`Invalid billing type. Must be one of: ${VALID_BILLING_TYPES.join(', ')}`);
+        }
+        updateData.billing_type = body.billing_type;
+    }
+    if (body.billing_amount_cents !== undefined) {
+        if (body.billing_amount_cents !== null && (typeof body.billing_amount_cents !== 'number' || body.billing_amount_cents < 0)) {
+            return badRequest('Billing amount must be a non-negative number');
+        }
+        updateData.billing_amount_cents = body.billing_amount_cents;
+    }
     // stripe_subscription_id is managed by Stripe webhooks only — not writable via API
     if (body.next_billing_date !== undefined) updateData.next_billing_date = body.next_billing_date;
 

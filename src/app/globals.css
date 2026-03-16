@@ -164,6 +164,13 @@
   }
 }
 
+/* Use dynamic viewport height on mobile to account for browser chrome */
+@supports (height: 100dvh) {
+  .h-screen {
+    height: 100dvh;
+  }
+}
+
 @keyframes fade-up {
   from {
     opacity: 0;

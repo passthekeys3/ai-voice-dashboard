@@ -102,7 +102,7 @@ Use these to filter which calls trigger the workflow:
 Use these in action configs (they get replaced with actual call data at runtime):
 - {{from_number}} — Caller's phone number
 - {{to_number}} — Called number
-- {{duration_seconds}} — Call duration
+- {{duration}} or {{duration_seconds}} — Call duration in seconds
 - {{duration_minutes}} — Duration in minutes (rounded)
 - {{status}} — Call status
 - {{sentiment}} — Detected sentiment

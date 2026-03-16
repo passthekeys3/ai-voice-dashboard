@@ -499,10 +499,12 @@ export async function upsertContact(
         if (data?.source) updates.hs_analytics_source = data.source;
         if (data?.properties) Object.assign(updates, data.properties);
 
-        // Merge tags into ai_call_tags property
+        // Merge tags into ai_call_tags property (semicolon-separated custom field)
         if (data?.tags && data.tags.length > 0) {
             const existingTags = contact.properties.ai_call_tags?.split(';').filter(Boolean) || [];
-            const mergedTags = [...new Set([...existingTags, ...data.tags])];
+            // Strip semicolons from tag values to prevent data corruption
+            const sanitizedNewTags = data.tags.map(t => t.replace(/;/g, '').trim()).filter(Boolean);
+            const mergedTags = [...new Set([...existingTags, ...sanitizedNewTags])];
             updates.ai_call_tags = mergedTags.join(';');
         }
 
@@ -683,7 +685,9 @@ export async function updateContactTags(
         // If fetch fails, proceed with just the new tags
     }
 
-    const mergedTags = [...new Set([...existingTags, ...tags])];
+    // Strip semicolons from tag values to prevent data corruption
+    const sanitizedTags = tags.map(t => t.replace(/;/g, '').trim()).filter(Boolean);
+    const mergedTags = [...new Set([...existingTags, ...sanitizedTags])];
     return updateContact(config, contactId, {
         ai_call_tags: mergedTags.join(';'),
     });

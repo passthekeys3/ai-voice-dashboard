@@ -66,10 +66,11 @@ export function Header({ title = 'Dashboard', userName, userEmail, userAvatar, o
                         size="sm"
                         onClick={handleSync}
                         disabled={syncing}
-                        className="transition-all duration-200 hover:border-slate-400 dark:hover:border-slate-600 hover:shadow-sm"
+                        className="h-9 min-w-9 px-2 sm:px-3 transition-all duration-200 hover:border-slate-400 dark:hover:border-slate-600 hover:shadow-sm"
+                        aria-label={syncing ? 'Syncing' : 'Sync data'}
                     >
-                        <RefreshCw className={`h-4 w-4 mr-2 transition-transform duration-200 ${syncing ? 'animate-spin' : ''}`} />
-                        {syncing ? 'Syncing...' : 'Sync Data'}
+                        <RefreshCw className={`h-4 w-4 sm:mr-2 transition-transform duration-200 ${syncing ? 'animate-spin' : ''}`} />
+                        <span className="hidden sm:inline">{syncing ? 'Syncing...' : 'Sync Data'}</span>
                     </Button>
                 )}
 
@@ -109,7 +110,7 @@ export function Header({ title = 'Dashboard', userName, userEmail, userAvatar, o
                             </Avatar>
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuContent className="w-48 sm:w-56" align="end" forceMount>
                         <DropdownMenuLabel className="font-normal">
                             <div className="flex flex-col space-y-1">
                                 <p className="text-sm font-medium">{userName}</p>

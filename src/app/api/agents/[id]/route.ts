@@ -131,7 +131,28 @@ export async function PATCH(
         if (body.is_active !== undefined) updatePayload.is_active = body.is_active;
         if (body.webhook_url !== undefined) updatePayload.webhook_url = body.webhook_url;
         if (body.widget_enabled !== undefined) updatePayload.widget_enabled = body.widget_enabled;
-        if (body.widget_config !== undefined) updatePayload.widget_config = body.widget_config;
+        if (body.widget_config !== undefined) {
+            const wc = body.widget_config;
+            if (typeof wc !== 'object' || wc === null || Array.isArray(wc)) {
+                return NextResponse.json({ error: 'Invalid widget config format' }, { status: 400 });
+            }
+            // Validate avatar_url — block javascript: and data: schemes
+            if (wc.avatar_url && typeof wc.avatar_url === 'string' && wc.avatar_url.trim()) {
+                try {
+                    const parsed = new URL(wc.avatar_url);
+                    if (!['http:', 'https:'].includes(parsed.protocol)) {
+                        return NextResponse.json({ error: 'Avatar URL must use https' }, { status: 400 });
+                    }
+                } catch {
+                    return NextResponse.json({ error: 'Invalid avatar URL' }, { status: 400 });
+                }
+            }
+            // Validate color
+            if (wc.color && typeof wc.color === 'string' && !/^#[0-9a-fA-F]{3,8}$/.test(wc.color)) {
+                return NextResponse.json({ error: 'Invalid widget color: must be a hex color' }, { status: 400 });
+            }
+            updatePayload.widget_config = wc;
+        }
 
         const { data: agent, error } = await supabase
             .from('agents')
