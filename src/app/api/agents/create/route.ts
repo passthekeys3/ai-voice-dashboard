@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { decrypt } from '@/lib/crypto';
 import { publishRetellAgent } from '@/lib/providers/retell';
 import { createVapiAssistant } from '@/lib/providers/vapi';
 import { createBlandPathway } from '@/lib/providers/bland';
@@ -73,18 +74,23 @@ export async function POST(request: NextRequest) {
             .eq('id', user.agency.id)
             .single();
 
+        // Decrypt API keys (stored encrypted in DB)
+        const retellKey = agency?.retell_api_key ? (decrypt(agency.retell_api_key) ?? undefined) : undefined;
+        const vapiKey = agency?.vapi_api_key ? (decrypt(agency.vapi_api_key) ?? undefined) : undefined;
+        const blandKey = agency?.bland_api_key ? (decrypt(agency.bland_api_key) ?? undefined) : undefined;
+
         // Determine which provider to use (requested > auto-select: retell → vapi → bland)
         const provider = requestedProvider || (
-            agency?.retell_api_key ? 'retell'
-            : agency?.vapi_api_key ? 'vapi'
-            : agency?.bland_api_key ? 'bland'
+            retellKey ? 'retell'
+            : vapiKey ? 'vapi'
+            : blandKey ? 'bland'
             : null
         );
 
         const apiKeyMap: Record<string, string | undefined> = {
-            retell: agency?.retell_api_key,
-            vapi: agency?.vapi_api_key,
-            bland: agency?.bland_api_key,
+            retell: retellKey,
+            vapi: vapiKey,
+            bland: blandKey,
         };
 
         const apiKey = apiKeyMap[provider as string];
