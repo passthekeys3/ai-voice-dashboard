@@ -183,12 +183,12 @@ export function BillingSection() {
     return (
         <Card>
             <CardHeader>
-                <div className="flex items-center justify-between">
-                    <div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="min-w-0">
                         <CardTitle>Billing & Subscription</CardTitle>
                         <CardDescription>Manage your subscription and billing details</CardDescription>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         {getPlanTypeBadge(planType)}
                         {planName && <Badge variant="secondary">{planName}</Badge>}
                         {billingData && getStatusBadge(billingData.subscription.status, billingData.subscription.is_beta)}
@@ -225,12 +225,12 @@ export function BillingSection() {
                                     </div>
                                 )}
                                 <div className="grid gap-4 md:grid-cols-2">
-                                    <div>
+                                    <div className="min-w-0">
                                         <p className="text-sm text-muted-foreground">
                                             {billingData.subscription.is_beta ? 'Beta Period' : 'Current Period'}
                                         </p>
-                                        <p className="font-medium">
-                                            {formatDate(billingData.subscription.current_period_start)} -{' '}
+                                        <p className="font-medium text-sm sm:text-base break-words">
+                                            {formatDate(billingData.subscription.current_period_start)} –{' '}
                                             {formatDate(billingData.subscription.current_period_end)}
                                         </p>
                                     </div>
@@ -250,29 +250,29 @@ export function BillingSection() {
                                         <Separator />
                                         <div>
                                             <h4 className="text-sm font-medium mb-3">Plan Limits</h4>
-                                            <div className="grid gap-4 md:grid-cols-3">
-                                                <div className="p-4 bg-muted/50 rounded-lg">
-                                                    <p className="text-2xl font-bold">
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                                                <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                                                    <p className="text-xl sm:text-2xl font-bold">
                                                         {!isFinite(limits.maxAgents) ? '∞' : limits.maxAgents}
                                                     </p>
-                                                    <p className="text-sm text-muted-foreground">
+                                                    <p className="text-xs sm:text-sm text-muted-foreground">
                                                         {!isFinite(limits.maxAgents) ? 'Unlimited Agents' : 'Max Agents'}
                                                     </p>
                                                 </div>
-                                                <div className="p-4 bg-muted/50 rounded-lg">
-                                                    <p className="text-2xl font-bold">{limits.maxClients}</p>
-                                                    <p className="text-sm text-muted-foreground">Clients Included</p>
+                                                <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                                                    <p className="text-xl sm:text-2xl font-bold">{limits.maxClients}</p>
+                                                    <p className="text-xs sm:text-sm text-muted-foreground">Clients Included</p>
                                                     {limits.additionalClientPrice != null && limits.additionalClientPrice > 0 && (
                                                         <p className="text-xs text-muted-foreground mt-1">
                                                             ${limits.additionalClientPrice}/additional
                                                         </p>
                                                     )}
                                                 </div>
-                                                <div className="p-4 bg-muted/50 rounded-lg">
-                                                    <p className="text-2xl font-bold">
+                                                <div className="col-span-2 sm:col-span-1 p-3 sm:p-4 bg-muted/50 rounded-lg">
+                                                    <p className="text-xl sm:text-2xl font-bold">
                                                         {perMinuteRate != null ? `$${perMinuteRate}` : '—'}
                                                     </p>
-                                                    <p className="text-sm text-muted-foreground">
+                                                    <p className="text-xs sm:text-sm text-muted-foreground">
                                                         {perMinuteRate != null ? 'Per Minute Rate' : 'No Per-Minute Billing'}
                                                     </p>
                                                     {planType === 'self_service' && perMinuteRate != null && (
@@ -291,18 +291,18 @@ export function BillingSection() {
                                 {/* Current Period Usage */}
                                 <div>
                                     <h4 className="text-sm font-medium mb-3">Current Period Usage</h4>
-                                    <div className="grid gap-4 md:grid-cols-3">
-                                        <div className="p-4 bg-muted/50 rounded-lg">
-                                            <p className="text-2xl font-bold">{billingData.usage.total_calls}</p>
-                                            <p className="text-sm text-muted-foreground">Total Calls</p>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                                        <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                                            <p className="text-xl sm:text-2xl font-bold">{billingData.usage.total_calls}</p>
+                                            <p className="text-xs sm:text-sm text-muted-foreground">Total Calls</p>
                                         </div>
-                                        <div className="p-4 bg-muted/50 rounded-lg">
-                                            <p className="text-2xl font-bold">{billingData.usage.total_minutes.toFixed(1)}</p>
-                                            <p className="text-sm text-muted-foreground">Minutes Used</p>
+                                        <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                                            <p className="text-xl sm:text-2xl font-bold">{billingData.usage.total_minutes.toFixed(1)}</p>
+                                            <p className="text-xs sm:text-sm text-muted-foreground">Minutes Used</p>
                                         </div>
-                                        <div className="p-4 bg-muted/50 rounded-lg">
-                                            <p className="text-2xl font-bold">${billingData.usage.total_cost.toFixed(2)}</p>
-                                            <p className="text-sm text-muted-foreground">Usage Cost</p>
+                                        <div className="col-span-2 sm:col-span-1 p-3 sm:p-4 bg-muted/50 rounded-lg">
+                                            <p className="text-xl sm:text-2xl font-bold">${billingData.usage.total_cost.toFixed(2)}</p>
+                                            <p className="text-xs sm:text-sm text-muted-foreground">Usage Cost</p>
                                         </div>
                                     </div>
                                 </div>
@@ -310,20 +310,24 @@ export function BillingSection() {
                                 <Separator />
 
                                 {/* Actions */}
-                                <div className="flex flex-wrap gap-3">
-                                    <Button
-                                        onClick={handleManageBilling}
-                                        disabled={actionLoading}
-                                    >
-                                        {actionLoading ? 'Loading...' : 'Manage Subscription'}
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => router.push('/billing/upgrade')}
-                                    >
-                                        Change Plan
-                                    </Button>
-                                    <p className="text-sm text-muted-foreground self-center">
+                                <div className="space-y-3">
+                                    <div className="flex flex-wrap gap-3">
+                                        <Button
+                                            onClick={handleManageBilling}
+                                            disabled={actionLoading}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            {actionLoading ? 'Loading...' : 'Manage Subscription'}
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => router.push('/billing/upgrade')}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            Change Plan
+                                        </Button>
+                                    </div>
+                                    <p className="text-xs sm:text-sm text-muted-foreground">
                                         Update payment method, view invoices, or change your plan
                                     </p>
                                 </div>
