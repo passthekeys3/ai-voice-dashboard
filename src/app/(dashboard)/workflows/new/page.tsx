@@ -65,6 +65,7 @@ export default async function NewWorkflowPage({
 
                 <NewWorkflowFlow
                     agents={agents || []}
+                    clientId={clientId}
                     context={context}
                 />
             </div>

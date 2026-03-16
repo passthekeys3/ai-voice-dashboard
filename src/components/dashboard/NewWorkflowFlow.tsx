@@ -14,6 +14,7 @@ import type { AIWorkflowResponse } from '@/lib/workflows/ai-builder';
 
 interface NewWorkflowFlowProps {
     agents: { id: string; name: string }[];
+    clientId?: string;
     context?: {
         hasGHL: boolean;
         hasHubSpot: boolean;
@@ -30,7 +31,7 @@ const AI_EXAMPLES = [
     'Tag contacts with "hot-lead" when call sentiment is positive and duration is over 3 minutes',
 ];
 
-export function NewWorkflowFlow({ agents, context }: NewWorkflowFlowProps) {
+export function NewWorkflowFlow({ agents, clientId, context }: NewWorkflowFlowProps) {
     const [mode, setMode] = useState<'choose' | 'ai' | 'editor'>('choose');
     const [selectedTemplate, setSelectedTemplate] = useState<WorkflowTemplate | null>(null);
     const [aiGeneratedWorkflow, setAiGeneratedWorkflow] = useState<Partial<Workflow> | null>(null);
@@ -394,6 +395,7 @@ export function NewWorkflowFlow({ agents, context }: NewWorkflowFlowProps) {
         <WorkflowEditor
             workflow={templateWorkflow as Workflow | undefined}
             agents={agents}
+            clientId={clientId}
         />
     );
 }

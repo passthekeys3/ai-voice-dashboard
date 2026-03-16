@@ -80,6 +80,7 @@ export default async function EditWorkflowPage({
                 <WorkflowEditor
                     workflow={workflow}
                     agents={agents || []}
+                    clientId={clientId}
                 />
 
                 <Card>

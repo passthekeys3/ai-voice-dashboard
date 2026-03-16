@@ -21,6 +21,7 @@ import type { Workflow, WorkflowAction, WorkflowCondition, WorkflowTrigger } fro
 interface WorkflowEditorProps {
     workflow?: Workflow;
     agents: { id: string; name: string }[];
+    clientId?: string;
 }
 
 const actionTypes = [
@@ -88,7 +89,7 @@ const conditionOperators = [
     { value: 'not_contains', label: 'does not contain' },
 ];
 
-export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
+export function WorkflowEditor({ workflow, agents, clientId }: WorkflowEditorProps) {
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -233,7 +234,7 @@ export function WorkflowEditor({ workflow, agents }: WorkflowEditorProps) {
                 throw new Error(data.error || 'Failed to save workflow');
             }
 
-            window.location.href = '/workflows';
+            window.location.href = clientId ? `/clients/${clientId}` : '/workflows';
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
