@@ -325,6 +325,7 @@ export default async function ClientDetailPage({
                     clientId={id}
                     retellApiKey={(safeClient as Client).retell_api_key || null}
                     vapiApiKey={(safeClient as Client).vapi_api_key || null}
+                    vapiPublicKey={(safeClient as Client).vapi_public_key || null}
                     blandApiKey={(safeClient as Client).bland_api_key || null}
                 />
 

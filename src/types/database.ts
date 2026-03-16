@@ -201,6 +201,7 @@ export interface Client {
     // Per-client voice provider API keys (null = use agency key)
     retell_api_key?: string;
     vapi_api_key?: string;
+    vapi_public_key?: string;
     bland_api_key?: string;
     // Per-client integration overrides (null = use agency defaults)
     integrations?: AgencyIntegrations;

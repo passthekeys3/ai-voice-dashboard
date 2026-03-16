@@ -13,6 +13,7 @@ interface ClientApiKeysEditorProps {
     clientId: string;
     retellApiKey?: string | null;
     vapiApiKey?: string | null;
+    vapiPublicKey?: string | null;
     blandApiKey?: string | null;
 }
 
@@ -22,6 +23,7 @@ const API_KEY_PATTERN = /^[a-zA-Z0-9_\-:.]+$/;
 const PROVIDERS = [
     { key: 'retell_api_key' as const, label: 'Retell API Key', placeholder: 'key_...' },
     { key: 'vapi_api_key' as const, label: 'Vapi API Key', placeholder: 'vapi-...' },
+    { key: 'vapi_public_key' as const, label: 'Vapi Public Key', placeholder: 'pk_...' },
     { key: 'bland_api_key' as const, label: 'Bland API Key', placeholder: 'sk-...' },
 ] as const;
 
@@ -34,6 +36,7 @@ export function ClientApiKeysEditor({
     clientId,
     retellApiKey,
     vapiApiKey,
+    vapiPublicKey,
     blandApiKey,
 }: ClientApiKeysEditorProps) {
     const router = useRouter();
@@ -43,23 +46,27 @@ export function ClientApiKeysEditor({
     const initial: Record<ProviderKey, string | null | undefined> = {
         retell_api_key: retellApiKey,
         vapi_api_key: vapiApiKey,
+        vapi_public_key: vapiPublicKey,
         bland_api_key: blandApiKey,
     };
 
     const [keys, setKeys] = useState<Record<ProviderKey, string>>({
         retell_api_key: isMasked(retellApiKey) ? '' : (retellApiKey || ''),
         vapi_api_key: isMasked(vapiApiKey) ? '' : (vapiApiKey || ''),
+        vapi_public_key: isMasked(vapiPublicKey) ? '' : (vapiPublicKey || ''),
         bland_api_key: isMasked(blandApiKey) ? '' : (blandApiKey || ''),
     });
     const [visibility, setVisibility] = useState<Record<ProviderKey, boolean>>({
         retell_api_key: false,
         vapi_api_key: false,
+        vapi_public_key: false,
         bland_api_key: false,
     });
     // Track which existing keys the user explicitly wants to clear
     const [cleared, setCleared] = useState<Record<ProviderKey, boolean>>({
         retell_api_key: false,
         vapi_api_key: false,
+        vapi_public_key: false,
         bland_api_key: false,
     });
 

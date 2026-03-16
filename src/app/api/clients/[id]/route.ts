@@ -128,7 +128,7 @@ export const PATCH = withErrorHandling(async (
     const API_KEY_MAX_LENGTH = 256;
     const API_KEY_PATTERN = /^[a-zA-Z0-9_\-:.]+$/;
 
-    for (const keyField of ['retell_api_key', 'vapi_api_key', 'bland_api_key'] as const) {
+    for (const keyField of ['retell_api_key', 'vapi_api_key', 'vapi_public_key', 'bland_api_key'] as const) {
         if (body[keyField] !== undefined) {
             if (body[keyField] === '' || body[keyField] === null) {
                 updateData[keyField] = null; // Clear the key → fall back to agency key
