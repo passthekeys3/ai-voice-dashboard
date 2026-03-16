@@ -8,10 +8,11 @@ import type { PhoneNumber } from '@/types';
 
 interface PhoneNumbersPageClientProps {
     initialPhoneNumbers: PhoneNumber[];
-    agents: { id: string; name: string }[];
+    agents: { id: string; name: string; provider?: string }[];
+    configuredProviders: string[];
 }
 
-export function PhoneNumbersPageClient({ initialPhoneNumbers, agents }: PhoneNumbersPageClientProps) {
+export function PhoneNumbersPageClient({ initialPhoneNumbers, agents, configuredProviders }: PhoneNumbersPageClientProps) {
     const [phoneNumbers, setPhoneNumbers] = useState(initialPhoneNumbers);
 
     const refetch = useCallback(async () => {
@@ -37,7 +38,11 @@ export function PhoneNumbersPageClient({ initialPhoneNumbers, agents }: PhoneNum
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <SyncPhoneNumbersButton onSyncComplete={refetch} />
-                    <BuyPhoneNumberButton agents={agents} onPurchaseComplete={refetch} />
+                    <BuyPhoneNumberButton
+                        agents={agents}
+                        configuredProviders={configuredProviders}
+                        onPurchaseComplete={refetch}
+                    />
                 </div>
             </div>
 

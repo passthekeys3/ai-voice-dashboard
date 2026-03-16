@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { purchaseBlandInboundNumber } from '@/lib/providers/bland';
 import { safeParseJson } from '@/lib/validation';
-import { PHONE_NUMBER_MONTHLY_COST_CENTS } from '@/lib/billing/tiers';
 import { decrypt } from '@/lib/crypto';
 
 const PROVIDER_API_TIMEOUT = 15_000;
@@ -150,7 +149,7 @@ export async function POST(request: NextRequest) {
                     provider: 'retell',
                     agent_id: agent_id || null,
                     inbound_agent_id: agent_id || null,
-                    monthly_cost_cents: PHONE_NUMBER_MONTHLY_COST_CENTS,
+                    monthly_cost_cents: 0,
                     purchased_at: new Date().toISOString(),
                 })
                 .select('*, inbound_agent:agents!phone_numbers_inbound_agent_id_fkey(id, name), outbound_agent:agents!phone_numbers_outbound_agent_id_fkey(id, name)')
@@ -206,7 +205,7 @@ export async function POST(request: NextRequest) {
                     provider: 'vapi',
                     agent_id: agent_id || null,
                     inbound_agent_id: agent_id || null,
-                    monthly_cost_cents: PHONE_NUMBER_MONTHLY_COST_CENTS,
+                    monthly_cost_cents: 0,
                     purchased_at: new Date().toISOString(),
                 })
                 .select('*, inbound_agent:agents!phone_numbers_inbound_agent_id_fkey(id, name), outbound_agent:agents!phone_numbers_outbound_agent_id_fkey(id, name)')
@@ -231,7 +230,7 @@ export async function POST(request: NextRequest) {
                     provider: 'bland',
                     agent_id: agent_id || null,
                     inbound_agent_id: agent_id || null,
-                    monthly_cost_cents: PHONE_NUMBER_MONTHLY_COST_CENTS,
+                    monthly_cost_cents: 0,
                     purchased_at: new Date().toISOString(),
                 })
                 .select('*, inbound_agent:agents!phone_numbers_inbound_agent_id_fkey(id, name), outbound_agent:agents!phone_numbers_outbound_agent_id_fkey(id, name)')

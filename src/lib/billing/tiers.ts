@@ -141,9 +141,6 @@ interface TierConfig {
     features: string[];
 }
 
-/** Monthly cost per phone number in cents */
-export const PHONE_NUMBER_MONTHLY_COST_CENTS = 200;
-
 /** Flat per-minute rate for platform-key usage across all tiers */
 export const PLATFORM_PER_MINUTE_RATE = 0.15;
 

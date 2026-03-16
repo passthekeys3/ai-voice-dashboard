@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,10 +20,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Plus, Loader2, PhoneIcon, MapPin, DollarSign } from 'lucide-react';
+import { Plus, Loader2, PhoneIcon, MapPin, Info } from 'lucide-react';
 
 interface BuyPhoneNumberButtonProps {
-    agents: { id: string; name: string }[];
+    agents: { id: string; name: string; provider?: string }[];
+    configuredProviders: string[];
     onPurchaseComplete?: () => void;
 }
 
@@ -42,17 +43,31 @@ const POPULAR_AREA_CODES = [
     { code: '503', region: 'Portland, OR' },
 ];
 
-export function BuyPhoneNumberButton({ agents, onPurchaseComplete }: BuyPhoneNumberButtonProps) {
+const PROVIDER_LABELS: Record<string, string> = {
+    retell: 'Retell AI',
+    vapi: 'Vapi',
+    bland: 'Bland AI',
+};
+
+export function BuyPhoneNumberButton({ agents, configuredProviders, onPurchaseComplete }: BuyPhoneNumberButtonProps) {
     const [open, setOpen] = useState(false);
     const [purchasing, setPurchasing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const purchaseInProgress = useRef(false);
 
+    const [provider, setProvider] = useState<string>(configuredProviders[0] || '');
     const [areaCode, setAreaCode] = useState('');
     const [customAreaCode, setCustomAreaCode] = useState('');
     const [agentId, setAgentId] = useState<string>('');
 
+    // Filter agents to only show those matching the selected provider
+    const filteredAgents = useMemo(() => {
+        if (!provider) return agents;
+        return agents.filter(a => !a.provider || a.provider === provider);
+    }, [agents, provider]);
+
     const resetForm = () => {
+        setProvider(configuredProviders[0] || '');
         setAreaCode('');
         setCustomAreaCode('');
         setAgentId('');
@@ -64,6 +79,12 @@ export function BuyPhoneNumberButton({ agents, onPurchaseComplete }: BuyPhoneNum
         purchaseInProgress.current = true;
 
         const finalAreaCode = areaCode === 'custom' ? customAreaCode : areaCode;
+
+        if (!provider) {
+            setError('Please select a voice provider');
+            purchaseInProgress.current = false;
+            return;
+        }
 
         if (!finalAreaCode || finalAreaCode.length !== 3) {
             setError('Please enter a valid 3-digit area code');
@@ -81,6 +102,7 @@ export function BuyPhoneNumberButton({ agents, onPurchaseComplete }: BuyPhoneNum
                 body: JSON.stringify({
                     area_code: finalAreaCode,
                     agent_id: agentId || undefined,
+                    provider,
                 }),
             });
 
@@ -100,6 +122,15 @@ export function BuyPhoneNumberButton({ agents, onPurchaseComplete }: BuyPhoneNum
         }
     };
 
+    if (configuredProviders.length === 0) {
+        return (
+            <Button disabled>
+                <Plus className="mr-2 h-4 w-4" />
+                Buy Phone Number
+            </Button>
+        );
+    }
+
     return (
         <Dialog open={open} onOpenChange={(isOpen: boolean) => {
             setOpen(isOpen);
@@ -118,11 +149,38 @@ export function BuyPhoneNumberButton({ agents, onPurchaseComplete }: BuyPhoneNum
                         Purchase Phone Number
                     </DialogTitle>
                     <DialogDescription>
-                        Get a new phone number for your AI agents. Numbers are charged monthly.
+                        Get a new phone number for your AI agents. The number will be purchased from your selected provider.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
+                    {/* Provider Selection */}
+                    <div className="space-y-2">
+                        <Label>Voice Provider *</Label>
+                        {configuredProviders.length === 1 ? (
+                            <div className="flex items-center gap-2 p-2.5 border rounded-md bg-muted/50">
+                                <span className="text-sm font-medium">{PROVIDER_LABELS[configuredProviders[0]] || configuredProviders[0]}</span>
+                            </div>
+                        ) : (
+                            <Select value={provider} onValueChange={(v: string) => {
+                                setProvider(v);
+                                setAgentId(''); // Reset agent when switching provider
+                            }}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select provider" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {configuredProviders.map((p) => (
+                                        <SelectItem key={p} value={p}>
+                                            {PROVIDER_LABELS[p] || p}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
+                    </div>
+
+                    {/* Area Code */}
                     <div className="space-y-2">
                         <Label>Area Code *</Label>
                         <Select value={areaCode} onValueChange={setAreaCode}>
@@ -158,6 +216,7 @@ export function BuyPhoneNumberButton({ agents, onPurchaseComplete }: BuyPhoneNum
                         </div>
                     )}
 
+                    {/* Agent Assignment */}
                     <div className="space-y-2">
                         <Label>Assign to Agent (Optional)</Label>
                         <Select value={agentId || 'none'} onValueChange={(v: string) => setAgentId(v === 'none' ? '' : v)}>
@@ -166,7 +225,7 @@ export function BuyPhoneNumberButton({ agents, onPurchaseComplete }: BuyPhoneNum
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="none">No agent (assign later)</SelectItem>
-                                {agents.map((agent) => (
+                                {filteredAgents.map((agent) => (
                                     <SelectItem key={agent.id} value={agent.id}>
                                         {agent.name}
                                     </SelectItem>
@@ -178,17 +237,18 @@ export function BuyPhoneNumberButton({ agents, onPurchaseComplete }: BuyPhoneNum
                         </p>
                     </div>
 
-                    <div className="bg-muted p-4 rounded-lg">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Estimated Monthly Cost</span>
-                            <div className="flex items-center gap-1 text-lg font-bold">
-                                <DollarSign className="h-4 w-4" />
-                                2.00/mo
-                            </div>
+                    {/* Billing Info */}
+                    <div className="bg-muted p-4 rounded-lg flex items-start gap-2.5">
+                        <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                        <div>
+                            <p className="text-sm font-medium">
+                                Billed by {PROVIDER_LABELS[provider] || 'your provider'}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                Phone number charges are billed directly to your {PROVIDER_LABELS[provider] || 'provider'} account.
+                                Check your provider dashboard for pricing details.
+                            </p>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Billed to your voice provider account
-                        </p>
                     </div>
 
                     {error && (
@@ -202,7 +262,7 @@ export function BuyPhoneNumberButton({ agents, onPurchaseComplete }: BuyPhoneNum
                     <Button variant="outline" onClick={() => setOpen(false)}>
                         Cancel
                     </Button>
-                    <Button onClick={handlePurchase} disabled={purchasing || !areaCode}>
+                    <Button onClick={handlePurchase} disabled={purchasing || !areaCode || !provider}>
                         {purchasing ? (
                             <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

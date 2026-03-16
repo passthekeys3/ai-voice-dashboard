@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
-import { decrypt } from '@/lib/crypto';
 
-// GET /api/phone-numbers/available - Search available phone numbers
+// GET /api/phone-numbers/available - Preview available phone numbers for an area code
 export async function GET(request: NextRequest) {
     try {
         const user = await getCurrentUser();
@@ -18,32 +16,11 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Area code is required' }, { status: 400 });
         }
 
-        const supabase = await createClient();
-
-        // Get Retell API key
-        const { data: agency } = await supabase
-            .from('agencies')
-            .select('retell_api_key')
-            .eq('id', user.agency.id)
-            .single();
-
-        // Decrypt API keys from DB
-        if (agency) {
-            agency.retell_api_key = decrypt(agency.retell_api_key) ?? agency.retell_api_key;
-        }
-
-        if (!agency?.retell_api_key) {
-            return NextResponse.json({ error: 'Retell API key not configured' }, { status: 400 });
-        }
-
-        // Search available numbers from Retell
-        // Note: Retell's API may not have a search endpoint - they provision on demand
-        // We'll return a preview of what area code will be purchased
+        // Numbers are provisioned on demand by the provider — return a preview
         const availableNumbers = [
             {
                 area_code: areaCode,
                 region: getRegionForAreaCode(areaCode),
-                estimated_cost_cents: 200, // $2/month typical
                 available: true,
             }
         ];
