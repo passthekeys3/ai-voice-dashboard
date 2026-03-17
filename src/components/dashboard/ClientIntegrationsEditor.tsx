@@ -32,8 +32,10 @@ interface IntegrationMeta {
     icon: React.ReactNode;
     /** Fields the user can configure for this integration */
     fields: { name: string; label: string; type: 'text' | 'url' | 'toggle' | 'select'; placeholder?: string; optionsKey?: string; description?: string; section?: string }[];
-    /** Whether this integration requires OAuth (Phase 2) */
+    /** Whether this integration requires OAuth */
     requiresOAuth?: boolean;
+    /** Whether this integration is coming soon (disabled) */
+    comingSoon?: boolean;
 }
 
 interface ClientIntegrationsEditorProps {
@@ -46,15 +48,26 @@ interface ClientIntegrationsEditorProps {
 
 const INTEGRATIONS: IntegrationMeta[] = [
     {
-        key: 'slack',
-        name: 'Slack',
-        description: 'Call notifications in Slack channels',
-        icon: <MessageSquare className="h-4 w-4" />,
+        key: 'ghl',
+        name: 'GoHighLevel',
+        description: 'CRM automation — contacts, pipelines, appointments',
+        icon: <ArrowRight className="h-4 w-4" />,
         fields: [
-            { name: 'webhook_url', label: 'Webhook URL', type: 'url', placeholder: 'https://hooks.slack.com/services/...' },
-            { name: 'channel_name', label: 'Channel Name', type: 'text', placeholder: '#call-notifications' },
+            { name: 'location_id', label: 'Location ID', type: 'text', placeholder: 'GHL Location ID', description: 'Override the agency location for this client (optional).' },
             { name: 'enabled', label: 'Enabled', type: 'toggle' },
         ],
+        requiresOAuth: true,
+    },
+    {
+        key: 'hubspot',
+        name: 'HubSpot',
+        description: 'CRM sync — contacts, deals, call logging',
+        icon: <ArrowRight className="h-4 w-4" />,
+        fields: [
+            { name: 'portal_id', label: 'Portal ID', type: 'text', placeholder: 'HubSpot Portal ID', description: 'Override the agency portal for this client (optional).' },
+            { name: 'enabled', label: 'Enabled', type: 'toggle' },
+        ],
+        requiresOAuth: true,
     },
     {
         key: 'api',
@@ -68,40 +81,6 @@ const INTEGRATIONS: IntegrationMeta[] = [
         ],
     },
     {
-        key: 'calendly',
-        name: 'Calendly',
-        description: 'Scheduling links and booking management',
-        icon: <Calendar className="h-4 w-4" />,
-        fields: [
-            { name: 'api_token', label: 'API Token', type: 'text', placeholder: 'Calendly personal access token' },
-            { name: 'user_uri', label: 'User URI', type: 'text', placeholder: 'https://api.calendly.com/users/...' },
-            { name: 'default_event_type_uri', label: 'Event Type URI', type: 'text', placeholder: 'https://api.calendly.com/event_types/...' },
-            { name: 'enabled', label: 'Enabled', type: 'toggle' },
-        ],
-    },
-    {
-        key: 'ghl',
-        name: 'GoHighLevel',
-        description: 'CRM automation (API key mode)',
-        icon: <ArrowRight className="h-4 w-4" />,
-        fields: [
-            { name: 'api_key', label: 'API Key', type: 'text', placeholder: 'GHL API key' },
-            { name: 'location_id', label: 'Location ID', type: 'text', placeholder: 'GHL Location ID' },
-            { name: 'enabled', label: 'Enabled', type: 'toggle' },
-        ],
-        requiresOAuth: true,
-    },
-    {
-        key: 'hubspot',
-        name: 'HubSpot',
-        description: 'CRM sync (OAuth required)',
-        icon: <ArrowRight className="h-4 w-4" />,
-        fields: [
-            { name: 'enabled', label: 'Enabled', type: 'toggle' },
-        ],
-        requiresOAuth: true,
-    },
-    {
         key: 'google_calendar',
         name: 'Google Calendar',
         description: 'Calendar availability & booking',
@@ -110,6 +89,22 @@ const INTEGRATIONS: IntegrationMeta[] = [
             { name: 'enabled', label: 'Enabled', type: 'toggle' },
         ],
         requiresOAuth: true,
+    },
+    {
+        key: 'slack',
+        name: 'Slack',
+        description: 'Call notifications in Slack channels',
+        icon: <MessageSquare className="h-4 w-4" />,
+        fields: [],
+        comingSoon: true,
+    },
+    {
+        key: 'calendly',
+        name: 'Calendly',
+        description: 'Scheduling links and booking management',
+        icon: <Calendar className="h-4 w-4" />,
+        fields: [],
+        comingSoon: true,
     },
 ];
 
@@ -322,34 +317,42 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {source[integ.key] === 'client' && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleResetToDefault(integ.key)}
-                                            disabled={saving}
-                                            title="Reset to agency default"
-                                        >
-                                            <RotateCcw className="h-3.5 w-3.5" />
-                                        </Button>
+                                    {integ.comingSoon ? (
+                                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                                            Coming Soon
+                                        </Badge>
+                                    ) : (
+                                        <>
+                                            {source[integ.key] === 'client' && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleResetToDefault(integ.key)}
+                                                    disabled={saving}
+                                                    title="Reset to agency default"
+                                                >
+                                                    <RotateCcw className="h-3.5 w-3.5" />
+                                                </Button>
+                                            )}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleOpenEdit(integ.key)}
+                                            >
+                                                {isConfigured(integ.key) ? (
+                                                    <>
+                                                        <Settings2 className="h-3.5 w-3.5 mr-1.5" />
+                                                        Configure
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                                                        Set Up
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </>
                                     )}
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleOpenEdit(integ.key)}
-                                    >
-                                        {isConfigured(integ.key) ? (
-                                            <>
-                                                <Settings2 className="h-3.5 w-3.5 mr-1.5" />
-                                                Configure
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                                                Set Up
-                                            </>
-                                        )}
-                                    </Button>
                                 </div>
                             </div>
                         ))}
@@ -463,9 +466,9 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
                         })()}
 
                         {INTEGRATIONS.find(i => i.key === editingKey)?.requiresOAuth && (
-                            <p className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                                Full OAuth connection (auto-refresh tokens) is coming soon.
-                                API key authentication is available now for GoHighLevel.
+                            <p className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                                This integration uses OAuth — connect it first on the agency Settings → Integrations page.
+                                Client-level overrides below let you customize behavior per client.
                             </p>
                         )}
                     </div>
