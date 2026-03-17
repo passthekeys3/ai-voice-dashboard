@@ -372,34 +372,3 @@ export function getProviderClient(
     }
 }
 
-// Get all providers for an agency
-export function getAgencyProviders(agency: {
-    retell_api_key?: string;
-    vapi_api_key?: string;
-    bland_api_key?: string;
-}): { provider: VoiceProvider; client: VoiceProviderClient }[] {
-    const providers: { provider: VoiceProvider; client: VoiceProviderClient }[] = [];
-
-    if (agency.retell_api_key) {
-        providers.push({
-            provider: 'retell',
-            client: createRetellClient(agency.retell_api_key),
-        });
-    }
-
-    if (agency.vapi_api_key) {
-        providers.push({
-            provider: 'vapi',
-            client: createVapiClient(agency.vapi_api_key),
-        });
-    }
-
-    if (agency.bland_api_key) {
-        providers.push({
-            provider: 'bland',
-            client: createBlandClient(agency.bland_api_key),
-        });
-    }
-
-    return providers;
-}

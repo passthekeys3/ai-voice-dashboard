@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod';
+import { normalizePhoneToE164 } from '@/lib/validation/phone';
 
 /**
  * Zod schema for generic trigger API payload
@@ -42,25 +43,13 @@ export function validateApiTriggerPayload(body: unknown): {
         return { success: false, error: errors.join(', ') };
     }
 
-    // Normalize phone number
-    let phone = result.data.phone_number.replace(/[\s\-\(\)]/g, '');
-    if (!phone.startsWith('+')) {
-        // Assume US/Canada if no country code
-        if (phone.length === 10) {
-            phone = '+1' + phone;
-        } else if (phone.length === 11 && phone.startsWith('1')) {
-            phone = '+' + phone;
-        }
-    }
-
-    // Validate E.164 format
-    const phoneRegex = /^\+[1-9]\d{6,14}$/;
-    if (!phoneRegex.test(phone)) {
-        return { success: false, error: 'Invalid phone number format. Expected E.164 (e.g., +14155551234)' };
+    const normalized = normalizePhoneToE164(result.data.phone_number);
+    if ('error' in normalized) {
+        return { success: false, error: normalized.error };
     }
 
     return {
         success: true,
-        data: { ...result.data, phone_number: phone },
+        data: { ...result.data, phone_number: normalized.phone },
     };
 }
