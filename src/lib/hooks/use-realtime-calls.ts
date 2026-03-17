@@ -47,7 +47,7 @@ export function useRealtimeCalls({
       if (result.data) {
         setActiveCalls(result.data);
       }
-    } catch (err) {
+    } catch (_err) {
       console.error('Failed to fetch active calls');
     }
   }, []);
@@ -67,7 +67,7 @@ export function useRealtimeCalls({
         if (result.data) {
           setActiveCalls(result.data);
         }
-      } catch (err) {
+      } catch (_err) {
         if (err instanceof Error && err.name === 'AbortError') return;
         console.error('Failed to fetch active calls');
       }
@@ -271,7 +271,7 @@ export function useRealtimeLiveCall({
         transcript: markedTranscript,
       });
       setError(null);
-    } catch (err) {
+    } catch (_err) {
       console.error('Failed to fetch call details');
       setError('Failed to load call data');
     } finally {
@@ -315,7 +315,7 @@ export function useRealtimeLiveCall({
           transcript: markedTranscript,
         });
         setError(null);
-      } catch (err) {
+      } catch (_err) {
         if (err instanceof Error && err.name === 'AbortError') return;
         console.error('Failed to fetch call details');
         setError('Failed to load call data');

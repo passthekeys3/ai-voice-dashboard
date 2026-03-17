@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { encrypt, decrypt, isEncrypted } from './crypto';
+import { isEncrypted } from './crypto';
 
 // We need to reset the cached key between tests since crypto.ts caches _derivedKey
 // The simplest way is to re-import the module fresh for each test group

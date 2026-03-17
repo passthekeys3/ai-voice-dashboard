@@ -110,7 +110,7 @@ export function ApiWebhooksConfig({
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [showRegenConfirm, setShowRegenConfirm] = useState(false);
-    const [signingSecret, setSigningSecret] = useState(apiConfig?.webhook_signing_secret ?? '');
+    const [signingSecret] = useState(apiConfig?.webhook_signing_secret ?? '');
     const [showSigningSecret, setShowSigningSecret] = useState(false);
     const [testing, setTesting] = useState(false);
     const [testResult, setTestResult] = useState<{ success: boolean; status_code?: number; error?: string } | null>(null);

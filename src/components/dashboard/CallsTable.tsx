@@ -693,7 +693,6 @@ export function CallsTable({
             </Table>
 
             {/* Shared audio element for inline playback */}
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
             <audio
                 ref={audioRef}
                 onEnded={() => { playingCallIdRef.current = null; setPlayingCallId(null); }}

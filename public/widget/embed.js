@@ -37,14 +37,14 @@
             var url = new URL(src, window.location.href);
             baseUrl = url.origin;
         }
-    } catch (e) {
+    } catch (_e) {
         // Fallback: use script src directory
         baseUrl = '';
     }
 
     var isOpen = false;
     var iframe = null;
-    var overlay = null;
+    var _overlay = null;
 
     // ── Create floating button ──
     var btn = document.createElement('button');

@@ -249,7 +249,7 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
-            let fullMessage = '';
+            let _fullMessage = '';
 
             const processLine = (line: string) => {
                 if (!line.trim()) return;
@@ -260,7 +260,7 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
                         // Accumulate raw text but don't display it —
                         // Claude returns JSON, not user-facing prose.
                         // The clean message is extracted from the 'result' event.
-                        fullMessage += chunk.text;
+                        _fullMessage += chunk.text;
                     } else if (chunk.type === 'result') {
                         const result = chunk.data as LLMBuilderResponse;
                         handleLLMResult(result, assistantMessageId);
@@ -392,7 +392,7 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
         } finally {
             setIsCreating(false);
         }
-    }, [isCreating]);
+    }, [isCreating, phoneNumbers]);
 
     const isReadyToCreate = !!(draft.name && draft.voiceId && draft.systemPrompt);
 

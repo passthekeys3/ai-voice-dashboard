@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getCurrentUser, isAgencyAdmin, isClientUser } from '@/lib/auth';
+import { getCurrentUser, isClientUser } from '@/lib/auth';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 import { getBlandCall } from '@/lib/providers/bland';
 import { isValidUuid } from '@/lib/validation';

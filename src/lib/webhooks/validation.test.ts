@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import crypto from 'crypto';
 import { isValidWebhookUrl, signWebhookPayload } from './validation';
 
 describe('isValidWebhookUrl', () => {
@@ -106,7 +107,6 @@ describe('signWebhookPayload', () => {
 
     it('uses Stripe-style format: HMAC(secret, "timestamp.body")', () => {
         // Manual verification: the signature should match HMAC-SHA256(secret, "1700000000.{body}")
-        const crypto = require('crypto');
         const expected = crypto
             .createHmac('sha256', secret)
             .update(`${timestamp}.${body}`)

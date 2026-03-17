@@ -8,7 +8,6 @@ import { detectTimezone } from '@/lib/timezone/detector';
 import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-analyzer';
 import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
 import { resolveIntegrations, createTokenRefreshCallback } from '@/lib/integrations/resolve';
-import { isValidWebhookUrl } from '@/lib/webhooks/validation';
 import { forwardToWebhook } from '@/lib/webhooks/forward';
 import { waitUntil } from '@vercel/functions';
 import type { Workflow } from '@/types';
