@@ -81,8 +81,10 @@ const integrations: Integration[] = [
         description: 'Full CRM automation for your AI voice agents',
         logo: <GoHighLevelLogo />,
         bgClassName: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
-        comingSoon: true,
+        comingSoon: false,
         requiredFeature: 'crm_integrations',
+        oauthUrl: '/api/auth/ghl',
+        connectionKey: 'ghl',
         features: [
             'Auto-log calls to contacts',
             'Update pipeline stages',
@@ -96,8 +98,10 @@ const integrations: Integration[] = [
         description: 'Sync AI call data with your HubSpot CRM',
         logo: <HubSpotLogo />,
         bgClassName: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400',
-        comingSoon: true,
+        comingSoon: false,
         requiredFeature: 'crm_integrations',
+        oauthUrl: '/api/auth/hubspot',
+        connectionKey: 'hubspot',
         features: [
             'Create call engagements',
             'Manage deals & pipeline',
@@ -127,7 +131,7 @@ const integrations: Integration[] = [
         description: 'Generate scheduling links and manage bookings',
         logo: <CalendlyLogo />,
         bgClassName: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
-        comingSoon: true,
+        comingSoon: false,
         features: [
             'Create one-time booking links',
             'Check availability',
@@ -140,7 +144,7 @@ const integrations: Integration[] = [
         description: 'Get real-time call notifications in your channels',
         logo: <SlackLogo />,
         bgClassName: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400',
-        comingSoon: true,
+        comingSoon: false,
         features: [
             'Call summary notifications',
             'Sentiment & score alerts',
