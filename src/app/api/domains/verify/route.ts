@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { verifyDomainOnVercel, isVercelConfigured } from '@/lib/vercel-domains';
+import { withErrorHandling } from '@/lib/api/response';
 import dns from 'dns';
 import { promisify } from 'util';
 
@@ -80,7 +81,7 @@ async function verifyDomain(domain: string, verificationToken: string): Promise<
 }
 
 // POST /api/domains/verify - Verify domain DNS configuration
-export async function POST() {
+export const POST = withErrorHandling(async () => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -202,10 +203,10 @@ export async function POST() {
         console.error('Error in POST /api/domains/verify:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 // GET /api/domains/verify - Get verification status and instructions
-export async function GET() {
+export const GET = withErrorHandling(async () => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -271,4 +272,4 @@ export async function GET() {
         console.error('Error in GET /api/domains/verify:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

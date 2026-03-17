@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 /**
  * Standardized API Response Utilities
@@ -413,32 +413,25 @@ export function validateRequest(
 // Error Handling Wrapper
 // ============================================================================
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 /**
- * Wrap a route handler with standardized error handling
- * Supports both simple handlers and handlers with route params
+ * Wrap a route handler with standardized error handling.
+ * Supports handlers with any argument shape (no args, request only, request + params).
  */
-export function withErrorHandling<
-  TRequest extends NextRequest | Request,
-  TContext = any
->(
-  handler: (request: TRequest, context?: TContext) => Promise<NextResponse<any>>
-): (request: TRequest, context?: TContext) => Promise<NextResponse<any>> {
-  return async (request, context) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function withErrorHandling<T extends (...args: any[]) => Promise<NextResponse<any> | Response>>(
+  handler: T
+): T {
+  return (async (...args: Parameters<T>) => {
     try {
-      return await handler(request, context);
+      return await handler(...args);
     } catch (error) {
       console.error('Unhandled API error:', error instanceof Error ? error.message : 'Unknown error');
 
-      // Check for specific error types
       if (error instanceof SyntaxError) {
         return badRequest('Invalid JSON in request body');
       }
 
       return internalError();
     }
-  };
+  }) as T;
 }
-
-/* eslint-enable @typescript-eslint/no-explicit-any */

@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ received: true });
         }
 
-        console.log(`[RETELL WEBHOOK] Received: event=${payload.event}, call=${payload.call.call_id}, agent=${payload.call.agent_id}`);
+        console.info(`[RETELL WEBHOOK] Received: event=${payload.event}, call=${payload.call.call_id}, agent=${payload.call.agent_id}`);
 
         // Use service client for webhook operations (bypasses RLS)
         const supabase = createServiceClient();
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
             }
 
             const twtcLen = Array.isArray(payload.transcript_with_tool_calls) ? payload.transcript_with_tool_calls.length : 0;
-            console.log(`[RETELL WEBHOOK] transcript_updated: call=${payload.call.call_id}, twtc_items=${twtcLen}, len=${transcript?.length || 0}`);
+            console.info(`[RETELL WEBHOOK] transcript_updated: call=${payload.call.call_id}, twtc_items=${twtcLen}, len=${transcript?.length || 0}`);
 
             if (!transcript) {
                 return NextResponse.json({ received: true });

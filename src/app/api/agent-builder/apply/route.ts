@@ -5,6 +5,7 @@ import { getTemplateById, getTemplateActions } from '@/lib/agent-builder/templat
 import { publishRetellAgent } from '@/lib/providers/retell';
 import { resolveProviderApiKeys, autoSelectProvider } from '@/lib/providers/resolve-keys';
 import { isValidUuid } from '@/lib/validation';
+import { withErrorHandling } from '@/lib/api/response';
 const MAX_NAME_LENGTH = 200;
 const MAX_PROMPT_LENGTH = 50000;
 const MAX_FIRST_MESSAGE_LENGTH = 1000;
@@ -25,7 +26,7 @@ function toRetellLanguage(lang: string): string {
 }
 
 // POST /api/agent-builder/apply - Create agent + optional workflows
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -422,4 +423,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+});

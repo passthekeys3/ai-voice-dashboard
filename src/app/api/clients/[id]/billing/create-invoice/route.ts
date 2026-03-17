@@ -131,7 +131,7 @@ export const POST = withErrorHandling(async (
             stripeAccountOptions
         );
 
-        console.log(`One-time invoice created for ${client.name}: $${(amountCents / 100).toFixed(2)} (${finalizedInvoice.id})`);
+        console.info(`One-time invoice created for ${client.name}: $${(amountCents / 100).toFixed(2)} (${finalizedInvoice.id})`);
 
         return apiSuccess({
             invoice_id: finalizedInvoice.id,

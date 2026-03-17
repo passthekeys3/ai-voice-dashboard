@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuthClient, createServiceClient } from '@/lib/supabase/server';
 import { isPlatformAdmin } from '@/lib/admin';
+import { withErrorHandling } from '@/lib/api/response';
 
 const VALID_PLAN_TYPES = ['self_service', 'managed'] as const;
 
@@ -8,10 +9,10 @@ const VALID_PLAN_TYPES = ['self_service', 'managed'] as const;
  * PATCH — Update an agency's plan_type.
  * Only platform admins can call this.
  */
-export async function PATCH(
+export const PATCH = withErrorHandling(async (
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> },
-) {
+) => {
     try {
         const authSupabase = await createAuthClient();
         const { data: { user } } = await authSupabase.auth.getUser();
@@ -54,4 +55,4 @@ export async function PATCH(
         console.error('[ADMIN] PATCH agency error:', err instanceof Error ? err.message : 'Unknown');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

@@ -6,9 +6,10 @@ import { isValidCustomDomain } from '@/lib/getAgencyFromDomain';
 import { addDomainToVercel, removeDomainFromVercel, getDomainFromVercel, isVercelConfigured } from '@/lib/vercel-domains';
 import crypto from 'crypto';
 import { safeParseJson } from '@/lib/validation';
+import { withErrorHandling } from '@/lib/api/response';
 
 // GET /api/domains - Get current domain configuration
-export async function GET() {
+export const GET = withErrorHandling(async () => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -66,10 +67,10 @@ export async function GET() {
         console.error('Error in GET /api/domains:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 // POST /api/domains - Add or update custom domain
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
             if (custom_domain && isVercelConfigured()) {
                 const vercelResult = await addDomainToVercel(custom_domain.toLowerCase());
                 if (vercelResult.success) {
-                    console.log(`[domains] Added ${custom_domain} to Vercel project`);
+                    console.info(`[domains] Added ${custom_domain} to Vercel project`);
                     vercelStatus = 'added';
                 } else {
                     console.warn(`[domains] Vercel add failed for ${custom_domain}: ${vercelResult.error}`);
@@ -213,12 +214,12 @@ export async function POST(request: NextRequest) {
         console.error('Error in POST /api/domains:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 // DELETE /api/domains - Remove custom domain
 // Intentionally NOT tier-gated: allow users who downgrade to remove
 // their custom domain rather than stranding them.
-export async function DELETE() {
+export const DELETE = withErrorHandling(async () => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -258,7 +259,7 @@ export async function DELETE() {
         if (currentAgency?.custom_domain && isVercelConfigured()) {
             const vercelResult = await removeDomainFromVercel(currentAgency.custom_domain);
             if (vercelResult.success) {
-                console.log(`[domains] Removed ${currentAgency.custom_domain} from Vercel project`);
+                console.info(`[domains] Removed ${currentAgency.custom_domain} from Vercel project`);
             } else {
                 console.warn(`[domains] Vercel remove failed for ${currentAgency.custom_domain}: ${vercelResult.error}`);
             }
@@ -271,4 +272,4 @@ export async function DELETE() {
         console.error('Error in DELETE /api/domains:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

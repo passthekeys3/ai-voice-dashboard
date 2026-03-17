@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
             const betaCount = expiredAgencies.filter(a => a.is_beta).length;
             results.trials_expired = normalCount;
             results.betas_expired = betaCount;
-            console.log(`[TRIAL EXPIRY] Expired ${normalCount} trial(s) and ${betaCount} beta(s)`);
+            console.info(`[TRIAL EXPIRY] Expired ${normalCount} trial(s) and ${betaCount} beta(s)`);
         }
 
         // ── Phase 2: Remind normal trials ending within 3 days ───────
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
             console.error('[TRIAL EXPIRY] Error fetching soon-expiring trials:', trialsError.code);
             results.errors.push('Failed to fetch soon-expiring trials');
         } else if (soonExpiringTrials && soonExpiringTrials.length > 0) {
-            console.log(`[TRIAL EXPIRY] Found ${soonExpiringTrials.length} trial(s) ending within 3 days`);
+            console.info(`[TRIAL EXPIRY] Found ${soonExpiringTrials.length} trial(s) ending within 3 days`);
             for (const agency of soonExpiringTrials) {
                 await sendReminders(supabase, agency, agency.subscription_current_period_end, now, results, false);
             }
@@ -99,13 +99,13 @@ export async function POST(request: NextRequest) {
             console.error('[TRIAL EXPIRY] Error fetching soon-expiring betas:', betasError.code);
             results.errors.push('Failed to fetch soon-expiring betas');
         } else if (soonExpiringBetas && soonExpiringBetas.length > 0) {
-            console.log(`[TRIAL EXPIRY] Found ${soonExpiringBetas.length} beta(s) ending within 3 days`);
+            console.info(`[TRIAL EXPIRY] Found ${soonExpiringBetas.length} beta(s) ending within 3 days`);
             for (const agency of soonExpiringBetas) {
                 await sendReminders(supabase, agency, agency.beta_ends_at, now, results, true);
             }
         }
 
-        console.log('[TRIAL EXPIRY] Complete:', results);
+        console.info('[TRIAL EXPIRY] Complete:', results);
 
         return NextResponse.json({
             message: 'Trial expiry check completed',
@@ -169,7 +169,7 @@ async function sendReminders(
         if (agencyEmailsSent > 0) {
             results.agencies_notified++;
             const label = isBeta ? 'beta' : 'trial';
-            console.log(`[TRIAL EXPIRY] Agency "${agency.name}" (${agency.id}): sent ${agencyEmailsSent} ${label} reminder(s), ${daysRemaining} day(s) remaining`);
+            console.info(`[TRIAL EXPIRY] Agency "${agency.name}" (${agency.id}): sent ${agencyEmailsSent} ${label} reminder(s), ${daysRemaining} day(s) remaining`);
         }
     } catch (agencyErr) {
         console.error(`[TRIAL EXPIRY] Error processing agency ${agency.id}:`, agencyErr instanceof Error ? agencyErr.message : 'Unknown error');

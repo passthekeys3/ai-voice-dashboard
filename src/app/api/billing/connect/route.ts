@@ -3,11 +3,12 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { getStripe } from '@/lib/stripe';
+import { withErrorHandling } from '@/lib/api/response';
 
 /**
  * GET /api/billing/connect — Check Stripe Connect status
  */
-export async function GET() {
+export const GET = withErrorHandling(async () => {
     try {
         const user = await getCurrentUser();
         if (!user || !isAgencyAdmin(user)) {
@@ -94,12 +95,12 @@ export async function GET() {
         console.error('Stripe Connect status error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 /**
  * POST /api/billing/connect — Create Express account + onboarding link
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user || !isAgencyAdmin(user)) {
@@ -179,12 +180,12 @@ export async function POST(request: NextRequest) {
         console.error('Stripe Connect onboarding error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Failed to start Stripe Connect onboarding' }, { status: 500 });
     }
-}
+});
 
 /**
  * PATCH /api/billing/connect — Update Connect settings (e.g. platform fee)
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withErrorHandling(async (request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user || !isAgencyAdmin(user)) {
@@ -228,7 +229,7 @@ export async function PATCH(request: NextRequest) {
         console.error('Stripe Connect PATCH error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 /**
  * DELETE /api/billing/connect — Disconnect Stripe Connect account
@@ -236,7 +237,7 @@ export async function PATCH(request: NextRequest) {
  * Intentionally NOT tier-gated: allow users who downgrade to disconnect
  * their Stripe Connect account rather than stranding them.
  */
-export async function DELETE() {
+export const DELETE = withErrorHandling(async () => {
     try {
         const user = await getCurrentUser();
         if (!user || !isAgencyAdmin(user)) {
@@ -288,4 +289,4 @@ export async function DELETE() {
         console.error('Stripe Connect disconnect error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Failed to disconnect Stripe account' }, { status: 500 });
     }
-}
+});

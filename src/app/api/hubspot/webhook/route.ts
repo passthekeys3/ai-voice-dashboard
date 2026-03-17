@@ -165,16 +165,16 @@ async function processEvent(supabase: any, agency: { id: string; integrations: a
     const { subscriptionType, objectId, propertyName, propertyValue } = event;
 
     // Log the event for debugging/audit
-    console.log(`HubSpot webhook [${agency.id}]: ${subscriptionType} object=${objectId} prop=${propertyName || 'n/a'}`);
+    console.info(`HubSpot webhook [${agency.id}]: ${subscriptionType} object=${objectId} prop=${propertyName || 'n/a'}`);
 
     switch (subscriptionType) {
         case 'object.creation': {
             if (event.objectTypeId === '0-1' || !event.objectTypeId) {
                 // Contact created — we can sync on next call, no immediate action needed
-                console.log(`HubSpot: New contact ${objectId} in agency ${agency.id}`);
+                console.info(`HubSpot: New contact ${objectId} in agency ${agency.id}`);
             } else if (event.objectTypeId === '0-3') {
                 // Deal created
-                console.log(`HubSpot: New deal ${objectId} in agency ${agency.id}`);
+                console.info(`HubSpot: New deal ${objectId} in agency ${agency.id}`);
             }
             break;
         }
@@ -182,32 +182,32 @@ async function processEvent(supabase: any, agency: { id: string; integrations: a
         case 'object.propertyChange': {
             if (propertyName === 'phone' || propertyName === 'email') {
                 // Contact phone/email changed — update any matching call records
-                console.log(`HubSpot: Contact ${objectId} ${propertyName} changed to ${propertyValue ? '[updated]' : '[cleared]'} in agency ${agency.id}`);
+                console.info(`HubSpot: Contact ${objectId} ${propertyName} changed to ${propertyValue ? '[updated]' : '[cleared]'} in agency ${agency.id}`);
             } else if (propertyName === 'dealstage') {
                 // Deal stage changed
-                console.log(`HubSpot: Deal ${objectId} stage changed to ${propertyValue} in agency ${agency.id}`);
+                console.info(`HubSpot: Deal ${objectId} stage changed to ${propertyValue} in agency ${agency.id}`);
             }
             break;
         }
 
         // Legacy subscription types (kept for backwards compatibility)
         case 'contact.creation':
-            console.log(`HubSpot: New contact ${objectId} (legacy event) in agency ${agency.id}`);
+            console.info(`HubSpot: New contact ${objectId} (legacy event) in agency ${agency.id}`);
             break;
 
         case 'contact.propertyChange':
-            console.log(`HubSpot: Contact ${objectId} ${propertyName} changed (legacy event) in agency ${agency.id}`);
+            console.info(`HubSpot: Contact ${objectId} ${propertyName} changed (legacy event) in agency ${agency.id}`);
             break;
 
         case 'contact.deletion':
-            console.log(`HubSpot: Contact ${objectId} deleted in agency ${agency.id}`);
+            console.info(`HubSpot: Contact ${objectId} deleted in agency ${agency.id}`);
             break;
 
         case 'contact.privacyDeletion':
-            console.log(`HubSpot: Privacy deletion for contact ${objectId} in agency ${agency.id}`);
+            console.info(`HubSpot: Privacy deletion for contact ${objectId} in agency ${agency.id}`);
             break;
 
         default:
-            console.log(`HubSpot: Unhandled event type ${subscriptionType} for object ${objectId}`);
+            console.info(`HubSpot: Unhandled event type ${subscriptionType} for object ${objectId}`);
     }
 }

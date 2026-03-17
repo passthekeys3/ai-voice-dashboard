@@ -100,7 +100,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
         if (updateError) {
             console.error('Error updating agency subscription:', updateError.code);
         } else {
-            console.log(`Updated subscription for agency ${agencyId}: ${subscription.status}`);
+            console.info(`Updated subscription for agency ${agencyId}: ${subscription.status}`);
         }
         return;
     }
@@ -122,7 +122,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     if (updateError) {
         console.error('Error updating agency subscription:', updateError.code);
     } else {
-        console.log(`Updated subscription for agency ${agency.id}: ${subscription.status}`);
+        console.info(`Updated subscription for agency ${agency.id}: ${subscription.status}`);
     }
 }
 
@@ -158,7 +158,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     if (updateError) {
         console.error('Error clearing agency subscription:', updateError.code);
     } else {
-        console.log(`Subscription deleted for agency ${agency.id}`);
+        console.info(`Subscription deleted for agency ${agency.id}`);
     }
 }
 
@@ -174,7 +174,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
         .single();
 
     if (agency) {
-        console.log(`Invoice ${invoice.id} paid for agency ${agency.name} (${agency.id})`);
+        console.info(`Invoice ${invoice.id} paid for agency ${agency.name} (${agency.id})`);
 
         // Send payment confirmation email to agency admin
         const { data: admin } = await supabase
@@ -265,7 +265,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     // This handler is useful for one-time purchases or additional checkout logic
     const agencyId = session.metadata?.agency_id;
     if (agencyId) {
-        console.log(`Checkout session completed for agency ${agencyId}`);
+        console.info(`Checkout session completed for agency ${agencyId}`);
     }
 }
 

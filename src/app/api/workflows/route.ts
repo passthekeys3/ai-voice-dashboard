@@ -3,9 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { ALLOWED_ACTION_TYPES, ALLOWED_TRIGGERS, ALLOWED_ACTION_TYPES_LIST, ALLOWED_TRIGGERS_LIST } from '@/lib/workflows/constants';
 import { isValidUuid, safeParseJson } from '@/lib/validation';
+import { withErrorHandling } from '@/lib/api/response';
 
 // GET /api/workflows - List all workflows
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -55,10 +56,10 @@ export async function GET(request: NextRequest) {
         console.error('Error fetching workflows:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 // POST /api/workflows - Create a new workflow
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -188,4 +189,4 @@ export async function POST(request: NextRequest) {
         console.error('Error creating workflow:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

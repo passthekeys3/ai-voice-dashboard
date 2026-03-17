@@ -3,13 +3,14 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { safeParseJson, isValidUuid } from '@/lib/validation';
 import { ALLOWED_ACTION_TYPES, ALLOWED_ACTION_TYPES_LIST, ALLOWED_TRIGGERS, ALLOWED_TRIGGERS_LIST } from '@/lib/workflows/constants';
+import { withErrorHandling } from '@/lib/api/response';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
 }
 
 // GET /api/workflows/[id] - Get a single workflow
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -42,10 +43,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         console.error('Error fetching workflow:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 // PATCH /api/workflows/[id] - Update a workflow
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -164,10 +165,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         console.error('Error updating workflow:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 // DELETE /api/workflows/[id] - Delete a workflow
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -200,4 +201,4 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         console.error('Error deleting workflow:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
                     results.push({ clientId: client.id, clientName: client.name, billingType: 'per_minute', status: 'invoiced', amount: usage.total_cost_cents });
 
                     const feeNote = applicationFeeAmount ? ` (platform fee: $${(applicationFeeAmount / 100).toFixed(2)})` : '';
-                    console.log(`[per_minute] Invoice created for ${client.name}: $${(usage.total_cost_cents / 100).toFixed(2)}${feeNote} (${invoice.id})`);
+                    console.info(`[per_minute] Invoice created for ${client.name}: $${(usage.total_cost_cents / 100).toFixed(2)}${feeNote} (${invoice.id})`);
                 } catch (err) {
                     console.error(`Failed to create per_minute invoice for client ${client.id}:`, err instanceof Error ? err.message : 'Unknown error');
                     results.push({ clientId: client.id, clientName: client.name, billingType: 'per_minute', status: 'error' });
@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
                     results.push({ clientId: client.id, clientName: client.name, billingType: 'subscription', status: 'invoiced', amount: amountCents });
 
                     const feeNote = applicationFeeAmount ? ` (platform fee: $${(applicationFeeAmount / 100).toFixed(2)})` : '';
-                    console.log(`[subscription] Invoice created for ${client.name}: $${(amountCents / 100).toFixed(2)}${feeNote} (${invoice.id})`);
+                    console.info(`[subscription] Invoice created for ${client.name}: $${(amountCents / 100).toFixed(2)}${feeNote} (${invoice.id})`);
                 } catch (err) {
                     console.error(`Failed to create subscription invoice for client ${client.id}:`, err instanceof Error ? err.message : 'Unknown error');
                     results.push({ clientId: client.id, clientName: client.name, billingType: 'subscription', status: 'error' });
@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
                         amount: overageCents,
                     });
 
-                    console.log(`[client_overage] Invoice item created for ${agency.name}: ${extraClients} extra clients × $${overageRate} = $${(overageCents / 100).toFixed(2)}`);
+                    console.info(`[client_overage] Invoice item created for ${agency.name}: ${extraClients} extra clients × $${overageRate} = $${(overageCents / 100).toFixed(2)}`);
                 } catch (err) {
                     console.error(`Failed to create client overage invoice for agency ${agency.id}:`, err instanceof Error ? err.message : 'Unknown error');
                     results.push({
@@ -305,7 +305,7 @@ export async function POST(request: NextRequest) {
         const invoicesCreated = results.filter(r => r.status === 'invoiced').length;
         const errors = results.filter(r => r.status === 'error').length;
         const totalItems = results.length;
-        console.log(`Invoice generation complete: ${invoicesCreated}/${totalItems} items invoiced, ${errors} errors for ${monthLabel}`);
+        console.info(`Invoice generation complete: ${invoicesCreated}/${totalItems} items invoiced, ${errors} errors for ${monthLabel}`);
 
         return NextResponse.json({
             success: errors === 0,

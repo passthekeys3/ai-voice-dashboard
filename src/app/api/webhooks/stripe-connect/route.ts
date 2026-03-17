@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
                     if (error) {
                         console.error(`Failed to update Connect status for account ${account.id}:`, error.code);
                     } else {
-                        console.log(`Connect account ${account.id} updated: charges=${account.charges_enabled}, payouts=${account.payouts_enabled}`);
+                        console.info(`Connect account ${account.id} updated: charges=${account.charges_enabled}, payouts=${account.payouts_enabled}`);
                     }
                     break;
                 }
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
                             .eq('agency_id', agency.id)
                             .not('stripe_customer_id', 'is', null);
 
-                        console.log(`Connect account ${account} deauthorized for agency ${agency.id}`);
+                        console.info(`Connect account ${account} deauthorized for agency ${agency.id}`);
                     }
                     break;
                 }
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
                     // Invoice paid on a connected account — log success
                     const invoice = event.data.object as Stripe.Invoice;
                     const connectedAccountId = event.account;
-                    console.log(`Connect invoice ${invoice.id} paid on account ${connectedAccountId}: $${((invoice.amount_paid || 0) / 100).toFixed(2)}`);
+                    console.info(`Connect invoice ${invoice.id} paid on account ${connectedAccountId}: $${((invoice.amount_paid || 0) / 100).toFixed(2)}`);
 
                     // Optionally send Slack notification
                     if (connectedAccountId) {
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
                 }
 
                 default:
-                    console.log(`Unhandled Stripe Connect event type: ${event.type}`);
+                    console.info(`Unhandled Stripe Connect event type: ${event.type}`);
             }
         };
 

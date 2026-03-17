@@ -5,9 +5,10 @@ import { detectTimezone, isWithinCallingWindow, getNextValidCallTime } from '@/l
 import { isValidUuid, safeParseJson } from '@/lib/validation';
 import { normalizePhoneToE164 } from '@/lib/validation/phone';
 import type { CallingWindowConfig } from '@/types';
+import { withErrorHandling } from '@/lib/api/response';
 
 // GET /api/scheduled-calls - List scheduled calls
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -83,10 +84,10 @@ export async function GET(request: NextRequest) {
         console.error('Error fetching scheduled calls:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 // POST /api/scheduled-calls - Schedule a new call
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -210,4 +211,4 @@ export async function POST(request: NextRequest) {
         console.error('Error creating scheduled call:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

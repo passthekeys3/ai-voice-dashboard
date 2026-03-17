@@ -102,14 +102,14 @@ export async function POST() {
                 const dedupIds = new Set<string>();
                 const externalAgents = rawAgents.filter(agent => {
                     if (dedupIds.has(agent.externalId)) {
-                        console.log(`[SYNC] Skipping duplicate agent: ${agent.name} (${agent.externalId})`);
+                        console.info(`[SYNC] Skipping duplicate agent: ${agent.name} (${agent.externalId})`);
                         return false;
                     }
                     dedupIds.add(agent.externalId);
                     return true;
                 });
 
-                console.log(`[SYNC] ${label}: syncing ${externalAgents.length} unique ${provider} agents (${rawAgents.length} raw)`);
+                console.info(`[SYNC] ${label}: syncing ${externalAgents.length} unique ${provider} agents (${rawAgents.length} raw)`);
 
                 // Fetch existing agents for this agency/provider
                 const { data: existingAgents, error: fetchError } = await supabase
@@ -132,9 +132,9 @@ export async function POST() {
                 const toUpsert = externalAgents.map(extAgent => {
                     const existing = existingMap.get(extAgent.externalId);
                     if (existing) {
-                        console.log(`[SYNC] ${label}: will update agent ${existing.id} "${existing.name}" → "${extAgent.name}"`);
+                        console.info(`[SYNC] ${label}: will update agent ${existing.id} "${existing.name}" → "${extAgent.name}"`);
                     } else {
-                        console.log(`[SYNC] ${label}: will insert new agent: ${extAgent.name}`);
+                        console.info(`[SYNC] ${label}: will insert new agent: ${extAgent.name}`);
                     }
 
                     return {
@@ -162,7 +162,7 @@ export async function POST() {
                         results.agents.errors += toUpsert.length;
                     } else {
                         results.agents.synced += toUpsert.length;
-                        console.log(`[SYNC] ${label}: upserted ${upsertedData?.length || toUpsert.length} agents`);
+                        console.info(`[SYNC] ${label}: upserted ${upsertedData?.length || toUpsert.length} agents`);
                     }
                 }
 
@@ -184,7 +184,7 @@ export async function POST() {
                             }
                         }
                         if (patchedCount > 0) {
-                            console.log(`[SYNC] ${label}: patched webhook config on ${patchedCount} agents (events=${REQUIRED_WEBHOOK_EVENTS.join(',')})`);
+                            console.info(`[SYNC] ${label}: patched webhook config on ${patchedCount} agents (events=${REQUIRED_WEBHOOK_EVENTS.join(',')})`);
                         }
                     } catch (err) {
                         console.error(`[SYNC] ${label}: failed to ensure webhook configs:`, err instanceof Error ? err.message : 'Unknown error');
@@ -197,7 +197,7 @@ export async function POST() {
             // ─── Sync Calls ───
             try {
                 const externalCalls: NormalizedCall[] = await providerClient.listCalls({ limit: 100 });
-                console.log(`[SYNC] ${label}: fetched ${externalCalls.length} ${provider} calls`);
+                console.info(`[SYNC] ${label}: fetched ${externalCalls.length} ${provider} calls`);
 
                 // Fetch agent mapping
                 const { data: dbAgents } = await supabase
@@ -218,7 +218,7 @@ export async function POST() {
                     const agentInfo = agentMap.get(extCall.agentExternalId);
                     if (!agentInfo) {
                         if (unmatchedCalls < 3) {
-                            console.log(`[SYNC] ${label}: no match for call agent "${extCall.agentExternalId}"`);
+                            console.info(`[SYNC] ${label}: no match for call agent "${extCall.agentExternalId}"`);
                         }
                         unmatchedCalls++;
                         continue;
@@ -226,7 +226,7 @@ export async function POST() {
                     callsWithAgents.push({ call: extCall, agentInfo });
                 }
 
-                console.log(`[SYNC] ${label}: ${callsWithAgents.length} calls matched, ${unmatchedCalls} unmatched`);
+                console.info(`[SYNC] ${label}: ${callsWithAgents.length} calls matched, ${unmatchedCalls} unmatched`);
 
                 if (callsWithAgents.length === 0) {
                     continue;
@@ -267,7 +267,7 @@ export async function POST() {
                         results.calls.errorDetails = 'Failed to upsert calls';
                     } else {
                         results.calls.synced += callsToUpsert.length;
-                        console.log(`[SYNC] ${label}: upserted ${callsToUpsert.length} calls`);
+                        console.info(`[SYNC] ${label}: upserted ${callsToUpsert.length} calls`);
                     }
                 }
             } catch (err) {

@@ -5,12 +5,13 @@ import { getCurrentUser, isBillingAdmin } from '@/lib/auth';
 import { getTierDefinition, getPriceId, getMeteredPriceId, type PlanTier, type BillingInterval } from '@/lib/billing/tiers';
 import type { PlanType } from '@/types/database';
 import { getStripe } from '@/lib/stripe';
+import { withErrorHandling } from '@/lib/api/response';
 
 const VALID_TIERS: PlanTier[] = ['starter', 'growth', 'agency'];
 const VALID_PLAN_TYPES: PlanType[] = ['self_service', 'managed'];
 
 // POST /api/billing/checkout - Create Stripe checkout session for subscription
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -172,10 +173,10 @@ export async function POST(request: NextRequest) {
         }
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 // GET /api/billing/checkout - Get checkout session status
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -220,4 +221,4 @@ export async function GET(request: NextRequest) {
         }
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

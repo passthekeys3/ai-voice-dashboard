@@ -3,13 +3,14 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { safeParseJson } from '@/lib/validation';
 import { normalizePhoneToE164 } from '@/lib/validation/phone';
+import { withErrorHandling } from '@/lib/api/response';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
 }
 
 // GET /api/scheduled-calls/[id] - Get a scheduled call
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -35,10 +36,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         console.error('Error fetching scheduled call:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 // PATCH /api/scheduled-calls/[id] - Update a scheduled call
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -118,10 +119,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         console.error('Error updating scheduled call:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 // DELETE /api/scheduled-calls/[id] - Cancel/delete a scheduled call
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -171,4 +172,4 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         console.error('Error cancelling scheduled call:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

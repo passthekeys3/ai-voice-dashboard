@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createAuthClient, createServiceClient } from '@/lib/supabase/server';
 import { isPlatformAdmin } from '@/lib/admin';
+import { withErrorHandling } from '@/lib/api/response';
 
 const IMPERSONATE_COOKIE = 'admin_impersonate';
 const MAX_AGE_SECONDS = 4 * 60 * 60; // 4 hours
@@ -15,7 +16,7 @@ const MAX_AGE_SECONDS = 4 * 60 * 60; // 4 hours
  * - Validates the target agency exists.
  * - Cookie is httpOnly (no client JS access), secure in prod, 4h max lifetime.
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
     try {
         // Authenticate the caller using the real auth client
         const authSupabase = await createAuthClient();
@@ -63,13 +64,13 @@ export async function POST(request: NextRequest) {
         console.error('[IMPERSONATE] POST error:', err instanceof Error ? err.message : 'Unknown');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 /**
  * DELETE — Stop impersonation.
  * Removes the httpOnly cookie.
  */
-export async function DELETE() {
+export const DELETE = withErrorHandling(async () => {
     try {
         // Verify caller is still an admin (defense-in-depth)
         const authSupabase = await createAuthClient();
@@ -93,4 +94,4 @@ export async function DELETE() {
         console.error('[IMPERSONATE] DELETE error:', err instanceof Error ? err.message : 'Unknown');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

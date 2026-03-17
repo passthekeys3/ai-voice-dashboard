@@ -3,11 +3,12 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 import { isValidUuid } from '@/lib/validation';
+import { withErrorHandling } from '@/lib/api/response';
 
-export async function GET(
+export const GET = withErrorHandling(async (
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
-) {
+) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -41,12 +42,12 @@ export async function GET(
         console.error('Error fetching agent:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
-export async function PATCH(
+export const PATCH = withErrorHandling(async (
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
-) {
+) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -171,12 +172,12 @@ export async function PATCH(
         console.error('Error updating agent:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
-export async function DELETE(
+export const DELETE = withErrorHandling(async (
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
-) {
+) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -285,4 +286,4 @@ export async function DELETE(
         console.error('Error deleting agent:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

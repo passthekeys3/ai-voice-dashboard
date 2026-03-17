@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { generateAgentConfigStream } from '@/lib/agent-builder/llm';
 import { checkRateLimitAsync } from '@/lib/rate-limit';
+import { withErrorHandling } from '@/lib/api/response';
 
 const MAX_MESSAGE_LENGTH = 5000;
 const MAX_HISTORY_MESSAGES = 20;
@@ -13,7 +14,7 @@ const AGENCY_BURST_LIMIT = { windowMs: 60 * 1000, maxRequests: 10 };      // 10 
 const AGENCY_DAILY_LIMIT = { windowMs: 24 * 60 * 60 * 1000, maxRequests: 200 }; // 200/day
 
 // POST /api/agent-builder/generate - Stream agent config generation via Claude
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -140,4 +141,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+});

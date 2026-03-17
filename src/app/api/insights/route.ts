@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
+import { withErrorHandling } from '@/lib/api/response';
 
 interface InsightsData {
     totalCalls: number;
@@ -31,7 +32,7 @@ interface InsightsData {
 }
 
 // GET /api/insights - Get aggregated call insights
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -95,4 +96,4 @@ export async function GET(request: NextRequest) {
         console.error('Error fetching insights:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

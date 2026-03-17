@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ message: 'No agencies to sync', synced: 0 });
         }
 
-        console.log(`[CRON SYNC] Starting sync for ${agencies.length} agencies`);
+        console.info(`[CRON SYNC] Starting sync for ${agencies.length} agencies`);
 
         const results = {
             agencies_synced: 0,
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
 
                             if (!agentUpsertError) {
                                 results.total_agents += upsertedAgents?.length || agentsToUpsert.length;
-                                console.log(`[CRON SYNC] ${label}: upserted ${agentsToUpsert.length} ${provider} agents`);
+                                console.info(`[CRON SYNC] ${label}: upserted ${agentsToUpsert.length} ${provider} agents`);
                             } else {
                                 console.error(`[CRON SYNC] ${label}: agent upsert error:`, agentUpsertError.code);
                             }
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
                                     }
                                 }
                                 if (patchedCount > 0) {
-                                    console.log(`[CRON SYNC] ${label}: patched webhook config on ${patchedCount} agents (events=${REQUIRED_WEBHOOK_EVENTS.join(',')})`);
+                                    console.info(`[CRON SYNC] ${label}: patched webhook config on ${patchedCount} agents (events=${REQUIRED_WEBHOOK_EVENTS.join(',')})`);
                                 }
                             } catch (err) {
                                 console.error(`[CRON SYNC] ${label}: failed to ensure webhook configs:`, err instanceof Error ? err.message : 'Unknown error');
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
                                     }
                                 }
                                 if (patchedCount > 0) {
-                                    console.log(`[CRON SYNC] ${label}: patched serverUrl on ${patchedCount} Vapi assistants`);
+                                    console.info(`[CRON SYNC] ${label}: patched serverUrl on ${patchedCount} Vapi assistants`);
                                 }
                             } catch (err) {
                                 console.error(`[CRON SYNC] ${label}: failed to ensure Vapi serverUrl:`, err instanceof Error ? err.message : 'Unknown error');
@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
 
                                         if (!phoneUpsertError) {
                                             results.total_phone_numbers += upsertedPhones?.length || phonesToUpsert.length;
-                                            console.log(`[CRON SYNC] ${label}: upserted ${phonesToUpsert.length} Retell phone numbers`);
+                                            console.info(`[CRON SYNC] ${label}: upserted ${phonesToUpsert.length} Retell phone numbers`);
                                         } else {
                                             console.error(`[CRON SYNC] ${label}: phone upsert error:`, phoneUpsertError.code);
                                         }
@@ -287,7 +287,7 @@ export async function POST(request: NextRequest) {
 
                                     if (!phoneUpsertError) {
                                         results.total_phone_numbers += upsertedPhones?.length || phonesToUpsert.length;
-                                        console.log(`[CRON SYNC] ${label}: upserted ${phonesToUpsert.length} Vapi phone numbers`);
+                                        console.info(`[CRON SYNC] ${label}: upserted ${phonesToUpsert.length} Vapi phone numbers`);
                                     } else {
                                         console.error(`[CRON SYNC] ${label}: Vapi phone upsert error:`, phoneUpsertError.code);
                                     }
@@ -325,7 +325,7 @@ export async function POST(request: NextRequest) {
 
                                     if (!phoneUpsertError) {
                                         results.total_phone_numbers += upsertedPhones?.length || phonesToUpsert.length;
-                                        console.log(`[CRON SYNC] ${label}: upserted ${phonesToUpsert.length} Bland phone numbers`);
+                                        console.info(`[CRON SYNC] ${label}: upserted ${phonesToUpsert.length} Bland phone numbers`);
                                     } else {
                                         console.error(`[CRON SYNC] ${label}: Bland phone upsert error:`, phoneUpsertError.code);
                                     }
@@ -356,7 +356,7 @@ export async function POST(request: NextRequest) {
                 .in('id', successfulAgencyIds);
         }
 
-        console.log(`[CRON SYNC] Complete:`, results);
+        console.info(`[CRON SYNC] Complete:`, results);
 
         return NextResponse.json({
             message: 'Sync completed',

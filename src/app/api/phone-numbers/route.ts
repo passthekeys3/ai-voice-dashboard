@@ -4,11 +4,12 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { purchaseBlandInboundNumber } from '@/lib/providers/bland';
 import { safeParseJson } from '@/lib/validation';
 import { decrypt } from '@/lib/crypto';
+import { withErrorHandling } from '@/lib/api/response';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
 // GET /api/phone-numbers - List owned phone numbers
-export async function GET(_request: NextRequest) {
+export const GET = withErrorHandling(async (_request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -59,10 +60,10 @@ export async function GET(_request: NextRequest) {
         console.error('Error fetching phone numbers:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 // POST /api/phone-numbers - Purchase a phone number
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -249,4 +250,4 @@ export async function POST(request: NextRequest) {
         console.error('Error purchasing phone number:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

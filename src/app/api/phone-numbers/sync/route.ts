@@ -4,11 +4,12 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { listVapiPhoneNumbers } from '@/lib/providers/vapi';
 import { listBlandPhoneNumbers } from '@/lib/providers/bland';
 import { decrypt } from '@/lib/crypto';
+import { withErrorHandling } from '@/lib/api/response';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
 // POST /api/phone-numbers/sync - Sync phone numbers from Retell, VAPI, and Bland
-export async function POST(_request: NextRequest) {
+export const POST = withErrorHandling(async (_request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -66,7 +67,7 @@ export async function POST(_request: NextRequest) {
 
                 if (retellResponse.ok) {
                     const retellNumbers = await retellResponse.json();
-                    console.log('Retell numbers fetched:', retellNumbers?.length || 0);
+                    console.info('Retell numbers fetched:', retellNumbers?.length || 0);
                     total += retellNumbers?.length || 0;
 
                     for (const retellNumber of retellNumbers) {
@@ -212,7 +213,7 @@ export async function POST(_request: NextRequest) {
         if (agency.bland_api_key) {
             try {
                 const blandNumbers = await listBlandPhoneNumbers(agency.bland_api_key);
-                console.log('Bland numbers fetched:', blandNumbers?.length || 0);
+                console.info('Bland numbers fetched:', blandNumbers?.length || 0);
                 total += blandNumbers?.length || 0;
 
                 for (const blandNumber of blandNumbers) {
@@ -274,4 +275,4 @@ export async function POST(_request: NextRequest) {
         console.error('Error syncing phone numbers:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

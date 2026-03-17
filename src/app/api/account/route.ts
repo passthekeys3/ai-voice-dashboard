@@ -54,7 +54,7 @@ export const DELETE = withErrorHandling(async (request: NextRequest) => {
         try {
             const stripe = getStripe();
             await stripe.subscriptions.cancel(user.agency.subscription_id);
-            console.log(`[ACCOUNT DELETE] Canceled agency subscription ${user.agency.subscription_id}`);
+            console.info(`[ACCOUNT DELETE] Canceled agency subscription ${user.agency.subscription_id}`);
         } catch (stripeErr) {
             console.error(`[ACCOUNT DELETE] Failed to cancel agency subscription:`,
                 stripeErr instanceof Error ? stripeErr.message : stripeErr);
@@ -84,7 +84,7 @@ export const DELETE = withErrorHandling(async (request: NextRequest) => {
                             err instanceof Error ? err.message : err);
                     }
                 }
-                console.log(`[ACCOUNT DELETE] Processed ${clientsWithSubs.length} client subscription(s)`);
+                console.info(`[ACCOUNT DELETE] Processed ${clientsWithSubs.length} client subscription(s)`);
             }
         } catch (err) {
             console.error(`[ACCOUNT DELETE] Error fetching client subscriptions:`,
@@ -107,7 +107,7 @@ export const DELETE = withErrorHandling(async (request: NextRequest) => {
                 console.error(`[ACCOUNT DELETE] Failed to delete auth user ${profile.id}:`, authError.message);
             }
         }
-        console.log(`[ACCOUNT DELETE] Deleted ${profiles.length - 1} auth user(s)`);
+        console.info(`[ACCOUNT DELETE] Deleted ${profiles.length - 1} auth user(s)`);
     }
 
     // ─── 4. Delete agency record (cascades all related data) ───
@@ -120,7 +120,7 @@ export const DELETE = withErrorHandling(async (request: NextRequest) => {
         return databaseError(error);
     }
 
-    console.log(`[ACCOUNT DELETE] Deleted agency ${agencyId}`);
+    console.info(`[ACCOUNT DELETE] Deleted agency ${agencyId}`);
 
     // ─── 5. Delete current user's auth account ───
     const { error: selfDeleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);

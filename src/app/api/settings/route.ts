@@ -11,8 +11,9 @@ import {
 } from '@/lib/integrations/validate-integrations';
 import { encrypt } from '@/lib/crypto';
 import crypto from 'crypto';
+import { withErrorHandling } from '@/lib/api/response';
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = withErrorHandling(async (request: NextRequest) => {
     try {
         const user = await getCurrentUser();
         if (!user || !isAgencyAdmin(user)) {
@@ -199,4 +200,4 @@ export async function PATCH(request: NextRequest) {
         console.error('Settings update error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

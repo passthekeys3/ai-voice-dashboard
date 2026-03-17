@@ -6,6 +6,7 @@ import * as retell from '@/lib/providers/retell';
 import * as vapiKb from '@/lib/providers/vapi-kb';
 import * as blandKb from '@/lib/providers/bland-kb';
 import { isValidUuid } from '@/lib/validation';
+import { withErrorHandling } from '@/lib/api/response';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -26,7 +27,7 @@ interface NormalizedKB {
 }
 
 // GET /api/agents/[id]/knowledge-base - Get KB for agent
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -137,10 +138,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         console.error('Error in KB GET:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 // POST /api/agents/[id]/knowledge-base - Create KB for agent
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export const POST = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -229,10 +230,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         console.error('Error creating KB:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Failed to create knowledge base' }, { status: 500 });
     }
-}
+});
 
 // DELETE /api/agents/[id]/knowledge-base - Delete KB for agent
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
     try {
         const user = await getCurrentUser();
         if (!user) {
@@ -319,4 +320,4 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         console.error('Error deleting KB:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

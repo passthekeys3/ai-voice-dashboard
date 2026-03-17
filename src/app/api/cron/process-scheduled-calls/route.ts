@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
             // If no row was updated, another process grabbed it - skip
             if (lockError || !lockedCall) {
-                console.log(`Scheduled call ${call.id} already being processed by another worker`);
+                console.info(`Scheduled call ${call.id} already being processed by another worker`);
                 continue;
             }
 
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
                             .eq('id', call.id);
 
                         results.push({ id: call.id, status: 'rescheduled' });
-                        console.log(`Scheduled call ${call.id} rescheduled to ${nextValid.toISOString()} (outside calling window in ${leadTimezone})`);
+                        console.info(`Scheduled call ${call.id} rescheduled to ${nextValid.toISOString()} (outside calling window in ${leadTimezone})`);
                         continue;
                     }
                 }
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
                     .eq('id', call.id);
 
                 results.push({ id: call.id, status: 'completed' });
-                console.log(`Scheduled call ${call.id} initiated via ${provider}, call ID: ${callResult.callId}`);
+                console.info(`Scheduled call ${call.id} initiated via ${provider}, call ID: ${callResult.callId}`);
 
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : 'Unknown error';

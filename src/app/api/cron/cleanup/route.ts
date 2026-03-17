@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
         const totalDeleted = results.reduce((sum, r) => sum + r.deleted, 0);
         const errors = results.filter(r => r.error);
 
-        console.log(`Data cleanup completed: ${totalDeleted} rows deleted across ${results.length} tables`);
+        console.info(`Data cleanup completed: ${totalDeleted} rows deleted across ${results.length} tables`);
         if (errors.length > 0) {
             console.warn('Cleanup errors:', errors);
         }
