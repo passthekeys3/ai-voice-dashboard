@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isValidWebhookUrl } from './validation';
+import { isValidWebhookUrl, signWebhookPayload } from './validation';
 
 describe('isValidWebhookUrl', () => {
     // Valid URLs
@@ -67,5 +67,51 @@ describe('isValidWebhookUrl', () => {
     it('rejects malformed URLs', () => {
         expect(isValidWebhookUrl('not-a-url')).toBe(false);
         expect(isValidWebhookUrl('')).toBe(false);
+    });
+});
+
+describe('signWebhookPayload', () => {
+    const body = '{"event":"call_ended","call_id":"123"}';
+    const secret = 'whsec_test_secret';
+    const timestamp = 1700000000;
+
+    it('returns a 64-character hex string (SHA-256)', () => {
+        const sig = signWebhookPayload(body, secret, timestamp);
+        expect(sig).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it('is deterministic for same inputs', () => {
+        const sig1 = signWebhookPayload(body, secret, timestamp);
+        const sig2 = signWebhookPayload(body, secret, timestamp);
+        expect(sig1).toBe(sig2);
+    });
+
+    it('produces different signature with different secret', () => {
+        const sig1 = signWebhookPayload(body, 'secret-a', timestamp);
+        const sig2 = signWebhookPayload(body, 'secret-b', timestamp);
+        expect(sig1).not.toBe(sig2);
+    });
+
+    it('produces different signature with different timestamp', () => {
+        const sig1 = signWebhookPayload(body, secret, 1700000000);
+        const sig2 = signWebhookPayload(body, secret, 1700000001);
+        expect(sig1).not.toBe(sig2);
+    });
+
+    it('produces different signature with different body', () => {
+        const sig1 = signWebhookPayload('{"a":1}', secret, timestamp);
+        const sig2 = signWebhookPayload('{"b":2}', secret, timestamp);
+        expect(sig1).not.toBe(sig2);
+    });
+
+    it('uses Stripe-style format: HMAC(secret, "timestamp.body")', () => {
+        // Manual verification: the signature should match HMAC-SHA256(secret, "1700000000.{body}")
+        const crypto = require('crypto');
+        const expected = crypto
+            .createHmac('sha256', secret)
+            .update(`${timestamp}.${body}`)
+            .digest('hex');
+        const actual = signWebhookPayload(body, secret, timestamp);
+        expect(actual).toBe(expected);
     });
 });
