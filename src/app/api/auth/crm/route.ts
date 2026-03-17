@@ -6,10 +6,10 @@ import crypto from 'crypto';
 
 const GHL_CLIENT_ID = process.env.GHL_CLIENT_ID;
 const GHL_CLIENT_SECRET = process.env.GHL_CLIENT_SECRET;
-const GHL_REDIRECT_URI = process.env.GHL_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/ghl/callback`;
+const GHL_REDIRECT_URI = process.env.GHL_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/crm/callback`;
 
 /**
- * GET /api/auth/ghl - Initiate GHL OAuth flow or disconnect
+ * GET /api/auth/crm - Initiate GHL OAuth flow or disconnect
  */
 export async function GET(request: NextRequest) {
     try {
@@ -81,11 +81,46 @@ export async function GET(request: NextRequest) {
             .digest('hex');
         const state = Buffer.from(`${statePayload}.${stateSignature}`).toString('base64');
 
-        // Build GHL OAuth URL (Location-level access)
+        // Build GHL OAuth URL (Location-level access with explicit scopes)
+        // Full scope set for Marketplace readiness — covers all current
+        // and planned integration features (contacts, calls, calendars,
+        // pipelines, workflows, conversations, custom fields/tags).
+        const GHL_SCOPES = [
+            // Contacts — search, create, update, tag, custom fields
+            'contacts.readonly',
+            'contacts.write',
+            // Conversations — log call notes, send messages
+            'conversations.readonly',
+            'conversations.write',
+            'conversations/message.readonly',
+            'conversations/message.write',
+            // Calendars — list calendars, check availability, book appointments
+            'calendars.readonly',
+            'calendars.write',
+            'calendars/events.readonly',
+            'calendars/events.write',
+            // Opportunities — update pipeline stages post-call
+            'opportunities.readonly',
+            'opportunities.write',
+            // Workflows — trigger post-call automation
+            'workflows.readonly',
+            // Location — read location context for multi-location support
+            'locations.readonly',
+            'locations/customValues.readonly',
+            'locations/customValues.write',
+            'locations/customFields.readonly',
+            'locations/customFields.write',
+            'locations/tags.readonly',
+            'locations/tags.write',
+            // Users — read user context for SSO and assignment
+            'users.readonly',
+        ].join(' ');
+
         const authUrl = new URL('https://marketplace.gohighlevel.com/oauth/chooselocation');
         authUrl.searchParams.set('response_type', 'code');
         authUrl.searchParams.set('redirect_uri', GHL_REDIRECT_URI);
         authUrl.searchParams.set('client_id', GHL_CLIENT_ID);
+        authUrl.searchParams.set('scope', GHL_SCOPES);
         authUrl.searchParams.set('state', state);
 
         return NextResponse.redirect(authUrl.toString());

@@ -6,11 +6,11 @@ import crypto from 'crypto';
 
 const GHL_CLIENT_ID = process.env.GHL_CLIENT_ID;
 const GHL_CLIENT_SECRET = process.env.GHL_CLIENT_SECRET;
-const GHL_REDIRECT_URI = process.env.GHL_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/ghl/callback`;
+const GHL_REDIRECT_URI = process.env.GHL_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/crm/callback`;
 const OAUTH_TOKEN_TIMEOUT = 15_000;
 
 /**
- * GET /api/auth/ghl/callback - GHL OAuth callback
+ * GET /api/auth/crm/callback - GHL OAuth callback
  */
 export async function GET(request: NextRequest) {
     try {

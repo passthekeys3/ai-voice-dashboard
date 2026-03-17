@@ -83,7 +83,7 @@ const integrations: Integration[] = [
         bgClassName: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
         comingSoon: false,
         requiredFeature: 'crm_integrations',
-        oauthUrl: '/api/auth/ghl',
+        oauthUrl: '/api/auth/crm',
         connectionKey: 'ghl',
         features: [
             'Auto-log calls to contacts',
