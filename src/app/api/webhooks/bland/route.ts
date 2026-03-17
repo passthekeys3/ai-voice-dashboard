@@ -150,8 +150,8 @@ export async function POST(request: NextRequest) {
         // or the agency's own number appears as `from` for outbound and `to` for inbound.
         const direction = (payload.metadata?.direction === 'inbound') ? 'inbound' : 'outbound';
 
-        // Detect lead timezone from phone number
-        const leadPhone = payload.to;
+        // Detect lead timezone from phone number (direction-aware: inbound → from, outbound → to)
+        const leadPhone = direction === 'inbound' ? payload.from : payload.to;
         const leadTimezone = leadPhone ? detectTimezone(leadPhone) : null;
 
         // Check for A/B experiment metadata
