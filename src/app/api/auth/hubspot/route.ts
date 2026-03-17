@@ -25,6 +25,12 @@ const HUBSPOT_OPTIONAL_SCOPES = [
 
 /**
  * GET /api/auth/hubspot - Initiate HubSpot OAuth flow
+ *
+ * Supports both agency-level and per-client OAuth:
+ *   /api/auth/hubspot                     → agency-level
+ *   /api/auth/hubspot?clientId=xxx        → client-level
+ *   /api/auth/hubspot?action=disconnect   → disconnect agency
+ *   /api/auth/hubspot?action=disconnect&clientId=xxx → disconnect client
  */
 export async function GET(request: NextRequest) {
     try {
@@ -35,34 +41,79 @@ export async function GET(request: NextRequest) {
 
         const { searchParams } = new URL(request.url);
         const action = searchParams.get('action');
+        const clientId = searchParams.get('clientId');
+
+        // If clientId provided, validate it belongs to this agency
+        if (clientId) {
+            const supabase = await createAdminClient();
+            const { data: client } = await supabase
+                .from('clients')
+                .select('id')
+                .eq('id', clientId)
+                .eq('agency_id', user.agency.id)
+                .single();
+
+            if (!client) {
+                return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+            }
+        }
+
+        const redirectBase = clientId ? `/clients/${clientId}` : '/settings';
 
         // Allow disconnect regardless of tier (don't strand users)
         if (action === 'disconnect') {
             const supabase = await createAdminClient();
 
-            // Get current integrations
-            const { data: agency } = await supabase
-                .from('agencies')
-                .select('integrations')
-                .eq('id', user.agency.id)
-                .single();
+            if (clientId) {
+                // Disconnect at client level — remove client's HubSpot override
+                const { data: client } = await supabase
+                    .from('clients')
+                    .select('integrations')
+                    .eq('id', clientId)
+                    .eq('agency_id', user.agency.id)
+                    .single();
 
-            // Remove HubSpot integration
-            const updatedIntegrations = {
-                ...agency?.integrations,
-                hubspot: { enabled: false },
-            };
+                const clientIntegrations = (client?.integrations as Record<string, unknown>) || {};
+                const { hubspot: _removed, ...rest } = clientIntegrations;
 
-            await supabase
-                .from('agencies')
-                .update({
-                    integrations: updatedIntegrations,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', user.agency.id);
+                await supabase
+                    .from('clients')
+                    .update({
+                        integrations: Object.keys(rest).length > 0 ? rest : null,
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', clientId)
+                    .eq('agency_id', user.agency.id);
+            } else {
+                // Disconnect at agency level
+                const { data: agency } = await supabase
+                    .from('agencies')
+                    .select('integrations')
+                    .eq('id', user.agency.id)
+                    .single();
 
-            // Redirect back to settings
-            return NextResponse.redirect(new URL('/settings?hubspot=disconnected', request.url));
+                // Clear OAuth tokens but preserve trigger_config, portal_id, webhook_secret
+                const updatedIntegrations = {
+                    ...agency?.integrations,
+                    hubspot: {
+                        ...agency?.integrations?.hubspot,
+                        access_token: null,
+                        refresh_token: null,
+                        expires_at: null,
+                        enabled: false,
+                    },
+                };
+
+                await supabase
+                    .from('agencies')
+                    .update({
+                        integrations: updatedIntegrations,
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', user.agency.id);
+            }
+
+            return NextResponse.redirect(new URL(`${redirectBase}?hubspot=disconnected`, request.url));
         }
 
         // ---- Tier gate: CRM integrations require Growth+ ----
@@ -80,8 +131,10 @@ export async function GET(request: NextRequest) {
         }
 
         // Generate state parameter for CSRF protection with HMAC signature
+        // Include clientId when doing per-client OAuth
         const statePayload = JSON.stringify({
             agencyId: user.agency.id,
+            ...(clientId ? { clientId } : {}),
             timestamp: Date.now(),
         });
         const stateSecret = HUBSPOT_CLIENT_SECRET!;

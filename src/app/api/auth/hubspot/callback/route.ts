@@ -33,8 +33,10 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Verify state HMAC signature and extract agency ID
+        // Verify state HMAC signature and extract agency ID + optional client ID
         let agencyId: string;
+        let clientId: string | undefined;
+        let stateTimestamp: number;
         try {
             const decoded = Buffer.from(state, 'base64').toString();
             const lastDotIndex = decoded.lastIndexOf('.');
@@ -60,16 +62,20 @@ export async function GET(request: NextRequest) {
 
             const stateData = JSON.parse(statePayload);
             agencyId = stateData.agencyId;
-
-            // Check timestamp (5 minute expiry)
-            if (Date.now() - stateData.timestamp > 5 * 60 * 1000) {
-                return NextResponse.redirect(
-                    new URL('/settings?hubspot=error&message=OAuth+session+expired', request.url)
-                );
-            }
+            clientId = stateData.clientId; // undefined for agency-level OAuth
+            stateTimestamp = stateData.timestamp;
         } catch {
             return NextResponse.redirect(
                 new URL('/settings?hubspot=error&message=Invalid+state+parameter', request.url)
+            );
+        }
+
+        const redirectBase = clientId ? `/clients/${clientId}` : '/settings';
+
+        // Check timestamp (5 minute expiry) — after redirectBase so redirect goes to the correct page
+        if (Date.now() - stateTimestamp > 5 * 60 * 1000) {
+            return NextResponse.redirect(
+                new URL(`${redirectBase}?hubspot=error&message=OAuth+session+expired`, request.url)
             );
         }
 
@@ -79,13 +85,13 @@ export async function GET(request: NextRequest) {
         const user = await getCurrentUser();
         if (!user || !isAgencyAdmin(user)) {
             return NextResponse.redirect(
-                new URL('/settings?hubspot=error&message=Session+expired+or+unauthorized', request.url)
+                new URL(`${redirectBase}?hubspot=error&message=Session+expired+or+unauthorized`, request.url)
             );
         }
         if (user.agency.id !== agencyId) {
             console.error(`HubSpot OAuth: session agency ${user.agency.id} does not match state agency ${agencyId}`);
             return NextResponse.redirect(
-                new URL('/settings?hubspot=error&message=Agency+mismatch', request.url)
+                new URL(`${redirectBase}?hubspot=error&message=Agency+mismatch`, request.url)
             );
         }
 
@@ -93,7 +99,7 @@ export async function GET(request: NextRequest) {
         const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations', user.agency.beta_ends_at);
         if (tierError) {
             return NextResponse.redirect(
-                new URL('/settings?hubspot=error&message=CRM+integrations+require+a+Growth+plan+or+higher', request.url)
+                new URL(`${redirectBase}?hubspot=error&message=CRM+integrations+require+a+Growth+plan+or+higher`, request.url)
             );
         }
 
@@ -101,7 +107,7 @@ export async function GET(request: NextRequest) {
         if (!HUBSPOT_CLIENT_ID || !HUBSPOT_CLIENT_SECRET) {
             console.error('HubSpot OAuth callback: missing HUBSPOT_CLIENT_ID or HUBSPOT_CLIENT_SECRET');
             return NextResponse.redirect(
-                new URL('/settings?hubspot=error&message=Server+configuration+error', request.url)
+                new URL(`${redirectBase}?hubspot=error&message=Server+configuration+error`, request.url)
             );
         }
 
@@ -124,7 +130,7 @@ export async function GET(request: NextRequest) {
         if (!tokenResponse.ok) {
             console.error('HubSpot token exchange error:', tokenResponse.status);
             return NextResponse.redirect(
-                new URL('/settings?hubspot=error&message=Failed+to+exchange+code', request.url)
+                new URL(`${redirectBase}?hubspot=error&message=Failed+to+exchange+code`, request.url)
             );
         }
 
@@ -134,52 +140,97 @@ export async function GET(request: NextRequest) {
         if (!tokens.access_token || !tokens.refresh_token) {
             console.error('HubSpot token exchange returned incomplete tokens');
             return NextResponse.redirect(
-                new URL('/settings?hubspot=error&message=Incomplete+token+response', request.url)
+                new URL(`${redirectBase}?hubspot=error&message=Incomplete+token+response`, request.url)
             );
         }
 
         // Store tokens in database
         const supabase = await createAdminClient();
 
-        // Get current integrations
-        const { data: agency } = await supabase
-            .from('agencies')
-            .select('integrations')
-            .eq('id', agencyId)
-            .single();
-
         // Safely parse expires_in (default to 6h if missing/invalid — HubSpot tokens typically last 6h)
         const expiresIn = typeof tokens.expires_in === 'number' ? tokens.expires_in : 21600;
 
-        // Update with HubSpot tokens
-        const updatedIntegrations = {
-            ...agency?.integrations,
-            hubspot: {
-                access_token: tokens.access_token,
-                refresh_token: tokens.refresh_token,
-                expires_at: Date.now() + (expiresIn * 1000),
-                enabled: true,
-            },
+        const hubspotTokenData = {
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+            expires_at: Date.now() + (expiresIn * 1000),
+            enabled: true,
         };
 
-        const { error: updateError } = await supabase
-            .from('agencies')
-            .update({
-                integrations: updatedIntegrations,
-                updated_at: new Date().toISOString(),
-            })
-            .eq('id', agencyId);
+        if (clientId) {
+            // Per-client OAuth — store in clients.integrations
+            const { data: client } = await supabase
+                .from('clients')
+                .select('integrations')
+                .eq('id', clientId)
+                .eq('agency_id', agencyId)
+                .single();
 
-        if (updateError) {
-            console.error('Failed to store HubSpot tokens:', updateError.code);
-            return NextResponse.redirect(
-                new URL('/settings?hubspot=error&message=Failed+to+save+tokens', request.url)
-            );
+            if (!client) {
+                console.error('HubSpot OAuth callback: client not found:', clientId);
+                return NextResponse.redirect(
+                    new URL(`${redirectBase}?hubspot=error&message=Client+not+found`, request.url)
+                );
+            }
+
+            const clientIntegrations = (client.integrations as Record<string, unknown>) || {};
+            const updatedIntegrations = {
+                ...clientIntegrations,
+                hubspot: {
+                    ...(clientIntegrations.hubspot as Record<string, unknown> || {}),
+                    ...hubspotTokenData,
+                },
+            };
+
+            const { error: updateError } = await supabase
+                .from('clients')
+                .update({
+                    integrations: updatedIntegrations,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', clientId)
+                .eq('agency_id', agencyId);
+
+            if (updateError) {
+                console.error('Failed to store HubSpot tokens on client:', updateError.code);
+                return NextResponse.redirect(
+                    new URL(`${redirectBase}?hubspot=error&message=Failed+to+save+tokens`, request.url)
+                );
+            }
+        } else {
+            // Agency-level OAuth — store in agencies.integrations
+            const { data: agency } = await supabase
+                .from('agencies')
+                .select('integrations')
+                .eq('id', agencyId)
+                .single();
+
+            const updatedIntegrations = {
+                ...agency?.integrations,
+                hubspot: {
+                    ...agency?.integrations?.hubspot,
+                    ...hubspotTokenData,
+                },
+            };
+
+            const { error: updateError } = await supabase
+                .from('agencies')
+                .update({
+                    integrations: updatedIntegrations,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', agencyId);
+
+            if (updateError) {
+                console.error('Failed to store HubSpot tokens:', updateError.code);
+                return NextResponse.redirect(
+                    new URL(`${redirectBase}?hubspot=error&message=Failed+to+save+tokens`, request.url)
+                );
+            }
         }
 
-        // Redirect back to settings with success message
         return NextResponse.redirect(
-            new URL('/settings?hubspot=connected', request.url)
+            new URL(`${redirectBase}?hubspot=connected`, request.url)
         );
     } catch (error) {
         console.error('HubSpot OAuth callback error:', error instanceof Error ? error.message : 'Unknown error');

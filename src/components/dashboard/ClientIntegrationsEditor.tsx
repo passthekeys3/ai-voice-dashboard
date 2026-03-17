@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import {
     Plug, Loader2, RotateCcw, Settings2, CheckCircle2,
-    ArrowRight, MessageSquare, Key, Calendar,
+    ArrowRight, MessageSquare, Key, Calendar, Link2, Unlink,
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import type { IntegrationSource } from '@/lib/integrations/resolve';
@@ -34,6 +34,8 @@ interface IntegrationMeta {
     fields: { name: string; label: string; type: 'text' | 'url' | 'toggle' | 'select'; placeholder?: string; optionsKey?: string; description?: string; section?: string }[];
     /** Whether this integration requires OAuth */
     requiresOAuth?: boolean;
+    /** OAuth initiation URL (without clientId — appended at runtime) */
+    oauthUrl?: string;
     /** Whether this integration is coming soon (disabled) */
     comingSoon?: boolean;
 }
@@ -57,6 +59,7 @@ const INTEGRATIONS: IntegrationMeta[] = [
             { name: 'enabled', label: 'Enabled', type: 'toggle' },
         ],
         requiresOAuth: true,
+        oauthUrl: '/api/auth/crm',
     },
     {
         key: 'hubspot',
@@ -68,6 +71,7 @@ const INTEGRATIONS: IntegrationMeta[] = [
             { name: 'enabled', label: 'Enabled', type: 'toggle' },
         ],
         requiresOAuth: true,
+        oauthUrl: '/api/auth/hubspot',
     },
     {
         key: 'api',
@@ -267,6 +271,27 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
 
     const isConfigured = (key: string) => source[key] === 'client' || source[key] === 'agency';
 
+    /** Check if a client has its own OAuth tokens (not inherited from agency) */
+    const hasClientOAuth = (key: string) => {
+        if (source[key] !== 'client') return false;
+        const config = resolved?.[key] as Record<string, unknown> | undefined;
+        return !!config?.access_token;
+    };
+
+    /** Check if the resolved config has an active OAuth connection (from any source) */
+    const hasOAuthConnection = (key: string) => {
+        const config = resolved?.[key] as Record<string, unknown> | undefined;
+        return !!config?.access_token;
+    };
+
+    const handleOAuthConnect = (oauthUrl: string) => {
+        window.location.href = `${oauthUrl}?clientId=${clientId}`;
+    };
+
+    const handleOAuthDisconnect = (oauthUrl: string) => {
+        window.location.href = `${oauthUrl}?action=disconnect&clientId=${clientId}`;
+    };
+
     if (loading) {
         return (
             <Card>
@@ -321,6 +346,55 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
                                         <Badge variant="outline" className="text-xs text-muted-foreground">
                                             Coming Soon
                                         </Badge>
+                                    ) : integ.requiresOAuth && integ.oauthUrl ? (
+                                        <>
+                                            {hasClientOAuth(integ.key) ? (
+                                                <>
+                                                    <Badge variant="default" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-100">
+                                                        Connected
+                                                    </Badge>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleOpenEdit(integ.key)}
+                                                    >
+                                                        <Settings2 className="h-3.5 w-3.5 mr-1.5" />
+                                                        Configure
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleOAuthDisconnect(integ.oauthUrl!)}
+                                                        title="Disconnect this client's CRM"
+                                                    >
+                                                        <Unlink className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </>
+                                            ) : hasOAuthConnection(integ.key) ? (
+                                                <>
+                                                    <Badge variant="secondary" className="text-xs">
+                                                        Using Agency
+                                                    </Badge>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleOAuthConnect(integ.oauthUrl!)}
+                                                    >
+                                                        <Link2 className="h-3.5 w-3.5 mr-1.5" />
+                                                        Connect Own
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleOAuthConnect(integ.oauthUrl!)}
+                                                >
+                                                    <Link2 className="h-3.5 w-3.5 mr-1.5" />
+                                                    Connect
+                                                </Button>
+                                            )}
+                                        </>
                                     ) : (
                                         <>
                                             {source[integ.key] === 'client' && (
@@ -467,8 +541,11 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
 
                         {INTEGRATIONS.find(i => i.key === editingKey)?.requiresOAuth && (
                             <p className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                                This integration uses OAuth — connect it first on the agency Settings → Integrations page.
-                                Client-level overrides below let you customize behavior per client.
+                                {hasClientOAuth(editingKey || '')
+                                    ? 'This client has its own CRM connection. Settings below apply to this client only.'
+                                    : source[editingKey || ''] === 'agency'
+                                        ? 'Currently using the agency CRM connection. You can connect this client\'s own CRM account from the integrations list.'
+                                        : 'Connect this client\'s CRM account from the integrations list to enable this integration.'}
                             </p>
                         )}
                     </div>

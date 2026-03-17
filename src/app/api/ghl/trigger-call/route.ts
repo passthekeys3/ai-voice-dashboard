@@ -41,28 +41,71 @@ export async function POST(request: NextRequest) {
         const data = validation.data;
         const supabase = createServiceClient();
 
-        // Look up agency by GHL location_id
+        // Look up agency by GHL location_id (check agency-level first, then client-level)
+        let _matchedClientId: string | null = null;
         const { data: agencies, error: agencyError } = await supabase
             .from('agencies')
             .select('id, integrations, calling_window, retell_api_key, vapi_api_key, bland_api_key, subscription_price_id, subscription_status, beta_ends_at')
             .filter('integrations->ghl->>location_id', 'eq', data.location_id);
 
-        if (agencyError || !agencies || agencies.length === 0) {
-            return NextResponse.json(
-                { error: 'No agency found for this location_id' },
-                { status: 404 },
-            );
-        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let agency: any;
 
-        if (agencies.length > 1) {
+        if (!agencyError && agencies && agencies.length === 1) {
+            agency = agencies[0];
+        } else if (!agencyError && agencies && agencies.length > 1) {
             console.error(`SECURITY: Multiple agencies matched GHL location_id ${data.location_id}: ${agencies.map(a => a.id).join(', ')}`);
             return NextResponse.json(
                 { error: 'Configuration error — contact support' },
                 { status: 500 },
             );
-        }
+        } else {
+            // No agency-level match — check client-level integrations
+            const { data: clients } = await supabase
+                .from('clients')
+                .select('id, agency_id, integrations')
+                .filter('integrations->ghl->>location_id', 'eq', data.location_id);
 
-        const agency = agencies[0];
+            if (!clients || clients.length === 0) {
+                return NextResponse.json(
+                    { error: 'No agency or client found for this location_id' },
+                    { status: 404 },
+                );
+            }
+
+            if (clients.length > 1) {
+                console.error(`SECURITY: Multiple clients matched GHL location_id ${data.location_id}: ${clients.map((c: { id: string }) => c.id).join(', ')}`);
+                return NextResponse.json(
+                    { error: 'Configuration error — contact support' },
+                    { status: 500 },
+                );
+            }
+
+            _matchedClientId = clients[0].id;
+
+            // Fetch the parent agency
+            const { data: parentAgency } = await supabase
+                .from('agencies')
+                .select('id, integrations, calling_window, retell_api_key, vapi_api_key, bland_api_key, subscription_price_id, subscription_status, beta_ends_at')
+                .eq('id', clients[0].agency_id)
+                .single();
+
+            if (!parentAgency) {
+                return NextResponse.json(
+                    { error: 'Parent agency not found' },
+                    { status: 404 },
+                );
+            }
+
+            // Deep-merge client's GHL tokens over agency config (preserves trigger_config, calling_window)
+            agency = {
+                ...parentAgency,
+                integrations: {
+                    ...parentAgency.integrations,
+                    ghl: { ...parentAgency.integrations?.ghl, ...clients[0].integrations?.ghl },
+                },
+            };
+        }
 
         // ---- Tier gate: CRM integrations require Growth+ ----
         const tierError = checkFeatureAccess(agency.subscription_price_id, agency.subscription_status, 'crm_integrations', agency.beta_ends_at);
