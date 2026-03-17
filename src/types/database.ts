@@ -184,6 +184,12 @@ export interface AgencyIntegrations {
     };
 }
 
+/** Subset of Agency fields selected by trigger webhook routes */
+export type AgencyTriggerRow = Pick<Agency,
+    'id' | 'integrations' | 'calling_window' | 'retell_api_key' | 'vapi_api_key' | 'bland_api_key' |
+    'subscription_price_id' | 'subscription_status' | 'beta_ends_at'
+>;
+
 export interface Client {
     id: string;
     agency_id: string;

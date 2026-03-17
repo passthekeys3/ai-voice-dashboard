@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import {
     Plug, Loader2, RotateCcw, Settings2, CheckCircle2,
-    ArrowRight, MessageSquare, Key, Calendar, Link2, Unlink,
+    ArrowRight, MessageSquare, Key, Calendar, Link2, Unlink, AlertTriangle,
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import type { IntegrationSource } from '@/lib/integrations/resolve';
@@ -128,6 +128,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
     // Dialog state
     const [editingKey, setEditingKey] = useState<string | null>(null);
     const [editFields, setEditFields] = useState<Record<string, unknown>>({});
+    const [disconnectingInteg, setDisconnectingInteg] = useState<IntegrationMeta | null>(null);
 
     const fetchIntegrations = useCallback(async () => {
         try {
@@ -288,8 +289,13 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
         window.location.href = `${oauthUrl}?clientId=${clientId}`;
     };
 
-    const handleOAuthDisconnect = (oauthUrl: string) => {
-        window.location.href = `${oauthUrl}?action=disconnect&clientId=${clientId}`;
+    const handleOAuthDisconnect = (integ: IntegrationMeta) => {
+        setDisconnectingInteg(integ);
+    };
+
+    const confirmDisconnect = () => {
+        if (!disconnectingInteg?.oauthUrl) return;
+        window.location.href = `${disconnectingInteg.oauthUrl}?action=disconnect&clientId=${clientId}`;
     };
 
     if (loading) {
@@ -364,7 +370,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={() => handleOAuthDisconnect(integ.oauthUrl!)}
+                                                        onClick={() => handleOAuthDisconnect(integ)}
                                                         title="Disconnect this client's CRM"
                                                     >
                                                         <Unlink className="h-3.5 w-3.5" />
@@ -372,7 +378,13 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
                                                 </>
                                             ) : hasOAuthConnection(integ.key) ? (
                                                 <>
-                                                    <Badge variant="secondary" className="text-xs">
+                                                    <Badge variant="secondary" className="text-xs" title={
+                                                        (() => {
+                                                            const config = resolved?.[integ.key] as Record<string, unknown> | undefined;
+                                                            const id = config?.location_id || config?.oauth_location_id || config?.portal_id;
+                                                            return id ? `Connected to: ${id}` : undefined;
+                                                        })()
+                                                    }>
                                                         Using Agency
                                                     </Badge>
                                                     <Button
@@ -563,6 +575,32 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
                             ) : (
                                 'Save'
                             )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Disconnect Confirmation Dialog */}
+            <Dialog open={!!disconnectingInteg} onOpenChange={(open: boolean) => !open && setDisconnectingInteg(null)}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            Disconnect {disconnectingInteg?.name}?
+                        </DialogTitle>
+                        <DialogDescription>
+                            This will remove this client&apos;s {disconnectingInteg?.name} connection.
+                            {source[disconnectingInteg?.key || ''] === 'client' && (
+                                <> The agency&apos;s connection will be used as a fallback if available.</>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDisconnectingInteg(null)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDisconnect}>
+                            Disconnect
                         </Button>
                     </DialogFooter>
                 </DialogContent>

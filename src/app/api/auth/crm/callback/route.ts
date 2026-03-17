@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { checkFeatureAccess } from '@/lib/billing/tiers';
-import crypto from 'crypto';
+import { verifyOAuthState, storeOAuthTokens, extractRedirectBase } from '@/lib/auth/oauth-helpers';
 
 const GHL_CLIENT_ID = process.env.GHL_CLIENT_ID;
 const GHL_CLIENT_SECRET = process.env.GHL_CLIENT_SECRET;
@@ -19,11 +19,12 @@ export async function GET(request: NextRequest) {
         const state = searchParams.get('state');
         const error = searchParams.get('error');
 
-        // Handle OAuth errors
+        // Handle OAuth errors (use state to determine redirect target if available)
         if (error) {
             console.error('GHL OAuth error:', error);
+            const base = extractRedirectBase(state);
             return NextResponse.redirect(
-                new URL(`/settings?ghl=error&message=${encodeURIComponent(error)}`, request.url)
+                new URL(`${base}?ghl=error&message=${encodeURIComponent(error)}`, request.url)
             );
         }
 
@@ -34,54 +35,30 @@ export async function GET(request: NextRequest) {
         }
 
         // Verify state HMAC signature and extract agency ID + optional client ID
-        let agencyId: string;
-        let clientId: string | undefined;
-        let stateTimestamp: number;
-        try {
-            const decoded = Buffer.from(state, 'base64').toString();
-            const lastDotIndex = decoded.lastIndexOf('.');
-            if (lastDotIndex === -1) {
-                throw new Error('Missing signature');
-            }
+        if (!GHL_CLIENT_SECRET) {
+            return NextResponse.redirect(
+                new URL('/settings?ghl=error&message=Server+configuration+error', request.url)
+            );
+        }
 
-            const statePayload = decoded.slice(0, lastDotIndex);
-            const stateSignature = decoded.slice(lastDotIndex + 1);
-
-            // Verify HMAC signature
-            if (!GHL_CLIENT_SECRET) {
-                throw new Error('GHL client secret not configured');
-            }
-            const expectedSignature = crypto
-                .createHmac('sha256', GHL_CLIENT_SECRET)
-                .update(statePayload)
-                .digest('hex');
-
-            if (!crypto.timingSafeEqual(Buffer.from(stateSignature), Buffer.from(expectedSignature))) {
-                throw new Error('Invalid signature');
-            }
-
-            const stateData = JSON.parse(statePayload);
-            agencyId = stateData.agencyId;
-            clientId = stateData.clientId; // undefined for agency-level OAuth
-            stateTimestamp = stateData.timestamp;
-        } catch {
+        const stateData = verifyOAuthState(state, GHL_CLIENT_SECRET);
+        if (!stateData) {
             return NextResponse.redirect(
                 new URL('/settings?ghl=error&message=Invalid+state+parameter', request.url)
             );
         }
 
+        const { agencyId, clientId, timestamp } = stateData;
         const redirectBase = clientId ? `/clients/${clientId}` : '/settings';
 
-        // Check timestamp (5 minute expiry) — after redirectBase so redirect goes to the correct page
-        if (Date.now() - stateTimestamp > 5 * 60 * 1000) {
+        // Check timestamp (5 minute expiry)
+        if (Date.now() - timestamp > 5 * 60 * 1000) {
             return NextResponse.redirect(
                 new URL(`${redirectBase}?ghl=error&message=OAuth+session+expired`, request.url)
             );
         }
 
         // Defense-in-depth: verify the current session matches the agencyId in the state
-        // The HMAC signature prevents state tampering, but this ensures the same user
-        // who initiated the flow is completing it.
         const user = await getCurrentUser();
         if (!user || !isAgencyAdmin(user)) {
             return NextResponse.redirect(
@@ -96,8 +73,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Validate env vars before token exchange
-        if (!GHL_CLIENT_ID || !GHL_CLIENT_SECRET) {
-            console.error('GHL OAuth callback: missing GHL_CLIENT_ID or GHL_CLIENT_SECRET');
+        if (!GHL_CLIENT_ID) {
+            console.error('GHL OAuth callback: missing GHL_CLIENT_ID');
             return NextResponse.redirect(
                 new URL(`${redirectBase}?ghl=error&message=Server+configuration+error`, request.url)
             );
@@ -106,9 +83,7 @@ export async function GET(request: NextRequest) {
         // Exchange code for tokens
         const tokenResponse = await fetch('https://services.leadconnectorhq.com/oauth/token', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
                 grant_type: 'authorization_code',
                 client_id: GHL_CLIENT_ID,
@@ -144,12 +119,12 @@ export async function GET(request: NextRequest) {
         // Safely parse expires_in (default to 24h if missing/invalid)
         const expiresIn = typeof tokens.expires_in === 'number' ? tokens.expires_in : 86400;
 
-        // Store tokens in database (deep merge to preserve existing config)
+        // Verify agency exists and check tier
         const supabase = await createAdminClient();
 
         const { data: agency } = await supabase
             .from('agencies')
-            .select('integrations, subscription_price_id, subscription_status, beta_ends_at')
+            .select('subscription_price_id, subscription_status, beta_ends_at')
             .eq('id', agencyId)
             .single();
 
@@ -168,80 +143,22 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        const ghlTokenData = {
+        // Store tokens via shared helper (routes to client or agency table)
+        const storeError = await storeOAuthTokens(supabase, 'ghl', agencyId, clientId, {
             access_token: tokens.access_token,
             refresh_token: tokens.refresh_token,
             expires_at: Date.now() + (expiresIn * 1000),
             oauth_location_id: tokens.locationId,
             location_id: tokens.locationId,
             enabled: true,
-            auth_method: 'oauth' as const,
-        };
+            auth_method: 'oauth',
+        });
 
-        if (clientId) {
-            // Per-client OAuth — store in clients.integrations
-            const { data: client } = await supabase
-                .from('clients')
-                .select('integrations')
-                .eq('id', clientId)
-                .eq('agency_id', agencyId)
-                .single();
-
-            if (!client) {
-                console.error('GHL OAuth callback: client not found:', clientId);
-                return NextResponse.redirect(
-                    new URL(`${redirectBase}?ghl=error&message=Client+not+found`, request.url)
-                );
-            }
-
-            const clientIntegrations = (client.integrations as Record<string, unknown>) || {};
-            const updatedIntegrations = {
-                ...clientIntegrations,
-                ghl: {
-                    ...(clientIntegrations.ghl as Record<string, unknown> || {}),
-                    ...ghlTokenData,
-                },
-            };
-
-            const { error: updateError } = await supabase
-                .from('clients')
-                .update({
-                    integrations: updatedIntegrations,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', clientId)
-                .eq('agency_id', agencyId);
-
-            if (updateError) {
-                console.error('Failed to store GHL tokens on client:', updateError.code);
-                return NextResponse.redirect(
-                    new URL(`${redirectBase}?ghl=error&message=Failed+to+save+tokens`, request.url)
-                );
-            }
-        } else {
-            // Agency-level OAuth — store in agencies.integrations
-            const updatedIntegrations = {
-                ...agency.integrations,
-                ghl: {
-                    ...agency.integrations?.ghl,
-                    ...ghlTokenData,
-                },
-            };
-
-            const { error: updateError } = await supabase
-                .from('agencies')
-                .update({
-                    integrations: updatedIntegrations,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', agencyId);
-
-            if (updateError) {
-                console.error('Failed to store GHL tokens:', updateError.code);
-                return NextResponse.redirect(
-                    new URL(`${redirectBase}?ghl=error&message=Failed+to+save+tokens`, request.url)
-                );
-            }
+        if (storeError) {
+            console.error('Failed to store GHL tokens:', storeError);
+            return NextResponse.redirect(
+                new URL(`${redirectBase}?ghl=error&message=Failed+to+save+tokens`, request.url)
+            );
         }
 
         return NextResponse.redirect(

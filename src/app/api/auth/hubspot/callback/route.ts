@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { checkFeatureAccess } from '@/lib/billing/tiers';
-import crypto from 'crypto';
+import { verifyOAuthState, storeOAuthTokens, extractRedirectBase } from '@/lib/auth/oauth-helpers';
 
 const HUBSPOT_CLIENT_ID = process.env.HUBSPOT_CLIENT_ID;
 const HUBSPOT_CLIENT_SECRET = process.env.HUBSPOT_CLIENT_SECRET;
@@ -19,11 +19,12 @@ export async function GET(request: NextRequest) {
         const state = searchParams.get('state');
         const error = searchParams.get('error');
 
-        // Handle OAuth errors
+        // Handle OAuth errors (use state to determine redirect target if available)
         if (error) {
             console.error('HubSpot OAuth error:', error);
+            const base = extractRedirectBase(state);
             return NextResponse.redirect(
-                new URL(`/settings?hubspot=error&message=${encodeURIComponent(error)}`, request.url)
+                new URL(`${base}?hubspot=error&message=${encodeURIComponent(error)}`, request.url)
             );
         }
 
@@ -34,54 +35,30 @@ export async function GET(request: NextRequest) {
         }
 
         // Verify state HMAC signature and extract agency ID + optional client ID
-        let agencyId: string;
-        let clientId: string | undefined;
-        let stateTimestamp: number;
-        try {
-            const decoded = Buffer.from(state, 'base64').toString();
-            const lastDotIndex = decoded.lastIndexOf('.');
-            if (lastDotIndex === -1) {
-                throw new Error('Missing signature');
-            }
+        if (!HUBSPOT_CLIENT_SECRET) {
+            return NextResponse.redirect(
+                new URL('/settings?hubspot=error&message=Server+configuration+error', request.url)
+            );
+        }
 
-            const statePayload = decoded.slice(0, lastDotIndex);
-            const stateSignature = decoded.slice(lastDotIndex + 1);
-
-            // Verify HMAC signature
-            if (!HUBSPOT_CLIENT_SECRET) {
-                throw new Error('HubSpot client secret not configured');
-            }
-            const expectedSignature = crypto
-                .createHmac('sha256', HUBSPOT_CLIENT_SECRET)
-                .update(statePayload)
-                .digest('hex');
-
-            if (!crypto.timingSafeEqual(Buffer.from(stateSignature), Buffer.from(expectedSignature))) {
-                throw new Error('Invalid signature');
-            }
-
-            const stateData = JSON.parse(statePayload);
-            agencyId = stateData.agencyId;
-            clientId = stateData.clientId; // undefined for agency-level OAuth
-            stateTimestamp = stateData.timestamp;
-        } catch {
+        const stateData = verifyOAuthState(state, HUBSPOT_CLIENT_SECRET);
+        if (!stateData) {
             return NextResponse.redirect(
                 new URL('/settings?hubspot=error&message=Invalid+state+parameter', request.url)
             );
         }
 
+        const { agencyId, clientId, timestamp } = stateData;
         const redirectBase = clientId ? `/clients/${clientId}` : '/settings';
 
-        // Check timestamp (5 minute expiry) — after redirectBase so redirect goes to the correct page
-        if (Date.now() - stateTimestamp > 5 * 60 * 1000) {
+        // Check timestamp (5 minute expiry)
+        if (Date.now() - timestamp > 5 * 60 * 1000) {
             return NextResponse.redirect(
                 new URL(`${redirectBase}?hubspot=error&message=OAuth+session+expired`, request.url)
             );
         }
 
         // Defense-in-depth: verify the current session matches the agencyId in the state
-        // The HMAC signature prevents state tampering, but this ensures the same user
-        // who initiated the flow is completing it.
         const user = await getCurrentUser();
         if (!user || !isAgencyAdmin(user)) {
             return NextResponse.redirect(
@@ -95,8 +72,23 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Defense-in-depth: re-verify tier in case agency downgraded during OAuth flow
-        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'crm_integrations', user.agency.beta_ends_at);
+        // Defense-in-depth: re-verify tier from fresh DB data in case agency downgraded during OAuth flow
+        const supabase = await createAdminClient();
+
+        const { data: agency } = await supabase
+            .from('agencies')
+            .select('subscription_price_id, subscription_status, beta_ends_at')
+            .eq('id', agencyId)
+            .single();
+
+        if (!agency) {
+            console.error('HubSpot OAuth callback: agency not found:', agencyId);
+            return NextResponse.redirect(
+                new URL(`${redirectBase}?hubspot=error&message=Agency+not+found`, request.url)
+            );
+        }
+
+        const tierError = checkFeatureAccess(agency.subscription_price_id, agency.subscription_status, 'crm_integrations', agency.beta_ends_at);
         if (tierError) {
             return NextResponse.redirect(
                 new URL(`${redirectBase}?hubspot=error&message=CRM+integrations+require+a+Growth+plan+or+higher`, request.url)
@@ -104,8 +96,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Validate env vars before token exchange
-        if (!HUBSPOT_CLIENT_ID || !HUBSPOT_CLIENT_SECRET) {
-            console.error('HubSpot OAuth callback: missing HUBSPOT_CLIENT_ID or HUBSPOT_CLIENT_SECRET');
+        if (!HUBSPOT_CLIENT_ID) {
+            console.error('HubSpot OAuth callback: missing HUBSPOT_CLIENT_ID');
             return NextResponse.redirect(
                 new URL(`${redirectBase}?hubspot=error&message=Server+configuration+error`, request.url)
             );
@@ -114,9 +106,7 @@ export async function GET(request: NextRequest) {
         // Exchange code for tokens
         const tokenResponse = await fetch('https://api.hubapi.com/oauth/v3/token', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
                 grant_type: 'authorization_code',
                 client_id: HUBSPOT_CLIENT_ID,
@@ -144,89 +134,22 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Store tokens in database
-        const supabase = await createAdminClient();
-
         // Safely parse expires_in (default to 6h if missing/invalid — HubSpot tokens typically last 6h)
         const expiresIn = typeof tokens.expires_in === 'number' ? tokens.expires_in : 21600;
 
-        const hubspotTokenData = {
+        // Store tokens via shared helper (routes to client or agency table)
+        const storeError = await storeOAuthTokens(supabase, 'hubspot', agencyId, clientId, {
             access_token: tokens.access_token,
             refresh_token: tokens.refresh_token,
             expires_at: Date.now() + (expiresIn * 1000),
             enabled: true,
-        };
+        });
 
-        if (clientId) {
-            // Per-client OAuth — store in clients.integrations
-            const { data: client } = await supabase
-                .from('clients')
-                .select('integrations')
-                .eq('id', clientId)
-                .eq('agency_id', agencyId)
-                .single();
-
-            if (!client) {
-                console.error('HubSpot OAuth callback: client not found:', clientId);
-                return NextResponse.redirect(
-                    new URL(`${redirectBase}?hubspot=error&message=Client+not+found`, request.url)
-                );
-            }
-
-            const clientIntegrations = (client.integrations as Record<string, unknown>) || {};
-            const updatedIntegrations = {
-                ...clientIntegrations,
-                hubspot: {
-                    ...(clientIntegrations.hubspot as Record<string, unknown> || {}),
-                    ...hubspotTokenData,
-                },
-            };
-
-            const { error: updateError } = await supabase
-                .from('clients')
-                .update({
-                    integrations: updatedIntegrations,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', clientId)
-                .eq('agency_id', agencyId);
-
-            if (updateError) {
-                console.error('Failed to store HubSpot tokens on client:', updateError.code);
-                return NextResponse.redirect(
-                    new URL(`${redirectBase}?hubspot=error&message=Failed+to+save+tokens`, request.url)
-                );
-            }
-        } else {
-            // Agency-level OAuth — store in agencies.integrations
-            const { data: agency } = await supabase
-                .from('agencies')
-                .select('integrations')
-                .eq('id', agencyId)
-                .single();
-
-            const updatedIntegrations = {
-                ...agency?.integrations,
-                hubspot: {
-                    ...agency?.integrations?.hubspot,
-                    ...hubspotTokenData,
-                },
-            };
-
-            const { error: updateError } = await supabase
-                .from('agencies')
-                .update({
-                    integrations: updatedIntegrations,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', agencyId);
-
-            if (updateError) {
-                console.error('Failed to store HubSpot tokens:', updateError.code);
-                return NextResponse.redirect(
-                    new URL(`${redirectBase}?hubspot=error&message=Failed+to+save+tokens`, request.url)
-                );
-            }
+        if (storeError) {
+            console.error('Failed to store HubSpot tokens:', storeError);
+            return NextResponse.redirect(
+                new URL(`${redirectBase}?hubspot=error&message=Failed+to+save+tokens`, request.url)
+            );
         }
 
         return NextResponse.redirect(

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { checkFeatureAccess } from '@/lib/billing/tiers';
-import crypto from 'crypto';
+import { signOAuthState, validateClientOwnership } from '@/lib/auth/oauth-helpers';
 
 const HUBSPOT_CLIENT_ID = process.env.HUBSPOT_CLIENT_ID;
 const HUBSPOT_CLIENT_SECRET = process.env.HUBSPOT_CLIENT_SECRET;
@@ -46,14 +46,7 @@ export async function GET(request: NextRequest) {
         // If clientId provided, validate it belongs to this agency
         if (clientId) {
             const supabase = await createAdminClient();
-            const { data: client } = await supabase
-                .from('clients')
-                .select('id')
-                .eq('id', clientId)
-                .eq('agency_id', user.agency.id)
-                .single();
-
-            if (!client) {
+            if (!await validateClientOwnership(supabase, clientId, user.agency.id)) {
                 return NextResponse.json({ error: 'Client not found' }, { status: 404 });
             }
         }
@@ -76,7 +69,7 @@ export async function GET(request: NextRequest) {
                 const clientIntegrations = (client?.integrations as Record<string, unknown>) || {};
                 const { hubspot: _removed, ...rest } = clientIntegrations;
 
-                await supabase
+                const { error: updateError } = await supabase
                     .from('clients')
                     .update({
                         integrations: Object.keys(rest).length > 0 ? rest : null,
@@ -84,6 +77,11 @@ export async function GET(request: NextRequest) {
                     })
                     .eq('id', clientId)
                     .eq('agency_id', user.agency.id);
+
+                if (updateError) {
+                    console.error('Failed to disconnect HubSpot for client:', updateError.code);
+                    return NextResponse.redirect(new URL(`${redirectBase}?hubspot=error&message=Failed+to+disconnect`, request.url));
+                }
             } else {
                 // Disconnect at agency level
                 const { data: agency } = await supabase
@@ -104,13 +102,18 @@ export async function GET(request: NextRequest) {
                     },
                 };
 
-                await supabase
+                const { error: updateError } = await supabase
                     .from('agencies')
                     .update({
                         integrations: updatedIntegrations,
                         updated_at: new Date().toISOString(),
                     })
                     .eq('id', user.agency.id);
+
+                if (updateError) {
+                    console.error('Failed to disconnect HubSpot:', updateError.code);
+                    return NextResponse.redirect(new URL(`${redirectBase}?hubspot=error&message=Failed+to+disconnect`, request.url));
+                }
             }
 
             return NextResponse.redirect(new URL(`${redirectBase}?hubspot=disconnected`, request.url));
@@ -130,19 +133,8 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Generate state parameter for CSRF protection with HMAC signature
-        // Include clientId when doing per-client OAuth
-        const statePayload = JSON.stringify({
-            agencyId: user.agency.id,
-            ...(clientId ? { clientId } : {}),
-            timestamp: Date.now(),
-        });
-        const stateSecret = HUBSPOT_CLIENT_SECRET!;
-        const stateSignature = crypto
-            .createHmac('sha256', stateSecret)
-            .update(statePayload)
-            .digest('hex');
-        const state = Buffer.from(`${statePayload}.${stateSignature}`).toString('base64');
+        // Generate HMAC-signed state for CSRF protection (includes clientId for per-client OAuth)
+        const state = signOAuthState({ agencyId: user.agency.id, clientId }, HUBSPOT_CLIENT_SECRET!);
 
         // Build HubSpot OAuth URL
         const authUrl = new URL('https://app.hubspot.com/oauth/authorize');
