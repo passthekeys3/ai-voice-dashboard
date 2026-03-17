@@ -10,7 +10,7 @@ export default function PrivacyPage() {
     return (
         <main className="max-w-2xl mx-auto py-24 px-4 sm:px-6">
             <h1 className="text-3xl font-bold tracking-tight mb-2">Privacy Policy</h1>
-            <p className="text-sm text-muted-foreground mb-8">Last updated: February 24, 2026</p>
+            <p className="text-sm text-muted-foreground mb-8">Last updated: March 17, 2026</p>
 
             <div className="prose prose-sm dark:prose-invert text-muted-foreground space-y-6">
                 <p>
@@ -76,6 +76,7 @@ export default function PrivacyPage() {
                         <li><strong>Stripe</strong> — Payment processing and subscription management.</li>
                         <li><strong>Resend</strong> — Transactional email delivery.</li>
                         <li><strong>Retell AI, Vapi, Bland</strong> — Voice provider integrations (you connect your own accounts).</li>
+                        <li><strong>GoHighLevel, HubSpot</strong> — CRM integrations for syncing contacts, deals, and call activity (you authorize access via OAuth).</li>
                         <li><strong>Vercel</strong> — Application hosting and serverless infrastructure.</li>
                         <li><strong>Sentry</strong> — Error monitoring and performance tracking.</li>
                     </ul>
@@ -86,7 +87,22 @@ export default function PrivacyPage() {
                 </section>
 
                 <section>
-                    <h2 className="text-lg font-semibold text-foreground">5. Data Retention</h2>
+                    <h2 className="text-lg font-semibold text-foreground">5. AI-Powered Calls</h2>
+                    <p>
+                        BuildVoiceAI enables you to deploy AI-powered voice agents that make and receive
+                        phone calls on your behalf. Call recordings, transcripts, and metadata are collected
+                        and stored as described in this policy. You are responsible for disclosing to call
+                        recipients that they are interacting with an AI agent where required by applicable
+                        law (see our{' '}
+                        <Link href="/terms" className="text-foreground underline">
+                            Terms of Service
+                        </Link>
+                        {' '}for compliance obligations).
+                    </p>
+                </section>
+
+                <section>
+                    <h2 className="text-lg font-semibold text-foreground">6. Data Retention</h2>
                     <p>
                         We retain your call data, agent configurations, and account information for as
                         long as your account is active. When you close your account or request deletion,
@@ -96,7 +112,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section>
-                    <h2 className="text-lg font-semibold text-foreground">6. Your Rights</h2>
+                    <h2 className="text-lg font-semibold text-foreground">7. Your Rights</h2>
                     <p>You have the right to:</p>
                     <ul className="list-disc pl-5 space-y-2">
                         <li><strong>Access</strong> the personal data we hold about you.</li>
@@ -110,7 +126,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section>
-                    <h2 className="text-lg font-semibold text-foreground">7. Cookies</h2>
+                    <h2 className="text-lg font-semibold text-foreground">8. Cookies</h2>
                     <p>
                         We use essential cookies for authentication and session management. We do not
                         use third-party advertising or tracking cookies.
@@ -118,7 +134,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section>
-                    <h2 className="text-lg font-semibold text-foreground">8. Changes to This Policy</h2>
+                    <h2 className="text-lg font-semibold text-foreground">9. Changes to This Policy</h2>
                     <p>
                         We may update this Privacy Policy from time to time. When we make changes, we
                         will update the &ldquo;Last updated&rdquo; date at the top of this page. Continued
@@ -127,7 +143,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section>
-                    <h2 className="text-lg font-semibold text-foreground">9. Contact Us</h2>
+                    <h2 className="text-lg font-semibold text-foreground">10. Contact Us</h2>
                     <p>
                         If you have questions about this Privacy Policy or our data practices, contact
                         us at{' '}

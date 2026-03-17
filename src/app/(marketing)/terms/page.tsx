@@ -10,7 +10,7 @@ export default function TermsPage() {
     return (
         <main className="max-w-2xl mx-auto py-24 px-4 sm:px-6">
             <h1 className="text-3xl font-bold tracking-tight mb-2">Terms of Service</h1>
-            <p className="text-sm text-muted-foreground mb-8">Last updated: February 24, 2026</p>
+            <p className="text-sm text-muted-foreground mb-8">Last updated: March 17, 2026</p>
 
             <div className="prose prose-sm dark:prose-invert text-muted-foreground space-y-6">
                 <p>
@@ -65,6 +65,13 @@ export default function TermsPage() {
                         <li>
                             <strong>Recording consent:</strong> Obtaining required consent for call
                             recording in accordance with local one-party or two-party consent laws.
+                        </li>
+                        <li>
+                            <strong>CRM integration authorization:</strong> When you connect a
+                            third-party CRM (such as GoHighLevel or HubSpot), you authorize
+                            BuildVoiceAI to read and write contacts, deals, and call activity in
+                            your CRM account on your behalf. You are responsible for ensuring this
+                            data sync complies with your own data handling obligations.
                         </li>
                     </ul>
                     <p>
