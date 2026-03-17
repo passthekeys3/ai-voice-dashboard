@@ -8,12 +8,19 @@ const HUBSPOT_CLIENT_ID = process.env.HUBSPOT_CLIENT_ID;
 const HUBSPOT_CLIENT_SECRET = process.env.HUBSPOT_CLIENT_SECRET;
 const HUBSPOT_REDIRECT_URI = process.env.HUBSPOT_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/hubspot/callback`;
 
-// OAuth scopes required for the integration
-const HUBSPOT_SCOPES = [
+// OAuth scopes — split into required vs optional per HubSpot's
+// advanced scope settings (mandatory since Oct 2024).
+// Required: always needed for core contact sync.
+// Optional: deals access — not all HubSpot plans include deals.
+const HUBSPOT_REQUIRED_SCOPES = [
     'crm.objects.contacts.read',
     'crm.objects.contacts.write',
+].join(' ');
+
+const HUBSPOT_OPTIONAL_SCOPES = [
     'crm.objects.deals.read',
     'crm.objects.deals.write',
+    'crm.schemas.contacts.read',
 ].join(' ');
 
 /**
@@ -88,7 +95,8 @@ export async function GET(request: NextRequest) {
         const authUrl = new URL('https://app.hubspot.com/oauth/authorize');
         authUrl.searchParams.set('client_id', HUBSPOT_CLIENT_ID);
         authUrl.searchParams.set('redirect_uri', HUBSPOT_REDIRECT_URI);
-        authUrl.searchParams.set('scope', HUBSPOT_SCOPES);
+        authUrl.searchParams.set('scope', HUBSPOT_REQUIRED_SCOPES);
+        authUrl.searchParams.set('optional_scope', HUBSPOT_OPTIONAL_SCOPES);
         authUrl.searchParams.set('state', state);
 
         return NextResponse.redirect(authUrl.toString());
