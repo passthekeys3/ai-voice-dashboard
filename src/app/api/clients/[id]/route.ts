@@ -17,6 +17,7 @@ import { getStripe } from '@/lib/stripe';
 import { isValidUuid } from '@/lib/validation';
 import { encrypt } from '@/lib/crypto';
 import { maskClientApiKeys } from '@/lib/clients/mask-keys';
+import { API_KEY_PATTERN, API_KEY_MAX_LENGTH } from '@/lib/integrations/validate-integrations';
 
 // Admin client for auth user deletion (same pattern as invite route)
 const supabaseAdmin = createSupabaseAdmin(
@@ -125,9 +126,6 @@ export const PATCH = withErrorHandling(async (
     if (body.next_billing_date !== undefined) updateData.next_billing_date = body.next_billing_date;
 
     // Voice provider API keys (per-client override — null/empty clears the key)
-    const API_KEY_MAX_LENGTH = 256;
-    const API_KEY_PATTERN = /^[a-zA-Z0-9_\-:.]+$/;
-
     for (const keyField of ['retell_api_key', 'vapi_api_key', 'vapi_public_key', 'bland_api_key'] as const) {
         if (body[keyField] !== undefined) {
             if (body[keyField] === '' || body[keyField] === null) {

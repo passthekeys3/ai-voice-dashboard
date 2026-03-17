@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { detectTimezone, isWithinCallingWindow, getNextValidCallTime } from '@/lib/timezone/detector';
 import { isValidUuid, safeParseJson } from '@/lib/validation';
+import { normalizePhoneToE164 } from '@/lib/validation/phone';
 import type { CallingWindowConfig } from '@/types';
 
 // GET /api/scheduled-calls - List scheduled calls
@@ -108,14 +109,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Phone number is required' }, { status: 400 });
         }
 
-        // Validate phone number format (E.164 format: +[country code][number])
-        const phoneRegex = /^\+[1-9]\d{6,14}$/;
-        const cleanedNumber = to_number.replace(/[\s\-\(\)]/g, ''); // Remove common formatting
-        if (!phoneRegex.test(cleanedNumber)) {
-            return NextResponse.json({
-                error: 'Invalid phone number format. Use E.164 format (e.g., +14155551234)'
-            }, { status: 400 });
+        // Validate and normalize phone number to E.164 format
+        const normalized = normalizePhoneToE164(to_number);
+        if ('error' in normalized) {
+            return NextResponse.json({ error: normalized.error }, { status: 400 });
         }
+        const cleanedNumber = normalized.phone;
 
         if (!scheduled_at) {
             return NextResponse.json({ error: 'Scheduled time is required' }, { status: 400 });

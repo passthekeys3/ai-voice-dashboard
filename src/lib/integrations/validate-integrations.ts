@@ -3,8 +3,8 @@
  * Used by both /api/settings (agency) and /api/clients/[id]/integrations (client).
  */
 
-const API_KEY_MAX_LENGTH = 256;
-const API_KEY_PATTERN = /^[a-zA-Z0-9_\-:.]+$/;
+export const API_KEY_MAX_LENGTH = 256;
+export const API_KEY_PATTERN = /^[a-zA-Z0-9_\-:.]+$/;
 const TOKEN_MAX_LENGTH = 2048;
 
 /** Only these top-level integration keys are accepted. */

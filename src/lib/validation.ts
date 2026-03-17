@@ -7,6 +7,9 @@ import { NextResponse } from 'next/server';
 /** Strict UUID v4 regex (case-insensitive) */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Matches a 6-digit hex color string like #0f172a */
+export const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
+
 /**
  * Validate that a string is a well-formed UUID.
  * Use this to fail-fast before hitting the database with user-supplied IDs.

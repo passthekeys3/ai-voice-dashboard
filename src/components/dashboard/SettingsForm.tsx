@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Eye, Palette, Mail, Phone, Globe, RefreshCw, Key, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from '@/lib/toast';
+import { HEX_COLOR_PATTERN } from '@/lib/validation';
 import type { Agency } from '@/types';
 
 interface SettingsFormProps {
@@ -195,14 +196,13 @@ export function SettingsForm({ agency }: SettingsFormProps) {
     };
 
     const validateBranding = (): string | null => {
-        const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
-        if (formData.primaryColor && !hexColorRegex.test(formData.primaryColor)) {
+        if (formData.primaryColor && !HEX_COLOR_PATTERN.test(formData.primaryColor)) {
             return 'Primary color must be a valid hex color (e.g. #0f172a)';
         }
-        if (formData.secondaryColor && !hexColorRegex.test(formData.secondaryColor)) {
+        if (formData.secondaryColor && !HEX_COLOR_PATTERN.test(formData.secondaryColor)) {
             return 'Secondary color must be a valid hex color (e.g. #1e293b)';
         }
-        if (formData.accentColor && !hexColorRegex.test(formData.accentColor)) {
+        if (formData.accentColor && !HEX_COLOR_PATTERN.test(formData.accentColor)) {
             return 'Accent color must be a valid hex color (e.g. #3b82f6)';
         }
 

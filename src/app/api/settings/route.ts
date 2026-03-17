@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { HEX_COLOR_PATTERN } from '@/lib/validation';
 import {
     deepMerge,
     sanitizeIntegrations,
     validateIntegrationUpdates,
+    API_KEY_PATTERN,
+    API_KEY_MAX_LENGTH,
 } from '@/lib/integrations/validate-integrations';
 import { encrypt } from '@/lib/crypto';
 import crypto from 'crypto';
@@ -18,11 +21,6 @@ export async function PATCH(request: NextRequest) {
 
         const body = await request.json();
         const { name, branding, calling_window, retell_api_key, vapi_api_key, vapi_public_key, bland_api_key, integrations } = body;
-
-        // Validate API key format and length
-        const API_KEY_MAX_LENGTH = 256;
-        // API keys typically contain alphanumeric chars, underscores, hyphens, and may have prefixes
-        const API_KEY_PATTERN = /^[a-zA-Z0-9_\-:.]+$/;
 
         if (retell_api_key) {
             if (typeof retell_api_key !== 'string' || retell_api_key.length > API_KEY_MAX_LENGTH) {
@@ -81,12 +79,11 @@ export async function PATCH(request: NextRequest) {
                 return NextResponse.json({ error: 'Invalid branding format' }, { status: 400 });
             }
             const b = branding as Record<string, unknown>;
-            const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
             const MAX_STRING = 500;
             // Validate color fields
             for (const colorField of ['primary_color', 'accent_color', 'sidebar_color', 'text_color']) {
                 if (b[colorField] !== undefined && b[colorField] !== null && b[colorField] !== '') {
-                    if (typeof b[colorField] !== 'string' || !HEX_COLOR.test(b[colorField] as string)) {
+                    if (typeof b[colorField] !== 'string' || !HEX_COLOR_PATTERN.test(b[colorField] as string)) {
                         return NextResponse.json({ error: `Invalid ${colorField}: must be a hex color (e.g. #FF0000)` }, { status: 400 });
                     }
                 }

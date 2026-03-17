@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { safeParseJson } from '@/lib/validation';
+import { normalizePhoneToE164 } from '@/lib/validation/phone';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -75,12 +76,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         };
 
         if (body.to_number !== undefined) {
-            const cleanedNumber = body.to_number.replace(/[\s\-\(\)]/g, '');
-            const phoneRegex = /^\+[1-9]\d{6,14}$/;
-            if (!phoneRegex.test(cleanedNumber)) {
-                return NextResponse.json({ error: 'Invalid phone number format. Use E.164 format (e.g. +14155551234)' }, { status: 400 });
+            const normalized = normalizePhoneToE164(body.to_number);
+            if ('error' in normalized) {
+                return NextResponse.json({ error: normalized.error }, { status: 400 });
             }
-            updateData.to_number = cleanedNumber;
+            updateData.to_number = normalized.phone;
         }
         if (body.contact_name !== undefined) updateData.contact_name = body.contact_name;
         if (body.scheduled_at !== undefined) {

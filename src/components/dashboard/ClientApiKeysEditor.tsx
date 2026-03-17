@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2, Key, Eye, EyeOff, X } from 'lucide-react';
 import { toast } from '@/lib/toast';
+import { API_KEY_PATTERN, API_KEY_MAX_LENGTH } from '@/lib/integrations/validate-integrations';
 
 interface ClientApiKeysEditorProps {
     clientId: string;
@@ -16,9 +17,6 @@ interface ClientApiKeysEditorProps {
     vapiPublicKey?: string | null;
     blandApiKey?: string | null;
 }
-
-const API_KEY_MAX_LENGTH = 256;
-const API_KEY_PATTERN = /^[a-zA-Z0-9_\-:.]+$/;
 
 const PROVIDERS = [
     { key: 'retell_api_key' as const, label: 'Retell API Key', placeholder: 'key_...' },
