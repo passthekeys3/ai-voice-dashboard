@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         try {
             payload = JSON.parse(rawBody);
         } catch {
-            console.error('[RETELL WEBHOOK] Invalid JSON payload');
+            console.error('[RETELL WEBHOOK] Invalid JSON payload:', rawBody.slice(0, 500));
             return NextResponse.json({ received: true });
         }
 
