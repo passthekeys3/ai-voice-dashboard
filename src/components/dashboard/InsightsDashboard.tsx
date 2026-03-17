@@ -120,9 +120,12 @@ export function InsightsDashboard() {
 
     const formatDuration = (seconds: number) => {
         const rounded = Math.round(seconds);
-        const mins = Math.floor(rounded / 60);
+        const hours = Math.floor(rounded / 3600);
+        const mins = Math.floor((rounded % 3600) / 60);
         const secs = rounded % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+        if (hours > 0) return `${hours}h ${mins}m`;
+        if (mins > 0) return `${mins}m ${secs}s`;
+        return `${secs}s`;
     };
 
     return (

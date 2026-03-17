@@ -123,9 +123,12 @@ export function ActiveCallsList({ basePath = '', canEndCalls = true }: ActiveCal
     };
 
     const formatDuration = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = Math.round(seconds % 60);
+        if (hours > 0) return `${hours}h ${mins}m`;
+        if (mins > 0) return `${mins}m ${secs}s`;
+        return `${secs}s`;
     };
 
     const formatPhoneNumber = (call: ActiveCall) => {

@@ -7,10 +7,18 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Format seconds into a human-readable duration string.
- * Examples: 59s → "0:59", 90s → "1:30", 3661s → "61:01"
+ * Examples: 45s → "45s", 90s → "1m 30s", 3600s → "1h 0m", 5430s → "1h 30m"
  */
 export function formatDuration(totalSeconds: number): string {
-  const mins = Math.floor(totalSeconds / 60);
+  const hours = Math.floor(totalSeconds / 3600);
+  const mins = Math.floor((totalSeconds % 3600) / 60);
   const secs = Math.round(totalSeconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+
+  if (hours > 0) {
+    return `${hours}h ${mins}m`;
+  }
+  if (mins > 0) {
+    return `${mins}m ${secs}s`;
+  }
+  return `${secs}s`;
 }
