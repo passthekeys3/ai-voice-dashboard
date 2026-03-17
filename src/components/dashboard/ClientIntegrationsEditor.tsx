@@ -8,6 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import {
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import {
     Dialog, DialogContent, DialogDescription, DialogFooter,
     DialogHeader, DialogTitle,
@@ -27,7 +31,7 @@ interface IntegrationMeta {
     description: string;
     icon: React.ReactNode;
     /** Fields the user can configure for this integration */
-    fields: { name: string; label: string; type: 'text' | 'url' | 'toggle'; placeholder?: string }[];
+    fields: { name: string; label: string; type: 'text' | 'url' | 'toggle' | 'select'; placeholder?: string; optionsKey?: string; description?: string; section?: string }[];
     /** Whether this integration requires OAuth (Phase 2) */
     requiresOAuth?: boolean;
 }
@@ -58,9 +62,9 @@ const INTEGRATIONS: IntegrationMeta[] = [
         description: 'Trigger calls via REST API & receive call data',
         icon: <Key className="h-4 w-4" />,
         fields: [
-            { name: 'webhook_url', label: 'Webhook URL', type: 'url', placeholder: 'https://hook.make.com/...' },
-            { name: 'enabled', label: 'Enabled', type: 'toggle' },
-            { name: 'default_agent_id', label: 'Default Agent ID', type: 'text', placeholder: 'Agent UUID' },
+            { name: 'webhook_url', label: 'Webhook URL', type: 'url', placeholder: 'https://hook.make.com/...', description: 'Receive call_started and call_ended events at this URL. Works with Zapier, Make, n8n, or any HTTPS endpoint.', section: 'Incoming Webhooks' },
+            { name: 'enabled', label: 'API Enabled', type: 'toggle', description: 'Allow triggering outbound calls via the REST API for this client.', section: 'Outbound API' },
+            { name: 'default_agent_id', label: 'Default Agent', type: 'select', placeholder: 'Select an agent', optionsKey: 'agents', description: 'Used when no agent_id is specified in the API request.' },
         ],
     },
     {
@@ -120,6 +124,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
     const [resolved, setResolved] = useState<Record<string, unknown> | null>(null);
     const [_clientOverrides, setClientOverrides] = useState<Record<string, unknown> | null>(null);
     const [source, setSource] = useState<Partial<Record<string, IntegrationSource>>>({});
+    const [agents, setAgents] = useState<{ id: string; name: string; provider: string }[]>([]);
 
     // Dialog state
     const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -127,12 +132,28 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
 
     const fetchIntegrations = useCallback(async () => {
         try {
-            const res = await fetch(`/api/clients/${clientId}/integrations`);
-            if (!res.ok) throw new Error('Failed to fetch');
-            const data = await res.json();
+            const [intRes, agentsRes] = await Promise.all([
+                fetch(`/api/clients/${clientId}/integrations`),
+                fetch('/api/agents'),
+            ]);
+            if (!intRes.ok) throw new Error('Failed to fetch');
+            const data = await intRes.json();
             setResolved(data.resolved);
             setClientOverrides(data.clientOverrides);
             setSource(data.source);
+
+            if (agentsRes.ok) {
+                const agentsData = await agentsRes.json();
+                // Filter to agents assigned to this client
+                const clientAgents = (agentsData.data || [])
+                    .filter((a: { client_id?: string }) => a.client_id === clientId)
+                    .map((a: { id: string; name: string; provider: string }) => ({
+                        id: a.id,
+                        name: a.name,
+                        provider: a.provider,
+                    }));
+                setAgents(clientAgents);
+            }
         } catch {
             toast.error('Failed to load integration settings');
         } finally {
@@ -154,6 +175,9 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
             for (const f of meta.fields) {
                 if (f.type === 'toggle') {
                     fields[f.name] = current[f.name] ?? false;
+                } else if (f.type === 'select') {
+                    // Always pre-fill select values (they aren't masked)
+                    fields[f.name] = current[f.name] ?? '';
                 } else {
                     // Don't pre-fill masked values
                     const val = current[f.name];
@@ -350,39 +374,93 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
-                        {INTEGRATIONS.find(i => i.key === editingKey)?.fields.map((field) => (
-                            <div key={field.name}>
-                                {field.type === 'toggle' ? (
-                                    <div className="flex items-center justify-between">
-                                        <Label htmlFor={`field-${field.name}`}>{field.label}</Label>
-                                        <Switch
-                                            id={`field-${field.name}`}
-                                            checked={!!editFields[field.name]}
-                                            onCheckedChange={(v: boolean) =>
-                                                setEditFields(prev => ({ ...prev, [field.name]: v }))
-                                            }
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor={`field-${field.name}`}>{field.label}</Label>
-                                        <Input
-                                            id={`field-${field.name}`}
-                                            value={(editFields[field.name] as string) || ''}
-                                            onChange={(e) =>
-                                                setEditFields(prev => ({ ...prev, [field.name]: e.target.value }))
-                                            }
-                                            placeholder={field.placeholder}
-                                            className="text-sm"
-                                        />
-                                        {/* Show hint when a field has an existing value (was masked) but is now blank */}
-                                        {!editFields[field.name] && isConfigured(editingKey || '') && (
-                                            <p className="text-xs text-muted-foreground">Leave blank to keep existing value</p>
+                        {(() => {
+                            const fields = INTEGRATIONS.find(i => i.key === editingKey)?.fields || [];
+                            let lastSection: string | undefined;
+                            return fields.map((field) => {
+                                const showSection = field.section && field.section !== lastSection;
+                                if (field.section) lastSection = field.section;
+                                return (
+                                    <div key={field.name}>
+                                        {showSection && (
+                                            <>
+                                                {lastSection !== fields.find(f => f.section)?.section && <Separator />}
+                                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{field.section}</p>
+                                            </>
+                                        )}
+                                        {field.type === 'toggle' ? (
+                                            <div className="space-y-1">
+                                                <div className="flex items-center justify-between">
+                                                    <Label htmlFor={`field-${field.name}`}>{field.label}</Label>
+                                                    <Switch
+                                                        id={`field-${field.name}`}
+                                                        checked={!!editFields[field.name]}
+                                                        onCheckedChange={(v: boolean) =>
+                                                            setEditFields(prev => ({ ...prev, [field.name]: v }))
+                                                        }
+                                                    />
+                                                </div>
+                                                {field.description && (
+                                                    <p className="text-xs text-muted-foreground">{field.description}</p>
+                                                )}
+                                            </div>
+                                        ) : field.type === 'select' && field.optionsKey === 'agents' ? (
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor={`field-${field.name}`}>{field.label}</Label>
+                                                <Select
+                                                    value={(editFields[field.name] as string) || 'none'}
+                                                    onValueChange={(v: string) =>
+                                                        setEditFields(prev => ({ ...prev, [field.name]: v === 'none' ? '' : v }))
+                                                    }
+                                                >
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder={field.placeholder || 'Select an agent'} />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">No default agent</SelectItem>
+                                                        {agents.map((agent) => (
+                                                            <SelectItem key={agent.id} value={agent.id}>
+                                                                <div className="flex items-center gap-2">
+                                                                    {agent.name}
+                                                                    <Badge variant="outline" className="text-[10px] px-1 py-0">
+                                                                        {agent.provider}
+                                                                    </Badge>
+                                                                </div>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {agents.length === 0 ? (
+                                                    <p className="text-xs text-muted-foreground">No agents assigned to this client yet.</p>
+                                                ) : field.description ? (
+                                                    <p className="text-xs text-muted-foreground">{field.description}</p>
+                                                ) : null}
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor={`field-${field.name}`}>{field.label}</Label>
+                                                <Input
+                                                    id={`field-${field.name}`}
+                                                    value={(editFields[field.name] as string) || ''}
+                                                    onChange={(e) =>
+                                                        setEditFields(prev => ({ ...prev, [field.name]: e.target.value }))
+                                                    }
+                                                    placeholder={field.placeholder}
+                                                    className="text-sm"
+                                                />
+                                                {field.description && (
+                                                    <p className="text-xs text-muted-foreground">{field.description}</p>
+                                                )}
+                                                {/* Show hint when a field has an existing value (was masked) but is now blank */}
+                                                {!editFields[field.name] && isConfigured(editingKey || '') && !field.description && (
+                                                    <p className="text-xs text-muted-foreground">Leave blank to keep existing value</p>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
-                                )}
-                            </div>
-                        ))}
+                                );
+                            });
+                        })()}
 
                         {INTEGRATIONS.find(i => i.key === editingKey)?.requiresOAuth && (
                             <p className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
