@@ -32,7 +32,7 @@ export default function TermsPage() {
                 <section>
                     <h2 className="text-lg font-semibold text-foreground">2. Acceptable Use</h2>
                     <p>You agree to use BuildVoiceAI only for lawful purposes. You must not:</p>
-                    <ul className="list-disc pl-5 space-y-2">
+                    <ul className="list-disc pl-4 sm:pl-5 space-y-2">
                         <li>Use the platform for spam, harassment, or fraudulent activity.</li>
                         <li>Attempt to gain unauthorized access to other accounts or our systems.</li>
                         <li>Reverse-engineer, decompile, or disassemble any part of the service.</li>
@@ -47,7 +47,7 @@ export default function TermsPage() {
                         You are solely responsible for ensuring that your use of AI voice agents
                         complies with all applicable laws, including but not limited to:
                     </p>
-                    <ul className="list-disc pl-5 space-y-2">
+                    <ul className="list-disc pl-4 sm:pl-5 space-y-2">
                         <li>
                             <strong>Consent laws:</strong> Obtaining proper consent before making
                             automated calls, in accordance with the Telephone Consumer Protection Act
@@ -92,7 +92,7 @@ export default function TermsPage() {
 
                 <section>
                     <h2 className="text-lg font-semibold text-foreground">5. Payment &amp; Billing</h2>
-                    <ul className="list-disc pl-5 space-y-2">
+                    <ul className="list-disc pl-4 sm:pl-5 space-y-2">
                         <li>Paid plans are billed on a recurring subscription basis.</li>
                         <li>Subscriptions automatically renew unless canceled before the next billing cycle.</li>
                         <li>You may cancel your subscription at any time from the billing settings page. Cancellation takes effect at the end of the current billing period.</li>

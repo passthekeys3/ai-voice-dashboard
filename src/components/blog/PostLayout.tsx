@@ -49,9 +49,9 @@ export function PostLayout({
                     {meta.description}
                 </p>
 
-                <div className="flex items-center gap-4 text-sm text-muted-foreground border-t border-border pt-4">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground border-t border-border pt-4">
                     <span className="font-medium text-foreground">{meta.author}</span>
-                    <span className="text-border">|</span>
+                    <span className="hidden sm:inline text-border">|</span>
                     <span className="inline-flex items-center gap-1.5">
                         <Calendar className="h-3.5 w-3.5" />
                         <time dateTime={meta.date}>{formatDate(meta.date)}</time>
@@ -63,7 +63,7 @@ export function PostLayout({
                 </div>
             </header>
 
-            <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-headings:font-semibold prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-lg prose-pre:bg-muted">
+            <div className="prose prose-sm sm:prose-base prose-slate dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-headings:font-semibold prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-lg prose-img:max-w-full prose-img:h-auto prose-pre:bg-muted prose-pre:overflow-x-auto prose-pre:text-xs sm:prose-pre:text-sm">
                 {children}
             </div>
 

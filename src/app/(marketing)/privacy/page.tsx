@@ -21,7 +21,7 @@ export default function PrivacyPage() {
 
                 <section>
                     <h2 className="text-lg font-semibold text-foreground">1. Information We Collect</h2>
-                    <ul className="list-disc pl-5 space-y-2">
+                    <ul className="list-disc pl-4 sm:pl-5 space-y-2">
                         <li>
                             <strong>Account Information:</strong> Name, email address, and organization
                             details provided during registration.
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
 
                 <section>
                     <h2 className="text-lg font-semibold text-foreground">2. How We Use Your Data</h2>
-                    <ul className="list-disc pl-5 space-y-2">
+                    <ul className="list-disc pl-4 sm:pl-5 space-y-2">
                         <li>Provide, maintain, and improve the BuildVoiceAI platform.</li>
                         <li>Sync and display agent, call, and phone number data from your voice providers.</li>
                         <li>Generate analytics and reports for your dashboard.</li>
@@ -72,7 +72,7 @@ export default function PrivacyPage() {
                 <section>
                     <h2 className="text-lg font-semibold text-foreground">4. Third-Party Services</h2>
                     <p>We use the following third-party services to operate the platform:</p>
-                    <ul className="list-disc pl-5 space-y-2">
+                    <ul className="list-disc pl-4 sm:pl-5 space-y-2">
                         <li><strong>Stripe</strong> — Payment processing and subscription management.</li>
                         <li><strong>Resend</strong> — Transactional email delivery.</li>
                         <li><strong>Retell AI, Vapi, Bland</strong> — Voice provider integrations (you connect your own accounts).</li>
@@ -114,7 +114,7 @@ export default function PrivacyPage() {
                 <section>
                     <h2 className="text-lg font-semibold text-foreground">7. Your Rights</h2>
                     <p>You have the right to:</p>
-                    <ul className="list-disc pl-5 space-y-2">
+                    <ul className="list-disc pl-4 sm:pl-5 space-y-2">
                         <li><strong>Access</strong> the personal data we hold about you.</li>
                         <li><strong>Correct</strong> inaccurate or incomplete information.</li>
                         <li><strong>Delete</strong> your account and associated data.</li>
