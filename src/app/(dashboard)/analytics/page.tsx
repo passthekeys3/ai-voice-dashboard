@@ -94,10 +94,19 @@ export default async function AnalyticsPage({ searchParams }: Props) {
                 callsByDay[date] = (callsByDay[date] || 0) + 1;
             });
 
-            // For chart data, use actual date range or last 30 days for "all time"
-            const chartDays = days || 30;
-            const chartStartDate = new Date();
-            chartStartDate.setDate(chartStartDate.getDate() - chartDays);
+            // For chart data, use selected range or earliest call date for "all time"
+            let chartStartDate: Date;
+            if (days) {
+                chartStartDate = new Date();
+                chartStartDate.setDate(chartStartDate.getDate() - days);
+            } else {
+                // "All time" — find earliest call date
+                const earliest = calls.reduce((min, c) => {
+                    const d = new Date(c.started_at);
+                    return d < min ? d : min;
+                }, new Date());
+                chartStartDate = earliest;
+            }
 
             const callsByDayArray: { date: string; count: number }[] = [];
             for (let d = new Date(chartStartDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -164,11 +173,11 @@ export default async function AnalyticsPage({ searchParams }: Props) {
                 <div className="grid gap-4 md:grid-cols-7">
                     <UsageChart data={analytics.calls_by_day} />
 
-                    <Card className="md:col-span-3 min-w-0">
+                    <Card className="md:col-span-3 min-w-0 flex flex-col">
                         <CardHeader>
                             <CardTitle>Calls by Agent</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="flex-1 overflow-auto max-h-[400px]">
                             <div className="space-y-4">
                                 {analytics.calls_by_agent.length > 0 ? (
                                     analytics.calls_by_agent.map((agent) => {

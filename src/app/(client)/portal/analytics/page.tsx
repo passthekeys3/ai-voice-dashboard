@@ -96,9 +96,17 @@ export default async function ClientAnalyticsPage({ searchParams }: Props) {
                 callsByDay[date] = (callsByDay[date] || 0) + 1;
             });
 
-            const chartDays = days || 30;
-            const chartStartDate = new Date();
-            chartStartDate.setDate(chartStartDate.getDate() - chartDays);
+            let chartStartDate: Date;
+            if (days) {
+                chartStartDate = new Date();
+                chartStartDate.setDate(chartStartDate.getDate() - days);
+            } else {
+                const earliest = calls.reduce((min, c) => {
+                    const d = new Date(c.started_at);
+                    return d < min ? d : min;
+                }, new Date());
+                chartStartDate = earliest;
+            }
 
             const callsByDayArray: { date: string; count: number }[] = [];
             for (let d = new Date(chartStartDate); d <= endDate; d.setDate(d.getDate() + 1)) {
