@@ -14,7 +14,7 @@ import crypto from 'crypto';
 import type { Workflow } from '@/types';
 
 // Max transcript length to store in DB (≈100k words — generous for any real call, prevents abuse)
-const MAX_TRANSCRIPT_LENGTH = 500_000;
+import { MAX_TRANSCRIPT_LENGTH } from '@/lib/constants/config';
 
 // Verify Bland webhook signature using HMAC-SHA256 (same pattern as Vapi).
 // The webhook secret is derived from the agency's Bland API key.

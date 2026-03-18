@@ -7,6 +7,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { APIError } from '@anthropic-ai/sdk';
 import { BUILDER_SYSTEM_PROMPT, buildMessages } from './prompts';
+import { MAX_PROMPT_LENGTH } from '@/lib/constants/config';
 import type { LLMBuilderResponse, Voice, VoiceCharacteristics, VoiceRecommendation } from './types';
 
 // --- Configuration constants ---
@@ -150,7 +151,7 @@ function sanitizeLLMResponse(raw: unknown): LLMBuilderResponse {
     const updates: LLMBuilderResponse['updates'] = {};
 
     if (typeof u.name === 'string') updates.name = u.name.slice(0, 200);
-    if (typeof u.systemPrompt === 'string') updates.systemPrompt = u.systemPrompt.slice(0, 50000);
+    if (typeof u.systemPrompt === 'string') updates.systemPrompt = u.systemPrompt.slice(0, MAX_PROMPT_LENGTH);
     if (typeof u.firstMessage === 'string') updates.firstMessage = u.firstMessage.slice(0, 1000);
     if (typeof u.language === 'string') updates.language = u.language.slice(0, 10);
 

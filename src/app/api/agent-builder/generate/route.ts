@@ -3,6 +3,7 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { generateAgentConfigStream } from '@/lib/agent-builder/llm';
 import { checkRateLimitAsync } from '@/lib/rate-limit';
 import { withErrorHandling } from '@/lib/api/response';
+import { MAX_PROMPT_LENGTH } from '@/lib/constants/config';
 
 const MAX_MESSAGE_LENGTH = 5000;
 const MAX_HISTORY_MESSAGES = 20;
@@ -107,7 +108,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
         const safeDraft = draft && typeof draft === 'object'
             ? {
                 name: typeof draft.name === 'string' ? draft.name.slice(0, 200) : '',
-                systemPrompt: typeof draft.systemPrompt === 'string' ? draft.systemPrompt.slice(0, 50000) : '',
+                systemPrompt: typeof draft.systemPrompt === 'string' ? draft.systemPrompt.slice(0, MAX_PROMPT_LENGTH) : '',
                 firstMessage: typeof draft.firstMessage === 'string' ? draft.firstMessage.slice(0, 1000) : '',
             }
             : null;

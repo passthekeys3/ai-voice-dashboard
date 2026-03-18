@@ -47,7 +47,7 @@ interface RetellWebhookPayload {
 // to ensure compatibility with Retell's signature format.
 
 // Max transcript length to store in DB (≈100k words — generous for any real call, prevents abuse)
-const MAX_TRANSCRIPT_LENGTH = 500_000;
+import { MAX_TRANSCRIPT_LENGTH } from '@/lib/constants/config';
 
 
 export async function POST(request: NextRequest) {

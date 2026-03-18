@@ -6,6 +6,7 @@ import { publishRetellAgent } from '@/lib/providers/retell';
 import { createVapiAssistant } from '@/lib/providers/vapi';
 import { createBlandPathway } from '@/lib/providers/bland';
 import { safeParseJson } from '@/lib/validation';
+import { MAX_PROMPT_LENGTH } from '@/lib/constants/config';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
         }
 
-        if (system_prompt && system_prompt.length > 50000) {
+        if (system_prompt && system_prompt.length > MAX_PROMPT_LENGTH) {
             return NextResponse.json({ error: 'System prompt is too long' }, { status: 400 });
         }
 

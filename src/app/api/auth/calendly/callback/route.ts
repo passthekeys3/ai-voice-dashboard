@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { verifyOAuthState, storeOAuthTokens, extractRedirectBase } from '@/lib/auth/oauth-helpers';
+import { DEFAULT_TOKEN_EXPIRY_SECONDS } from '@/lib/constants/config';
 
 const CALENDLY_CLIENT_ID = process.env.CALENDLY_CLIENT_ID;
 const CALENDLY_CLIENT_SECRET = process.env.CALENDLY_CLIENT_SECRET;
@@ -145,7 +146,7 @@ export async function GET(request: NextRequest) {
             console.error('Failed to fetch Calendly user info:', meError instanceof Error ? meError.message : 'Unknown error');
         }
 
-        const expiresIn = typeof tokens.expires_in === 'number' ? tokens.expires_in : 7200; // Calendly tokens last 2 hours
+        const expiresIn = typeof tokens.expires_in === 'number' ? tokens.expires_in : DEFAULT_TOKEN_EXPIRY_SECONDS;
 
         // Store tokens
         const storeError = await storeOAuthTokens(supabase, 'calendly', agencyId, clientId, {

@@ -13,8 +13,7 @@ import { waitUntil } from '@vercel/functions';
 import type { Workflow } from '@/types';
 import crypto from 'crypto';
 
-// Max transcript length to store in DB (≈100k words — generous for any real call, prevents abuse)
-const MAX_TRANSCRIPT_LENGTH = 500_000;
+import { MAX_TRANSCRIPT_LENGTH } from '@/lib/constants/config';
 
 // Verify Vapi webhook signature using HMAC-SHA256
 function verifyVapiSignature(body: string, signature: string | null, apiKey: string): boolean {

@@ -5,7 +5,10 @@
  * API docs: https://developer.calendly.com/api-docs
  */
 
+import { DEFAULT_TOKEN_EXPIRY_SECONDS } from '@/lib/constants/config';
+
 const CALENDLY_API_BASE = 'https://api.calendly.com';
+const CALENDLY_API_TIMEOUT = 15_000;
 
 // ============================================================================
 // Types
@@ -103,7 +106,7 @@ async function calendlyFetch<T>(
                 'Content-Type': 'application/json',
                 ...options.headers,
             },
-            signal: AbortSignal.timeout(15000), // 15s timeout
+            signal: AbortSignal.timeout(CALENDLY_API_TIMEOUT), // 15s timeout
         });
 
         if (!response.ok) {
@@ -339,7 +342,7 @@ export async function getValidCalendlyToken(
                         client_secret: CALENDLY_CLIENT_SECRET!,
                         refresh_token: config.refresh_token!,
                     }),
-                    signal: AbortSignal.timeout(15000),
+                    signal: AbortSignal.timeout(CALENDLY_API_TIMEOUT),
                 });
 
                 if (!response.ok) {
@@ -348,7 +351,7 @@ export async function getValidCalendlyToken(
                 }
 
                 const tokens = await response.json();
-                const expiresIn = typeof tokens.expires_in === 'number' ? tokens.expires_in : 7200;
+                const expiresIn = typeof tokens.expires_in === 'number' ? tokens.expires_in : DEFAULT_TOKEN_EXPIRY_SECONDS;
                 const result = {
                     accessToken: tokens.access_token,
                     refreshToken: tokens.refresh_token,

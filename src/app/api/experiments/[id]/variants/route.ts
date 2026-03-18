@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { isValidUuid, safeParseJson } from '@/lib/validation';
+import { MAX_PROMPT_LENGTH } from '@/lib/constants/config';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Name and prompt are required' }, { status: 400 });
         }
 
-        if (prompt && prompt.length > 50000) {
+        if (prompt && prompt.length > MAX_PROMPT_LENGTH) {
             return NextResponse.json({ error: 'Prompt is too long' }, { status: 400 });
         }
 
@@ -142,7 +143,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             if (variant.prompt !== undefined && typeof variant.prompt !== 'string') {
                 return NextResponse.json({ error: 'Variant prompt must be a string' }, { status: 400 });
             }
-            if (variant.prompt && variant.prompt.length > 50000) {
+            if (variant.prompt && variant.prompt.length > MAX_PROMPT_LENGTH) {
                 return NextResponse.json({ error: 'Variant prompt is too long' }, { status: 400 });
             }
             if (variant.traffic_weight !== undefined && (typeof variant.traffic_weight !== 'number' || isNaN(variant.traffic_weight) || variant.traffic_weight < 0 || variant.traffic_weight > 100)) {
