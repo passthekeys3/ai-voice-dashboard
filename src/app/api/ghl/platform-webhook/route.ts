@@ -4,11 +4,9 @@
  * POST /api/ghl/platform-webhook
  *
  * Receives platform-level events from GoHighLevel:
- * - App installed / uninstalled
- * - Location access granted / revoked
+ * - Location created / updated
  *
  * Verifies ED25519 signature using GHL's public key.
- * Legacy X-WH-Signature (RSA-SHA256) supported until July 1 2026.
  */
 
 import crypto from 'crypto';
@@ -33,17 +31,26 @@ function verifyED25519Signature(rawBody: string, signature: string): boolean {
     }
 }
 
-type PlatformEvent =
-    | { type: 'INSTALL'; data: { locationId: string; companyId: string; userId?: string } }
-    | { type: 'UNINSTALL'; data: { locationId: string; companyId: string } }
-    | { type: 'LOCATION_ACCESS_GRANTED'; data: { locationId: string; companyId: string } }
-    | { type: 'LOCATION_ACCESS_REVOKED'; data: { locationId: string; companyId: string } };
+interface LocationEvent {
+    type: string;
+    locationId: string;
+    companyId: string;
+    name?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    phone?: string;
+    email?: string;
+    website?: string;
+    timezone?: string;
+}
 
 export async function POST(request: NextRequest) {
     try {
         const rawBody = await request.text();
 
-        // Verify signature — prefer ED25519, reject if missing
+        // Verify ED25519 signature
         const ed25519Sig = request.headers.get('x-ghl-signature');
 
         if (!ed25519Sig) {
@@ -57,7 +64,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Parse payload
-        let event: PlatformEvent;
+        let event: LocationEvent;
         try {
             event = JSON.parse(rawBody);
         } catch {
@@ -67,26 +74,16 @@ export async function POST(request: NextRequest) {
         const supabase = createServiceClient();
 
         switch (event.type) {
-            case 'INSTALL':
-                await handleInstall(supabase, event.data);
+            case 'LocationCreate':
+                await handleLocationCreate(supabase, event);
                 break;
 
-            case 'UNINSTALL':
-                await handleUninstall(supabase, event.data);
-                break;
-
-            case 'LOCATION_ACCESS_GRANTED':
-                // Same as install — ensure location is tracked
-                await handleInstall(supabase, event.data);
-                break;
-
-            case 'LOCATION_ACCESS_REVOKED':
-                // Same as uninstall — revoke access for this location
-                await handleUninstall(supabase, event.data);
+            case 'LocationUpdate':
+                await handleLocationUpdate(supabase, event);
                 break;
 
             default:
-                console.log('GHL platform webhook: unhandled event type', (event as { type: string }).type);
+                console.log('GHL platform webhook: unhandled event type', event.type);
                 break;
         }
 
@@ -98,83 +95,102 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Handle app install / location access granted.
- * Logs the event — the actual OAuth token exchange happens via the OAuth flow.
+ * Handle new GHL location created.
+ * Logs the event for awareness — no auto-provisioning needed.
+ * The agency/client connects via OAuth when they're ready.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handleInstall(supabase: any, data: { locationId: string; companyId: string; userId?: string }) {
-    console.log(`GHL app installed: location=${data.locationId}, company=${data.companyId}`);
+async function handleLocationCreate(supabase: any, event: LocationEvent) {
+    console.log(`GHL location created: id=${event.locationId}, name=${event.name}, company=${event.companyId}`);
 
-    // Log the install event
     await supabase.from('integration_events').insert({
         provider: 'ghl',
-        event_type: 'install',
-        location_id: data.locationId,
-        company_id: data.companyId,
-        user_id: data.userId,
+        event_type: 'location_create',
+        location_id: event.locationId,
+        company_id: event.companyId,
+        metadata: {
+            name: event.name,
+            address: event.address,
+            city: event.city,
+            state: event.state,
+            country: event.country,
+            phone: event.phone,
+            email: event.email,
+            timezone: event.timezone,
+        },
         created_at: new Date().toISOString(),
     }).then(({ error }: { error: unknown }) => {
-        // Best-effort logging — table may not exist yet
-        if (error) console.warn('Failed to log GHL install event (table may not exist)');
+        if (error) console.warn('Failed to log GHL location create event (table may not exist)');
     });
 }
 
 /**
- * Handle app uninstall / location access revoked.
- * Clears GHL integration config for the affected agency/client.
+ * Handle GHL location updated.
+ * If this location is connected to an agency or client, sync the updated info.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handleUninstall(supabase: any, data: { locationId: string; companyId: string }) {
-    console.log(`GHL app uninstalled: location=${data.locationId}, company=${data.companyId}`);
+async function handleLocationUpdate(supabase: any, event: LocationEvent) {
+    console.log(`GHL location updated: id=${event.locationId}, name=${event.name}`);
 
-    // Find agencies connected to this GHL location and clear their GHL integration
+    // Check if any agency or client is connected to this location
+    // and update their stored location metadata if so
     const { data: agencies } = await supabase
         .from('agencies')
         .select('id, integrations')
-        .filter('integrations->ghl->location_id', 'eq', data.locationId);
+        .filter('integrations->ghl->location_id', 'eq', event.locationId);
 
     if (agencies && agencies.length > 0) {
         for (const agency of agencies) {
             const integrations = { ...agency.integrations };
-            delete integrations.ghl;
+            if (integrations.ghl) {
+                integrations.ghl.location_name = event.name;
+                integrations.ghl.location_timezone = event.timezone;
 
-            await supabase
-                .from('agencies')
-                .update({ integrations })
-                .eq('id', agency.id);
+                await supabase
+                    .from('agencies')
+                    .update({ integrations })
+                    .eq('id', agency.id);
 
-            console.log(`Cleared GHL integration for agency ${agency.id}`);
+                console.log(`Synced GHL location update for agency ${agency.id}`);
+            }
         }
     }
 
-    // Also check client-level integrations
+    // Also sync client-level integrations
     const { data: clients } = await supabase
         .from('clients')
         .select('id, integrations')
-        .filter('integrations->ghl->location_id', 'eq', data.locationId);
+        .filter('integrations->ghl->location_id', 'eq', event.locationId);
 
     if (clients && clients.length > 0) {
         for (const client of clients) {
             const integrations = { ...client.integrations };
-            delete integrations.ghl;
+            if (integrations.ghl) {
+                integrations.ghl.location_name = event.name;
+                integrations.ghl.location_timezone = event.timezone;
 
-            await supabase
-                .from('clients')
-                .update({ integrations })
-                .eq('id', client.id);
+                await supabase
+                    .from('clients')
+                    .update({ integrations })
+                    .eq('id', client.id);
 
-            console.log(`Cleared GHL integration for client ${client.id}`);
+                console.log(`Synced GHL location update for client ${client.id}`);
+            }
         }
     }
 
-    // Log the uninstall event
+    // Log the event
     await supabase.from('integration_events').insert({
         provider: 'ghl',
-        event_type: 'uninstall',
-        location_id: data.locationId,
-        company_id: data.companyId,
+        event_type: 'location_update',
+        location_id: event.locationId,
+        company_id: event.companyId,
+        metadata: {
+            name: event.name,
+            timezone: event.timezone,
+        },
         created_at: new Date().toISOString(),
     }).then(({ error }: { error: unknown }) => {
-        if (error) console.warn('Failed to log GHL uninstall event (table may not exist)');
+        if (error) console.warn('Failed to log GHL location update event (table may not exist)');
     });
 }
