@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { executeTestRun } from '@/lib/testing/runner';
@@ -33,8 +33,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
         }
         const supabase = await createClient();
+        // Use service client for execution writes (RLS client may expire during long runs)
+        const serviceClient = createServiceClient();
 
-        // Fetch the run
+        // Fetch the run (using RLS client for authorization check)
         const { data: run } = await supabase
             .from('test_runs')
             .select('*')
@@ -91,8 +93,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                     runId,
                     testCases: testCases as (TestCase & { persona?: TestPersona })[],
                     agentPrompt: run.prompt_tested,
-                    agentFirstMessage: undefined,
-                    supabase,
+                    agentFirstMessage: run.first_message_tested || undefined,
+                    supabase: serviceClient,
                     onProgress: (update) => {
                         sendEvent(update);
                     },
@@ -108,8 +110,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                             message: err instanceof Error ? err.message : 'Execution failed',
                         });
 
-                        // Mark any remaining pending results as errored
-                        await supabase
+                        // Mark any remaining pending results as errored (use service client)
+                        await serviceClient
                             .from('test_results')
                             .update({
                                 status: 'errored',
@@ -120,7 +122,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                             .eq('status', 'pending');
 
                         // Mark run as failed
-                        await supabase
+                        await serviceClient
                             .from('test_runs')
                             .update({
                                 status: 'failed',

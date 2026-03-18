@@ -171,9 +171,12 @@
         }
     });
 
-    // Listen for messages from the widget iframe
+    // Listen for messages from the widget iframe (validate origin)
     window.addEventListener('message', function (event) {
         if (!event.data || event.data.type !== 'buildvoiceai-widget') return;
+
+        // Only accept messages from the widget iframe origin
+        if (baseUrl && event.origin !== baseUrl) return;
 
         switch (event.data.action) {
             case 'close':

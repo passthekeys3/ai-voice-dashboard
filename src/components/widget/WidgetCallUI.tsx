@@ -48,11 +48,24 @@ export function WidgetCallUI({ agentId, agentName, provider, widgetConfig }: Wid
     const color = /^#[0-9A-Fa-f]{3,8}$/.test(rawColor) ? rawColor : '#0f172a';
 
     // Notify parent window of state changes
+    // Use document.referrer origin to restrict postMessage to the embedding page
+    const parentOrigin = useRef<string>('*');
+    useEffect(() => {
+        try {
+            if (document.referrer) {
+                const ref = new URL(document.referrer);
+                parentOrigin.current = ref.origin;
+            }
+        } catch {
+            // Invalid referrer — keep wildcard as fallback
+        }
+    }, []);
+
     const postToParent = useCallback((action: string, data?: Record<string, unknown>) => {
         try {
             window.parent.postMessage(
                 { type: 'buildvoiceai-widget', action, ...data },
-                '*'
+                parentOrigin.current
             );
         } catch {
             // Parent may not exist if opened directly
@@ -397,7 +410,7 @@ export function WidgetCallUI({ agentId, agentName, provider, widgetConfig }: Wid
 
                         <button
                             onClick={startCall}
-                            disabled={!sdkLoaded && provider === 'retell'}
+                            disabled={provider !== 'retell' || !sdkLoaded}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -409,8 +422,8 @@ export function WidgetCallUI({ agentId, agentName, provider, widgetConfig }: Wid
                                 borderRadius: '24px',
                                 fontSize: '15px',
                                 fontWeight: 600,
-                                cursor: sdkLoaded || provider !== 'retell' ? 'pointer' : 'not-allowed',
-                                opacity: sdkLoaded || provider !== 'retell' ? 1 : 0.5,
+                                cursor: provider === 'retell' && sdkLoaded ? 'pointer' : 'not-allowed',
+                                opacity: provider === 'retell' && sdkLoaded ? 1 : 0.5,
                                 transition: 'transform 0.15s, box-shadow 0.15s',
                                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                             }}

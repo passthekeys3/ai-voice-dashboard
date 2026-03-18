@@ -265,6 +265,18 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
         setBlandCallId(null);
         setBlandCallStatus(null);
 
+        // Check microphone permissions for browser-based calls
+        if (supportsBrowserCall) {
+            try {
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch {
+                setError('Microphone access is required for test calls. Please allow microphone access in your browser settings and try again.');
+                setIsConnecting(false);
+                isCallInFlightRef.current = false;
+                return;
+            }
+        }
+
         try {
             if (provider === 'retell') {
                 await startRetellCall();
@@ -408,17 +420,23 @@ export function TestCall({ agentId, agentName, provider }: TestCallProps) {
                                 </>
                             )}
                             {isBland && (
-                                <Button
-                                    onClick={() => {
-                                        setIsCallActive(false);
-                                        setBlandCallId(null);
-                                        setBlandCallStatus(null);
-                                        isCallInFlightRef.current = false;
-                                    }}
-                                    variant="outline"
-                                >
-                                    Done
-                                </Button>
+                                <div className="flex flex-col gap-2">
+                                    <p className="text-xs text-muted-foreground">
+                                        The call is active on your phone. Hang up your phone to end it.
+                                    </p>
+                                    <Button
+                                        onClick={() => {
+                                            setIsCallActive(false);
+                                            setBlandCallId(null);
+                                            setBlandCallStatus(null);
+                                            isCallInFlightRef.current = false;
+                                        }}
+                                        variant="outline"
+                                    >
+                                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                                        Done
+                                    </Button>
+                                </div>
                             )}
                         </>
                     )}
