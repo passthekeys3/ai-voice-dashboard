@@ -10,10 +10,6 @@ import {
     CheckCircle2,
     ArrowRight,
     Loader2,
-    Key,
-    Sparkles,
-    Phone,
-    Bot,
     BookOpen,
     ExternalLink,
     Eye,
@@ -31,22 +27,7 @@ type Step = 'welcome' | 'provider' | 'verify' | 'complete';
 
 const STEPS: Step[] = ['welcome', 'provider', 'verify', 'complete'];
 
-const STEP_COLORS: Record<Step, string> = {
-    welcome: 'bg-blue-500',
-    provider: 'bg-green-500',
-    verify: 'bg-amber-500',
-    complete: 'bg-purple-500',
-};
-
-const STEP_BORDERS: Record<Step, string> = {
-    welcome: 'border-l-blue-500',
-    provider: 'border-l-green-500',
-    verify: 'border-l-amber-500',
-    complete: 'border-l-purple-500',
-};
-
 export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWizardProps) {
-
     const [step, setStep] = useState<Step>(isOnboarded ? 'complete' : 'welcome');
     const [provider, setProvider] = useState<'retell' | 'vapi' | 'bland'>('retell');
     const [apiKey, setApiKey] = useState('');
@@ -54,9 +35,9 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
     const [saving, setSaving] = useState(false);
     const [verifying, setVerifying] = useState(false);
     const [verified, setVerified] = useState(false);
+    const [agentCount, setAgentCount] = useState(0);
     const stepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Cleanup timeout on unmount
     useEffect(() => {
         return () => {
             if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current);
@@ -86,7 +67,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                 throw new Error(data.error || 'Failed to save API key');
             }
 
-            toast.success('API key saved successfully');
+            toast.success('API key saved');
             setStep('verify');
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Failed to save');
@@ -98,7 +79,6 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
     const handleVerify = async () => {
         setVerifying(true);
         try {
-            // Try to sync agents to verify the API key works
             const response = await fetch('/api/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -106,14 +86,15 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
             });
 
             if (!response.ok) {
-                throw new Error('API key verification failed. Please check your key.');
+                throw new Error('Verification failed. Please check your API key.');
             }
 
             const data = await response.json();
+            const synced = data.synced || 0;
+            setAgentCount(synced);
             setVerified(true);
-            toast.success(`Connected! Found ${data.synced || 0} agents.`);
+            toast.success(`Connected! Found ${synced} agent${synced !== 1 ? 's' : ''}.`);
 
-            // Short delay then move to complete
             stepTimeoutRef.current = setTimeout(() => setStep('complete'), 1500);
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Verification failed');
@@ -122,33 +103,23 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
         }
     };
 
-    const handleComplete = () => {
-        window.location.href = '/';
-    };
-
-    const handleSkip = () => {
-        window.location.href = '/';
-    };
+    const providerName = provider === 'retell' ? 'Retell' : provider === 'vapi' ? 'VAPI' : 'Bland';
 
     return (
         <div className="w-full max-w-lg">
-            {/* Step indicator */}
+            {/* Step indicator — single neutral color */}
             <div className="flex items-center justify-center gap-0 mb-8">
                 {STEPS.map((s, i) => (
                     <div key={s} className="flex items-center">
                         <div
-                            className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                                i <= currentIndex
-                                    ? STEP_COLORS[s]
-                                    : 'bg-muted-foreground/20'
+                            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                                i <= currentIndex ? 'bg-foreground' : 'bg-muted-foreground/20'
                             }`}
                         />
                         {i < STEPS.length - 1 && (
                             <div
                                 className={`w-10 h-px transition-all duration-300 ${
-                                    i < currentIndex
-                                        ? STEP_COLORS[STEPS[i]]
-                                        : 'bg-muted-foreground/20'
+                                    i < currentIndex ? 'bg-foreground' : 'bg-muted-foreground/20'
                                 }`}
                             />
                         )}
@@ -156,59 +127,43 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                 ))}
             </div>
 
-            <Card className={`w-full border-l-4 transition-colors duration-300 ${STEP_BORDERS[step]}`}>
+            <Card className="w-full">
+                {/* ── Welcome ──────────────────────────────── */}
                 {step === 'welcome' && (
                     <>
-                        <CardHeader className="text-center pb-2">
-                            <div className="mx-auto w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
-                                <Sparkles className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <CardTitle className="text-3xl">Welcome, {userName.split(' ')[0]}!</CardTitle>
-                            <CardDescription className="text-base">
-                                Let&apos;s get {agency.name} set up with your voice AI provider.
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-2xl">
+                                Welcome, {userName.split(' ')[0]}
+                            </CardTitle>
+                            <CardDescription>
+                                Connect your voice AI provider to get {agency.name} up and running. Takes about 2 minutes.
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="space-y-3">
-                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted border-l-2 border-l-blue-500">
-                                    <Key className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                                    <div>
-                                        <p className="font-medium text-sm">Connect your provider</p>
-                                        <p className="text-sm text-muted-foreground">Add your Retell, VAPI, or Bland API key</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted border-l-2 border-l-green-500">
-                                    <Bot className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
-                                    <div>
-                                        <p className="font-medium text-sm">Sync your agents</p>
-                                        <p className="text-sm text-muted-foreground">Import existing AI agents automatically</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted border-l-2 border-l-amber-500">
-                                    <Phone className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
-                                    <div>
-                                        <p className="font-medium text-sm">Manage everything</p>
-                                        <p className="text-sm text-muted-foreground">Calls, analytics, clients - all in one place</p>
-                                    </div>
-                                </div>
-                            </div>
+                        <CardContent className="space-y-5">
+                            <p className="text-sm text-muted-foreground">
+                                You&apos;ll connect your Retell, VAPI, or Bland account, and we&apos;ll import your agents automatically.
+                            </p>
 
                             <a
                                 href="https://docs.buildvoiceai.com/docs/getting-started"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-2 text-sm text-primary hover:underline"
+                                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 <BookOpen className="h-4 w-4" />
-                                Read the getting started guide
+                                Getting started guide
                                 <ExternalLink className="h-3 w-3" />
                             </a>
 
                             <div className="flex gap-3">
-                                <Button variant="outline" className="flex-1 rounded-full" onClick={handleSkip}>
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => { window.location.href = '/'; }}
+                                >
                                     Skip for now
                                 </Button>
-                                <Button className="flex-1 rounded-full transition-colors" onClick={() => setStep('provider')}>
+                                <Button className="flex-1" onClick={() => setStep('provider')}>
                                     Get started
                                     <ArrowRight className="h-4 w-4 ml-2" />
                                 </Button>
@@ -217,147 +172,79 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                     </>
                 )}
 
+                {/* ── Provider ─────────────────────────────── */}
                 {step === 'provider' && (
                     <>
                         <CardHeader>
                             <CardTitle>Connect your provider</CardTitle>
                             <CardDescription>
-                                Enter your API key to connect your voice AI provider
+                                Paste your API key — we&apos;ll encrypt and store it securely.
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-6">
+                        <CardContent className="space-y-5">
                             <Tabs value={provider} onValueChange={(v: string) => { setProvider(v as 'retell' | 'vapi' | 'bland'); setApiKey(''); }}>
                                 <TabsList className="grid w-full grid-cols-3">
-                                    <TabsTrigger value="retell">Retell AI</TabsTrigger>
+                                    <TabsTrigger value="retell">Retell</TabsTrigger>
                                     <TabsTrigger value="vapi">VAPI</TabsTrigger>
-                                    <TabsTrigger value="bland">Bland.ai</TabsTrigger>
+                                    <TabsTrigger value="bland">Bland</TabsTrigger>
                                 </TabsList>
-                                <TabsContent value="retell" className="space-y-4 mt-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="retell-key">Retell API Key</Label>
-                                        <div className="relative">
-                                            <Input
-                                                id="retell-key"
-                                                type={showKey ? 'text' : 'password'}
-                                                placeholder="key_..."
-                                                value={apiKey}
-                                                onChange={(e) => setApiKey(e.target.value)}
-                                                className="pr-10"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowKey(!showKey)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                                tabIndex={-1}
-                                                aria-label={showKey ? 'Hide API key' : 'Show API key'}
-                                            >
-                                                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                            </button>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            Find your API key at{' '}
-                                            <a
-                                                href="https://beta.retellai.com/dashboard"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-primary hover:underline"
-                                            >
-                                                beta.retellai.com/dashboard
-                                            </a>
-                                        </p>
-                                    </div>
-                                </TabsContent>
-                                <TabsContent value="vapi" className="space-y-4 mt-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="vapi-key">VAPI API Key</Label>
-                                        <div className="relative">
-                                            <Input
-                                                id="vapi-key"
-                                                type={showKey ? 'text' : 'password'}
-                                                placeholder="vapi_..."
-                                                value={apiKey}
-                                                onChange={(e) => setApiKey(e.target.value)}
-                                                className="pr-10"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowKey(!showKey)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                                tabIndex={-1}
-                                                aria-label={showKey ? 'Hide API key' : 'Show API key'}
-                                            >
-                                                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                            </button>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            Find your API key at{' '}
-                                            <a
-                                                href="https://dashboard.vapi.ai"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-primary hover:underline"
-                                            >
-                                                dashboard.vapi.ai
-                                            </a>
-                                        </p>
-                                    </div>
-                                </TabsContent>
-                                <TabsContent value="bland" className="space-y-4 mt-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="bland-key">Bland API Key</Label>
-                                        <div className="relative">
-                                            <Input
-                                                id="bland-key"
-                                                type={showKey ? 'text' : 'password'}
-                                                placeholder="sk-..."
-                                                value={apiKey}
-                                                onChange={(e) => setApiKey(e.target.value)}
-                                                className="pr-10"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowKey(!showKey)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                                tabIndex={-1}
-                                                aria-label={showKey ? 'Hide API key' : 'Show API key'}
-                                            >
-                                                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                            </button>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            Find your API key at{' '}
-                                            <a
-                                                href="https://app.bland.ai/dashboard"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-primary hover:underline"
-                                            >
-                                                app.bland.ai/dashboard
-                                            </a>
-                                        </p>
-                                    </div>
-                                </TabsContent>
+
+                                {(['retell', 'vapi', 'bland'] as const).map((p) => {
+                                    const urls = {
+                                        retell: 'https://beta.retellai.com/dashboard',
+                                        vapi: 'https://dashboard.vapi.ai',
+                                        bland: 'https://app.bland.ai/dashboard',
+                                    };
+                                    const placeholders = { retell: 'key_...', vapi: 'vapi_...', bland: 'sk-...' };
+
+                                    return (
+                                        <TabsContent key={p} value={p} className="space-y-3 mt-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor={`${p}-key`}>API Key</Label>
+                                                <div className="relative">
+                                                    <Input
+                                                        id={`${p}-key`}
+                                                        type={showKey ? 'text' : 'password'}
+                                                        placeholder={placeholders[p]}
+                                                        value={apiKey}
+                                                        onChange={(e) => setApiKey(e.target.value)}
+                                                        className="pr-10"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowKey(!showKey)}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                                        tabIndex={-1}
+                                                        aria-label={showKey ? 'Hide' : 'Show'}
+                                                    >
+                                                        {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                    </button>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Find it at{' '}
+                                                    <a href={urls[p]} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                                        {urls[p].replace('https://', '')}
+                                                    </a>
+                                                </p>
+                                            </div>
+                                        </TabsContent>
+                                    );
+                                })}
                             </Tabs>
 
                             <div className="flex gap-3">
-                                <Button variant="outline" className="rounded-full" onClick={() => setStep('welcome')}>
+                                <Button variant="outline" onClick={() => setStep('welcome')}>
                                     Back
                                 </Button>
                                 <Button
-                                    className="flex-1 rounded-full transition-colors"
+                                    className="flex-1"
                                     onClick={handleSaveApiKey}
                                     disabled={saving || !apiKey.trim()}
                                 >
                                     {saving ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                            Saving...
-                                        </>
+                                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</>
                                     ) : (
-                                        <>
-                                            Save & Continue
-                                            <ArrowRight className="h-4 w-4 ml-2" />
-                                        </>
+                                        <>Save & Continue <ArrowRight className="h-4 w-4 ml-2" /></>
                                     )}
                                 </Button>
                             </div>
@@ -365,54 +252,49 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                     </>
                 )}
 
+                {/* ── Verify ───────────────────────────────── */}
                 {step === 'verify' && (
                     <>
                         <CardHeader>
                             <CardTitle>Verify connection</CardTitle>
                             <CardDescription>
-                                Let&apos;s make sure everything is connected properly
+                                We&apos;ll sync your {providerName} agents to confirm the key works.
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="p-4 rounded-lg border bg-muted">
+                        <CardContent className="space-y-5">
+                            <div className="p-4 rounded-lg border bg-muted/50">
                                 <div className="flex items-center gap-3">
                                     {verified ? (
-                                        <CheckCircle2 className="h-8 w-8 text-green-500" />
+                                        <CheckCircle2 className="h-6 w-6 text-emerald-500 shrink-0" />
                                     ) : (
-                                        <div className="h-8 w-8 rounded-full border-2 border-dashed border-muted-foreground/30" />
+                                        <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground/30 shrink-0" />
                                     )}
                                     <div>
-                                        <p className="font-medium">
-                                            {verified ? 'Connection verified!' : 'Ready to verify'}
+                                        <p className="font-medium text-sm">
+                                            {verified ? 'Connected' : 'Ready to verify'}
                                         </p>
                                         <p className="text-sm text-muted-foreground">
                                             {verified
-                                                ? 'Your agents have been synced'
-                                                : `We'll sync your ${provider === 'retell' ? 'Retell' : provider === 'vapi' ? 'VAPI' : 'Bland'} agents`}
+                                                ? `${agentCount} agent${agentCount !== 1 ? 's' : ''} synced from ${providerName}`
+                                                : `Click verify to import your ${providerName} agents`}
                                         </p>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="flex gap-3">
-                                <Button variant="outline" className="rounded-full" onClick={() => setStep('provider')}>
+                                <Button variant="outline" onClick={() => setStep('provider')}>
                                     Back
                                 </Button>
                                 <Button
-                                    className="flex-1 rounded-full transition-colors"
+                                    className="flex-1"
                                     onClick={handleVerify}
                                     disabled={verifying || verified}
                                 >
                                     {verifying ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                            Verifying...
-                                        </>
+                                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Verifying...</>
                                     ) : verified ? (
-                                        <>
-                                            <CheckCircle2 className="h-4 w-4 mr-2" />
-                                            Verified
-                                        </>
+                                        <><CheckCircle2 className="h-4 w-4 mr-2" /> Verified</>
                                     ) : (
                                         'Verify connection'
                                     )}
@@ -422,22 +304,57 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                     </>
                 )}
 
+                {/* ── Complete — actionable next steps ──────── */}
                 {step === 'complete' && (
                     <>
-                        <CardHeader className="text-center pb-2">
-                            <div className="mx-auto w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mb-4">
-                                <CheckCircle2 className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-                            </div>
-                            <CardTitle className="text-2xl">You&apos;re all set!</CardTitle>
-                            <CardDescription className="text-base">
-                                {agency.name} is ready to go. Start managing your voice AI agents.
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-2xl">You&apos;re set up</CardTitle>
+                            <CardDescription>
+                                {agency.name} is connected. Here&apos;s what to do next.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <Button className="w-full rounded-full transition-colors" size="lg" onClick={handleComplete}>
+                            <div className="space-y-2">
+                                <a
+                                    href="/agents"
+                                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                                >
+                                    <div>
+                                        <p className="text-sm font-medium">View your agents</p>
+                                        <p className="text-xs text-muted-foreground">Configure, test, and manage your voice agents</p>
+                                    </div>
+                                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                </a>
+                                <a
+                                    href="/agent-builder"
+                                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                                >
+                                    <div>
+                                        <p className="text-sm font-medium">Build a new agent</p>
+                                        <p className="text-xs text-muted-foreground">Describe what you need — AI generates the config</p>
+                                    </div>
+                                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                </a>
+                                <a
+                                    href="/clients"
+                                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                                >
+                                    <div>
+                                        <p className="text-sm font-medium">Add your first client</p>
+                                        <p className="text-xs text-muted-foreground">Set up a client account and assign agents</p>
+                                    </div>
+                                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                </a>
+                            </div>
+
+                            <Button
+                                className="w-full"
+                                size="lg"
+                                onClick={() => { window.location.href = '/'; }}
+                            >
                                 Go to Dashboard
-                                <ArrowRight className="h-4 w-4 ml-2" />
                             </Button>
+
                             <a
                                 href="https://docs.buildvoiceai.com/docs"
                                 target="_blank"
@@ -445,7 +362,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                 className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 <BookOpen className="h-4 w-4" />
-                                Explore the documentation
+                                Documentation
                                 <ExternalLink className="h-3 w-3" />
                             </a>
                         </CardContent>

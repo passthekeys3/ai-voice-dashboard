@@ -185,7 +185,7 @@ export function WorkflowsList({ workflows }: WorkflowsListProps) {
         return (
             <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-12">
-                    <Zap className="h-12 w-12 text-muted-foreground mb-4" />
+                    <Zap className="h-8 w-8 text-muted-foreground/40 mb-3" />
                     <h3 className="text-lg font-medium mb-2">No workflows yet</h3>
                     <p className="text-muted-foreground text-center mb-4 max-w-md">
                         Create automated workflows to send webhooks, log calls to your CRM,

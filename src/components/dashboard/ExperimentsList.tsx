@@ -102,7 +102,7 @@ export function ExperimentsList({ experiments }: ExperimentsListProps) {
         return (
             <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-12">
-                    <FlaskConical className="h-12 w-12 text-muted-foreground mb-4" />
+                    <FlaskConical className="h-8 w-8 text-muted-foreground/40 mb-3" />
                     <h3 className="text-lg font-medium mb-2">No experiments yet</h3>
                     <p className="text-muted-foreground text-center mb-4 max-w-md">
                         Create A/B experiments to test different prompts and optimize
