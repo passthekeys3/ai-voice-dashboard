@@ -70,17 +70,8 @@ interface CallData {
     [key: string]: unknown; // Index signature for dynamic field access
 }
 
-/**
- * HTML-escape a string to prevent injection when used in email HTML bodies
- */
-export function escapeHtml(str: string): string {
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
+// Re-export escapeHtml from email templates (single source of truth)
+export { escapeHtml } from '@/lib/email/templates';
 
 /**
  * Resolve template variables in a string (e.g., {{from_number}}, {{summary}})

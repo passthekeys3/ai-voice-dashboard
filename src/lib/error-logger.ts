@@ -9,18 +9,10 @@ import * as Sentry from '@sentry/nextjs';
 
 const SENTRY_ENABLED = !!(process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN);
 
-export interface ErrorContext {
-    userId?: string;
-    agencyId?: string;
-    route?: string;
-    action?: string;
-    metadata?: Record<string, unknown>;
-}
-
 /**
  * Log an error with optional context
  */
-export function logError(error: Error | unknown, context?: ErrorContext): void {
+export function logError(error: Error | unknown, context?: Record<string, unknown>): void {
     const err = error instanceof Error ? error : new Error(String(error));
 
     console.error('[ERROR]', err.message, {
@@ -30,16 +22,9 @@ export function logError(error: Error | unknown, context?: ErrorContext): void {
 
     if (SENTRY_ENABLED) {
         Sentry.captureException(err, {
-            extra: context ? { ...context } as Record<string, unknown> : undefined,
+            extra: context,
         });
     }
-}
-
-/**
- * Log an info-level message
- */
-export function logInfo(message: string, data?: Record<string, unknown>): void {
-    console.log('[INFO]', message, data);
 }
 
 /**
@@ -54,21 +39,4 @@ export function logWarning(message: string, data?: Record<string, unknown>): voi
             extra: data,
         });
     }
-}
-
-/**
- * Wrap an async function with error logging
- */
-export function withErrorLogging<T extends (...args: unknown[]) => Promise<unknown>>(
-    fn: T,
-    context?: Omit<ErrorContext, 'metadata'>
-): T {
-    return (async (...args: Parameters<T>) => {
-        try {
-            return await fn(...args);
-        } catch (error) {
-            logError(error, { ...context, metadata: { args } });
-            throw error;
-        }
-    }) as T;
 }

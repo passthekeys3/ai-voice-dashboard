@@ -44,7 +44,7 @@ interface RateLimitConfig {
     maxRequests: number;  // Max requests per window
 }
 
-export interface RateLimitResult {
+interface RateLimitResult {
     allowed: boolean;
     remaining: number;
     resetTime: number;
@@ -191,85 +191,8 @@ export async function checkRateLimitAsync(
 }
 
 /**
- * Synchronous rate limit check (in-memory only)
- * Use this when you can't use async/await (e.g., in some middleware scenarios)
- *
- * @deprecated Prefer checkRateLimitAsync for Redis support
- */
-export function checkRateLimit(
-    identifier: string,
-    config: RateLimitConfig
-): RateLimitResult {
-    return { ...checkRateLimitMemory(identifier, config), source: 'memory' };
-}
-
-/**
  * Get rate limit key from request (IP + path)
  */
 export function getRateLimitKey(ip: string, path: string): string {
     return `${ip}:${path}`;
-}
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-/**
- * Clear rate limit for a specific identifier (useful for testing or manual reset)
- */
-export async function clearRateLimit(identifier: string): Promise<void> {
-    // Clear from memory
-    rateLimitStore.delete(identifier);
-
-    // Clear from Redis if available
-    const redis = await getRedisClient();
-    if (redis) {
-        try {
-            await redis.del(`ratelimit:${identifier}`);
-        } catch (err) {
-            console.error('Failed to clear Redis rate limit:', err instanceof Error ? err.message : 'Unknown error');
-        }
-    }
-}
-
-/**
- * Get current rate limit status without incrementing
- */
-export async function getRateLimitStatus(
-    identifier: string,
-    _config: RateLimitConfig
-): Promise<{ count: number; resetTime: number; source: 'redis' | 'memory' } | null> {
-    const redis = await getRedisClient();
-
-    if (redis) {
-        try {
-            const key = `ratelimit:${identifier}`;
-            const [count, ttl] = await Promise.all([
-                redis.get(key),
-                redis.ttl(key),
-            ]);
-
-            if (count !== null) {
-                return {
-                    count: parseInt(count, 10),
-                    resetTime: Date.now() + (ttl * 1000),
-                    source: 'redis',
-                };
-            }
-        } catch (err) {
-            console.error('Redis get status error:', err instanceof Error ? err.message : 'Unknown error');
-        }
-    }
-
-    // Check in-memory
-    const entry = rateLimitStore.get(identifier);
-    if (entry && entry.resetTime > Date.now()) {
-        return {
-            count: entry.count,
-            resetTime: entry.resetTime,
-            source: 'memory',
-        };
-    }
-
-    return null;
 }

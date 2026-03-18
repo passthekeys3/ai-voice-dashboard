@@ -232,12 +232,12 @@ describe('escapeHtml', () => {
     });
 
     it('escapes single quotes', () => {
-        expect(escapeHtml("it's")).toBe("it&#039;s");
+        expect(escapeHtml("it's")).toBe("it&#39;s");
     });
 
     it('escapes all special characters in one string', () => {
         expect(escapeHtml('<div class="x">&\'</div>')).toBe(
-            '&lt;div class=&quot;x&quot;&gt;&amp;&#039;&lt;/div&gt;'
+            '&lt;div class=&quot;x&quot;&gt;&amp;&#39;&lt;/div&gt;'
         );
     });
 

@@ -12,7 +12,7 @@ import { NextResponse } from 'next/server';
 // Types
 // ============================================================================
 
-export type ErrorCode =
+type ErrorCode =
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
   | 'NOT_FOUND'
@@ -24,18 +24,18 @@ export type ErrorCode =
   | 'EXTERNAL_SERVICE_ERROR'
   | 'DATABASE_ERROR';
 
-export interface ApiError {
+interface ApiError {
   code: ErrorCode;
   message: string;
   details?: Record<string, string | string[]>;
 }
 
-export interface ApiErrorResponse {
+interface ApiErrorResponse {
   error: ApiError;
   requestId?: string;
 }
 
-export interface ApiSuccessResponse<T> {
+interface ApiSuccessResponse<T> {
   data: T;
   meta?: PaginationMeta;
 }

@@ -1,14 +1,14 @@
-import { createClient, createAuthClient, createServiceClient } from '@/lib/supabase/server';
+import { createAuthClient, createServiceClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { isPlatformAdmin } from '@/lib/admin';
 import type { AuthUser, Profile, Agency, Client } from '@/types';
 
 /** Roles that have agency-level access (admin panel, all clients) */
-export const AGENCY_ROLES = ['agency_admin', 'agency_member'] as const;
+const AGENCY_ROLES = ['agency_admin', 'agency_member'] as const;
 
 /** Roles that have client-level access (own client data only) */
-export const CLIENT_ROLES = ['client_admin', 'client_member'] as const;
+const CLIENT_ROLES = ['client_admin', 'client_member'] as const;
 
 /** All valid roles — used to reject corrupted/tampered role values */
 const VALID_ROLES = new Set<string>([...AGENCY_ROLES, ...CLIENT_ROLES]);
@@ -144,36 +144,6 @@ export async function requireAgencyAdmin(): Promise<AuthUser> {
     return user;
 }
 
-/**
- * Require client access - ensures user can access specific client
- */
-export async function requireClientAccess(clientId: string): Promise<AuthUser> {
-    const user = await requireAuth();
-
-    // Agency admins/members can access any client in their agency
-    if ((AGENCY_ROLES as readonly string[]).includes(user.profile.role)) {
-        const supabase = await createClient();
-        const { data: client } = await supabase
-            .from('clients')
-            .select('*')
-            .eq('id', clientId)
-            .eq('agency_id', user.agency.id)
-            .single();
-
-        if (!client) {
-            redirect('/');
-        }
-
-        return user;
-    }
-
-    // Client users can only access their own client
-    if (user.profile.client_id !== clientId) {
-        redirect('/');
-    }
-
-    return user;
-}
 
 /**
  * Check if current user is an agency admin

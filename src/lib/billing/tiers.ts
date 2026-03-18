@@ -105,14 +105,14 @@ export function checkFeatureAccess(
     return null;
 }
 
-export interface TierLimits {
+interface TierLimits {
     maxAgents: number;
     maxCallMinutesPerMonth: number;
     maxClients: number;
     additionalClientPrice: number; // $/client overage
 }
 
-export interface TierDefinition {
+interface TierDefinition {
     tier: PlanTier;
     planType: PlanType;
     name: string;           // e.g., "Self-Service Starter"
@@ -494,12 +494,3 @@ export function getTierConfig(tier: PlanTier, planType: PlanType = 'self_service
     return TIER_CONFIGS.find(c => c.tier === tier && c.planType === planType) || null;
 }
 
-/**
- * Get all tier configs for display purposes (no priceId needed).
- */
-export function getAllTierConfigs(planType?: PlanType): TierConfig[] {
-    if (planType) {
-        return TIER_CONFIGS.filter(c => c.planType === planType);
-    }
-    return [...TIER_CONFIGS];
-}

@@ -75,12 +75,6 @@ export function promise<T>(
   });
 }
 
-/**
- * Dismiss a specific toast or all toasts
- */
-export function dismiss(toastId?: string | number) {
-  return sonnerToast.dismiss(toastId);
-}
 
 /**
  * Export all toast functions as a single object for convenient imports
@@ -91,7 +85,6 @@ export const toast = {
   warning,
   info,
   promise,
-  dismiss,
 };
 
 export default toast;

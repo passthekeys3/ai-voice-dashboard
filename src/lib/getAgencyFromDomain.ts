@@ -122,17 +122,6 @@ export async function getAgencyFromDomain(
 }
 
 /**
- * Get agency branding for a hostname.
- * Returns just the branding info needed for rendering.
- */
-export async function getAgencyBrandingFromDomain(
-    hostname: string
-): Promise<AgencyBranding | null> {
-    const agency = await getAgencyFromDomain(hostname);
-    return agency?.branding || null;
-}
-
-/**
  * Validate if a domain can be used as a custom domain
  */
 export function isValidCustomDomain(domain: string): boolean {
