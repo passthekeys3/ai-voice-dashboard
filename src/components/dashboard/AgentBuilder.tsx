@@ -411,8 +411,10 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
                 />
             </div>
 
-            {/* Preview Panel */}
-            <div className="lg:flex-1 flex flex-col min-w-0 min-h-[400px] lg:min-h-0 bg-slate-50 dark:bg-slate-950">
+            {/* Preview Panel — hidden on mobile until agent draft has content */}
+            <div className={`lg:flex-1 flex flex-col min-w-0 min-h-[400px] lg:min-h-0 bg-slate-50 dark:bg-slate-950 ${
+                !draft.systemPrompt ? 'hidden lg:flex' : ''
+            }`}>
                 <AgentBuilderPreview
                     draft={draft}
                     onDraftUpdate={handleDraftUpdate}
