@@ -82,6 +82,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 }
 
 // PATCH /api/experiments/[id]/variants - Update variants (batch)
+// Supports: updating existing variants, inserting new variants, and deleting removed variants
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
         const user = await getCurrentUser();
@@ -106,6 +107,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         if (!variants || !Array.isArray(variants)) {
             return NextResponse.json({ error: 'Variants array is required' }, { status: 400 });
+        }
+
+        if (variants.length < 2) {
+            return NextResponse.json({ error: 'At least 2 variants are required' }, { status: 400 });
+        }
+
+        if (variants.length > 10) {
+            return NextResponse.json({ error: 'Maximum 10 variants per experiment' }, { status: 400 });
         }
 
         // Validate individual variant fields
@@ -138,56 +147,80 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Experiment not found' }, { status: 404 });
         }
 
-        // Check variant count limit: existing (in DB) + new variants <= 10
-        const newVariants = variants.filter((v: { id?: string }) => !v.id);
-        if (newVariants.length > 0) {
-            const { count: existingCount } = await supabase
-                .from('experiment_variants')
-                .select('id', { count: 'exact', head: true })
-                .eq('experiment_id', experimentId);
+        // Fetch existing variant IDs from DB to determine which to delete
+        const { data: existingVariants } = await supabase
+            .from('experiment_variants')
+            .select('id')
+            .eq('experiment_id', experimentId);
 
-            if ((existingCount || 0) + newVariants.length > 10) {
-                return NextResponse.json(
-                    { error: 'Maximum 10 variants per experiment' },
-                    { status: 400 }
-                );
+        const existingIds = new Set((existingVariants || []).map(v => v.id));
+
+        // Separate variants into: existing (update), new (insert)
+        // A variant is "existing" only if its ID is a valid UUID AND exists in the DB
+        const toUpdate: typeof variants = [];
+        const toInsert: typeof variants = [];
+
+        for (const variant of variants) {
+            if (variant.id && isValidUuid(variant.id) && existingIds.has(variant.id)) {
+                toUpdate.push(variant);
+            } else {
+                toInsert.push(variant);
             }
         }
 
-        // Update each variant
-        const errors: string[] = [];
-        for (const variant of variants) {
-            if (variant.id) {
-                // Validate variant ID format to prevent injection
-                if (!isValidUuid(variant.id)) {
-                    return NextResponse.json({ error: 'Invalid variant ID format' }, { status: 400 });
-                }
-                const updateFields: Record<string, unknown> = {
-                    updated_at: new Date().toISOString(),
-                };
-                if (variant.name !== undefined) updateFields.name = variant.name;
-                if (variant.prompt !== undefined) updateFields.prompt = variant.prompt;
-                if (variant.traffic_weight !== undefined) updateFields.traffic_weight = variant.traffic_weight;
-                if (variant.is_control !== undefined) updateFields.is_control = variant.is_control;
+        // Determine which existing variants were removed (not in the incoming list)
+        const incomingIds = new Set(toUpdate.map(v => v.id));
+        const toDeleteIds = [...existingIds].filter(id => !incomingIds.has(id));
 
-                const { error: updateErr } = await supabase
-                    .from('experiment_variants')
-                    .update(updateFields)
-                    .eq('id', variant.id)
-                    .eq('experiment_id', experimentId);
-                if (updateErr) errors.push(updateErr.code);
-            } else {
-                const { error: insertErr } = await supabase
-                    .from('experiment_variants')
-                    .insert({
-                        experiment_id: experimentId,
-                        name: variant.name,
-                        prompt: variant.prompt,
-                        traffic_weight: variant.traffic_weight ?? 50,
-                        is_control: !!variant.is_control,
-                    });
-                if (insertErr) errors.push(insertErr.code);
+        const errors: string[] = [];
+
+        // Delete removed variants (only if experiment is not running to preserve data)
+        if (toDeleteIds.length > 0) {
+            if (experiment.status === 'running') {
+                return NextResponse.json({
+                    error: 'Cannot delete variants from a running experiment. Pause it first.'
+                }, { status: 400 });
             }
+
+            const { error: deleteErr } = await supabase
+                .from('experiment_variants')
+                .delete()
+                .in('id', toDeleteIds)
+                .eq('experiment_id', experimentId);
+
+            if (deleteErr) errors.push(deleteErr.code);
+        }
+
+        // Update existing variants
+        for (const variant of toUpdate) {
+            const updateFields: Record<string, unknown> = {
+                updated_at: new Date().toISOString(),
+            };
+            if (variant.name !== undefined) updateFields.name = variant.name;
+            if (variant.prompt !== undefined) updateFields.prompt = variant.prompt;
+            if (variant.traffic_weight !== undefined) updateFields.traffic_weight = variant.traffic_weight;
+            if (variant.is_control !== undefined) updateFields.is_control = variant.is_control;
+
+            const { error: updateErr } = await supabase
+                .from('experiment_variants')
+                .update(updateFields)
+                .eq('id', variant.id)
+                .eq('experiment_id', experimentId);
+            if (updateErr) errors.push(updateErr.code);
+        }
+
+        // Insert new variants
+        for (const variant of toInsert) {
+            const { error: insertErr } = await supabase
+                .from('experiment_variants')
+                .insert({
+                    experiment_id: experimentId,
+                    name: variant.name,
+                    prompt: variant.prompt,
+                    traffic_weight: variant.traffic_weight ?? 50,
+                    is_control: !!variant.is_control,
+                });
+            if (insertErr) errors.push(insertErr.code);
         }
 
         if (errors.length > 0) {
@@ -205,6 +238,77 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ data: updatedVariants });
     } catch (error) {
         console.error('Error updating variants:', error instanceof Error ? error.message : 'Unknown error');
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+}
+
+// DELETE /api/experiments/[id]/variants?variant_id=xxx - Delete a single variant
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+    try {
+        const user = await getCurrentUser();
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        if (!isAgencyAdmin(user)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        const tierError = checkFeatureAccess(user.agency.subscription_price_id, user.agency.subscription_status, 'experiments', user.agency.beta_ends_at);
+        if (tierError) {
+            return NextResponse.json({ error: tierError }, { status: 403 });
+        }
+
+        const { id: experimentId } = await params;
+        const { searchParams } = new URL(request.url);
+        const variantId = searchParams.get('variant_id');
+
+        if (!variantId || !isValidUuid(variantId)) {
+            return NextResponse.json({ error: 'Valid variant_id is required' }, { status: 400 });
+        }
+
+        const supabase = await createClient();
+
+        // Verify experiment belongs to this agency and is not running
+        const { data: experiment } = await supabase
+            .from('experiments')
+            .select('status')
+            .eq('id', experimentId)
+            .eq('agency_id', user.agency.id)
+            .single();
+
+        if (!experiment) {
+            return NextResponse.json({ error: 'Experiment not found' }, { status: 404 });
+        }
+
+        if (experiment.status === 'running') {
+            return NextResponse.json({ error: 'Cannot delete variants from a running experiment' }, { status: 400 });
+        }
+
+        // Check we won't go below 2 variants
+        const { count } = await supabase
+            .from('experiment_variants')
+            .select('id', { count: 'exact', head: true })
+            .eq('experiment_id', experimentId);
+
+        if ((count || 0) <= 2) {
+            return NextResponse.json({ error: 'Cannot delete: experiment must have at least 2 variants' }, { status: 400 });
+        }
+
+        const { error } = await supabase
+            .from('experiment_variants')
+            .delete()
+            .eq('id', variantId)
+            .eq('experiment_id', experimentId);
+
+        if (error) {
+            console.error('Error deleting variant:', error.code);
+            return NextResponse.json({ error: 'Failed to delete variant' }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting variant:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

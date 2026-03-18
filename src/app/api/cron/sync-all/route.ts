@@ -362,6 +362,29 @@ export async function POST(request: NextRequest) {
                 .in('id', successfulAgencyIds);
         }
 
+        // Auto-complete experiments that have passed their end_date
+        try {
+            const { data: expiredExperiments } = await supabase
+                .from('experiments')
+                .select('id, name')
+                .eq('status', 'running')
+                .lt('end_date', new Date().toISOString())
+                .not('end_date', 'is', null);
+
+            if (expiredExperiments && expiredExperiments.length > 0) {
+                const { error: expUpdateErr } = await supabase
+                    .from('experiments')
+                    .update({ status: 'paused', updated_at: new Date().toISOString() })
+                    .in('id', expiredExperiments.map(e => e.id));
+
+                if (!expUpdateErr) {
+                    console.info(`[CRON SYNC] Auto-paused ${expiredExperiments.length} expired experiments`);
+                }
+            }
+        } catch (expErr) {
+            console.error('[CRON SYNC] Experiment auto-completion error:', expErr instanceof Error ? expErr.message : 'Unknown error');
+        }
+
         console.info(`[CRON SYNC] Complete:`, results);
 
         return NextResponse.json({

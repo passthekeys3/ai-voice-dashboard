@@ -48,8 +48,8 @@ export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) 
             traffic_weight: v.traffic_weight,
             is_control: v.is_control,
         })) || [
-            { id: crypto.randomUUID(), name: 'Control', prompt: '', traffic_weight: 50, is_control: true },
-            { id: crypto.randomUUID(), name: 'Variant A', prompt: '', traffic_weight: 50, is_control: false },
+            { name: 'Control', prompt: '', traffic_weight: 50, is_control: true },
+            { name: 'Variant A', prompt: '', traffic_weight: 50, is_control: false },
         ]
     );
 
@@ -57,7 +57,7 @@ export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) 
 
     const addVariant = () => {
         const newVariant: VariantDraft = {
-            id: crypto.randomUUID(),
+            // No id — API will generate one on save
             name: `Variant ${String.fromCharCode(65 + variants.length - 1)}`,
             prompt: '',
             traffic_weight: 0,
@@ -97,8 +97,9 @@ export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) 
             setError('At least 2 variants are required');
             return;
         }
-        if (variants.some(v => !v.prompt.trim())) {
-            setError('All variants must have a prompt');
+        // Control variant uses the agent's existing prompt — only treatment variants need prompts
+        if (variants.some(v => !v.is_control && !v.prompt.trim())) {
+            setError('All treatment variants must have a prompt');
             return;
         }
         if (totalWeight !== 100) {
@@ -247,7 +248,7 @@ export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) 
                 </CardHeader>
                 <CardContent className="space-y-6">
                     {variants.map((variant, index) => (
-                        <Card key={variant.id || index} className={variant.is_control ? 'border-primary' : ''}>
+                        <Card key={variant.id || `new-${index}`} className={variant.is_control ? 'border-primary' : ''}>
                             <CardHeader className="py-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -277,14 +278,21 @@ export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) 
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label>Prompt *</Label>
-                                    <Textarea
-                                        value={variant.prompt}
-                                        onChange={(e) => updateVariant(index, { prompt: e.target.value })}
-                                        placeholder="Enter the full agent prompt for this variant..."
-                                        rows={6}
-                                        className="font-mono text-sm"
-                                    />
+                                    <Label>{variant.is_control ? 'Prompt' : 'Prompt *'}</Label>
+                                    {variant.is_control ? (
+                                        <div className="bg-muted p-3 rounded-md text-sm text-muted-foreground">
+                                            The control variant uses the agent&apos;s current prompt (no override).
+                                            This is the baseline your treatment variants are compared against.
+                                        </div>
+                                    ) : (
+                                        <Textarea
+                                            value={variant.prompt}
+                                            onChange={(e) => updateVariant(index, { prompt: e.target.value })}
+                                            placeholder="Enter the full agent prompt for this variant..."
+                                            rows={6}
+                                            className="font-mono text-sm"
+                                        />
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">

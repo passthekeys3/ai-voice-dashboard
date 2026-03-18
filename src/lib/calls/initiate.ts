@@ -14,9 +14,8 @@ export interface CallInitiationParams {
     metadata?: Record<string, unknown>;
     /**
      * Optional prompt override for A/B experiments.
-     * - Retell: Injected via retell_llm_dynamic_variables as {{experiment_prompt}}
-     *   (agent's LLM prompt must include this variable for it to take effect)
-     * - Vapi: Injected via assistantOverrides.variableValues as {{experiment_prompt}}
+     * - Retell: Uses override_agent_config.llm_config.general_prompt (per-call override)
+     * - Vapi: Uses assistantOverrides.model.messages to replace system prompt
      * - Bland: Overrides the `task` parameter directly (full prompt replacement)
      */
     promptOverride?: string;
@@ -62,11 +61,14 @@ async function initiateRetellCall(params: CallInitiationParams): Promise<CallIni
             body.from_number = params.fromNumber;
         }
 
-        // Inject experiment prompt via dynamic variables.
-        // The agent's LLM prompt must include {{experiment_prompt}} for this to work.
+        // Override the agent's prompt for A/B experiment variants.
+        // Uses Retell's override_agent_config to replace the prompt at call time
+        // without modifying the agent's saved configuration.
         if (params.promptOverride) {
-            body.retell_llm_dynamic_variables = {
-                experiment_prompt: params.promptOverride,
+            body.override_agent_config = {
+                llm_config: {
+                    general_prompt: params.promptOverride,
+                },
             };
         }
 
@@ -116,12 +118,14 @@ async function initiateVapiCall(params: CallInitiationParams): Promise<CallIniti
             body.phoneNumberId = params.fromNumber; // Vapi uses phone number ID
         }
 
-        // Inject experiment prompt via assistant overrides variable values.
-        // The assistant's system prompt must include {{experiment_prompt}} for this to work.
+        // Override the assistant's prompt for A/B experiment variants.
+        // Uses Vapi's assistantOverrides to replace the system prompt at call time.
         if (params.promptOverride) {
             body.assistantOverrides = {
-                variableValues: {
-                    experiment_prompt: params.promptOverride,
+                model: {
+                    messages: [
+                        { role: 'system', content: params.promptOverride },
+                    ],
                 },
             };
         }

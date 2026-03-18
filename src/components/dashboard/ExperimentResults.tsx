@@ -288,10 +288,33 @@ export function ExperimentResults({ experiment }: ExperimentResultsProps) {
                         );
                     })}
 
-                    {totalCalls < 10 && (
+                    {/* Statistical significance indicator */}
+                    {totalCalls < 10 ? (
                         <div className="text-center py-4 text-muted-foreground">
                             <p>Need at least 10 calls to determine statistical significance</p>
                             <p className="text-sm">{10 - totalCalls} more calls needed</p>
+                        </div>
+                    ) : (
+                        <div className={`text-center py-4 rounded-lg ${
+                            (experiment.confidence ?? 0) >= 0.95
+                                ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300'
+                                : (experiment.confidence ?? 0) >= 0.8
+                                    ? 'bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300'
+                                    : 'text-muted-foreground'
+                        }`}>
+                            <p className="font-medium">
+                                {(experiment.confidence ?? 0) >= 0.95
+                                    ? `Statistically significant (${Math.round((experiment.confidence ?? 0) * 100)}% confidence)`
+                                    : (experiment.confidence ?? 0) >= 0.8
+                                        ? `Approaching significance (${Math.round((experiment.confidence ?? 0) * 100)}% confidence)`
+                                        : `Not yet significant (${Math.round((experiment.confidence ?? 0) * 100)}% confidence)`
+                                }
+                            </p>
+                            <p className="text-sm mt-1">
+                                {(experiment.confidence ?? 0) >= 0.95
+                                    ? 'Results are reliable — safe to promote a winner'
+                                    : 'More calls needed for reliable results'}
+                            </p>
                         </div>
                     )}
                 </CardContent>

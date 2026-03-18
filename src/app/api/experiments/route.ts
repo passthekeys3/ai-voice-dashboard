@@ -136,9 +136,9 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        if (totalWeight > 100) {
+        if (totalWeight !== 100) {
             return NextResponse.json({
-                error: `Total traffic weight (${totalWeight}%) cannot exceed 100%`
+                error: `Total traffic weight must equal 100% (currently ${totalWeight}%)`
             }, { status: 400 });
         }
 

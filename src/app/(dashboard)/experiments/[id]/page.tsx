@@ -9,6 +9,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { isValidUuid } from '@/lib/validation';
+import { computeVariantMetrics, computeSignificance } from '@/lib/experiments/metrics';
 
 export const metadata: Metadata = { title: 'Experiment Details' };
 
@@ -43,50 +44,40 @@ export default async function ExperimentDetailPage({
         .eq('agency_id', user.agency.id);
     const agencyAgentIds = agencyAgents?.map(a => a.id) || [];
 
-    // Calculate metrics for each variant
-    for (const variant of experiment.variants || []) {
-        let variantQuery = supabase
-            .from('calls')
-            .select('duration_seconds, sentiment, status')
-            .eq('variant_id', variant.id);
+    // Calculate metrics for each variant using shared computation
+    const variantCallsMap: Record<string, { duration_seconds?: number; sentiment?: string; status?: string }[]> = {};
 
-        // Scope to agency's agents to prevent cross-tenant data leaks
-        if (agencyAgentIds.length > 0) {
-            variantQuery = variantQuery.in('agent_id', agencyAgentIds);
-        } else {
-            // No agents = no calls to show
-            variant.call_count = 0;
-            variant.avg_duration = 0;
-            variant.avg_sentiment = 0;
-            variant.conversion_rate = 0;
+    for (const variant of experiment.variants || []) {
+        if (agencyAgentIds.length === 0) {
+            Object.assign(variant, computeVariantMetrics([]));
+            variantCallsMap[variant.id] = [];
             continue;
         }
 
-        const { data: calls } = await variantQuery;
+        const { data: calls } = await supabase
+            .from('calls')
+            .select('duration_seconds, sentiment, status')
+            .eq('variant_id', variant.id)
+            .in('agent_id', agencyAgentIds);
 
-        if (calls && calls.length > 0) {
-            variant.call_count = calls.length;
-            variant.avg_duration = Math.round(
-                calls.reduce((sum: number, c: { duration_seconds?: number }) => sum + (c.duration_seconds || 0), 0) / calls.length
-            );
+        variantCallsMap[variant.id] = calls || [];
+        Object.assign(variant, computeVariantMetrics(calls || []));
+    }
 
-            const sentimentScores = calls.map((c: { sentiment?: string }) => {
-                if (c.sentiment === 'positive') return 1;
-                if (c.sentiment === 'negative') return 0;
-                return 0.5;
-            });
-            variant.avg_sentiment = Math.round(
-                sentimentScores.reduce((sum: number, s: number) => sum + s, 0) / sentimentScores.length * 100
-            ) / 100;
+    // Compute statistical significance between top 2 variants
+    if (experiment.variants && experiment.variants.length >= 2) {
+        const sorted = [...experiment.variants].sort((a, b) => {
+            const goal = experiment.goal || 'conversion';
+            const metricKey = goal === 'conversion' ? 'conversion_rate' : goal === 'duration' ? 'avg_duration' : 'avg_sentiment';
+            return (b[metricKey] || 0) - (a[metricKey] || 0);
+        });
 
-            const completedCalls = calls.filter((c: { status?: string }) => c.status === 'completed').length;
-            variant.conversion_rate = Math.round((completedCalls / calls.length) * 100);
-        } else {
-            variant.call_count = 0;
-            variant.avg_duration = 0;
-            variant.avg_sentiment = 0;
-            variant.conversion_rate = 0;
-        }
+        const topTwo = sorted.slice(0, 2);
+        experiment.confidence = computeSignificance(
+            experiment.goal || 'conversion',
+            { calls: variantCallsMap[topTwo[0].id] || [], metrics: topTwo[0] },
+            { calls: variantCallsMap[topTwo[1].id] || [], metrics: topTwo[1] },
+        );
     }
 
     return (
