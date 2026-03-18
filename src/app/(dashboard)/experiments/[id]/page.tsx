@@ -39,7 +39,7 @@ export default async function ExperimentDetailPage({
 
     // Fetch call metrics for all variants in a single query (avoids N+1)
     if (experiment.variants && experiment.variants.length > 0) {
-        const variantIds = experiment.variants.map(v => v.id);
+        const variantIds = experiment.variants.map((v: { id: string }) => v.id);
 
         const { data: allCalls } = await supabase
             .from('calls')
