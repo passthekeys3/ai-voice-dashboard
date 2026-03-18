@@ -36,9 +36,6 @@ export default async function WorkflowHistoryPage({
                     </Button>
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight">Execution History</h2>
-                        <p className="text-muted-foreground">
-                            View workflow execution results
-                        </p>
                     </div>
                 </div>
 

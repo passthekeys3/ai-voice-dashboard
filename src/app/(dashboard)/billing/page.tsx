@@ -90,12 +90,7 @@ export default async function BillingPage() {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto overflow-x-hidden">
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Billing</h2>
-                    <p className="text-muted-foreground">
-                        Manage your subscription, view usage, and configure client billing
-                    </p>
-                </div>
+                <h2 className="text-2xl font-bold tracking-tight">Billing</h2>
 
                 {/* Subscription Management */}
                 {isAdmin && (

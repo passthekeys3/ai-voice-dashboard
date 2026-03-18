@@ -32,9 +32,6 @@ export function PhoneNumbersPageClient({ initialPhoneNumbers, agents, configured
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight">Phone Numbers</h2>
-                    <p className="text-muted-foreground">
-                        Purchase and manage phone numbers for your AI agents
-                    </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <SyncPhoneNumbersButton onSyncComplete={refetch} />

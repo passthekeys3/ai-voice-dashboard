@@ -47,9 +47,6 @@ export default async function ScheduledCallsPage() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight">Scheduled Calls</h2>
-                        <p className="text-muted-foreground">
-                            Schedule outbound calls for follow-ups and appointments
-                        </p>
                     </div>
                     <ScheduleCallButton agents={agents || []} />
                 </div>

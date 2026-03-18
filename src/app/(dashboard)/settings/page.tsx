@@ -200,12 +200,7 @@ export default async function SettingsPage() {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
-                    <p className="text-muted-foreground">
-                        Configure your agency branding, API keys, and permissions
-                    </p>
-                </div>
+                <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
 
                 {/* AI Call Analysis Usage */}
                 {user.profile.role === 'agency_admin' && (

@@ -74,9 +74,6 @@ export default async function ClientAgentsPage() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight">Agents</h2>
-                        <p className="text-muted-foreground">
-                            Manage your voice AI agents
-                        </p>
                     </div>
                     {canCreate && (
                         <div className="flex flex-wrap gap-2">

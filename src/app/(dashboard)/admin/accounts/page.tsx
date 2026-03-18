@@ -77,12 +77,7 @@ export default async function AdminAccountsPage() {
 
     return (
         <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold">Admin: Managed Accounts</h1>
-                <p className="text-muted-foreground mt-1">
-                    View and manage all agencies. Mark agencies as &quot;Managed&quot; for done-for-you accounts.
-                </p>
-            </div>
+            <h1 className="text-2xl font-bold">Admin: Managed Accounts</h1>
             <ManagedAccountsTable agencies={enrichedAgencies} />
         </div>
     );
