@@ -39,7 +39,7 @@ export function computeVariantMetrics(calls: CallData[]): VariantMetrics {
     );
 
     // Sentiment score: positive=1, neutral=0.5, negative=0
-    const sentimentScores = calls.map(c => {
+    const sentimentScores: number[] = calls.map(c => {
         if (c.sentiment === 'positive') return 1;
         if (c.sentiment === 'negative') return 0;
         return 0.5;
@@ -112,12 +112,12 @@ export function computeSignificance(
 
     if (goal === 'sentiment') {
         // Two-sample t-test for sentiment scores
-        const scoresA = variantA.calls.map(c => {
+        const scoresA: number[] = variantA.calls.map(c => {
             if (c.sentiment === 'positive') return 1;
             if (c.sentiment === 'negative') return 0;
             return 0.5;
         });
-        const scoresB = variantB.calls.map(c => {
+        const scoresB: number[] = variantB.calls.map(c => {
             if (c.sentiment === 'positive') return 1;
             if (c.sentiment === 'negative') return 0;
             return 0.5;

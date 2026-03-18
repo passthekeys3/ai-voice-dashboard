@@ -543,6 +543,8 @@ export interface Experiment {
     winner_variant_id?: string;
     created_at: string;
     updated_at: string;
+    // Computed
+    confidence?: number;
     // Joined data
     agent?: { name: string };
     variants?: ExperimentVariant[];
