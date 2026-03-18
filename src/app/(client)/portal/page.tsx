@@ -88,19 +88,20 @@ export default async function ClientDashboardPage() {
     const successRate = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0;
 
     // Call volume data for chart (last 30 days)
+    const toLocalDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const volumeMap = new Map<string, number>();
     const now = new Date();
 
     for (let i = 29; i >= 0; i--) {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = toLocalDate(date);
         volumeMap.set(dateStr, 0);
     }
 
     callStats?.forEach(call => {
         if (call.started_at) {
-            const dateStr = call.started_at.split('T')[0];
+            const dateStr = toLocalDate(new Date(call.started_at));
             if (volumeMap.has(dateStr)) {
                 volumeMap.set(dateStr, (volumeMap.get(dateStr) || 0) + 1);
             }

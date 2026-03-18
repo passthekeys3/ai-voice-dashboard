@@ -86,10 +86,11 @@ export default async function AnalyticsPage({ searchParams }: Props) {
             const successRate = totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
             const avgCallDuration = totalCalls > 0 ? totalMinutes / totalCalls : 0;
 
-            // Group calls by day
+            // Group calls by day (use local date to match user's timezone)
+            const toLocalDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             const callsByDay: Record<string, number> = {};
             calls.forEach(call => {
-                const date = new Date(call.started_at).toISOString().split('T')[0];
+                const date = toLocalDate(new Date(call.started_at));
                 callsByDay[date] = (callsByDay[date] || 0) + 1;
             });
 
@@ -100,7 +101,7 @@ export default async function AnalyticsPage({ searchParams }: Props) {
 
             const callsByDayArray: { date: string; count: number }[] = [];
             for (let d = new Date(chartStartDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                const dateStr = d.toISOString().split('T')[0];
+                const dateStr = toLocalDate(d);
                 callsByDayArray.push({ date: dateStr, count: callsByDay[dateStr] || 0 });
             }
 
