@@ -46,8 +46,8 @@ function getStatusBadge(status: string | null) {
         unpaid: { variant: 'destructive', label: 'Unpaid' },
     };
 
-    const c = config[status] || { variant: 'outline' as const, label: status };
-    return <Badge variant={c.variant}>{c.label}</Badge>;
+    const statusConfig = config[status] || { variant: 'outline' as const, label: status };
+    return <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>;
 }
 
 function formatDate(dateString: string): string {

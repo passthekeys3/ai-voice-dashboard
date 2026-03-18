@@ -79,38 +79,38 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
             if (typeof branding !== 'object' || branding === null || Array.isArray(branding)) {
                 return NextResponse.json({ error: 'Invalid branding format' }, { status: 400 });
             }
-            const b = branding as Record<string, unknown>;
+            const brandingConfig = branding as Record<string, unknown>;
             const MAX_STRING = 500;
             // Validate color fields
             for (const colorField of ['primary_color', 'accent_color', 'sidebar_color', 'text_color']) {
-                if (b[colorField] !== undefined && b[colorField] !== null && b[colorField] !== '') {
-                    if (typeof b[colorField] !== 'string' || !HEX_COLOR_PATTERN.test(b[colorField] as string)) {
+                if (brandingConfig[colorField] !== undefined && brandingConfig[colorField] !== null && brandingConfig[colorField] !== '') {
+                    if (typeof brandingConfig[colorField] !== 'string' || !HEX_COLOR_PATTERN.test(brandingConfig[colorField] as string)) {
                         return NextResponse.json({ error: `Invalid ${colorField}: must be a hex color (e.g. #FF0000)` }, { status: 400 });
                     }
                 }
             }
             // Validate URL fields
             for (const urlField of ['logo_url', 'favicon_url']) {
-                if (b[urlField] !== undefined && b[urlField] !== null && b[urlField] !== '') {
-                    if (typeof b[urlField] !== 'string' || (b[urlField] as string).length > 2048) {
+                if (brandingConfig[urlField] !== undefined && brandingConfig[urlField] !== null && brandingConfig[urlField] !== '') {
+                    if (typeof brandingConfig[urlField] !== 'string' || (brandingConfig[urlField] as string).length > 2048) {
                         return NextResponse.json({ error: `Invalid ${urlField}: too long` }, { status: 400 });
                     }
-                    try { new URL(b[urlField] as string); } catch {
+                    try { new URL(brandingConfig[urlField] as string); } catch {
                         return NextResponse.json({ error: `Invalid ${urlField}: must be a valid URL` }, { status: 400 });
                     }
                 }
             }
             // Validate string fields
             for (const strField of ['company_name', 'tagline', 'login_message', 'footer_text', 'support_email']) {
-                if (b[strField] !== undefined && b[strField] !== null) {
-                    if (typeof b[strField] !== 'string' || (b[strField] as string).length > MAX_STRING) {
+                if (brandingConfig[strField] !== undefined && brandingConfig[strField] !== null) {
+                    if (typeof brandingConfig[strField] !== 'string' || (brandingConfig[strField] as string).length > MAX_STRING) {
                         return NextResponse.json({ error: `Invalid ${strField}: too long (max ${MAX_STRING} chars)` }, { status: 400 });
                     }
                 }
             }
             // Validate email field
-            if (b.support_email !== undefined && b.support_email !== null && b.support_email !== '') {
-                if (typeof b.support_email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.support_email as string)) {
+            if (brandingConfig.support_email !== undefined && brandingConfig.support_email !== null && brandingConfig.support_email !== '') {
+                if (typeof brandingConfig.support_email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(brandingConfig.support_email as string)) {
                     return NextResponse.json({ error: 'Invalid support email format' }, { status: 400 });
                 }
             }

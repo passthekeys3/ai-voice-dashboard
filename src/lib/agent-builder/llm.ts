@@ -147,26 +147,26 @@ function sanitizeLLMResponse(raw: unknown): LLMBuilderResponse {
         return { message, updates: undefined };
     }
 
-    const u = obj.updates as Record<string, unknown>;
+    const rawUpdates = obj.updates as Record<string, unknown>;
     const updates: LLMBuilderResponse['updates'] = {};
 
-    if (typeof u.name === 'string') updates.name = u.name.slice(0, 200);
-    if (typeof u.systemPrompt === 'string') updates.systemPrompt = u.systemPrompt.slice(0, MAX_PROMPT_LENGTH);
-    if (typeof u.firstMessage === 'string') updates.firstMessage = u.firstMessage.slice(0, 1000);
-    if (typeof u.language === 'string') updates.language = u.language.slice(0, 10);
+    if (typeof rawUpdates.name === 'string') updates.name = rawUpdates.name.slice(0, 200);
+    if (typeof rawUpdates.systemPrompt === 'string') updates.systemPrompt = rawUpdates.systemPrompt.slice(0, MAX_PROMPT_LENGTH);
+    if (typeof rawUpdates.firstMessage === 'string') updates.firstMessage = rawUpdates.firstMessage.slice(0, 1000);
+    if (typeof rawUpdates.language === 'string') updates.language = rawUpdates.language.slice(0, 10);
 
-    if (u.voiceCharacteristics && typeof u.voiceCharacteristics === 'object') {
-        const vc = u.voiceCharacteristics as Record<string, unknown>;
+    if (rawUpdates.voiceCharacteristics && typeof rawUpdates.voiceCharacteristics === 'object') {
+        const voiceChars = rawUpdates.voiceCharacteristics as Record<string, unknown>;
         updates.voiceCharacteristics = {
-            ...(typeof vc.gender === 'string' && ['male', 'female', 'neutral'].includes(vc.gender) ? { gender: vc.gender as 'male' | 'female' | 'neutral' } : {}),
-            ...(typeof vc.ageRange === 'string' && ['young', 'middle-aged', 'mature'].includes(vc.ageRange) ? { ageRange: vc.ageRange as 'young' | 'middle-aged' | 'mature' } : {}),
-            ...(typeof vc.accent === 'string' ? { accent: vc.accent.slice(0, 50) } : {}),
-            ...(typeof vc.tone === 'string' ? { tone: vc.tone.slice(0, 100) } : {}),
+            ...(typeof voiceChars.gender === 'string' && ['male', 'female', 'neutral'].includes(voiceChars.gender) ? { gender: voiceChars.gender as 'male' | 'female' | 'neutral' } : {}),
+            ...(typeof voiceChars.ageRange === 'string' && ['young', 'middle-aged', 'mature'].includes(voiceChars.ageRange) ? { ageRange: voiceChars.ageRange as 'young' | 'middle-aged' | 'mature' } : {}),
+            ...(typeof voiceChars.accent === 'string' ? { accent: voiceChars.accent.slice(0, 50) } : {}),
+            ...(typeof voiceChars.tone === 'string' ? { tone: voiceChars.tone.slice(0, 100) } : {}),
         };
     }
 
-    if (Array.isArray(u.integrationSuggestions)) {
-        updates.integrationSuggestions = u.integrationSuggestions
+    if (Array.isArray(rawUpdates.integrationSuggestions)) {
+        updates.integrationSuggestions = rawUpdates.integrationSuggestions
             .filter((s): s is string => typeof s === 'string')
             .slice(0, 20);
     }

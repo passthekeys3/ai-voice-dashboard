@@ -56,10 +56,10 @@ async function verifyDomain(domain: string, verificationToken: string): Promise<
         const cnameRecords = await resolveCname(domain);
         const platformHost = PLATFORM_HOSTNAME.toLowerCase();
         result.cname_configured = cnameRecords.some(record => {
-            const r = record.toLowerCase().replace(/\.$/, ''); // Remove trailing dot
-            return r === platformHost ||
-                r.endsWith('.' + platformHost) ||
-                (VERCEL_PROJECT_DOMAIN && r === VERCEL_PROJECT_DOMAIN.toLowerCase());
+            const normalizedRecord = record.toLowerCase().replace(/\.$/, ''); // Remove trailing dot
+            return normalizedRecord === platformHost ||
+                normalizedRecord.endsWith('.' + platformHost) ||
+                (VERCEL_PROJECT_DOMAIN && normalizedRecord === VERCEL_PROJECT_DOMAIN.toLowerCase());
         });
 
         if (!result.cname_configured) {

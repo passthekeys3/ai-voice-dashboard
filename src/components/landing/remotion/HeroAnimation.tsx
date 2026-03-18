@@ -25,9 +25,9 @@ export function HeroAnimation({ isInView }: HeroAnimationProps) {
     // Listen for reduced motion preference changes
     useEffect(() => {
         const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-        const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
-        mql.addEventListener('change', handler);
-        return () => mql.removeEventListener('change', handler);
+        const onMotionPrefChange = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+        mql.addEventListener('change', onMotionPrefChange);
+        return () => mql.removeEventListener('change', onMotionPrefChange);
     }, []);
 
     // Detect dark mode

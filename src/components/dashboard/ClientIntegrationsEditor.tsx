@@ -255,15 +255,15 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
     };
 
     const getSourceBadge = (key: string) => {
-        const s = source[key];
-        if (s === 'client') {
+        const integrationSource = source[key];
+        if (integrationSource === 'client') {
             return (
                 <Badge variant="default" className="text-xs bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400 hover:bg-violet-100">
                     Client Override
                 </Badge>
             );
         }
-        if (s === 'agency') {
+        if (integrationSource === 'agency') {
             return (
                 <Badge variant="secondary" className="text-xs">
                     Agency Default
