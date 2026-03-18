@@ -187,6 +187,36 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ received: true });
         }
 
+        // Handle call_analyzed separately — only update analysis fields, don't overwrite call data
+        if (payload.event === 'call_analyzed') {
+            const updateFields: Record<string, unknown> = {};
+            if (payload.call.call_analysis?.call_summary) {
+                updateFields.summary = payload.call.call_analysis.call_summary;
+            }
+            if (payload.call.call_analysis?.user_sentiment) {
+                updateFields.sentiment = payload.call.call_analysis.user_sentiment;
+            }
+            if (payload.call.transcript) {
+                updateFields.transcript = payload.call.transcript.slice(0, MAX_TRANSCRIPT_LENGTH);
+            }
+            if (payload.call.recording_url) {
+                updateFields.audio_url = payload.call.recording_url;
+            }
+
+            if (Object.keys(updateFields).length > 0) {
+                const { error: analyzeError } = await supabase
+                    .from('calls')
+                    .update(updateFields)
+                    .eq('external_id', payload.call.call_id);
+
+                if (analyzeError) {
+                    console.error('Error updating call_analyzed:', analyzeError.code);
+                }
+            }
+
+            return NextResponse.json({ received: true });
+        }
+
         const durationSeconds = payload.call.end_timestamp && payload.call.start_timestamp
             ? Math.round((payload.call.end_timestamp - payload.call.start_timestamp) / 1000)
             : 0;

@@ -34,7 +34,7 @@ const PROVIDER_API_TIMEOUT = 15_000;
  * provider's client SDK (Retell).
  */
 export async function POST(
-    _request: NextRequest,
+    request: NextRequest,
     { params }: { params: Promise<{ agentId: string }> }
 ) {
     try {
@@ -74,6 +74,16 @@ export async function POST(
 
         if (agentError || !agent) {
             return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+        }
+
+        // Check allowed origins if configured (optional security restriction)
+        const rawWidgetConfig = agent.widget_config as Record<string, unknown> | null;
+        const allowedOrigins = rawWidgetConfig?.allowed_origins as string[] | undefined;
+        if (allowedOrigins && allowedOrigins.length > 0) {
+            const origin = request.headers.get('origin') || '';
+            if (!allowedOrigins.some(allowed => origin === allowed || origin.endsWith(`.${allowed.replace(/^https?:\/\//, '')}`))) {
+                return NextResponse.json({ error: 'Origin not allowed' }, { status: 403 });
+            }
         }
 
         if (!agent.is_active) {

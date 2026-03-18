@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { decrypt } from '@/lib/crypto';
 const PROVIDER_API_TIMEOUT = 15_000;
 
 export async function GET() {
@@ -35,7 +36,7 @@ export async function GET() {
         const response = await fetch('https://api.retellai.com/v2/list-calls', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${agency.retell_api_key}`,
+                'Authorization': `Bearer ${decrypt(agency.retell_api_key) || agency.retell_api_key}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ limit: 10, sort_order: 'descending' }),

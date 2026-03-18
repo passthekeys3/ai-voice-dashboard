@@ -82,7 +82,13 @@ export async function POST(request: NextRequest) {
         } else if (soonExpiringTrials && soonExpiringTrials.length > 0) {
             console.info(`[TRIAL EXPIRY] Found ${soonExpiringTrials.length} trial(s) ending within 3 days`);
             for (const agency of soonExpiringTrials) {
-                await sendReminders(supabase, agency, agency.subscription_current_period_end, now, results, false);
+                // Only send on specific days (3 days, 1 day) to avoid daily duplicates
+                const daysLeft = Math.ceil(
+                    (new Date(agency.subscription_current_period_end).getTime() - now.getTime()) / (24 * 60 * 60 * 1000)
+                );
+                if (daysLeft === 3 || daysLeft === 1) {
+                    await sendReminders(supabase, agency, agency.subscription_current_period_end, now, results, false);
+                }
             }
         }
 
@@ -101,7 +107,12 @@ export async function POST(request: NextRequest) {
         } else if (soonExpiringBetas && soonExpiringBetas.length > 0) {
             console.info(`[TRIAL EXPIRY] Found ${soonExpiringBetas.length} beta(s) ending within 3 days`);
             for (const agency of soonExpiringBetas) {
-                await sendReminders(supabase, agency, agency.beta_ends_at, now, results, true);
+                const daysLeft = Math.ceil(
+                    (new Date(agency.beta_ends_at).getTime() - now.getTime()) / (24 * 60 * 60 * 1000)
+                );
+                if (daysLeft === 3 || daysLeft === 1) {
+                    await sendReminders(supabase, agency, agency.beta_ends_at, now, results, true);
+                }
             }
         }
 

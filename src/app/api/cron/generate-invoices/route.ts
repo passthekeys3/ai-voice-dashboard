@@ -273,7 +273,9 @@ export async function POST(request: NextRequest) {
 
                     const overageCents = extraClients * overageRate * 100; // overageRate is in dollars
 
-                    // Create an invoice item on the agency's platform subscription customer
+                    // Create an invoice item on the agency's platform subscription customer.
+                    // This attaches to their next automatic Stripe subscription invoice
+                    // (intentional — overage is billed with the subscription cycle, not standalone).
                     await stripe.invoiceItems.create({
                         customer: agency.stripe_customer_id,
                         amount: overageCents,

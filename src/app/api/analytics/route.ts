@@ -71,7 +71,9 @@ export async function GET(request: NextRequest) {
             callsQuery = callsQuery.eq('client_id', clientId);
         }
 
-        const { data: calls, error: callsError } = await callsQuery;
+        // Limit to 50k rows to prevent memory issues on high-volume agencies.
+        // Supabase default is 1000 — explicitly set a higher cap.
+        const { data: calls, error: callsError } = await callsQuery.limit(50000);
 
         if (callsError) {
             console.error('Analytics calls query error:', callsError.code);

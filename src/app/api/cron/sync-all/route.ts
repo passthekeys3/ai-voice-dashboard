@@ -75,8 +75,11 @@ export async function POST(request: NextRequest) {
 
         const successfulAgencyIds: string[] = [];
 
-        for (const agency of agencies) {
-            try {
+        // Process agencies in parallel batches of 5 to avoid Vercel timeout
+        const BATCH_SIZE = 5;
+        for (let i = 0; i < agencies.length; i += BATCH_SIZE) {
+            const batch = agencies.slice(i, i + BATCH_SIZE);
+            const batchResults = await Promise.allSettled(batch.map(async (agency) => {
                 // Build sync entries: agency-level + client-level keys (deduped)
                 const syncEntries: SyncEntry[] = [];
                 const seenApiKeys = new Set<string>();
@@ -110,7 +113,7 @@ export async function POST(request: NextRequest) {
                     }
                 }
 
-                if (syncEntries.length === 0) continue;
+                if (syncEntries.length === 0) return;
 
                 // Sync agents, webhook configs, and phone numbers from each workspace
                 for (const entry of syncEntries) {
@@ -348,9 +351,14 @@ export async function POST(request: NextRequest) {
 
                 results.agencies_synced++;
                 successfulAgencyIds.push(agency.id);
-            } catch (agencyErr) {
-                console.error(`Agency ${agency.id} sync error:`, agencyErr instanceof Error ? agencyErr.message : 'Unknown error');
-                results.errors.push(`Agency ${agency.id} sync failed`);
+            }));
+
+            for (const result of batchResults) {
+                if (result.status === 'rejected') {
+                    const errMsg = result.reason instanceof Error ? result.reason.message : 'Unknown error';
+                    console.error('Agency sync error:', errMsg);
+                    results.errors.push(`Agency sync failed: ${errMsg}`);
+                }
             }
         }
 

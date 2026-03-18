@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     try {
         if (!webhookSecret) {
             console.error('STRIPE_CONNECT_WEBHOOK_SECRET not configured');
-            return NextResponse.json({ received: true, warning: 'Webhook not configured' }, { status: 200 });
+            return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 });
         }
 
         const body = await request.text();

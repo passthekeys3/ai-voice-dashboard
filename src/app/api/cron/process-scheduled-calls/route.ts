@@ -4,7 +4,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { initiateCall, type CallInitiationParams } from '@/lib/calls/initiate';
 import { isWithinCallingWindow, getNextValidCallTime } from '@/lib/timezone/detector';
 import { applyExperiment } from '@/lib/experiments/apply';
-import { decrypt } from '@/lib/crypto';
+import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 
 // This endpoint should be called by a cron job every minute
 // Example: Vercel Cron, or external service like cron-job.org
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
         // Find all pending calls that are due
         const { data: dueCalls, error: fetchError } = await supabase
             .from('scheduled_calls')
-            .select('*, agent:agents(external_id, provider, agency_id, agencies(retell_api_key, vapi_api_key, bland_api_key, calling_window))')
+            .select('*, agent:agents(external_id, provider, agency_id, client_id, agencies(calling_window))')
             .eq('status', 'pending')
             .lte('scheduled_at', now)
             .order('scheduled_at', { ascending: true })
@@ -102,15 +102,18 @@ export async function POST(request: NextRequest) {
                     }
                 }
 
-                // Determine provider and API key
+                // Determine provider and API key (resolves client → agency fallback)
                 const provider = call.agent?.provider || 'retell';
                 const externalAgentId = call.agent?.external_id;
-                const rawKey = provider === 'vapi'
-                    ? call.agent?.agencies?.vapi_api_key
-                    : provider === 'bland'
-                    ? call.agent?.agencies?.bland_api_key
-                    : call.agent?.agencies?.retell_api_key;
-                const providerApiKey = rawKey ? decrypt(rawKey) : null;
+                const agencyId = call.agent?.agency_id;
+                const clientId = call.agent?.client_id;
+
+                if (!agencyId) {
+                    throw new Error('Missing agency_id on agent');
+                }
+
+                const resolvedKeys = await resolveProviderApiKeys(supabase, agencyId, clientId);
+                const providerApiKey = getProviderKey(resolvedKeys, provider as 'retell' | 'vapi' | 'bland');
 
                 if (!providerApiKey || !externalAgentId) {
                     throw new Error(`Missing ${provider} API key or agent external ID`);
