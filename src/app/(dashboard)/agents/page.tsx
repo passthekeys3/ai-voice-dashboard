@@ -7,6 +7,7 @@ import { Header } from '@/components/dashboard/Header';
 import { FilterableAgentGrid } from '@/components/dashboard/FilterableAgentGrid';
 import { SyncButton } from '@/components/dashboard/SyncButton';
 import { CreateAgentButton } from '@/components/dashboard/CreateAgentButton';
+import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import type { Agent } from '@/types';
@@ -79,13 +80,12 @@ export default async function AgentsPage() {
                         {isAdmin && <SyncButton />}
                         {canCreate && (
                             <>
-                                <Link
-                                    href="/agent-builder"
-                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 transition-colors"
-                                >
-                                    <Sparkles className="h-4 w-4" />
-                                    Build with AI
-                                </Link>
+                                <Button asChild variant="default">
+                                    <Link href="/agent-builder">
+                                        <Sparkles className="h-4 w-4" />
+                                        Build with AI
+                                    </Link>
+                                </Button>
                                 <CreateAgentButton
                                     clients={clients || []}
                                     phoneNumbers={phoneNumbers || []}
