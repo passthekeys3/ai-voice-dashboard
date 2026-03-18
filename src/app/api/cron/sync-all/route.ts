@@ -224,19 +224,25 @@ export async function POST(request: NextRequest) {
                                             phone_number_id?: string;
                                             phone_number: string;
                                             nickname?: string;
-                                            inbound_agent_id?: string;
-                                        }) => ({
-                                            agency_id: agency.id,
-                                            external_id: phone.phone_number_id || phone.phone_number,
-                                            phone_number: phone.phone_number,
-                                            nickname: phone.nickname || null,
-                                            provider: 'retell',
-                                            status: 'active',
-                                            agent_id: phone.inbound_agent_id
-                                                ? agentLookupMap.get(phone.inbound_agent_id) || null
-                                                : null,
-                                            updated_at: new Date().toISOString(),
-                                        }));
+                                            inbound_agents?: { agent_id: string; weight: number }[];
+                                            inbound_agent_id?: string; // deprecated fallback
+                                        }) => {
+                                            // Prefer new weighted agent list, fall back to deprecated field
+                                            const inboundRetellId = phone.inbound_agents?.[0]?.agent_id
+                                                ?? phone.inbound_agent_id ?? null;
+                                            return {
+                                                agency_id: agency.id,
+                                                external_id: phone.phone_number_id || phone.phone_number,
+                                                phone_number: phone.phone_number,
+                                                nickname: phone.nickname || null,
+                                                provider: 'retell',
+                                                status: 'active',
+                                                agent_id: inboundRetellId
+                                                    ? agentLookupMap.get(inboundRetellId) || null
+                                                    : null,
+                                                updated_at: new Date().toISOString(),
+                                            };
+                                        });
 
                                         const { error: phoneUpsertError, data: upsertedPhones } = await supabase
                                             .from('phone_numbers')

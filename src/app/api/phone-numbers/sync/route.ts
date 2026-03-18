@@ -71,11 +71,16 @@ export const POST = withErrorHandling(async (_request: NextRequest) => {
                     total += retellNumbers?.length || 0;
 
                     for (const retellNumber of retellNumbers) {
-                        const inboundAgentId = retellNumber.inbound_agent_id
-                            ? agentMap.get(retellNumber.inbound_agent_id)
+                        // Support both new weighted agent lists and deprecated single-agent fields
+                        const inboundRetellId = retellNumber.inbound_agents?.[0]?.agent_id
+                            ?? retellNumber.inbound_agent_id ?? null;
+                        const outboundRetellId = retellNumber.outbound_agents?.[0]?.agent_id
+                            ?? retellNumber.outbound_agent_id ?? null;
+                        const inboundAgentId = inboundRetellId
+                            ? agentMap.get(inboundRetellId)
                             : null;
-                        const outboundAgentId = retellNumber.outbound_agent_id
-                            ? agentMap.get(retellNumber.outbound_agent_id)
+                        const outboundAgentId = outboundRetellId
+                            ? agentMap.get(outboundRetellId)
                             : null;
 
                         // Use phone_number_id from Retell as external_id (consistent with purchase route)

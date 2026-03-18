@@ -158,14 +158,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
             try {
                 if (existing.provider === 'retell' && agency?.retell_api_key) {
-                    const retellUpdate: Record<string, string | null> = {};
+                    // Use weighted agent lists (Retell deprecated single-agent fields March 2026)
+                    const retellUpdate: Record<string, unknown> = {};
 
                     if (body.inbound_agent_id !== undefined || body.agent_id !== undefined) {
                         const agentId = body.inbound_agent_id ?? body.agent_id;
-                        retellUpdate.inbound_agent_id = await resolveAgentExternalId(agentId);
+                        const externalId = await resolveAgentExternalId(agentId);
+                        retellUpdate.inbound_agents = externalId
+                            ? [{ agent_id: externalId, weight: 100 }]
+                            : [];
                     }
                     if (body.outbound_agent_id !== undefined) {
-                        retellUpdate.outbound_agent_id = await resolveAgentExternalId(body.outbound_agent_id);
+                        const externalId = await resolveAgentExternalId(body.outbound_agent_id);
+                        retellUpdate.outbound_agents = externalId
+                            ? [{ agent_id: externalId, weight: 100 }]
+                            : [];
                     }
 
                     if (Object.keys(retellUpdate).length > 0) {

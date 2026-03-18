@@ -292,7 +292,7 @@ export async function POST(request: NextRequest) {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            inbound_agent_id: externalId,
+                            inbound_agents: [{ agent_id: externalId, weight: 100 }],
                         }),
                         signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                     });
