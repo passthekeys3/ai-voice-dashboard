@@ -17,23 +17,20 @@ interface UsageChartProps {
     data: { date: string; count: number }[];
 }
 
-// Theme-aware chart colors (hex values that work reliably in SVG)
+// Neutral chart colors — avoids the "AI color palette" anti-pattern.
+// Uses a single hue (slate-blue) instead of gradient rainbow.
 const CHART_COLORS = {
     light: {
-        stroke1: '#8b5cf6',   // violet-500
-        stroke2: '#6366f1',   // indigo-500
-        fill1: '#8b5cf6',     // violet-500
-        fill2: '#6366f1',     // indigo-500
-        grid: '#e2e8f0',      // slate-200
-        axis: '#64748b',      // slate-500
+        stroke: '#3b82f6',    // blue-500 (single solid color)
+        fill: '#3b82f6',      // blue-500
+        grid: '#f1f5f9',      // slate-100
+        axis: '#94a3b8',      // slate-400
     },
     dark: {
-        stroke1: '#a78bfa',   // violet-400
-        stroke2: '#818cf8',   // indigo-400
-        fill1: '#a78bfa',     // violet-400
-        fill2: '#818cf8',     // indigo-400
-        grid: '#334155',      // slate-700
-        axis: '#94a3b8',      // slate-400
+        stroke: '#60a5fa',    // blue-400
+        fill: '#60a5fa',      // blue-400
+        grid: '#1e293b',      // slate-800
+        axis: '#64748b',      // slate-500
     },
 };
 
@@ -41,18 +38,11 @@ const CHART_COLORS = {
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
     if (active && payload && payload.length) {
         return (
-            <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-sm p-3 shadow-lg dark:bg-background/90">
-                <div className="grid gap-1.5">
-                    <span className="text-xs font-medium text-muted-foreground">
-                        {label}
-                    </span>
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-indigo-500 bg-clip-text text-transparent">
-                            {payload[0].value}
-                        </span>
-                        <span className="text-xs text-muted-foreground">calls</span>
-                    </div>
-                </div>
+            <div className="rounded-lg border border-border bg-background px-3 py-2 shadow-sm">
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="text-sm font-semibold">
+                    {payload[0].value} <span className="font-normal text-muted-foreground">calls</span>
+                </p>
             </div>
         );
     }
@@ -62,10 +52,8 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 export function UsageChart({ data }: UsageChartProps) {
     const { resolvedTheme } = useTheme();
     const colors = resolvedTheme === 'dark' ? CHART_COLORS.dark : CHART_COLORS.light;
-    // Unique IDs for SVG gradients to prevent collisions when multiple charts render
     const id = useId();
     const fillGradientId = `fillGradient-${id}`;
-    const strokeGradientId = `strokeGradient-${id}`;
 
     // Format dates for display
     const formattedData = data.map((item) => ({
@@ -86,24 +74,16 @@ export function UsageChart({ data }: UsageChartProps) {
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={formattedData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                             <defs>
-                                {/* Violet to indigo gradient for the area fill */}
                                 <linearGradient id={fillGradientId} x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor={colors.fill1} stopOpacity={0.4} />
-                                    <stop offset="50%" stopColor={colors.fill2} stopOpacity={0.2} />
-                                    <stop offset="100%" stopColor={colors.fill2} stopOpacity={0.05} />
-                                </linearGradient>
-                                {/* Stroke gradient for the line */}
-                                <linearGradient id={strokeGradientId} x1="0" y1="0" x2="1" y2="0">
-                                    <stop offset="0%" stopColor={colors.stroke1} />
-                                    <stop offset="100%" stopColor={colors.stroke2} />
+                                    <stop offset="0%" stopColor={colors.fill} stopOpacity={0.15} />
+                                    <stop offset="100%" stopColor={colors.fill} stopOpacity={0.02} />
                                 </linearGradient>
                             </defs>
-                            {/* Subtle grid with theme-aware colors */}
                             <CartesianGrid
-                                strokeDasharray="3 3"
                                 stroke={colors.grid}
-                                strokeOpacity={0.5}
+                                strokeOpacity={1}
                                 vertical={false}
+                                horizontalCoordinatesGenerator={undefined}
                             />
                             <XAxis
                                 dataKey="displayDate"
@@ -135,8 +115,8 @@ export function UsageChart({ data }: UsageChartProps) {
                             <Area
                                 type="monotone"
                                 dataKey="count"
-                                stroke={`url(#${strokeGradientId})`}
-                                strokeWidth={2.5}
+                                stroke={colors.stroke}
+                                strokeWidth={2}
                                 fillOpacity={1}
                                 fill={`url(#${fillGradientId})`}
                                 animationDuration={300}

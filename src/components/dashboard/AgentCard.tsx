@@ -32,9 +32,9 @@ interface AgentCardProps {
 }
 
 const providerIconStyles: Record<string, string> = {
-    retell: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
-    vapi: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
-    bland: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
+    retell: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400',
+    vapi: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400',
+    bland: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400',
 };
 
 function formatPhoneNumber(number: string) {
@@ -51,9 +51,9 @@ export function AgentCard({ agent, phoneNumber, showDelete = true, configBasePat
     const [deleteFromProvider, setDeleteFromProvider] = useState(false);
 
     const providerStyles: Record<string, string> = {
-        retell: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-        vapi: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
-        bland: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300',
+        retell: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+        vapi: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+        bland: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
     };
 
     const providerDisplayName = agent.provider === 'bland' ? 'Bland.ai' : agent.provider.charAt(0).toUpperCase() + agent.provider.slice(1);
@@ -93,14 +93,7 @@ export function AgentCard({ agent, phoneNumber, showDelete = true, configBasePat
     return (
         <Card className={cn(
             'relative overflow-hidden transition-all duration-200',
-            'hover:shadow-lg hover:-translate-y-1',
-            'before:absolute before:inset-0 before:rounded-lg before:opacity-0 before:transition-opacity before:duration-200',
-            'hover:before:opacity-100 before:pointer-events-none',
-            agent.provider === 'retell'
-                ? 'before:bg-gradient-to-br before:from-blue-500/5 before:to-transparent'
-                : agent.provider === 'bland'
-                    ? 'before:bg-gradient-to-br before:from-amber-500/5 before:to-transparent'
-                    : 'before:bg-gradient-to-br before:from-purple-500/5 before:to-transparent'
+            'hover:shadow-md',
         )}>
             <CardHeader className="flex flex-row items-start justify-between pb-2">
                 <div className="flex items-center gap-3">
