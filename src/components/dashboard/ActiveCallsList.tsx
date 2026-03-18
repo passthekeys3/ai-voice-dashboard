@@ -199,7 +199,7 @@ export function ActiveCallsList({ basePath = '', canEndCalls = true }: ActiveCal
                         )}
                     </div>
                     <ConnectionStatus status={connectionStatus} />
-                    <span className="text-xs text-muted-foreground">Polling every 5s</span>
+                    <span className="text-xs text-muted-foreground">Polling every 2s</span>
                 </div>
                 <Button variant="ghost" size="icon" onClick={fetchActiveCalls} title="Refresh" aria-label="Refresh active calls">
                     <RefreshCw className="h-4 w-4" />
@@ -279,7 +279,7 @@ export function ActiveCallsList({ basePath = '', canEndCalls = true }: ActiveCal
                         <p className="text-muted-foreground text-center max-w-md">
                             When calls are in progress, they&apos;ll appear here in real-time.
                             <span className="block mt-2 text-green-600 text-sm">
-                                Auto-refreshing every 5 seconds
+                                Auto-refreshing every 2 seconds
                             </span>
                         </p>
                     </CardContent>

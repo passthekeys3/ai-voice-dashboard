@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -162,7 +162,6 @@ export function BillingSection() {
             <Card>
                 <CardHeader>
                     <CardTitle>Billing & Subscription</CardTitle>
-                    <CardDescription>Manage your subscription and billing details</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <Skeleton className="h-8 w-32" />
@@ -187,8 +186,7 @@ export function BillingSection() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="min-w-0">
                         <CardTitle>Billing & Subscription</CardTitle>
-                        <CardDescription>Manage your subscription and billing details</CardDescription>
-                    </div>
+                        </div>
                     <div className="flex flex-wrap items-center gap-2">
                         {getPlanTypeBadge(planType)}
                         {planName && <Badge variant="secondary">{planName}</Badge>}
