@@ -399,7 +399,7 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
     return (
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
             {/* Chat Panel — fixed height on mobile so input stays visible */}
-            <div className="flex flex-col min-w-0 h-[calc(100vh-8rem)] lg:h-auto lg:flex-1 lg:max-w-[55%] border-b lg:border-b-0 lg:border-r border-border">
+            <div className="flex flex-col min-w-0 h-[calc(100dvh-7rem)] lg:h-auto lg:flex-1 lg:max-w-[55%] border-b lg:border-b-0 lg:border-r border-border">
                 <AgentBuilderChat
                     messages={messages}
                     isStreaming={isStreaming}

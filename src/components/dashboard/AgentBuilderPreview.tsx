@@ -339,7 +339,7 @@ export function AgentBuilderPreview({
             {hasContent && (
                 <div className="flex-shrink-0 p-4 border-t border-border bg-white dark:bg-slate-900 space-y-3">
                     {/* Optional selectors */}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {clients.length > 0 && (
                             <div>
                                 <Label htmlFor="builder-client-select" className="text-xs text-muted-foreground mb-1 block">Client (optional)</Label>
