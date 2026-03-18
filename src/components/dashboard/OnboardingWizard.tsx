@@ -16,6 +16,7 @@ import {
     EyeOff,
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
+import Link from 'next/link';
 
 interface OnboardingWizardProps {
     agency: { name: string };
@@ -315,7 +316,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <a
+                                <Link
                                     href="/agents"
                                     className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                                 >
@@ -324,8 +325,8 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                         <p className="text-xs text-muted-foreground">Configure, test, and manage your voice agents</p>
                                     </div>
                                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                </a>
-                                <a
+                                </Link>
+                                <Link
                                     href="/agent-builder"
                                     className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                                 >
@@ -334,8 +335,8 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                         <p className="text-xs text-muted-foreground">Describe what you need — AI generates the config</p>
                                     </div>
                                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                </a>
-                                <a
+                                </Link>
+                                <Link
                                     href="/clients"
                                     className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                                 >
@@ -344,7 +345,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                         <p className="text-xs text-muted-foreground">Set up a client account and assign agents</p>
                                     </div>
                                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                </a>
+                                </Link>
                             </div>
 
                             <Button
