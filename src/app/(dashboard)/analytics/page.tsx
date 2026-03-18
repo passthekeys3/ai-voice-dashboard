@@ -63,71 +63,73 @@ export default async function AnalyticsPage({ searchParams }: Props) {
     };
 
     if (agentIds.length > 0) {
-        // Build query for calls
-        let callsQuery = supabase
-            .from('calls')
-            .select('id, duration_seconds, cost_cents, status, started_at, agent_id')
-            .in('agent_id', agentIds);
+        const sinceDate = startDate ? startDate.toISOString() : '1970-01-01T00:00:00Z';
 
-        if (startDate) {
-            callsQuery = callsQuery.gte('started_at', startDate.toISOString());
-        }
-        callsQuery = callsQuery.lte('started_at', endDate.toISOString());
+        // Aggregate stats via Postgres RPC (avoids loading all rows into memory)
+        const { data: statsRow } = await supabase.rpc('get_dashboard_stats', {
+            p_agent_ids: agentIds,
+            p_since: sinceDate,
+            ...(clientId ? { p_client_id: clientId } : {}),
+        });
 
-        if (clientId) {
-            callsQuery = callsQuery.eq('client_id', clientId);
-        }
+        // Call volume by day via RPC
+        const { data: volumeRows } = await supabase.rpc('get_call_volume_by_day', {
+            p_agent_ids: agentIds,
+            p_since: sinceDate,
+            p_until: endDate.toISOString(),
+            ...(clientId ? { p_client_id: clientId } : {}),
+        });
 
-        const { data: calls } = await callsQuery;
+        // Calls by agent via RPC
+        const { data: agentRows } = await supabase.rpc('get_analytics_by_agent', {
+            p_agent_ids: agentIds,
+            p_since: sinceDate,
+            p_until: endDate.toISOString(),
+            ...(clientId ? { p_client_id: clientId } : {}),
+        });
 
-        if (calls && calls.length > 0) {
-            const totalCalls = calls.length;
-            const completedCalls = calls.filter(c => c.status === 'completed').length;
-            const totalMinutes = calls.reduce((acc, c) => acc + (c.duration_seconds || 0), 0) / 60;
-            const totalCost = calls.reduce((acc, c) => acc + (c.cost_cents || 0), 0) / 100;
+        const stats = Array.isArray(statsRow) ? statsRow[0] : statsRow;
+        if (stats) {
+            const totalCalls = Number(stats.total_calls || 0);
+            const completedCalls = Number(stats.completed_calls || 0);
+            const totalMinutes = Number(stats.total_seconds || 0) / 60;
+            const totalCost = Number(stats.total_cost_cents || 0) / 100;
             const successRate = totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
             const avgCallDuration = totalCalls > 0 ? totalMinutes / totalCalls : 0;
 
-            // Group calls by day using UTC (server runs in UTC, started_at is UTC)
+            // Fill in missing days from volume RPC results
             const toDateStr = (d: Date) => d.toISOString().split('T')[0];
-            const callsByDay: Record<string, number> = {};
-            calls.forEach(call => {
-                const date = toDateStr(new Date(call.started_at));
-                callsByDay[date] = (callsByDay[date] || 0) + 1;
-            });
+            const volumeMap = new Map<string, number>();
+            if (Array.isArray(volumeRows)) {
+                for (const row of volumeRows) {
+                    volumeMap.set(String(row.call_date), Number(row.call_count));
+                }
+            }
 
-            // For chart data, use selected range or earliest call date for "all time"
+            // Determine chart start date
             let chartStartDate: Date;
             if (days) {
                 chartStartDate = new Date();
                 chartStartDate.setDate(chartStartDate.getDate() - days);
             } else {
-                // "All time" — find earliest call date
-                const earliest = calls.reduce((min, c) => {
-                    const d = new Date(c.started_at);
-                    return d < min ? d : min;
-                }, new Date());
-                chartStartDate = earliest;
+                // "All time" — use earliest date from volume data, or 30 days ago
+                const dates = Array.from(volumeMap.keys()).sort();
+                chartStartDate = dates.length > 0 ? new Date(dates[0]) : new Date();
+                if (dates.length === 0) chartStartDate.setDate(chartStartDate.getDate() - 30);
             }
 
             const callsByDayArray: { date: string; count: number }[] = [];
             for (let d = new Date(chartStartDate); d <= endDate; d.setDate(d.getDate() + 1)) {
                 const dateStr = toDateStr(d);
-                callsByDayArray.push({ date: dateStr, count: callsByDay[dateStr] || 0 });
+                callsByDayArray.push({ date: dateStr, count: volumeMap.get(dateStr) || 0 });
             }
 
-            // Group calls by agent
-            const callsByAgent: Record<string, number> = {};
-            calls.forEach(call => {
-                if (call.agent_id) {
-                    callsByAgent[call.agent_id] = (callsByAgent[call.agent_id] || 0) + 1;
-                }
-            });
-
-            const callsByAgentArray = Object.keys(callsByAgent).map(id => ({
-                agent_id: id,
-                agent_name: agents?.find(a => a.id === id)?.name || 'Unknown',
-                count: callsByAgent[id],
+            // Build agent breakdown from RPC results
+            const agentNameMap = new Map(agents?.map(a => [a.id, a.name]) || []);
+            const callsByAgentArray = (Array.isArray(agentRows) ? agentRows : []).map(row => ({
+                agent_id: row.agent_id,
+                agent_name: agentNameMap.get(row.agent_id) || 'Unknown',
+                count: Number(row.call_count),
             })).sort((a, b) => b.count - a.count);
 
             analytics = {

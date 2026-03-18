@@ -4,8 +4,10 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { listBlandActiveCalls } from '@/lib/providers/bland';
 import { listVapiCalls } from '@/lib/providers/vapi';
 import { decrypt } from '@/lib/crypto';
+import { getRedisClient } from '@/lib/redis';
 
 const PROVIDER_API_TIMEOUT = 15_000;
+const ACTIVE_CALLS_CACHE_TTL = 8; // seconds — balance between freshness and provider API load
 
 // GET /api/calls/active - Get all active calls from all configured providers
 export async function GET(_request: NextRequest) {
@@ -16,6 +18,31 @@ export async function GET(_request: NextRequest) {
         }
 
         const supabase = await createClient();
+
+        // Check Redis cache first (same agency shares cached provider responses)
+        const redis = await getRedisClient();
+        const cacheKey = `active-calls:${user.agency.id}`;
+        if (redis) {
+            try {
+                const cached = await redis.get(cacheKey);
+                if (cached) {
+                    const allCalls = JSON.parse(cached);
+                    // Filter by client for non-admin users (cache stores all agency calls)
+                    if (!isAgencyAdmin(user) && user.client) {
+                        const { data: clientAgents } = await supabase
+                            .from('agents')
+                            .select('external_id')
+                            .eq('agency_id', user.agency.id)
+                            .eq('client_id', user.client.id);
+                        const clientExternalIds = new Set(clientAgents?.map(a => a.external_id) || []);
+                        return NextResponse.json({ data: allCalls.filter((c: { agent_id: string }) => clientExternalIds.has(c.agent_id)) });
+                    }
+                    return NextResponse.json({ data: allCalls });
+                }
+            } catch {
+                // Cache miss or parse error — fall through to provider APIs
+            }
+        }
 
         // Get agency's API keys for all providers (decrypt from DB)
         const { data: agencyRaw } = await supabase
@@ -190,6 +217,23 @@ export async function GET(_request: NextRequest) {
             } catch (err) {
                 console.error('Error fetching Vapi active calls:', err instanceof Error ? err.message : 'Unknown error');
             }
+        }
+
+        // Cache results in Redis for other users from the same agency
+        if (redis) {
+            try {
+                await redis.set(cacheKey, JSON.stringify(allActiveCalls), 'EX', ACTIVE_CALLS_CACHE_TTL);
+            } catch {
+                // Non-critical — continue without caching
+            }
+        }
+
+        // Filter by client for non-admin users
+        if (!isAgencyAdmin(user) && user.client) {
+            const clientExternalIds = new Set(
+                agents?.filter(a => a.client_id === user.client!.id).map(a => a.external_id) || []
+            );
+            return NextResponse.json({ data: allActiveCalls.filter(c => clientExternalIds.has(c.agent_id)) });
         }
 
         return NextResponse.json({ data: allActiveCalls });

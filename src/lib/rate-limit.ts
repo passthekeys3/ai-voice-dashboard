@@ -173,8 +173,12 @@ function checkRateLimitMemory(
 // ============================================================================
 
 /**
- * Check and update rate limit for a given identifier
- * Tries Redis first, falls back to in-memory if unavailable
+ * Check and update rate limit for a given identifier.
+ * Tries Redis first, falls back to in-memory.
+ *
+ * NOTE: In-memory fallback is per-serverless-instance and resets on cold starts.
+ * At scale, this means rate limiting is effectively disabled without Redis.
+ * The fallback still provides basic protection on warm instances.
  */
 export async function checkRateLimitAsync(
     identifier: string,
@@ -186,9 +190,17 @@ export async function checkRateLimitAsync(
         return redisResult;
     }
 
-    // Fall back to in-memory
+    // In production without Redis, log a warning (once per process)
+    if (process.env.NODE_ENV === 'production' && !warnedNoRedis) {
+        warnedNoRedis = true;
+        console.warn('[RATE LIMIT] Redis unavailable — falling back to per-instance in-memory limiting. Rate limits are NOT enforced across instances.');
+    }
+
+    // Fall back to in-memory (better than nothing on warm instances)
     return checkRateLimitMemory(identifier, config);
 }
+
+let warnedNoRedis = false;
 
 /**
  * Get rate limit key from request (IP + path)

@@ -56,52 +56,51 @@ export default async function DashboardPage() {
 
     const { data: recentCalls } = await callsQuery;
 
-    // Calculate stats from actual calls in database (bounded to last 90 days for performance)
+    // Aggregate stats via Postgres RPC (avoids loading all rows into memory)
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    let statsQuery = supabase
-        .from('calls')
-        .select('duration_seconds, cost_cents, status, started_at')
-        .gte('started_at', ninetyDaysAgo.toISOString());
-
-    if (agentIds.length > 0) {
-        statsQuery = statsQuery.in('agent_id', agentIds);
-    }
-
-    if (clientId) {
-        statsQuery = statsQuery.eq('client_id', clientId);
-    }
-
-    const { data: callStats } = await statsQuery;
-
-    const totalCalls = callStats?.length || 0;
-    const totalMinutes = Math.round((callStats?.reduce((sum, c) => sum + (c.duration_seconds || 0), 0) || 0) / 60);
-    const totalCost = (callStats?.reduce((sum, c) => sum + (c.cost_cents || 0), 0) || 0) / 100;
-    const completedCalls = callStats?.filter(c => c.status === 'completed').length || 0;
-    const successRate = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0;
-
-    // Calculate call volume data for chart (last 30 days)
-    const toDateStr = (d: Date) => d.toISOString().split('T')[0];
-    const volumeMap = new Map<string, number>();
     const now = new Date();
 
-    // Initialize last 30 days with 0
+    const { data: statsRow } = await supabase.rpc('get_dashboard_stats', {
+        p_agent_ids: agentIds,
+        p_since: ninetyDaysAgo.toISOString(),
+        ...(clientId ? { p_client_id: clientId } : {}),
+    });
+
+    const stats = Array.isArray(statsRow) ? statsRow[0] : statsRow;
+    const totalCalls = Number(stats?.total_calls || 0);
+    const totalMinutes = Math.round(Number(stats?.total_seconds || 0) / 60);
+    const totalCost = Number(stats?.total_cost_cents || 0) / 100;
+    const completedCalls = Number(stats?.completed_calls || 0);
+    const successRate = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0;
+
+    // Call volume by day via Postgres RPC (returns only date+count rows, not full call records)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const { data: volumeRows } = await supabase.rpc('get_call_volume_by_day', {
+        p_agent_ids: agentIds,
+        p_since: thirtyDaysAgo.toISOString(),
+        p_until: now.toISOString(),
+        ...(clientId ? { p_client_id: clientId } : {}),
+    });
+
+    // Fill in missing days with 0
+    const toDateStr = (d: Date) => d.toISOString().split('T')[0];
+    const volumeMap = new Map<string, number>();
     for (let i = 29; i >= 0; i--) {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
-        const dateStr = toDateStr(date);
-        volumeMap.set(dateStr, 0);
+        volumeMap.set(toDateStr(date), 0);
     }
-
-    // Count calls per day
-    callStats?.forEach(call => {
-        if (call.started_at) {
-            const dateStr = toDateStr(new Date(call.started_at));
+    if (Array.isArray(volumeRows)) {
+        for (const row of volumeRows) {
+            const dateStr = String(row.call_date);
             if (volumeMap.has(dateStr)) {
-                volumeMap.set(dateStr, (volumeMap.get(dateStr) || 0) + 1);
+                volumeMap.set(dateStr, Number(row.call_count));
             }
         }
-    });
+    }
 
     const callVolumeData = Array.from(volumeMap.entries())
         .map(([date, count]) => ({ date, count }))

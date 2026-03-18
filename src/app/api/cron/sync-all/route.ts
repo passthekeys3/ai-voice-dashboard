@@ -47,13 +47,16 @@ export async function POST(request: NextRequest) {
 
         const supabase = createServiceClient();
 
-        // Get all agencies — we now also sync from client-level keys,
-        // so we can't pre-filter by agency keys alone. The inner loop
-        // skips agencies with zero sync entries (no agency OR client keys).
+        // Get agencies that haven't been synced in the last 30 minutes.
+        // This prevents re-syncing agencies that were just synced and
+        // ensures the cron completes within Vercel's timeout by processing
+        // only a subset each run.
+        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
         const { data: agencies, error: agenciesError } = await supabase
             .from('agencies')
             .select('id, name, retell_api_key, vapi_api_key, bland_api_key')
-            .limit(10000);
+            .or(`updated_at.lt.${thirtyMinutesAgo},updated_at.is.null`)
+            .limit(100); // Process up to 100 per cron run (fits within 60s timeout)
 
         if (agenciesError) {
             console.error('Error fetching agencies:', agenciesError.code);
