@@ -188,7 +188,7 @@ export function NewWorkflowFlow({ agents, clientId, context }: NewWorkflowFlowPr
                     <CardContent>
                         <Button
                             onClick={handleAiMode}
-                            className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700"
+                            className="bg-violet-600 hover:bg-violet-700"
                         >
                             <Sparkles className="h-4 w-4 mr-2" />
                             Describe with AI
@@ -266,7 +266,7 @@ export function NewWorkflowFlow({ agents, clientId, context }: NewWorkflowFlowPr
                             <Button
                                 onClick={() => handleGenerate()}
                                 disabled={!aiInput.trim() || aiStreaming}
-                                className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700"
+                                className="bg-violet-600 hover:bg-violet-700"
                             >
                                 {aiStreaming ? (
                                     <>

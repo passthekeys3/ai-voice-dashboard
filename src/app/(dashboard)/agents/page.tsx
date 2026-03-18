@@ -74,20 +74,14 @@ export default async function AgentsPage() {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h2 className="text-2xl font-bold tracking-tight">Agents</h2>
-                        <p className="text-muted-foreground">
-                            Manage your voice AI agents
-                        </p>
-                    </div>
+                <div className="flex items-center justify-end">
                     <div className="flex flex-wrap gap-2">
                         {isAdmin && <SyncButton />}
                         {canCreate && (
                             <>
                                 <Link
                                     href="/agent-builder"
-                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-gradient-to-r from-violet-500 to-purple-600 text-white hover:from-violet-600 hover:to-purple-700 transition-all shadow-sm"
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 transition-colors"
                                 >
                                     <Sparkles className="h-4 w-4" />
                                     Build with AI

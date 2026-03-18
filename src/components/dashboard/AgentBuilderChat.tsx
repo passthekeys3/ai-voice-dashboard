@@ -256,7 +256,7 @@ export function AgentBuilderChat({
                         size="icon"
                         onClick={handleSend}
                         disabled={!input.trim() || isStreaming}
-                        className="flex-shrink-0 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700"
+                        className="flex-shrink-0 bg-violet-600 hover:bg-violet-700"
                         aria-label="Send message"
                     >
                         {isStreaming ? (

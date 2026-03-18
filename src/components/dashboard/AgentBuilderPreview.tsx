@@ -384,7 +384,7 @@ export function AgentBuilderPreview({
 
                     {/* Confirmation summary */}
                     {showConfirmation && isReady ? (
-                        <Card className="border-violet-500/30 bg-gradient-to-r from-violet-500/5 to-purple-500/5">
+                        <Card className="border-violet-500/30 bg-violet-50 dark:bg-violet-950/20">
                             <CardContent className="p-4 space-y-3">
                                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Confirm Agent</p>
                                 <div className="space-y-1.5 text-sm">
@@ -431,7 +431,7 @@ export function AgentBuilderPreview({
                                     </Button>
                                     <Button
                                         size="sm"
-                                        className="flex-1 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white"
+                                        className="flex-1 bg-violet-600 hover:bg-violet-700 text-white"
                                         onClick={handleCreate}
                                         disabled={isCreating}
                                     >
@@ -451,12 +451,12 @@ export function AgentBuilderPreview({
                             </CardContent>
                         </Card>
                     ) : (
-                        <Card className="border-violet-500/20 bg-gradient-to-r from-violet-500/5 to-purple-500/5">
+                        <Card className="border-violet-500/20 bg-violet-50 dark:bg-violet-950/20">
                             <CardContent className="p-3">
                                 <Button
                                     onClick={() => setShowConfirmation(true)}
                                     disabled={!isReady || isCreating}
-                                    className="w-full bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white"
+                                    className="w-full bg-violet-600 hover:bg-violet-700 text-white"
                                 >
                                     <Rocket className="h-4 w-4 mr-2" />
                                     Create Agent

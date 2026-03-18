@@ -34,7 +34,7 @@ export default async function DashboardPage() {
     // Get agent IDs for this agency
     const { data: agents } = await supabase
         .from('agents')
-        .select('id, name')
+        .select('id, name, provider')
         .eq('agency_id', user.agency.id);
 
     const agentIds = agents?.map(a => a.id) || [];
@@ -114,17 +114,8 @@ export default async function DashboardPage() {
                 userAvatar={user.profile.avatar_url}
             />
 
-            <div className="flex-1 p-4 sm:p-6 space-y-6 sm:space-y-8">
-                <div className="animate-fade-up">
-                    <h2 className="text-2xl font-bold tracking-tight">
-                        Welcome back, {user.profile.full_name?.split(' ')[0] || 'there'}
-                    </h2>
-                    <p className="text-muted-foreground mt-1">
-                        Here&apos;s an overview of your voice AI performance
-                    </p>
-                </div>
-
-                {/* KPI Cards */}
+            <div className="flex-1 p-4 sm:p-6 space-y-5 sm:space-y-6">
+                {/* KPI Cards — no heading needed, the cards speak for themselves */}
                 <AnalyticsCards
                     totalCalls={totalCalls}
                     totalMinutes={totalMinutes}
@@ -144,13 +135,11 @@ export default async function DashboardPage() {
                     <UsageChart data={callVolumeData} />
 
                     <Card className="md:col-span-3 min-w-0">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                             <div className="flex items-center gap-2">
-                                <CardTitle>Your Agents</CardTitle>
+                                <CardTitle className="text-base">Agents</CardTitle>
                                 {agents && agents.length > 0 && (
-                                    <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">
-                                        {agents.length}
-                                    </span>
+                                    <span className="text-xs text-muted-foreground">{agents.length}</span>
                                 )}
                             </div>
                             {agents && agents.length > 0 && (
@@ -159,22 +148,22 @@ export default async function DashboardPage() {
                                 </Link>
                             )}
                         </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                        <CardContent className="pt-0">
+                            <div className="space-y-1 max-h-[300px] overflow-y-auto">
                                 {agents && agents.length > 0 ? (
                                     agents.map((agent) => (
-                                        <div key={agent.id} className="flex items-center justify-between">
-                                            <Link
-                                                href={`/agents/${agent.id}`}
-                                                className="text-sm font-medium truncate hover:underline"
-                                            >
-                                                {agent.name}
-                                            </Link>
-                                        </div>
+                                        <Link
+                                            key={agent.id}
+                                            href={`/agents/${agent.id}`}
+                                            className="flex items-center justify-between py-2 px-2 -mx-2 rounded-md text-sm hover:bg-muted/50 transition-colors"
+                                        >
+                                            <span className="font-medium truncate">{agent.name}</span>
+                                            <span className="text-xs text-muted-foreground shrink-0 ml-2">{agent.provider}</span>
+                                        </Link>
                                     ))
                                 ) : (
-                                    <p className="text-muted-foreground text-sm">
-                                        No agents yet. Go to Settings to add your API keys, then sync agents.
+                                    <p className="text-muted-foreground text-sm py-4">
+                                        No agents yet. Add your API keys in Settings, then sync.
                                     </p>
                                 )}
                             </div>
@@ -183,14 +172,10 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Recent Calls */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Recent Calls</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <CallsTable calls={(recentCalls || []) as (Call & { agents: { name: string; provider: string } })[]} />
-                    </CardContent>
-                </Card>
+                <div>
+                    <h3 className="text-lg font-semibold mb-3">Recent Calls</h3>
+                    <CallsTable calls={(recentCalls || []) as (Call & { agents: { name: string; provider: string } })[]} />
+                </div>
             </div>
         </div>
     );
