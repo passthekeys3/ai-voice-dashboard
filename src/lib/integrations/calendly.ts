@@ -1,7 +1,7 @@
 /**
  * Calendly Integration — REST API v2
  *
- * Uses Personal Access Token authentication.
+ * Supports OAuth access_token (preferred) and Personal Access Token (legacy).
  * API docs: https://developer.calendly.com/api-docs
  */
 
@@ -12,9 +12,25 @@ const CALENDLY_API_BASE = 'https://api.calendly.com';
 // ============================================================================
 
 export interface CalendlyConfig {
-    apiToken: string;
+    apiToken: string;           // OAuth access_token or legacy Personal Access Token
     userUri?: string;
     defaultEventTypeUri?: string;
+}
+
+/**
+ * Build a CalendlyConfig from an integration config object.
+ * Prefers OAuth access_token over legacy api_token.
+ */
+export function buildCalendlyConfig(
+    config: { access_token?: string; api_token?: string; user_uri?: string; default_event_type_uri?: string },
+): CalendlyConfig | null {
+    const token = config.access_token || config.api_token;
+    if (!token) return null;
+    return {
+        apiToken: token,
+        userUri: config.user_uri,
+        defaultEventTypeUri: config.default_event_type_uri,
+    };
 }
 
 export interface CalendlyUser {
@@ -273,4 +289,87 @@ export async function getScheduledEvents(
         return { data: [], error: result.error };
     }
     return { data: result.data.collection };
+}
+
+// ============================================================================
+// Token Refresh (OAuth)
+// ============================================================================
+
+const CALENDLY_CLIENT_ID = process.env.CALENDLY_CLIENT_ID;
+const CALENDLY_CLIENT_SECRET = process.env.CALENDLY_CLIENT_SECRET;
+
+// Singleton promise to prevent concurrent refresh races
+let refreshPromise: Promise<{ accessToken: string; refreshToken: string; expiresAt: number } | null> | null = null;
+
+/**
+ * Get a valid Calendly access token, refreshing if expired.
+ * Uses singleton promise pattern to prevent concurrent refresh races.
+ * Returns null if no OAuth tokens available (falls back to api_token).
+ */
+export async function getValidCalendlyToken(
+    config: { access_token?: string; refresh_token?: string; expires_at?: number; api_token?: string },
+    updateTokens?: (newTokens: { accessToken: string; refreshToken?: string; expiresAt?: number }) => Promise<void>,
+): Promise<string | null> {
+    // If no OAuth tokens, fall back to legacy api_token
+    if (!config.access_token) {
+        return config.api_token || null;
+    }
+
+    // Check if token is still valid (5-minute buffer)
+    const bufferMs = 5 * 60 * 1000;
+    if (config.expires_at && Date.now() < config.expires_at - bufferMs) {
+        return config.access_token;
+    }
+
+    // Need to refresh
+    if (!config.refresh_token || !CALENDLY_CLIENT_ID || !CALENDLY_CLIENT_SECRET) {
+        return config.access_token; // Return potentially expired token as last resort
+    }
+
+    // Singleton promise to prevent concurrent refreshes
+    if (!refreshPromise) {
+        refreshPromise = (async () => {
+            try {
+                const response = await fetch('https://auth.calendly.com/oauth/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        grant_type: 'refresh_token',
+                        client_id: CALENDLY_CLIENT_ID!,
+                        client_secret: CALENDLY_CLIENT_SECRET!,
+                        refresh_token: config.refresh_token!,
+                    }),
+                    signal: AbortSignal.timeout(15000),
+                });
+
+                if (!response.ok) {
+                    console.error('Calendly token refresh failed:', response.status);
+                    return null;
+                }
+
+                const tokens = await response.json();
+                const expiresIn = typeof tokens.expires_in === 'number' ? tokens.expires_in : 7200;
+                const result = {
+                    accessToken: tokens.access_token,
+                    refreshToken: tokens.refresh_token,
+                    expiresAt: Date.now() + (expiresIn * 1000),
+                };
+
+                // Persist new tokens
+                if (updateTokens) {
+                    await updateTokens(result);
+                }
+
+                return result;
+            } catch (err) {
+                console.error('Calendly token refresh error:', err instanceof Error ? err.message : 'Unknown error');
+                return null;
+            } finally {
+                refreshPromise = null;
+            }
+        })();
+    }
+
+    const refreshed = await refreshPromise;
+    return refreshed?.accessToken || config.access_token;
 }

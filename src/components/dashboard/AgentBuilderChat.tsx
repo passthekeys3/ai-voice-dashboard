@@ -153,13 +153,13 @@ export function AgentBuilderChat({
                             </p>
                         </div>
 
-                        {/* Starter templates */}
+                        {/* Starter templates — last 2 hidden on mobile to keep input visible */}
                         <div className="w-full max-w-2xl grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {STARTER_PROMPTS.map((starter) => (
+                            {STARTER_PROMPTS.map((starter, i) => (
                                 <button
                                     key={starter.title}
                                     onClick={() => handleQuickAction(starter.prompt)}
-                                    className="w-full text-left p-3 rounded-xl border border-border hover:border-violet-500/50 hover:bg-violet-500/5 transition-all duration-200 group"
+                                    className={`w-full text-left p-3 rounded-xl border border-border hover:border-violet-500/50 hover:bg-violet-500/5 transition-all duration-200 group ${i >= 4 ? 'hidden sm:block' : ''}`}
                                 >
                                     <div className="flex items-center gap-2">
                                         <span className="text-base">{starter.icon}</span>

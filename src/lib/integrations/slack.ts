@@ -1,8 +1,9 @@
 /**
- * Slack Integration — Incoming Webhooks
+ * Slack Integration — OAuth + Incoming Webhooks
  *
  * Sends rich Block Kit notifications to Slack channels.
- * Uses Incoming Webhooks (no OAuth needed — user pastes webhook URL).
+ * Prefers OAuth access_token (chat.postMessage API) when available,
+ * falls back to Incoming Webhook URL.
  */
 
 // ============================================================================
@@ -197,6 +198,65 @@ export async function testSlackWebhook(
     };
 
     return sendSlackMessage(webhookUrl, payload);
+}
+
+/**
+ * Send a message via OAuth access_token using chat.postMessage API.
+ * Preferred over webhook URL when available — supports richer features.
+ */
+export async function sendSlackChatMessage(
+    accessToken: string,
+    channelId: string,
+    payload: SlackPayload,
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const response = await fetch('https://slack.com/api/chat.postMessage', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+                channel: channelId,
+                text: payload.text,
+                blocks: payload.blocks,
+            }),
+            signal: AbortSignal.timeout(10000),
+        });
+
+        const data = await response.json();
+
+        if (!data.ok) {
+            console.error('Slack chat.postMessage error:', data.error);
+            return { success: false, error: `Slack API error: ${data.error}` };
+        }
+
+        return { success: true };
+    } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return { success: false, error: `Slack API failed: ${message}` };
+    }
+}
+
+/**
+ * Send a Slack notification using the best available method.
+ * Prefers OAuth (chat.postMessage) > webhook URL.
+ */
+export async function sendSlackNotification(
+    config: { access_token?: string; webhook_url?: string; channel_id?: string },
+    payload: SlackPayload,
+): Promise<{ success: boolean; error?: string }> {
+    // Prefer OAuth access_token + channel_id
+    if (config.access_token && config.channel_id) {
+        return sendSlackChatMessage(config.access_token, config.channel_id, payload);
+    }
+
+    // Fall back to webhook URL
+    if (config.webhook_url) {
+        return sendSlackMessage(config.webhook_url, payload);
+    }
+
+    return { success: false, error: 'No Slack access token or webhook URL configured' };
 }
 
 /**

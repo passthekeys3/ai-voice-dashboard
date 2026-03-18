@@ -172,15 +172,22 @@ export interface AgencyIntegrations {
         webhook_signing_secret?: string; // HMAC-SHA256 secret for signing outbound webhooks
     };
     slack?: {
-        webhook_url?: string;
+        access_token?: string;    // Bot token from OAuth
+        webhook_url?: string;     // Incoming webhook URL (auto from OAuth)
         enabled?: boolean;
-        channel_name?: string;  // Display only, for user reference
+        channel_id?: string;      // Selected channel ID
+        channel_name?: string;    // Display name
+        team_name?: string;       // Workspace name
     };
     calendly?: {
-        api_token?: string;
+        access_token?: string;
+        refresh_token?: string;
+        expires_at?: number;
+        api_token?: string;                 // Legacy manual token (fallback)
         enabled?: boolean;
-        user_uri?: string;                  // Auto-populated on connect: https://api.calendly.com/users/XXXXX
+        user_uri?: string;                  // Auto-populated on connect
         default_event_type_uri?: string;    // Selected event type for booking
+        organization_uri?: string;          // Auto-populated on connect
     };
 }
 

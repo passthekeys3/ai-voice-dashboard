@@ -99,16 +99,23 @@ const INTEGRATIONS: IntegrationMeta[] = [
         name: 'Slack',
         description: 'Call notifications in Slack channels',
         icon: <MessageSquare className="h-4 w-4" />,
-        fields: [],
-        comingSoon: true,
+        fields: [
+            { name: 'channel_name', label: 'Channel', type: 'text', placeholder: 'Auto-populated from OAuth', description: 'The Slack channel receiving notifications.' },
+            { name: 'enabled', label: 'Enabled', type: 'toggle' },
+        ],
+        requiresOAuth: true,
+        oauthUrl: '/api/auth/slack',
     },
     {
         key: 'calendly',
         name: 'Calendly',
         description: 'Scheduling links and booking management',
         icon: <Calendar className="h-4 w-4" />,
-        fields: [],
-        comingSoon: true,
+        fields: [
+            { name: 'enabled', label: 'Enabled', type: 'toggle' },
+        ],
+        requiresOAuth: true,
+        oauthUrl: '/api/auth/calendly',
     },
 ];
 

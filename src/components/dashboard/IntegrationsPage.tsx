@@ -132,6 +132,9 @@ const integrations: Integration[] = [
         logo: <CalendlyLogo />,
         bgClassName: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
         comingSoon: false,
+        requiredFeature: 'crm_integrations',
+        oauthUrl: '/api/auth/calendly',
+        connectionKey: 'calendly',
         features: [
             'Create one-time booking links',
             'Check availability',
@@ -145,6 +148,9 @@ const integrations: Integration[] = [
         logo: <SlackLogo />,
         bgClassName: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400',
         comingSoon: false,
+        requiredFeature: 'crm_integrations',
+        oauthUrl: '/api/auth/slack',
+        connectionKey: 'slack',
         features: [
             'Call summary notifications',
             'Sentiment & score alerts',

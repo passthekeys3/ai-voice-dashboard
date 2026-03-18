@@ -193,12 +193,12 @@ export function AgentPreviewDemo() {
 
             {/* Starter chips */}
             {!showResults && (
-                <div className="flex flex-wrap gap-1.5 justify-center">
+                <div className="flex flex-wrap gap-1.5 justify-center px-1 overflow-x-auto">
                     {STARTER_PROMPTS.map((starter) => (
                         <button
                             key={starter.title}
                             onClick={() => handleStarterClick(starter.prompt)}
-                            className="px-3 py-1 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                            className="px-3 py-1 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors whitespace-nowrap shrink-0"
                         >
                             {starter.title}
                         </button>
