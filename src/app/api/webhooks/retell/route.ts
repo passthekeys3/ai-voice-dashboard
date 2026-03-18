@@ -151,28 +151,24 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ received: true });
             }
 
-            const { error: updateError } = await supabase
+            // Upsert instead of update — the call record may not exist yet
+            // (transcript_updated can arrive before call_started).
+            // Supabase .update() with no matching rows returns success (not an error),
+            // so we can't rely on error-based fallback.
+            await supabase
                 .from('calls')
-                .update({ transcript })
-                .eq('external_id', payload.call.call_id);
-
-            if (updateError) {
-                // Call record may not exist yet (race with call_started) — upsert minimal record
-                await supabase
-                    .from('calls')
-                    .upsert({
-                        agent_id: agent.id,
-                        client_id: agent.client_id,
-                        external_id: payload.call.call_id,
-                        provider: 'retell',
-                        status: 'in_progress',
-                        direction: payload.call.direction || 'outbound',
-                        transcript,
-                        from_number: payload.call.from_number,
-                        to_number: payload.call.to_number,
-                        started_at: new Date(payload.call.start_timestamp).toISOString(),
-                    }, { onConflict: 'external_id' });
-            }
+                .upsert({
+                    agent_id: agent.id,
+                    client_id: agent.client_id,
+                    external_id: payload.call.call_id,
+                    provider: 'retell',
+                    status: 'in_progress',
+                    direction: payload.call.direction || 'outbound',
+                    transcript,
+                    from_number: payload.call.from_number,
+                    to_number: payload.call.to_number,
+                    started_at: new Date(payload.call.start_timestamp).toISOString(),
+                }, { onConflict: 'external_id' });
 
             // Broadcast transcript update via Supabase Broadcast (not postgres_changes)
             // so frontend receives it instantly without RLS blocking the notification
