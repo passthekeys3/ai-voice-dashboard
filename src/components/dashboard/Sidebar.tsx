@@ -151,22 +151,19 @@ function SidebarContent({
             className="flex h-full w-full flex-col text-white relative overflow-hidden"
             style={{ backgroundColor: sidebarColor }}
         >
-            {/* Gradient overlay for texture */}
-            <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-transparent to-black/10 pointer-events-none" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent pointer-events-none" />
             {/* Logo */}
-            <div className="relative z-10 flex h-16 items-center px-6 border-b border-white/10 bg-gradient-to-r from-white/5 to-transparent">
+            <div className="relative z-10 flex h-16 items-center px-6 border-b border-white/10">
                 {branding?.logo_url ? (
                     <Image
                         src={branding.logo_url}
                         alt={displayName}
                         width={180}
                         height={32}
-                        className="max-w-[180px] object-contain drop-shadow-sm"
+                        className="max-w-[180px] object-contain"
                         unoptimized
                     />
                 ) : (
-                    <span className="text-xl font-bold truncate bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent drop-shadow-sm">{displayName}</span>
+                    <span className="text-xl font-bold truncate text-white">{displayName}</span>
                 )}
             </div>
 
@@ -211,7 +208,7 @@ function SidebarContent({
             </nav>
 
             {/* Docs & Logout */}
-            <div className="relative z-10 border-t border-white/10 p-3 bg-gradient-to-t from-black/10 to-transparent space-y-1">
+            <div className="relative z-10 border-t border-white/10 p-3 space-y-1">
                 <a
                     href="https://docs.buildvoiceai.com"
                     target="_blank"

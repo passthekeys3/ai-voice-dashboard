@@ -74,7 +74,7 @@ export function AgentBuilderVoiceCard({ voice, isSelected, onSelect }: AgentBuil
             onKeyDown={handleKeyDown}
             className={`w-full text-left flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 cursor-pointer ${
                 isSelected
-                    ? 'border-violet-500 bg-violet-500/10 ring-1 ring-violet-500/20'
+                    ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/20'
                     : 'border-border hover:border-violet-500/30 hover:bg-violet-500/5'
             }`}
         >

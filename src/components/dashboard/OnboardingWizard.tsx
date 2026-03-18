@@ -208,7 +208,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                 <Button variant="outline" className="flex-1 rounded-full" onClick={handleSkip}>
                                     Skip for now
                                 </Button>
-                                <Button className="flex-1 rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg" onClick={() => setStep('provider')}>
+                                <Button className="flex-1 rounded-full transition-colors" onClick={() => setStep('provider')}>
                                     Get started
                                     <ArrowRight className="h-4 w-4 ml-2" />
                                 </Button>
@@ -344,7 +344,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                     Back
                                 </Button>
                                 <Button
-                                    className="flex-1 rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+                                    className="flex-1 rounded-full transition-colors"
                                     onClick={handleSaveApiKey}
                                     disabled={saving || !apiKey.trim()}
                                 >
@@ -399,7 +399,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                                     Back
                                 </Button>
                                 <Button
-                                    className="flex-1 rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+                                    className="flex-1 rounded-full transition-colors"
                                     onClick={handleVerify}
                                     disabled={verifying || verified}
                                 >
@@ -434,7 +434,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <Button className="w-full rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg" size="lg" onClick={handleComplete}>
+                            <Button className="w-full rounded-full transition-colors" size="lg" onClick={handleComplete}>
                                 Go to Dashboard
                                 <ArrowRight className="h-4 w-4 ml-2" />
                             </Button>

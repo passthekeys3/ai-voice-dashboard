@@ -39,12 +39,7 @@ export default async function ExperimentsPage() {
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
                 <TierGate currentTier={currentTier} requiredFeature="experiments" label="A/B Experiments">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h2 className="text-2xl font-bold tracking-tight">A/B Experiments</h2>
-                            <p className="text-muted-foreground">
-                                Test different prompts to optimize agent performance
-                            </p>
-                        </div>
+                        <h2 className="text-2xl font-bold tracking-tight">A/B Experiments</h2>
                         <Button asChild>
                             <Link href="/experiments/new">
                                 <Plus className="mr-2 h-4 w-4" />

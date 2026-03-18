@@ -429,7 +429,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell', base
 
             {/* Vapi Call Control Panel — only visible for active Vapi calls */}
             {isVapiCall && (
-                <Card className="border-l-4 border-l-blue-500">
+                <Card className="border-l-4 border-l-slate-300 dark:border-l-slate-600">
                     <CardContent className="py-4">
                         <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
@@ -550,7 +550,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell', base
                                         <div className={`flex-1 max-w-[80%] rounded-lg p-3 ${line.speaker === 'agent'
                                             ? 'bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100'
                                             : 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100'
-                                            } ${line.isNew ? 'ring-2 ring-green-400 ring-opacity-50' : ''}`}>
+                                            } ${line.isNew ? 'ring-1 ring-border' : ''}`}>
                                             <p className="text-sm">{line.text}</p>
                                         </div>
                                     </div>
@@ -563,9 +563,9 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell', base
                                             <Bot className="h-4 w-4" />
                                         </div>
                                         <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 flex items-center gap-1">
-                                            <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                                            <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                                            <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                                            <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></span>
+                                            <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '150ms' }}></span>
+                                            <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></span>
                                         </div>
                                     </div>
                                 )}
@@ -577,9 +577,9 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell', base
                                     <p className="font-medium">Call in progress</p>
                                     <p className="text-sm mt-1">Waiting for conversation to begin...</p>
                                     <div className="flex justify-center gap-1 mt-4">
-                                        <span className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                                        <span className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                                        <span className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></span>
+                                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '150ms' }}></span>
+                                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></span>
                                     </div>
                                 </div>
                             </div>
