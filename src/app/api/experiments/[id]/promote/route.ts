@@ -64,10 +64,12 @@ export async function POST(
             return NextResponse.json({ error: 'Experiment not found' }, { status: 404 });
         }
 
-        // Guard: prevent re-promotion of completed experiments
-        if (experiment.status === 'completed') {
+        // Guard: only allow promotion from running or paused experiments
+        if (experiment.status !== 'running' && experiment.status !== 'paused') {
             return NextResponse.json(
-                { error: 'This experiment has already been completed. Cannot promote again.' },
+                { error: experiment.status === 'completed'
+                    ? 'This experiment has already been completed. Cannot promote again.'
+                    : 'Experiment must be running or paused to promote a winner.' },
                 { status: 400 }
             );
         }

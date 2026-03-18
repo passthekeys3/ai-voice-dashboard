@@ -145,8 +145,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             if (variant.prompt && variant.prompt.length > 50000) {
                 return NextResponse.json({ error: 'Variant prompt is too long' }, { status: 400 });
             }
-            if (variant.traffic_weight !== undefined && (typeof variant.traffic_weight !== 'number' || variant.traffic_weight < 0 || variant.traffic_weight > 100)) {
-                return NextResponse.json({ error: 'Traffic weight must be 0-100' }, { status: 400 });
+            if (variant.traffic_weight !== undefined && (typeof variant.traffic_weight !== 'number' || isNaN(variant.traffic_weight) || variant.traffic_weight < 0 || variant.traffic_weight > 100)) {
+                return NextResponse.json({ error: 'Traffic weight must be a number between 0 and 100' }, { status: 400 });
             }
             totalWeight += variant.traffic_weight ?? 0;
         }
@@ -154,6 +154,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         if (Math.abs(totalWeight - 100) > 0.01) {
             return NextResponse.json({
                 error: `Total traffic weight must equal 100% (currently ${totalWeight}%)`
+            }, { status: 400 });
+        }
+
+        // Enforce exactly one control variant
+        const controlVariants = variants.filter((v: { is_control?: boolean }) => v.is_control);
+        if (controlVariants.length !== 1) {
+            return NextResponse.json({
+                error: `Exactly one variant must be marked as control (found ${controlVariants.length})`
             }, { status: 400 });
         }
 
@@ -204,14 +212,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         const errors: string[] = [];
 
-        // Delete removed variants (only if experiment is not running to preserve data)
+        // Delete removed variants
         if (toDeleteIds.length > 0) {
-            if (experiment.status === 'running') {
-                return NextResponse.json({
-                    error: 'Cannot delete variants from a running experiment. Pause it first.'
-                }, { status: 400 });
-            }
-
             const { error: deleteErr } = await supabase
                 .from('experiment_variants')
                 .delete()
