@@ -3,7 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isClientUser } from '@/lib/auth';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 import { getBlandCall } from '@/lib/providers/bland';
-import { isValidUuid } from '@/lib/validation';
+import { isValidExternalId } from '@/lib/validation';
+import { parseTranscript } from '@/lib/utils/transcript';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id: callId } = await params;
-        if (!isValidUuid(callId)) {
+        if (!isValidExternalId(callId)) {
             return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
         }
         const providerHint = request.nextUrl.searchParams.get('provider') || 'retell';
@@ -283,25 +284,3 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 }
 
-// Parse Retell transcript format into structured lines
-function parseTranscript(transcript: string): { speaker: 'agent' | 'user'; text: string }[] {
-    if (!transcript) return [];
-
-    const lines: { speaker: 'agent' | 'user'; text: string }[] = [];
-
-    // Retell format: "Agent: Hello...\nUser: Hi...\n"
-    const parts = transcript.split('\n').filter(line => line.trim());
-
-    for (const part of parts) {
-        if (part.startsWith('Agent:')) {
-            lines.push({ speaker: 'agent', text: part.replace('Agent:', '').trim() });
-        } else if (part.startsWith('User:')) {
-            lines.push({ speaker: 'user', text: part.replace('User:', '').trim() });
-        } else if (lines.length > 0) {
-            // Continuation of previous line
-            lines[lines.length - 1].text += ' ' + part.trim();
-        }
-    }
-
-    return lines;
-}

@@ -41,11 +41,13 @@ export function ActiveCallsList({ basePath = '', canEndCalls = true }: ActiveCal
     const [loading, setLoading] = useState(true);
     const [ending, setEnding] = useState<string | null>(null);
     const [endConfirmCallId, setEndConfirmCallId] = useState<string | null>(null);
-    const [connectionStatus] = useState<ConnectionStatusType>({
-        connected: true,
+    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusType>({
+        connected: false,
         reconnecting: false,
     });
     const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const hasErrorToastRef = useRef(false);
+    const endedCallIdsRef = useRef<Set<string>>(new Set());
 
     const fetchActiveCalls = useCallback(async () => {
         try {
@@ -55,13 +57,34 @@ export function ActiveCallsList({ basePath = '', canEndCalls = true }: ActiveCal
             }
             const result = await response.json();
             if (result.data) {
-                setCalls(result.data);
+                // Filter out recently-ended calls to prevent zombie flicker
+                const filtered = (result.data as ActiveCall[]).filter(
+                    (c) => !endedCallIdsRef.current.has(c.id)
+                );
+                setCalls(filtered);
             }
+            // Mark connection as healthy on successful fetch
+            setConnectionStatus({
+                connected: true,
+                lastConnected: new Date(),
+                reconnecting: false,
+            });
+            // Clear error toast flag on success
+            hasErrorToastRef.current = false;
         } catch (err) {
             console.error('Failed to fetch active calls:', err);
-            toast.error('Failed to load active calls', {
-                description: 'Check your connection and try again',
-            });
+            setConnectionStatus(prev => ({
+                ...prev,
+                connected: false,
+                reconnecting: true,
+            }));
+            // Only show error toast once until connectivity is restored
+            if (!hasErrorToastRef.current) {
+                hasErrorToastRef.current = true;
+                toast.error('Failed to load active calls', {
+                    description: 'Check your connection and try again',
+                });
+            }
         } finally {
             setLoading(false);
         }
@@ -76,9 +99,9 @@ export function ActiveCallsList({ basePath = '', canEndCalls = true }: ActiveCal
             setCalls((prev) =>
                 prev.map((call) => ({
                     ...call,
-                    duration_seconds: Math.floor(
+                    duration_seconds: Math.max(0, Math.floor(
                         (Date.now() - new Date(call.started_at).getTime()) / 1000
-                    ),
+                    )),
                 }))
             );
         }, 1000);
@@ -96,6 +119,14 @@ export function ActiveCallsList({ basePath = '', canEndCalls = true }: ActiveCal
         };
     }, [fetchActiveCalls]);
 
+    // Clean up ended call IDs after 15 seconds (3 poll cycles)
+    useEffect(() => {
+        const cleanup = setInterval(() => {
+            endedCallIdsRef.current.clear();
+        }, 15000);
+        return () => clearInterval(cleanup);
+    }, []);
+
     const handleEndCall = async (callId: string) => {
         const call = calls.find((c) => c.id === callId);
         setEnding(callId);
@@ -105,6 +136,8 @@ export function ActiveCallsList({ basePath = '', canEndCalls = true }: ActiveCal
             if (!response.ok) {
                 throw new Error('Failed to end call');
             }
+            // Track ended call to prevent zombie flicker on next poll
+            endedCallIdsRef.current.add(callId);
             // Remove from list immediately for better UX
             setCalls((prev) => prev.filter((c) => c.id !== callId));
             toast.success('Call ended', {
@@ -123,9 +156,10 @@ export function ActiveCallsList({ basePath = '', canEndCalls = true }: ActiveCal
     };
 
     const formatDuration = (seconds: number) => {
-        const hours = Math.floor(seconds / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        const secs = Math.round(seconds % 60);
+        const safe = Math.max(0, seconds);
+        const hours = Math.floor(safe / 3600);
+        const mins = Math.floor((safe % 3600) / 60);
+        const secs = Math.round(safe % 60);
         if (hours > 0) return `${hours}h ${mins}m`;
         if (mins > 0) return `${mins}m ${secs}s`;
         return `${secs}s`;
@@ -165,6 +199,7 @@ export function ActiveCallsList({ basePath = '', canEndCalls = true }: ActiveCal
                         )}
                     </div>
                     <ConnectionStatus status={connectionStatus} />
+                    <span className="text-xs text-muted-foreground">Polling every 5s</span>
                 </div>
                 <Button variant="ghost" size="icon" onClick={fetchActiveCalls} title="Refresh" aria-label="Refresh active calls">
                     <RefreshCw className="h-4 w-4" />

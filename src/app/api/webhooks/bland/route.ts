@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { executeWorkflows } from '@/lib/workflows/executor';
-import { broadcastCallUpdate } from '@/lib/realtime/broadcast';
+import { broadcastCallUpdate, broadcastTranscriptUpdate } from '@/lib/realtime/broadcast';
 import { detectTimezone } from '@/lib/timezone/detector';
 import { accumulateUsage } from '@/lib/billing/usage';
 import { calculateCallScore, inferBasicSentiment } from '@/lib/scoring/call-score';
@@ -234,6 +234,15 @@ export async function POST(request: NextRequest) {
         if (error) {
             console.error('Error saving Bland call:', error.code);
             return NextResponse.json({ received: true });
+        }
+
+        // Broadcast transcript update for live transcript viewers
+        if (transcript) {
+            waitUntil(broadcastTranscriptUpdate({
+                _agencyId: agent.agency_id,
+                callId: payload.call_id,
+                transcript,
+            }));
         }
 
         // AI-powered call analysis (runs in background)

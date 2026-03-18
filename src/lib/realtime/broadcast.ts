@@ -37,11 +37,10 @@ export async function broadcastCallUpdate({
  * Used for real-time transcript streaming
  */
 export async function broadcastTranscriptUpdate({
-  _agencyId,
   callId,
   transcript,
 }: {
-  _agencyId: string;
+  _agencyId?: string; // Kept for backward compatibility with existing callers
   callId: string;
   transcript: string;
 }): Promise<void> {

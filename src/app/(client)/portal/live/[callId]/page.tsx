@@ -80,7 +80,7 @@ export default async function ClientLiveCallPage({
                     </div>
                 </div>
 
-                <LiveTranscript callId={callId} provider={provider || 'retell'} />
+                <LiveTranscript callId={callId} provider={provider || 'retell'} basePath="/portal" />
             </div>
         </div>
     );

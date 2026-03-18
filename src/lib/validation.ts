@@ -19,6 +19,16 @@ export function isValidUuid(value: string): boolean {
 }
 
 /**
+ * Validate that a string is a plausible external call/resource ID.
+ * Provider external IDs (Retell, Vapi, Bland) may not be UUIDs —
+ * they can be any alphanumeric string. This validates basic sanity
+ * (length, no injection characters) without enforcing UUID format.
+ */
+export function isValidExternalId(value: string): boolean {
+    return typeof value === 'string' && value.length > 0 && value.length < 200 && /^[a-zA-Z0-9_\-:.]+$/.test(value);
+}
+
+/**
  * Safely parse JSON from a request body.
  * Returns the parsed object on success, or a 400 NextResponse on malformed JSON.
  *

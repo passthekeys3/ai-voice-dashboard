@@ -11,7 +11,7 @@ import {
     withErrorHandling,
 } from '@/lib/api/response';
 import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
-import { isValidUuid } from '@/lib/validation';
+import { isValidExternalId } from '@/lib/validation';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -50,7 +50,7 @@ export const POST = withErrorHandling(async (
     }
 
     const { id: callId } = await context!.params;
-    if (!isValidUuid(callId)) {
+    if (!isValidExternalId(callId)) {
         return badRequest('Invalid ID format');
     }
     const body = await request.json();

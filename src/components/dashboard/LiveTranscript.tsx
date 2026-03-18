@@ -61,9 +61,11 @@ interface LiveCall {
 interface LiveTranscriptProps {
     callId: string;
     provider?: string;
+    /** Base path for navigation (e.g. "/portal" for client users) */
+    basePath?: string;
 }
 
-export function LiveTranscript({ callId, provider: providerProp = 'retell' }: LiveTranscriptProps) {
+export function LiveTranscript({ callId, provider: providerProp = 'retell', basePath = '' }: LiveTranscriptProps) {
     const router = useRouter();
     const [call, setCall] = useState<LiveCall | null>(null);
     const [loading, setLoading] = useState(true);
@@ -203,9 +205,9 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                 if (!prev || !prev.is_active) return prev;
                 return {
                     ...prev,
-                    duration_seconds: Math.floor(
+                    duration_seconds: Math.max(0, Math.floor(
                         (Date.now() - new Date(prev.started_at).getTime()) / 1000
-                    ),
+                    )),
                 };
             });
         }, 1000);
@@ -257,7 +259,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                 throw new Error('Failed to end call');
             }
             toast.success('Call ended');
-            router.push('/live');
+            router.push(`${basePath}/live`);
         } catch (err) {
             console.error('Failed to end call:', err);
             toast.error('Failed to end call. Please try again.');
@@ -318,9 +320,10 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
     };
 
     const formatDuration = (seconds: number) => {
-        const hours = Math.floor(seconds / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        const secs = Math.round(seconds % 60);
+        const safe = Math.max(0, seconds);
+        const hours = Math.floor(safe / 3600);
+        const mins = Math.floor((safe % 3600) / 60);
+        const secs = Math.round(safe % 60);
         if (hours > 0) return `${hours}h ${mins}m`;
         if (mins > 0) return `${mins}m ${secs}s`;
         return `${secs}s`;
@@ -343,7 +346,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell' }: Li
                     <p className="text-muted-foreground mb-4">
                         This call is no longer active
                     </p>
-                    <Button onClick={() => router.push('/live')}>
+                    <Button onClick={() => router.push(`${basePath}/live`)}>
                         Back to Live Calls
                     </Button>
                 </CardContent>
