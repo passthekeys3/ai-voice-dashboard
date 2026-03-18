@@ -1,19 +1,29 @@
+/**
+ * Retell Webhook Handler
+ *
+ * Processes 4 event types from Retell:
+ *   - call_started: call initiated → upsert + post-processing pipeline
+ *   - call_ended: call completed → upsert + post-processing pipeline
+ *   - call_analyzed: analysis ready → selective update (summary/sentiment only)
+ *   - transcript_updated: live transcript → upsert + broadcast
+ *
+ * Provider-specific logic (parsing, SDK signature, transcript format) stays here.
+ * Post-upsert processing is handled by the shared pipeline in lib/webhooks/post-process.ts.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
-import { executeWorkflows } from '@/lib/workflows/executor';
-import { broadcastCallUpdate, broadcastTranscriptUpdate } from '@/lib/realtime/broadcast';
-import { accumulateUsage } from '@/lib/billing/usage';
-import { calculateCallScore, inferBasicSentiment } from '@/lib/scoring/call-score';
+import { broadcastTranscriptUpdate } from '@/lib/realtime/broadcast';
 import { detectTimezone } from '@/lib/timezone/detector';
-import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-analyzer';
+import { calculateCallScore, inferBasicSentiment } from '@/lib/scoring/call-score';
 import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
-import { resolveIntegrations, createTokenRefreshCallback } from '@/lib/integrations/resolve';
-import { forwardToWebhook } from '@/lib/webhooks/forward';
 import { waitUntil } from '@vercel/functions';
-import type { Workflow } from '@/types';
+import { runPostProcessingPipeline, type ProcessedCall } from '@/lib/webhooks/post-process';
+import { MAX_TRANSCRIPT_LENGTH } from '@/lib/constants/config';
 import Retell from 'retell-sdk';
 
-// Retell webhook payload types
+// ── Payload Types ────────────────────────────────────────
+
 interface RetellWebhookPayload {
     event: 'call_started' | 'call_ended' | 'call_analyzed' | 'transcript_updated';
     call: {
@@ -39,20 +49,15 @@ interface RetellWebhookPayload {
         };
         metadata?: Record<string, unknown>;
     };
-    // transcript_with_tool_calls is at ROOT level (not inside call) for transcript_updated events
     transcript_with_tool_calls?: Array<{ role: string; content?: string; words?: unknown[] }>;
 }
 
-// Signature verification uses the official Retell SDK's Retell.verify()
-// to ensure compatibility with Retell's signature format.
+const ALLOWED_EVENTS = ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'] as const;
 
-// Max transcript length to store in DB (≈100k words — generous for any real call, prevents abuse)
-import { MAX_TRANSCRIPT_LENGTH } from '@/lib/constants/config';
-
+// ── Main Handler ─────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
     try {
-        // Get raw body for signature verification
         const rawBody = await request.text();
         const signature = request.headers.get('x-retell-signature');
 
@@ -64,8 +69,6 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ received: true });
         }
 
-        // Validate event type at runtime (TypeScript union doesn't enforce this)
-        const ALLOWED_EVENTS = ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'] as const;
         if (!ALLOWED_EVENTS.includes(payload.event as typeof ALLOWED_EVENTS[number])) {
             console.warn(`[RETELL WEBHOOK] Unknown event type: ${String(payload.event)}`);
             return NextResponse.json({ received: true });
@@ -73,10 +76,9 @@ export async function POST(request: NextRequest) {
 
         console.info(`[RETELL WEBHOOK] Received: event=${payload.event}, call=${payload.call.call_id}, agent=${payload.call.agent_id}`);
 
-        // Use service client for webhook operations (bypasses RLS)
         const supabase = createServiceClient();
 
-        // Find agent by external_id (include webhook_url and agency_id)
+        // ── Agent Lookup & Auth ──────────────────────────
         const { data: agent } = await supabase
             .from('agents')
             .select('id, name, client_id, agency_id, webhook_url')
@@ -89,21 +91,18 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ received: true });
         }
 
-        // Resolve API key (client key → agency key fallback)
         const resolvedKeys = await resolveProviderApiKeys(supabase, agent.agency_id, agent.client_id);
-        const retellApiKey = resolvedKeys.retell_api_key;
-
-        if (!retellApiKey) {
-            console.error('Retell API key not configured - cannot verify webhook signature');
+        if (!resolvedKeys.retell_api_key) {
+            console.error('Retell API key not configured');
             return NextResponse.json({ error: 'API key not configured' }, { status: 401 });
         }
 
-        if (!Retell.verify(rawBody, retellApiKey, signature || '')) {
+        if (!Retell.verify(rawBody, resolvedKeys.retell_api_key, signature || '')) {
             console.error(`[RETELL WEBHOOK] SIGNATURE REJECTED: event=${payload.event}, call=${payload.call.call_id}`);
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
-        // Deduplicate — atomic INSERT rejects duplicates via primary key constraint
+        // ── Dedup ────────────────────────────────────────
         const dedupKey = `retell:${payload.call.call_id}:${payload.event}`;
         const { error: dedupError } = await supabase
             .from('webhook_events')
@@ -113,670 +112,210 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ received: true });
         }
 
-        // Handle transcript_updated event — lightweight: just update DB transcript and return
+        // ── Transcript Updated ───────────────────────────
         if (payload.event === 'transcript_updated') {
-            let transcript: string | undefined;
-
-            // Primary: transcript_with_tool_calls at ROOT level of payload (NOT inside call).
-            // Retell sends this at payload.transcript_with_tool_calls for transcript_updated events.
-            // Contains array of utterances: {role: "agent"|"user", content: "...", words: [...]}
-            if (Array.isArray(payload.transcript_with_tool_calls) && payload.transcript_with_tool_calls.length > 0) {
-                transcript = payload.transcript_with_tool_calls
-                    .filter(item => (item.role === 'agent' || item.role === 'user') && item.content)
-                    .map(item => `${item.role === 'agent' ? 'Agent' : 'User'}: ${item.content}`)
-                    .join('\n');
-            }
-
-            // Fallback 1: transcript string in call (populated after call ends / final update)
-            if (!transcript) {
-                transcript = payload.call.transcript;
-            }
-
-            // Fallback 2: transcript_object array in call (populated after call ends)
-            if (!transcript && Array.isArray(payload.call.transcript_object)) {
-                transcript = payload.call.transcript_object
-                    .map(item => `${item.role === 'agent' ? 'Agent' : 'User'}: ${item.content}`)
-                    .join('\n');
-            }
-
-            // Cap transcript length to prevent oversized payloads
-            if (transcript && transcript.length > MAX_TRANSCRIPT_LENGTH) {
-                transcript = transcript.slice(0, MAX_TRANSCRIPT_LENGTH);
-            }
-
-            const twtcLen = Array.isArray(payload.transcript_with_tool_calls) ? payload.transcript_with_tool_calls.length : 0;
-            console.info(`[RETELL WEBHOOK] transcript_updated: call=${payload.call.call_id}, twtc_items=${twtcLen}, len=${transcript?.length || 0}`);
-
-            if (!transcript) {
-                return NextResponse.json({ received: true });
-            }
-
-            // Upsert instead of update — the call record may not exist yet
-            // (transcript_updated can arrive before call_started).
-            // Supabase .update() with no matching rows returns success (not an error),
-            // so we can't rely on error-based fallback.
-            await supabase
-                .from('calls')
-                .upsert({
-                    agent_id: agent.id,
-                    client_id: agent.client_id,
-                    external_id: payload.call.call_id,
-                    provider: 'retell',
-                    status: 'in_progress',
-                    direction: payload.call.direction || 'outbound',
-                    transcript,
-                    from_number: payload.call.from_number,
-                    to_number: payload.call.to_number,
-                    started_at: new Date(payload.call.start_timestamp).toISOString(),
-                }, { onConflict: 'external_id' });
-
-            // Broadcast transcript update via Supabase Broadcast (not postgres_changes)
-            // so frontend receives it instantly without RLS blocking the notification
-            waitUntil(
-                broadcastTranscriptUpdate({
-                    _agencyId: agent.agency_id,
-                    callId: payload.call.call_id,
-                    transcript,
-                }).catch(err => console.error('Failed to broadcast transcript update:', err instanceof Error ? err.message : 'Unknown error'))
-            );
-
-            return NextResponse.json({ received: true });
+            return handleTranscriptUpdated(supabase, payload, agent);
         }
 
-        // Handle call_analyzed separately — only update analysis fields, don't overwrite call data
+        // ── Call Analyzed (selective update only) ─────────
         if (payload.event === 'call_analyzed') {
-            const updateFields: Record<string, unknown> = {};
-            if (payload.call.call_analysis?.call_summary) {
-                updateFields.summary = payload.call.call_analysis.call_summary;
-            }
-            if (payload.call.call_analysis?.user_sentiment) {
-                updateFields.sentiment = payload.call.call_analysis.user_sentiment;
-            }
-            if (payload.call.transcript) {
-                updateFields.transcript = payload.call.transcript.slice(0, MAX_TRANSCRIPT_LENGTH);
-            }
-            if (payload.call.recording_url) {
-                updateFields.audio_url = payload.call.recording_url;
-            }
-
-            if (Object.keys(updateFields).length > 0) {
-                const { error: analyzeError } = await supabase
-                    .from('calls')
-                    .update(updateFields)
-                    .eq('external_id', payload.call.call_id);
-
-                if (analyzeError) {
-                    console.error('Error updating call_analyzed:', analyzeError.code);
-                }
-            }
-
-            return NextResponse.json({ received: true });
+            return handleCallAnalyzed(supabase, payload);
         }
 
+        // ── Call Started / Ended: Parse & Upsert ─────────
+        const direction = payload.call.direction || 'outbound';
         const durationSeconds = payload.call.end_timestamp && payload.call.start_timestamp
             ? Math.round((payload.call.end_timestamp - payload.call.start_timestamp) / 1000)
             : 0;
 
-        let status: string = 'queued';
-        if (payload.call.call_status === 'ended') status = 'completed';
-        else if (payload.call.call_status === 'error') status = 'failed';
-        else if (payload.call.call_status === 'ongoing') status = 'in_progress';
-
-        // Retell combined_cost is already in cents
+        const status = mapRetellStatus(payload.call.call_status);
         const costCents = Math.round(payload.call.call_cost?.combined_cost || 0);
-
-        const direction = payload.call.direction || 'outbound';
-
-        // Check for A/B experiment metadata (injected by traffic splitting at call initiation)
-        let experimentId: string | null = null;
-        let variantId: string | null = null;
-        if (payload.call.metadata?.experiment_id && payload.call.metadata?.variant_id) {
-            experimentId = payload.call.metadata.experiment_id as string;
-            variantId = payload.call.metadata.variant_id as string;
-        }
-
-        // Cap transcript length
         const callTranscript = payload.call.transcript?.slice(0, MAX_TRANSCRIPT_LENGTH);
 
-        // Use Retell's native sentiment if available, otherwise infer from transcript
         const nativeSentiment = payload.call.call_analysis?.user_sentiment;
         const sentiment = nativeSentiment
             || (status === 'completed' && callTranscript ? inferBasicSentiment(callTranscript) : null)
             || null;
 
-        // Calculate deterministic call quality score (consistent with Vapi/Bland)
         const callScore = status === 'completed' ? calculateCallScore({
             sentiment: sentiment || undefined,
             durationSeconds,
             status,
         }) : null;
 
-        // Detect lead timezone from phone number
-        const leadPhone = direction === 'inbound'
-            ? payload.call.from_number
-            : payload.call.to_number;
+        const leadPhone = direction === 'inbound' ? payload.call.from_number : payload.call.to_number;
         const leadTimezone = leadPhone ? detectTimezone(leadPhone) : null;
 
-        // Upsert call
+        const experimentId = (payload.call.metadata?.experiment_id as string) || null;
+        const variantId = (payload.call.metadata?.variant_id as string) || null;
+
+        // Upsert call record
         const { error } = await supabase
             .from('calls')
-            .upsert(
-                {
-                    agent_id: agent.id,
-                    client_id: agent.client_id,
-                    external_id: payload.call.call_id,
-                    provider: 'retell',
-                    status,
-                    direction,
-                    duration_seconds: durationSeconds,
-                    cost_cents: costCents,
-                    from_number: payload.call.from_number,
-                    to_number: payload.call.to_number,
-                    transcript: callTranscript,
-                    audio_url: payload.call.recording_url,
-                    summary: payload.call.call_analysis?.call_summary,
-                    sentiment,
-                    call_score: callScore,
-                    started_at: new Date(payload.call.start_timestamp).toISOString(),
-                    ended_at: payload.call.end_timestamp
-                        ? new Date(payload.call.end_timestamp).toISOString()
-                        : null,
-                    metadata: {
-                        ...(payload.call.metadata || {}),
-                        ...(payload.call.call_cost?.product_costs ? { cost_breakdown: payload.call.call_cost.product_costs } : {}),
-                    },
-                    experiment_id: experimentId,
-                    variant_id: variantId,
-                    lead_timezone: leadTimezone,
-                },
-                { onConflict: 'external_id' }
-            );
-
-        if (error) {
-            console.error('Error saving Retell call:', error.code);
-            // Return 200 to prevent webhook retry storms — log for internal investigation
-            return NextResponse.json({ received: true });
-        }
-
-        // AI-powered call analysis (runs in background, gated behind per-client opt-in)
-        if (status === 'completed' && callTranscript) {
-            waitUntil((async () => {
-                try {
-                    // Check if client has AI analysis enabled
-                    let aiEnabled = false;
-                    if (agent.client_id) {
-                        const { data: clientRow } = await supabase
-                            .from('clients')
-                            .select('ai_call_analysis')
-                            .eq('id', agent.client_id)
-                            .single();
-                        aiEnabled = !!clientRow?.ai_call_analysis;
-                    }
-
-                    if (!shouldAnalyzeCall(aiEnabled, durationSeconds, callTranscript.length)) {
-                        return;
-                    }
-
-                    const analysis = await analyzeCallTranscript(callTranscript, agent.name);
-                    if (analysis) {
-                        // Fetch current metadata to avoid overwriting enriched fields
-                        const { data: currentCall } = await supabase
-                            .from('calls')
-                            .select('metadata')
-                            .eq('external_id', payload.call.call_id)
-                            .single();
-
-                        // Update the call record with AI-enriched fields
-                        // Preserve deterministic call_score — store AI lead_score in metadata only
-                        const { error: updateError } = await supabase
-                            .from('calls')
-                            .update({
-                                sentiment: analysis.sentiment,
-                                summary: analysis.summary,
-                                topics: analysis.topics,
-                                objections: analysis.objections,
-                                metadata: {
-                                    ...((currentCall?.metadata as Record<string, unknown>) || {}),
-                                    ai_analysis: {
-                                        sentiment_score: analysis.sentiment_score,
-                                        action_items: analysis.action_items,
-                                        call_outcome: analysis.call_outcome,
-                                        lead_score: analysis.lead_score,
-                                        analyzed_at: new Date().toISOString(),
-                                    },
-                                },
-                            })
-                            .eq('external_id', payload.call.call_id);
-
-                        if (updateError) {
-                            console.error('Failed to update call with AI analysis:', updateError.code);
-                        }
-
-                        // Increment agency AI analysis counter for usage tracking
-                        await supabase.rpc('increment_ai_analysis_count', { agency_id_input: agent.agency_id });
-                    }
-                } catch (err) {
-                    console.error('AI call analysis error (Retell):', err instanceof Error ? err.message : 'Unknown error');
-                }
-            })());
-        }
-
-        // Broadcast real-time update to connected clients
-        waitUntil(broadcastCallUpdate({
-            agencyId: agent.agency_id,
-            event: payload.event === 'call_started' ? 'call:started'
-                 : payload.event === 'call_ended' ? 'call:ended'
-                 : 'call:updated',
-            call: {
-                call_id: payload.call.call_id,
+            .upsert({
+                agent_id: agent.id,
+                client_id: agent.client_id,
                 external_id: payload.call.call_id,
-                agent_id: agent.id,
-                agent_name: agent.name,
-                status: status as 'queued' | 'in_progress' | 'completed' | 'failed',
-                direction: (payload.call.direction || 'outbound') as 'inbound' | 'outbound',
-                from_number: payload.call.from_number,
-                to_number: payload.call.to_number,
-                started_at: new Date(payload.call.start_timestamp).toISOString(),
-                ended_at: payload.call.end_timestamp
-                    ? new Date(payload.call.end_timestamp).toISOString()
-                    : undefined,
-                duration_seconds: durationSeconds,
-                transcript: callTranscript,
-                cost_cents: costCents,
-                summary: payload.call.call_analysis?.call_summary,
-                sentiment: payload.call.call_analysis?.user_sentiment,
-            },
-        }).catch(err => console.error('Failed to broadcast call update:', err instanceof Error ? err.message : 'Unknown error')));
-
-        // ======================================
-        // Inbound Receptionist: call_started
-        // ======================================
-        if (payload.event === 'call_started' && direction === 'inbound') {
-            // Use waitUntil to ensure inbound processing completes after response
-            waitUntil((async () => {
-                try {
-                    const { integrations: resolvedIntegrations, source: integrationSource } = await resolveIntegrations(supabase, agent.agency_id, agent.client_id);
-
-                    const ghlInteg = resolvedIntegrations.ghl;
-                    const ghlEnabled = ghlInteg?.enabled && (ghlInteg.api_key || ghlInteg.access_token);
-                    const hubspotEnabled = resolvedIntegrations.hubspot?.enabled && resolvedIntegrations.hubspot.access_token;
-
-                    // Resolve GHL config once (shared between upsert + workflow)
-                    let resolvedGhlConfig: { apiKey: string; locationId: string } | undefined;
-                    if (ghlEnabled) {
-                        if (ghlInteg!.auth_method === 'oauth' && ghlInteg!.access_token) {
-                            const { getValidAccessToken: getGHLToken } = await import('@/lib/integrations/ghl');
-                            const validToken = await getGHLToken(ghlInteg!, createTokenRefreshCallback(
-                                supabase, agent.agency_id, agent.client_id, 'ghl', integrationSource.ghl ?? 'agency',
-                            ));
-                            if (validToken) resolvedGhlConfig = { apiKey: validToken, locationId: ghlInteg!.location_id || '' };
-                        } else if (ghlInteg!.api_key) {
-                            resolvedGhlConfig = { apiKey: ghlInteg!.api_key, locationId: ghlInteg!.location_id || '' };
-                        }
-                    }
-
-                    // Resolve HubSpot config once (shared between upsert + workflow)
-                    let resolvedHubspotConfig: { accessToken: string } | undefined;
-                    if (hubspotEnabled) {
-                        const { getValidAccessToken: getHubSpotToken } = await import('@/lib/integrations/hubspot');
-                        const validToken = await getHubSpotToken(resolvedIntegrations.hubspot!, createTokenRefreshCallback(
-                            supabase, agent.agency_id, agent.client_id, 'hubspot', integrationSource.hubspot ?? 'agency',
-                        ));
-                        if (validToken) resolvedHubspotConfig = { accessToken: validToken };
-                    }
-
-                    // Auto-create/lookup GHL contact for inbound callers
-                    if (resolvedGhlConfig && payload.call.from_number) {
-                        const { upsertContact } = await import('@/lib/integrations/ghl');
-                        await upsertContact(resolvedGhlConfig, payload.call.from_number, {
-                            source: 'BuildVoiceAI Inbound Call',
-                            tags: ['inbound-call', 'ai-receptionist'],
-                        });
-                    }
-
-                    // Auto-create/lookup HubSpot contact for inbound callers
-                    if (resolvedHubspotConfig && payload.call.from_number) {
-                        const { upsertContact: hsUpsertContact } = await import('@/lib/integrations/hubspot');
-                        await hsUpsertContact(resolvedHubspotConfig, payload.call.from_number, {
-                            source: 'BuildVoiceAI Inbound Call',
-                            tags: ['inbound-call', 'ai-receptionist'],
-                        });
-                    }
-
-                    // Execute inbound_call_started workflows
-                    const { data: inboundWorkflows } = await supabase
-                        .from('workflows')
-                        .select('*')
-                        .eq('agency_id', agent.agency_id)
-                        .eq('trigger', 'inbound_call_started')
-                        .eq('is_active', true)
-                        .or(`agent_id.is.null,agent_id.eq.${agent.id}`);
-
-                    if (inboundWorkflows && inboundWorkflows.length > 0) {
-                        const callData = {
-                            call_id: payload.call.call_id,
-                            agent_id: agent.id,
-                            agent_name: agent.name,
-                            status,
-                            direction,
-                            duration_seconds: 0,
-                            cost_cents: 0,
-                            from_number: payload.call.from_number,
-                            to_number: payload.call.to_number,
-                            started_at: new Date(payload.call.start_timestamp).toISOString(),
-                            metadata: payload.call.metadata,
-                        };
-
-                        // Refresh Google Calendar token if expired before passing to executor
-                        let gcalConfig: { accessToken: string; calendarId: string } | undefined;
-                        if (resolvedIntegrations.google_calendar?.enabled && resolvedIntegrations.google_calendar.access_token) {
-                            const { getValidAccessToken: getGCalToken } = await import('@/lib/integrations/gcal');
-                            const validToken = await getGCalToken(resolvedIntegrations.google_calendar, createTokenRefreshCallback(
-                                supabase, agent.agency_id, agent.client_id, 'google_calendar', integrationSource.google_calendar ?? 'agency',
-                            ));
-                            if (validToken) {
-                                gcalConfig = {
-                                    accessToken: validToken,
-                                    calendarId: resolvedIntegrations.google_calendar.default_calendar_id || 'primary',
-                                };
-                            }
-                        }
-
-                        // Inject Slack webhook URL into metadata for executor fallback
-                        if (resolvedIntegrations.slack?.enabled && resolvedIntegrations.slack.webhook_url) {
-                            callData.metadata = { ...callData.metadata, slack_webhook_url: resolvedIntegrations.slack.webhook_url };
-                        }
-
-                        // Resolve Calendly config
-                        const inboundCalendlyConfig = resolvedIntegrations.calendly?.enabled && resolvedIntegrations.calendly.api_token
-                            ? { apiToken: resolvedIntegrations.calendly.api_token, userUri: resolvedIntegrations.calendly.user_uri || '', defaultEventTypeUri: resolvedIntegrations.calendly.default_event_type_uri }
-                            : undefined;
-
-                        const results = await executeWorkflows(inboundWorkflows as Workflow[], callData, resolvedGhlConfig, resolvedHubspotConfig, gcalConfig, inboundCalendlyConfig, {
-                            supabase,
-                            agencyId: agent.agency_id,
-                        });
-                        for (const result of results) {
-                            if (result.actions_failed > 0) {
-                                console.error(`Inbound workflow "${result.workflow_name}" errors:`, result.errors);
-                            }
-                        }
-                    }
-                } catch (err) {
-                    console.error('Inbound call_started processing error:', err instanceof Error ? err.message : 'Unknown error');
-                }
-            })());
-        }
-
-        // Forward to agent's webhook if configured (call_started + call_ended)
-        const isRetellCallStarted = payload.event === 'call_started';
-        const isRetellCallEnded = payload.event === 'call_ended';
-        const retellDirection = payload.call.direction || 'outbound';
-
-        if (agent.webhook_url && (isRetellCallStarted || isRetellCallEnded)) {
-            const webhookPayload: Record<string, unknown> = {
-                event: isRetellCallStarted ? 'call_started' : 'call_ended',
-                call_id: payload.call.call_id,
-                agent_id: agent.id,
-                agent_name: agent.name,
+                provider: 'retell',
                 status,
-                direction: retellDirection,
+                direction,
                 duration_seconds: durationSeconds,
                 cost_cents: costCents,
                 from_number: payload.call.from_number,
                 to_number: payload.call.to_number,
-                ...(isRetellCallEnded ? {
-                    transcript: callTranscript,
-                    recording_url: payload.call.recording_url,
-                    summary: payload.call.call_analysis?.call_summary,
-                    sentiment: payload.call.call_analysis?.user_sentiment,
-                } : {}),
+                transcript: callTranscript,
+                audio_url: payload.call.recording_url,
+                summary: payload.call.call_analysis?.call_summary,
+                sentiment,
+                call_score: callScore,
                 started_at: new Date(payload.call.start_timestamp).toISOString(),
                 ended_at: payload.call.end_timestamp
                     ? new Date(payload.call.end_timestamp).toISOString()
                     : null,
-                metadata: payload.call.metadata,
-                provider: 'retell',
-            };
+                metadata: {
+                    ...(payload.call.metadata || {}),
+                    ...(payload.call.call_cost?.product_costs ? { cost_breakdown: payload.call.call_cost.product_costs } : {}),
+                },
+                experiment_id: experimentId,
+                variant_id: variantId,
+                lead_timezone: leadTimezone,
+            }, { onConflict: 'external_id' });
 
-            waitUntil(forwardToWebhook(supabase, {
-                webhookUrl: agent.webhook_url,
-                payload: webhookPayload,
-                agencyId: agent.agency_id,
-                callId: payload.call.call_id,
-                event: isRetellCallStarted ? 'call_started' : 'call_ended',
-            }));
+        if (error) {
+            console.error('Error saving Retell call:', error.code);
+            return NextResponse.json({ received: true });
         }
 
-        // Accumulate usage for per-minute billing (client-level)
-        if (payload.event === 'call_ended' && status === 'completed' && agent.client_id && durationSeconds > 0) {
-            waitUntil((async () => {
-                try {
-                    const { data: client } = await supabase
-                        .from('clients')
-                        .select('billing_type, billing_amount_cents')
-                        .eq('id', agent.client_id)
-                        .single();
+        // ── Post-Processing Pipeline ─────────────────────
+        const isCallStarted = payload.event === 'call_started';
+        const isCallEnded = payload.event === 'call_ended';
 
-                    if (client?.billing_type === 'per_minute' && client.billing_amount_cents != null) {
-                        const minutes = durationSeconds / 60;
-                        const billableCostCents = Math.ceil(minutes * (client.billing_amount_cents || 0));
-                        await accumulateUsage(supabase, {
-                            clientId: agent.client_id!,
-                            durationSeconds,
-                            costCents: billableCostCents,
-                        });
-                    }
-                } catch (err) {
-                    console.error('Failed to accumulate usage for Retell call:', err instanceof Error ? err.message : 'Unknown error');
-                }
-            })());
-        }
+        const processedCall: ProcessedCall = {
+            callId: payload.call.call_id,
+            agentId: agent.id,
+            agentName: agent.name,
+            agencyId: agent.agency_id,
+            clientId: agent.client_id,
+            provider: 'retell',
+            status,
+            direction: direction as 'inbound' | 'outbound',
+            durationSeconds,
+            costCents,
+            fromNumber: payload.call.from_number,
+            toNumber: payload.call.to_number,
+            startedAt: new Date(payload.call.start_timestamp).toISOString(),
+            endedAt: payload.call.end_timestamp
+                ? new Date(payload.call.end_timestamp).toISOString()
+                : undefined,
+            transcript: callTranscript,
+            recordingUrl: payload.call.recording_url,
+            summary: payload.call.call_analysis?.call_summary,
+            sentiment: sentiment || undefined,
+            metadata: payload.call.metadata,
+            isCallStarted,
+            isCallEnded,
+            agentWebhookUrl: agent.webhook_url,
+            resolvedKeySource: resolvedKeys.source as Record<string, string>,
+        };
 
-        // Report platform-key metered usage to Stripe (agency-level billing for using our API keys)
-        if (payload.event === 'call_ended' && status === 'completed' && durationSeconds > 0 && resolvedKeys.source.retell === 'platform') {
-            waitUntil((async () => {
-                try {
-                    const { data: agencyRow } = await supabase
-                        .from('agencies')
-                        .select('stripe_customer_id')
-                        .eq('id', agent.agency_id)
-                        .single();
-
-                    if (agencyRow?.stripe_customer_id) {
-                        const { reportMeteredUsage } = await import('@/lib/billing/metered');
-                        await reportMeteredUsage({
-                            stripeCustomerId: agencyRow.stripe_customer_id,
-                            minutes: durationSeconds / 60,
-                            timestamp: Math.floor((payload.call.end_timestamp || Date.now()) / 1000),
-                            identifier: `retell_call_${payload.call.call_id}`,
-                        });
-                    }
-                } catch (err) {
-                    console.error('Failed to report metered usage for Retell call:', err instanceof Error ? err.message : 'Unknown error');
-                }
-            })());
-        }
-
-        // Execute workflows if call ended
-        // NOTE: Agency lookup and integration config resolution below run before the response,
-        // but executeWorkflows itself is wrapped in waitUntil to guarantee completion after response.
-        // Moving the entire block into waitUntil would be ideal but risks subtle breakage
-        // since the response depends on none of these operations failing with an unhandled exception.
-        // Forward call_started to client/agency API webhook
-        if (isRetellCallStarted) {
-            waitUntil((async () => {
-                try {
-                    const { integrations: startedIntegrations } = await resolveIntegrations(supabase, agent.agency_id, agent.client_id);
-                    if (startedIntegrations.api?.enabled && startedIntegrations.api.webhook_url) {
-                        const startedEvent = retellDirection === 'inbound' ? 'inbound_call_started' : 'call_started';
-                        await forwardToWebhook(supabase, {
-                            webhookUrl: startedIntegrations.api.webhook_url,
-                            payload: {
-                                event: startedEvent,
-                                call_id: payload.call.call_id,
-                                agent_id: agent.id,
-                                agent_name: agent.name,
-                                status,
-                                direction: retellDirection,
-                                from_number: payload.call.from_number,
-                                to_number: payload.call.to_number,
-                                started_at: new Date(payload.call.start_timestamp).toISOString(),
-                                metadata: payload.call.metadata,
-                                provider: 'retell',
-                            },
-                            signingSecret: startedIntegrations.api.webhook_signing_secret,
-                            agencyId: agent.agency_id,
-                            callId: payload.call.call_id,
-                            event: startedEvent,
-                        });
-                    }
-                } catch (err) {
-                    console.error('Retell call_started webhook forwarding error:', err instanceof Error ? err.message : 'Unknown error');
-                }
-            })());
-        }
-
-        if (payload.event === 'call_ended') {
-            // Resolve integrations (client overrides → agency fallback)
-            const { integrations: resolvedIntegrations, source: integrationSource } = await resolveIntegrations(supabase, agent.agency_id, agent.client_id);
-
-            // Forward to client/agency webhook URL (API integration setting)
-            // Fires independently from the per-agent webhook — both can trigger for the same call.
-            if (resolvedIntegrations.api?.enabled && resolvedIntegrations.api.webhook_url) {
-                const endedEvent = retellDirection === 'inbound' ? 'inbound_call_ended' : 'call_ended';
-                const clientWebhookPayload = {
-                    event: endedEvent,
-                    call_id: payload.call.call_id,
-                    agent_id: agent.id,
-                    agent_name: agent.name,
-                    status,
-                    direction: retellDirection,
-                    duration_seconds: durationSeconds,
-                    cost_cents: costCents,
-                    from_number: payload.call.from_number,
-                    to_number: payload.call.to_number,
-                    transcript: callTranscript,
-                    recording_url: payload.call.recording_url,
-                    summary: payload.call.call_analysis?.call_summary,
-                    sentiment: payload.call.call_analysis?.user_sentiment,
-                    started_at: new Date(payload.call.start_timestamp).toISOString(),
-                    ended_at: payload.call.end_timestamp
-                        ? new Date(payload.call.end_timestamp).toISOString()
-                        : null,
-                    metadata: payload.call.metadata,
-                    provider: 'retell',
-                };
-                waitUntil(forwardToWebhook(supabase, {
-                    webhookUrl: resolvedIntegrations.api.webhook_url,
-                    payload: clientWebhookPayload,
-                    signingSecret: resolvedIntegrations.api.webhook_signing_secret,
-                    agencyId: agent.agency_id,
-                    callId: payload.call.call_id,
-                    event: endedEvent,
-                }));
-            }
-
-            // Fetch matching workflows (both generic call_ended AND direction-specific inbound_call_ended)
-            const triggers = ['call_ended'];
-            if (direction === 'inbound') {
-                triggers.push('inbound_call_ended');
-            }
-
-            const { data: workflows } = await supabase
-                .from('workflows')
-                .select('*')
-                .eq('agency_id', agent.agency_id)
-                .in('trigger', triggers)
-                .eq('is_active', true)
-                .or(`agent_id.is.null,agent_id.eq.${agent.id}`);
-
-            if (workflows && workflows.length > 0) {
-                const callData = {
-                    call_id: payload.call.call_id,
-                    agent_id: agent.id,
-                    agent_name: agent.name,
-                    status,
-                    direction: payload.call.direction || 'outbound',
-                    duration_seconds: durationSeconds,
-                    cost_cents: costCents,
-                    from_number: payload.call.from_number,
-                    to_number: payload.call.to_number,
-                    transcript: callTranscript,
-                    recording_url: payload.call.recording_url,
-                    summary: payload.call.call_analysis?.call_summary,
-                    sentiment: payload.call.call_analysis?.user_sentiment,
-                    started_at: new Date(payload.call.start_timestamp).toISOString(),
-                    ended_at: payload.call.end_timestamp
-                        ? new Date(payload.call.end_timestamp).toISOString()
-                        : undefined,
-                    metadata: payload.call.metadata,
-                };
-
-                // Resolve GHL config with OAuth token refresh if needed
-                const ghlInteg = resolvedIntegrations.ghl;
-                let ghlConfig: { apiKey: string; locationId: string } | undefined;
-                if (ghlInteg?.enabled) {
-                    if (ghlInteg.auth_method === 'oauth' && ghlInteg.access_token) {
-                        const { getValidAccessToken: getGHLToken } = await import('@/lib/integrations/ghl');
-                        const validToken = await getGHLToken(ghlInteg, createTokenRefreshCallback(
-                            supabase, agent.agency_id, agent.client_id, 'ghl', integrationSource.ghl ?? 'agency',
-                        ));
-                        if (validToken) ghlConfig = { apiKey: validToken, locationId: ghlInteg.location_id || '' };
-                    } else if (ghlInteg.api_key) {
-                        ghlConfig = { apiKey: ghlInteg.api_key, locationId: ghlInteg.location_id || '' };
-                    }
-                }
-
-                // Refresh HubSpot token if expired before passing to executor
-                let hubspotConfig: { accessToken: string } | undefined;
-                if (resolvedIntegrations.hubspot?.enabled && resolvedIntegrations.hubspot.access_token) {
-                    const { getValidAccessToken: getHubSpotToken } = await import('@/lib/integrations/hubspot');
-                    const validToken = await getHubSpotToken(resolvedIntegrations.hubspot, createTokenRefreshCallback(
-                        supabase, agent.agency_id, agent.client_id, 'hubspot', integrationSource.hubspot ?? 'agency',
-                    ));
-                    if (validToken) hubspotConfig = { accessToken: validToken };
-                }
-
-                // Refresh Google Calendar token if expired before passing to executor
-                let gcalConfig: { accessToken: string; calendarId: string } | undefined;
-                if (resolvedIntegrations.google_calendar?.enabled && resolvedIntegrations.google_calendar.access_token) {
-                    const { getValidAccessToken: getGCalToken } = await import('@/lib/integrations/gcal');
-                    const validToken = await getGCalToken(resolvedIntegrations.google_calendar, createTokenRefreshCallback(
-                        supabase, agent.agency_id, agent.client_id, 'google_calendar', integrationSource.google_calendar ?? 'agency',
-                    ));
-                    if (validToken) {
-                        gcalConfig = {
-                            accessToken: validToken,
-                            calendarId: resolvedIntegrations.google_calendar.default_calendar_id || 'primary',
-                        };
-                    }
-                }
-
-                // Inject Slack webhook URL into metadata for executor fallback
-                if (resolvedIntegrations.slack?.enabled && resolvedIntegrations.slack.webhook_url) {
-                    callData.metadata = { ...callData.metadata, slack_webhook_url: resolvedIntegrations.slack.webhook_url };
-                }
-
-                // Resolve Calendly config
-                const calendlyConfig = resolvedIntegrations.calendly?.enabled && resolvedIntegrations.calendly.api_token
-                    ? { apiToken: resolvedIntegrations.calendly.api_token, userUri: resolvedIntegrations.calendly.user_uri || '', defaultEventTypeUri: resolvedIntegrations.calendly.default_event_type_uri }
-                    : undefined;
-
-                // Execute workflows with waitUntil to guarantee completion after response
-                waitUntil(
-                    executeWorkflows(workflows as Workflow[], callData, ghlConfig, hubspotConfig, gcalConfig, calendlyConfig, {
-                        supabase,
-                        agencyId: agent.agency_id,
-                    })
-                );
-            }
-        }
+        runPostProcessingPipeline(supabase, processedCall);
 
         return NextResponse.json({ received: true });
     } catch (error) {
         console.error('Retell webhook error:', error instanceof Error ? error.message : 'Unknown error');
-        // Return 200 to prevent webhook retry storms — log for internal investigation
         return NextResponse.json({ received: true });
     }
+}
+
+// ── Helper: Transcript Updated ───────────────────────────
+
+async function handleTranscriptUpdated(
+    supabase: ReturnType<typeof createServiceClient>,
+    payload: RetellWebhookPayload,
+    agent: { id: string; agency_id: string; client_id: string | null },
+) {
+    let transcript: string | undefined;
+
+    // Primary: transcript_with_tool_calls at ROOT level
+    if (Array.isArray(payload.transcript_with_tool_calls) && payload.transcript_with_tool_calls.length > 0) {
+        transcript = payload.transcript_with_tool_calls
+            .filter(item => (item.role === 'agent' || item.role === 'user') && item.content)
+            .map(item => `${item.role === 'agent' ? 'Agent' : 'User'}: ${item.content}`)
+            .join('\n');
+    }
+
+    // Fallback: transcript string or transcript_object in call
+    if (!transcript) transcript = payload.call.transcript;
+    if (!transcript && Array.isArray(payload.call.transcript_object)) {
+        transcript = payload.call.transcript_object
+            .map(item => `${item.role === 'agent' ? 'Agent' : 'User'}: ${item.content}`)
+            .join('\n');
+    }
+
+    if (transcript && transcript.length > MAX_TRANSCRIPT_LENGTH) {
+        transcript = transcript.slice(0, MAX_TRANSCRIPT_LENGTH);
+    }
+
+    if (!transcript) {
+        return NextResponse.json({ received: true });
+    }
+
+    // Upsert (not just update) — call record may not exist yet
+    await supabase
+        .from('calls')
+        .upsert({
+            agent_id: agent.id,
+            client_id: agent.client_id,
+            external_id: payload.call.call_id,
+            provider: 'retell',
+            status: 'in_progress',
+            direction: payload.call.direction || 'outbound',
+            transcript,
+            from_number: payload.call.from_number,
+            to_number: payload.call.to_number,
+            started_at: new Date(payload.call.start_timestamp).toISOString(),
+        }, { onConflict: 'external_id' });
+
+    // Broadcast for live transcript UI
+    waitUntil(
+        broadcastTranscriptUpdate({
+            callId: payload.call.call_id,
+            transcript,
+        }).catch(err => console.error('Failed to broadcast transcript update:', err instanceof Error ? err.message : 'Unknown error'))
+    );
+
+    return NextResponse.json({ received: true });
+}
+
+// ── Helper: Call Analyzed (selective update) ──────────────
+
+async function handleCallAnalyzed(
+    supabase: ReturnType<typeof createServiceClient>,
+    payload: RetellWebhookPayload,
+) {
+    const updateFields: Record<string, unknown> = {};
+    if (payload.call.call_analysis?.call_summary) updateFields.summary = payload.call.call_analysis.call_summary;
+    if (payload.call.call_analysis?.user_sentiment) updateFields.sentiment = payload.call.call_analysis.user_sentiment;
+    if (payload.call.transcript) updateFields.transcript = payload.call.transcript.slice(0, MAX_TRANSCRIPT_LENGTH);
+    if (payload.call.recording_url) updateFields.audio_url = payload.call.recording_url;
+
+    if (Object.keys(updateFields).length > 0) {
+        const { error } = await supabase
+            .from('calls')
+            .update(updateFields)
+            .eq('external_id', payload.call.call_id);
+
+        if (error) console.error('Error updating call_analyzed:', error.code);
+    }
+
+    return NextResponse.json({ received: true });
+}
+
+// ── Helper: Map Retell status ────────────────────────────
+
+function mapRetellStatus(callStatus: string): string {
+    if (callStatus === 'ended') return 'completed';
+    if (callStatus === 'error') return 'failed';
+    if (callStatus === 'ongoing') return 'in_progress';
+    return 'queued';
 }

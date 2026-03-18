@@ -1,39 +1,39 @@
+/**
+ * Bland AI Webhook Handler
+ *
+ * Bland fires a single webhook event per call (on completion).
+ * Unlike Retell/Vapi, there is no call_started event — the dashboard's
+ * active calls panel uses the Bland API directly for in-progress calls.
+ *
+ * Provider-specific logic (parsing, signature, voicemail detection) stays here.
+ * Post-upsert processing is handled by the shared pipeline in lib/webhooks/post-process.ts.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
-import { executeWorkflows } from '@/lib/workflows/executor';
-import { broadcastCallUpdate, broadcastTranscriptUpdate } from '@/lib/realtime/broadcast';
+import { broadcastTranscriptUpdate } from '@/lib/realtime/broadcast';
 import { detectTimezone } from '@/lib/timezone/detector';
-import { accumulateUsage } from '@/lib/billing/usage';
 import { calculateCallScore, inferBasicSentiment } from '@/lib/scoring/call-score';
-import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-analyzer';
 import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
-import { resolveIntegrations, createTokenRefreshCallback } from '@/lib/integrations/resolve';
-import { forwardToWebhook } from '@/lib/webhooks/forward';
 import { waitUntil } from '@vercel/functions';
-import crypto from 'crypto';
-import type { Workflow } from '@/types';
-
-// Max transcript length to store in DB (≈100k words — generous for any real call, prevents abuse)
+import { runPostProcessingPipeline, type ProcessedCall } from '@/lib/webhooks/post-process';
 import { MAX_TRANSCRIPT_LENGTH } from '@/lib/constants/config';
+import crypto from 'crypto';
 
-// Verify Bland webhook signature using HMAC-SHA256 (same pattern as Vapi).
-// The webhook secret is derived from the agency's Bland API key.
+// ── Signature Verification ───────────────────────────────
+
 function verifyBlandSignature(body: string, signature: string | null, apiKey: string): boolean {
     if (!signature) return false;
-
     try {
-        const hash = crypto
-            .createHmac('sha256', apiKey)
-            .update(body)
-            .digest('hex');
+        const hash = crypto.createHmac('sha256', apiKey).update(body).digest('hex');
         return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(hash));
     } catch {
         return false;
     }
 }
 
-// Bland.ai webhook payload
-// Bland fires the webhook URL set per-call (not per-agent).
+// ── Payload Types ────────────────────────────────────────
+
 interface BlandWebhookPayload {
     call_id: string;
     c_id?: string;
@@ -42,9 +42,9 @@ interface BlandWebhookPayload {
     from?: string;
     status: string;
     completed: boolean;
-    call_length?: number;       // Duration in MINUTES
-    price?: number;             // Cost in DOLLARS
-    answered_by?: string;       // 'human' | 'voicemail' | null
+    call_length?: number;
+    price?: number;
+    answered_by?: string;
     summary?: string;
     recording_url?: string;
     concatenated_transcript?: string;
@@ -62,6 +62,7 @@ interface BlandWebhookPayload {
     end_at?: string;
 }
 
+// ── Main Handler ─────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
     try {
@@ -76,16 +77,13 @@ export async function POST(request: NextRequest) {
 
         const supabase = createServiceClient();
 
-        // Bland uses pathway_id as the agent identifier
+        // ── Agent Lookup ─────────────────────────────────
         const pathwayId = payload.pathway_id || (payload.metadata?.pathway_id as string);
-
         if (!pathwayId) {
-            // Bland calls without a pathway_id can't be mapped to an agent
             console.warn(`Bland webhook received without pathway_id for call: ${payload.call_id}`);
             return NextResponse.json({ received: true });
         }
 
-        // Find agent by external_id (pathway_id) + provider = 'bland'
         const { data: agent } = await supabase
             .from('agents')
             .select('id, name, client_id, agency_id, webhook_url')
@@ -98,27 +96,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ received: true });
         }
 
-        // Resolve API key (client key → agency key fallback)
+        // ── Auth ─────────────────────────────────────────
         const resolvedKeys = await resolveProviderApiKeys(supabase, agent.agency_id, agent.client_id);
-        const blandApiKey = resolvedKeys.bland_api_key;
-
-        if (!blandApiKey) {
-            console.error('Bland API key not configured — rejecting webhook');
+        if (!resolvedKeys.bland_api_key) {
+            console.error('Bland API key not configured');
             return NextResponse.json({ error: 'API key not configured' }, { status: 401 });
         }
 
-        // Verify webhook signature (required)
         const blandSignature = request.headers.get('x-bland-signature');
-        if (!blandSignature) {
-            console.error('Bland webhook received without signature — rejecting');
-            return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
-        }
-        if (!verifyBlandSignature(rawBody, blandSignature, blandApiKey)) {
+        if (!blandSignature || !verifyBlandSignature(rawBody, blandSignature, resolvedKeys.bland_api_key)) {
             console.error('Invalid Bland webhook signature');
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
-        // Deduplicate — atomic INSERT rejects duplicates via primary key constraint
+        // ── Dedup ────────────────────────────────────────
         const dedupKey = `bland:${payload.call_id}`;
         const { error: dedupError } = await supabase
             .from('webhook_events')
@@ -128,48 +119,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ received: true });
         }
 
-        // Convert Bland units
-        const durationSeconds = payload.call_length
-            ? Math.round(payload.call_length * 60)
-            : 0;
-        const costCents = payload.price
-            ? Math.round(payload.price * 100)
-            : 0;
-
-        let status: string = 'queued';
-        if (payload.completed || payload.status === 'completed' || payload.status === 'complete') {
-            status = 'completed';
-        } else if (payload.status === 'in-progress' || payload.status === 'ongoing') {
-            status = 'in_progress';
-        } else if (payload.status === 'error') {
-            status = 'failed';
-        }
-
-        // Detect inbound direction: Bland inbound calls may set direction in metadata,
-        // or the agency's own number appears as `from` for outbound and `to` for inbound.
+        // ── Parse & Upsert ───────────────────────────────
+        const durationSeconds = payload.call_length ? Math.round(payload.call_length * 60) : 0;
+        const costCents = payload.price ? Math.round(payload.price * 100) : 0;
         const direction = (payload.metadata?.direction === 'inbound') ? 'inbound' : 'outbound';
-
-        // Detect lead timezone from phone number (direction-aware: inbound → from, outbound → to)
-        const leadPhone = direction === 'inbound' ? payload.from : payload.to;
-        const leadTimezone = leadPhone ? detectTimezone(leadPhone) : null;
-
-        // Check for A/B experiment metadata
-        let experimentId: string | null = null;
-        let variantId: string | null = null;
-        if (payload.metadata?.experiment_id && payload.metadata?.variant_id) {
-            experimentId = payload.metadata.experiment_id as string;
-            variantId = payload.metadata.variant_id as string;
-        }
-
-        // Detect voicemail calls — Bland provides answered_by: 'human' | 'voicemail' | null
         const isVoicemail = payload.answered_by === 'voicemail';
-
-        // Build timestamps
         const startedAt = payload.started_at || payload.created_at || new Date().toISOString();
         const endedAt = payload.end_at || null;
 
-        // Prefer structured transcripts array (speaker-attributed) over flat string.
-        // Formats into "Agent: ...\nUser: ..." matching Retell/Vapi parseTranscript() expectations.
+        const status = mapBlandStatus(payload);
+
+        // Build transcript from structured array or flat string
         let transcript: string | undefined;
         if (payload.transcripts && payload.transcripts.length > 0) {
             transcript = payload.transcripts
@@ -178,371 +138,110 @@ export async function POST(request: NextRequest) {
         } else {
             transcript = payload.concatenated_transcript || undefined;
         }
-
-        // Cap transcript length to prevent oversized payloads
         if (transcript && transcript.length > MAX_TRANSCRIPT_LENGTH) {
             transcript = transcript.slice(0, MAX_TRANSCRIPT_LENGTH);
         }
 
-        // Infer basic sentiment from transcript for initial scoring
-        // (AI analysis will refine this later if enabled)
         const inferredSentiment = isVoicemail ? 'neutral' : inferBasicSentiment(transcript);
-
-        // Calculate call quality score (voicemail = 0, not a meaningful interaction)
         const callScore = status === 'completed'
-            ? (isVoicemail ? 0 : calculateCallScore({
-                sentiment: inferredSentiment,
-                durationSeconds,
-                status,
-            }))
+            ? (isVoicemail ? 0 : calculateCallScore({ sentiment: inferredSentiment, durationSeconds, status }))
             : null;
 
-        // Upsert call
+        const leadPhone = direction === 'inbound' ? payload.from : payload.to;
+        const leadTimezone = leadPhone ? detectTimezone(leadPhone) : null;
+
+        const experimentId = (payload.metadata?.experiment_id as string) || null;
+        const variantId = (payload.metadata?.variant_id as string) || null;
+
+        // Upsert call record
         const { error } = await supabase
             .from('calls')
-            .upsert(
-                {
-                    agent_id: agent.id,
-                    client_id: agent.client_id,
-                    external_id: payload.call_id,
-                    provider: 'bland',
-                    status,
-                    direction,
-                    duration_seconds: durationSeconds,
-                    cost_cents: costCents,
-                    from_number: payload.from,
-                    to_number: payload.to,
-                    transcript,
-                    audio_url: payload.recording_url,
-                    summary: payload.summary,
-                    sentiment: inferredSentiment || null,
-                    call_score: callScore,
-                    started_at: startedAt,
-                    ended_at: endedAt,
-                    metadata: {
-                        ...(payload.variables || {}),
-                        ...(payload.metadata || {}),
-                        answered_by: payload.answered_by,
-                    },
-                    experiment_id: experimentId,
-                    variant_id: variantId,
-                    lead_timezone: leadTimezone,
+            .upsert({
+                agent_id: agent.id,
+                client_id: agent.client_id,
+                external_id: payload.call_id,
+                provider: 'bland',
+                status,
+                direction,
+                duration_seconds: durationSeconds,
+                cost_cents: costCents,
+                from_number: payload.from,
+                to_number: payload.to,
+                transcript,
+                audio_url: payload.recording_url,
+                summary: payload.summary,
+                sentiment: inferredSentiment || null,
+                call_score: callScore,
+                started_at: startedAt,
+                ended_at: endedAt,
+                metadata: {
+                    ...(payload.variables || {}),
+                    ...(payload.metadata || {}),
+                    answered_by: payload.answered_by,
                 },
-                { onConflict: 'external_id' }
-            );
+                experiment_id: experimentId,
+                variant_id: variantId,
+                lead_timezone: leadTimezone,
+            }, { onConflict: 'external_id' });
 
         if (error) {
             console.error('Error saving Bland call:', error.code);
             return NextResponse.json({ received: true });
         }
 
-        // Broadcast transcript update for live transcript viewers
+        // Broadcast transcript for live viewers
         if (transcript) {
             waitUntil(broadcastTranscriptUpdate({
-                _agencyId: agent.agency_id,
                 callId: payload.call_id,
                 transcript,
             }));
         }
 
-        // AI-powered call analysis (runs in background)
-        // Skip voicemail calls — no meaningful conversation to analyze, saves AI credits
-        if (status === 'completed' && transcript && !isVoicemail) {
-            waitUntil((async () => {
-                try {
-                    let aiEnabled = false;
-                    if (agent.client_id) {
-                        const { data: clientRow } = await supabase
-                            .from('clients')
-                            .select('ai_call_analysis')
-                            .eq('id', agent.client_id)
-                            .single();
-                        aiEnabled = !!clientRow?.ai_call_analysis;
-                    }
-
-                    if (!shouldAnalyzeCall(aiEnabled, durationSeconds, transcript.length)) {
-                        return;
-                    }
-
-                    const analysis = await analyzeCallTranscript(transcript, agent.name);
-                    if (analysis) {
-                        // Fetch current metadata to avoid overwriting enriched fields
-                        const { data: currentCall } = await supabase
-                            .from('calls')
-                            .select('metadata')
-                            .eq('external_id', payload.call_id)
-                            .single();
-
-                        const { error: updateError } = await supabase
-                            .from('calls')
-                            .update({
-                                sentiment: analysis.sentiment,
-                                summary: analysis.summary,
-                                // Preserve deterministic call_score — store AI lead_score in metadata only
-                                topics: analysis.topics,
-                                objections: analysis.objections,
-                                metadata: {
-                                    ...((currentCall?.metadata as Record<string, unknown>) || {}),
-                                    ai_analysis: {
-                                        sentiment_score: analysis.sentiment_score,
-                                        action_items: analysis.action_items,
-                                        call_outcome: analysis.call_outcome,
-                                        lead_score: analysis.lead_score,
-                                        analyzed_at: new Date().toISOString(),
-                                    },
-                                },
-                            })
-                            .eq('external_id', payload.call_id);
-
-                        if (updateError) {
-                            console.error('Failed to update Bland call with AI analysis:', updateError.code);
-                        }
-
-                        await supabase.rpc('increment_ai_analysis_count', { agency_id_input: agent.agency_id });
-                    }
-                } catch (err) {
-                    console.error('AI call analysis error (Bland):', err instanceof Error ? err.message : 'Unknown error');
-                }
-            })());
-        }
-
-        // Broadcast real-time update.
-        // NOTE: Bland only fires a single webhook event (on call completion), so unlike
-        // Retell (call_started event) and Vapi (status-update → in-progress), we CANNOT
-        // broadcast a 'call:started' event. The dashboard's active calls panel relies on
-        // the real-time Bland API query (GET /api/calls/active → listBlandActiveCalls)
-        // to show in-progress Bland calls instead.
+        // ── Post-Processing Pipeline ─────────────────────
+        // Bland only fires on completion — isCallStarted is always false
         const isCallEnded = status === 'completed' || status === 'failed';
-        waitUntil(broadcastCallUpdate({
+
+        const processedCall: ProcessedCall = {
+            callId: payload.call_id,
+            agentId: agent.id,
+            agentName: agent.name,
             agencyId: agent.agency_id,
-            event: isCallEnded ? 'call:ended' : 'call:updated',
-            call: {
-                call_id: payload.call_id,
-                external_id: payload.call_id,
-                agent_id: agent.id,
-                agent_name: agent.name,
-                status: status as 'queued' | 'in_progress' | 'completed' | 'failed',
-                direction,
-                from_number: payload.from,
-                to_number: payload.to,
-                started_at: startedAt,
-                ended_at: endedAt || undefined,
-                duration_seconds: durationSeconds,
-                transcript,
-                cost_cents: costCents,
-                summary: payload.summary,
-                sentiment: inferredSentiment,
-            },
-        }).catch(err => console.error('Failed to broadcast Bland call update:', err instanceof Error ? err.message : 'Unknown error')));
+            clientId: agent.client_id,
+            provider: 'bland',
+            status,
+            direction: direction as 'inbound' | 'outbound',
+            durationSeconds,
+            costCents,
+            fromNumber: payload.from,
+            toNumber: payload.to,
+            startedAt,
+            endedAt: endedAt || undefined,
+            transcript,
+            recordingUrl: payload.recording_url,
+            summary: payload.summary,
+            sentiment: inferredSentiment || undefined,
+            metadata: { ...(payload.variables || {}), ...(payload.metadata || {}) },
+            isCallStarted: false,
+            isCallEnded,
+            isVoicemail,
+            agentWebhookUrl: agent.webhook_url,
+            resolvedKeySource: resolvedKeys.source as Record<string, string>,
+        };
 
-        // Forward to agent's webhook if configured
-        if (agent.webhook_url && isCallEnded) {
-            const webhookPayload: Record<string, unknown> = {
-                event: 'call_ended',
-                call_id: payload.call_id,
-                agent_id: agent.id,
-                agent_name: agent.name,
-                status,
-                direction,
-                duration_seconds: durationSeconds,
-                cost_cents: costCents,
-                from_number: payload.from,
-                to_number: payload.to,
-                transcript,
-                recording_url: payload.recording_url,
-                summary: payload.summary,
-                started_at: startedAt,
-                ended_at: endedAt,
-                metadata: payload.metadata,
-                provider: 'bland',
-            };
-
-            waitUntil(forwardToWebhook(supabase, {
-                webhookUrl: agent.webhook_url,
-                payload: webhookPayload,
-                agencyId: agent.agency_id,
-                callId: payload.call_id,
-                event: 'call_ended',
-            }));
-        }
-
-        // Accumulate usage for per-minute billing (client-level)
-        if (isCallEnded && status === 'completed' && agent.client_id && durationSeconds > 0) {
-            waitUntil((async () => {
-                try {
-                    const { data: client } = await supabase
-                        .from('clients')
-                        .select('billing_type, billing_amount_cents')
-                        .eq('id', agent.client_id)
-                        .single();
-
-                    if (client?.billing_type === 'per_minute' && client.billing_amount_cents != null) {
-                        const minutes = durationSeconds / 60;
-                        const billableCostCents = Math.ceil(minutes * (client.billing_amount_cents || 0));
-                        await accumulateUsage(supabase, {
-                            clientId: agent.client_id!,
-                            durationSeconds,
-                            costCents: billableCostCents,
-                        });
-                    }
-                } catch (err) {
-                    console.error('Failed to accumulate usage for Bland call:', err instanceof Error ? err.message : 'Unknown error');
-                }
-            })());
-        }
-
-        // Report platform-key metered usage to Stripe (agency-level billing for using our API keys)
-        if (isCallEnded && status === 'completed' && durationSeconds > 0 && resolvedKeys.source.bland === 'platform') {
-            waitUntil((async () => {
-                try {
-                    const { data: agencyRow } = await supabase
-                        .from('agencies')
-                        .select('stripe_customer_id')
-                        .eq('id', agent.agency_id)
-                        .single();
-
-                    if (agencyRow?.stripe_customer_id) {
-                        const { reportMeteredUsage } = await import('@/lib/billing/metered');
-                        await reportMeteredUsage({
-                            stripeCustomerId: agencyRow.stripe_customer_id,
-                            minutes: durationSeconds / 60,
-                            timestamp: Math.floor(new Date(endedAt || new Date().toISOString()).getTime() / 1000),
-                            identifier: `bland_call_${payload.call_id}`,
-                        });
-                    }
-                } catch (err) {
-                    console.error('Failed to report metered usage for Bland call:', err instanceof Error ? err.message : 'Unknown error');
-                }
-            })());
-        }
-
-        // Execute workflows if call ended
-        if (isCallEnded) {
-            const { integrations: resolvedIntegrations, source: integrationSource } = await resolveIntegrations(supabase, agent.agency_id, agent.client_id);
-
-            // Forward to client/agency webhook URL (API integration setting)
-            // Fires independently from the per-agent webhook — both can trigger for the same call.
-            if (resolvedIntegrations.api?.enabled && resolvedIntegrations.api.webhook_url) {
-                const endedEvent = direction === 'inbound' ? 'inbound_call_ended' : 'call_ended';
-                const clientWebhookPayload = {
-                    event: endedEvent,
-                    call_id: payload.call_id,
-                    agent_id: agent.id,
-                    agent_name: agent.name,
-                    status,
-                    direction,
-                    duration_seconds: durationSeconds,
-                    cost_cents: costCents,
-                    from_number: payload.from,
-                    to_number: payload.to,
-                    transcript,
-                    recording_url: payload.recording_url,
-                    summary: payload.summary,
-                    started_at: startedAt,
-                    ended_at: endedAt,
-                    metadata: payload.metadata,
-                    provider: 'bland',
-                };
-                waitUntil(forwardToWebhook(supabase, {
-                    webhookUrl: resolvedIntegrations.api.webhook_url,
-                    payload: clientWebhookPayload,
-                    signingSecret: resolvedIntegrations.api.webhook_signing_secret,
-                    agencyId: agent.agency_id,
-                    callId: payload.call_id,
-                    event: endedEvent,
-                }));
-            }
-
-            const { data: workflows } = await supabase
-                .from('workflows')
-                .select('*')
-                .eq('agency_id', agent.agency_id)
-                .in('trigger', direction === 'inbound' ? ['call_ended', 'inbound_call_ended'] : ['call_ended'])
-                .eq('is_active', true)
-                .or(`agent_id.is.null,agent_id.eq.${agent.id}`);
-
-            if (workflows && workflows.length > 0) {
-                const callData = {
-                    call_id: payload.call_id,
-                    agent_id: agent.id,
-                    agent_name: agent.name,
-                    status,
-                    direction,
-                    duration_seconds: durationSeconds,
-                    cost_cents: costCents,
-                    from_number: payload.from,
-                    to_number: payload.to,
-                    transcript,
-                    recording_url: payload.recording_url,
-                    summary: payload.summary,
-                    started_at: startedAt,
-                    ended_at: endedAt || undefined,
-                    metadata: payload.metadata as Record<string, unknown> | undefined,
-                };
-
-                // Resolve GHL config
-                const ghlInteg = resolvedIntegrations.ghl;
-                let ghlConfig: { apiKey: string; locationId: string } | undefined;
-                if (ghlInteg?.enabled) {
-                    if (ghlInteg.auth_method === 'oauth' && ghlInteg.access_token) {
-                        const { getValidAccessToken: getGHLToken } = await import('@/lib/integrations/ghl');
-                        const validToken = await getGHLToken(ghlInteg, createTokenRefreshCallback(
-                            supabase, agent.agency_id, agent.client_id, 'ghl', integrationSource.ghl ?? 'agency',
-                        ));
-                        if (validToken) ghlConfig = { apiKey: validToken, locationId: ghlInteg.location_id || '' };
-                    } else if (ghlInteg.api_key) {
-                        ghlConfig = { apiKey: ghlInteg.api_key, locationId: ghlInteg.location_id || '' };
-                    }
-                }
-
-                // Resolve HubSpot config
-                let hubspotConfig: { accessToken: string } | undefined;
-                if (resolvedIntegrations.hubspot?.enabled && resolvedIntegrations.hubspot.access_token) {
-                    const { getValidAccessToken: getHubSpotToken } = await import('@/lib/integrations/hubspot');
-                    const validToken = await getHubSpotToken(resolvedIntegrations.hubspot, createTokenRefreshCallback(
-                        supabase, agent.agency_id, agent.client_id, 'hubspot', integrationSource.hubspot ?? 'agency',
-                    ));
-                    if (validToken) hubspotConfig = { accessToken: validToken };
-                }
-
-                // Resolve Google Calendar config
-                let gcalConfig: { accessToken: string; calendarId: string } | undefined;
-                if (resolvedIntegrations.google_calendar?.enabled && resolvedIntegrations.google_calendar.access_token) {
-                    const { getValidAccessToken: getGCalToken } = await import('@/lib/integrations/gcal');
-                    const validToken = await getGCalToken(resolvedIntegrations.google_calendar, createTokenRefreshCallback(
-                        supabase, agent.agency_id, agent.client_id, 'google_calendar', integrationSource.google_calendar ?? 'agency',
-                    ));
-                    if (validToken) {
-                        gcalConfig = {
-                            accessToken: validToken,
-                            calendarId: resolvedIntegrations.google_calendar.default_calendar_id || 'primary',
-                        };
-                    }
-                }
-
-                // Inject Slack webhook URL
-                if (resolvedIntegrations.slack?.enabled && resolvedIntegrations.slack.webhook_url) {
-                    callData.metadata = { ...(callData.metadata || {}), slack_webhook_url: resolvedIntegrations.slack.webhook_url };
-                }
-
-                // Resolve Calendly config
-                const calendlyConfig = resolvedIntegrations.calendly?.enabled && resolvedIntegrations.calendly.api_token
-                    ? { apiToken: resolvedIntegrations.calendly.api_token, userUri: resolvedIntegrations.calendly.user_uri || '', defaultEventTypeUri: resolvedIntegrations.calendly.default_event_type_uri }
-                    : undefined;
-
-                waitUntil(
-                    executeWorkflows(workflows as Workflow[], callData, ghlConfig, hubspotConfig, gcalConfig, calendlyConfig, {
-                        supabase,
-                        agencyId: agent.agency_id,
-                    })
-                );
-            }
-        }
+        runPostProcessingPipeline(supabase, processedCall);
 
         return NextResponse.json({ received: true });
     } catch (error) {
         console.error('Bland webhook error:', error instanceof Error ? error.message : 'Unknown error');
-        // Return 200 to prevent webhook retry storms
         return NextResponse.json({ received: true });
     }
+}
+
+// ── Helper: Map Bland status ─────────────────────────────
+
+function mapBlandStatus(payload: BlandWebhookPayload): string {
+    if (payload.completed || payload.status === 'completed' || payload.status === 'complete') return 'completed';
+    if (payload.status === 'in-progress' || payload.status === 'ongoing') return 'in_progress';
+    if (payload.status === 'error') return 'failed';
+    return 'queued';
 }
