@@ -364,20 +364,6 @@ export interface Usage {
     created_at: string;
 }
 
-// API Response Types
-export interface ApiResponse<T> {
-    data?: T;
-    error?: string;
-    message?: string;
-}
-
-export interface PaginatedResponse<T> {
-    data: T[];
-    total: number;
-    page: number;
-    per_page: number;
-    total_pages: number;
-}
 
 // Analytics Types
 export interface AnalyticsOverview {
@@ -464,32 +450,6 @@ export interface WorkflowCondition {
 export interface WorkflowAction {
     type: WorkflowActionType;
     config: Record<string, unknown>;
-}
-
-export interface WorkflowWebhookConfig {
-    url: string;
-    method?: 'POST' | 'GET';
-    headers?: Record<string, string>;
-}
-
-export interface WorkflowGHLConfig {
-    tags?: string[];
-}
-
-export interface WorkflowSMSConfig {
-    to: string;              // '{{from_number}}' or explicit number
-    message: string;         // template with {{variables}}
-}
-
-export interface WorkflowEmailConfig {
-    to: string;              // email address or template variable
-    subject: string;         // template with {{variables}}
-    body?: string;           // HTML or plain text with {{variables}}
-}
-
-export interface WorkflowSlackConfig {
-    webhook_url: string;
-    channel?: string;
 }
 
 // Workflow Execution Log Types

@@ -11,7 +11,8 @@ export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' |
 // CALL STATUS CONFIGURATION
 // =====================================================
 
-export type CallStatus =
+/** Display-level call status — superset of DB CallStatus with provider-specific values */
+export type CallDisplayStatus =
     | 'completed'
     | 'ended'
     | 'in_progress'
@@ -32,7 +33,7 @@ export interface StatusConfig {
     description?: string;
 }
 
-export const CALL_STATUS_CONFIG: Record<CallStatus, StatusConfig> = {
+export const CALL_STATUS_CONFIG: Record<CallDisplayStatus, StatusConfig> = {
     completed: {
         label: 'Completed',
         variant: 'success',
@@ -99,7 +100,7 @@ export const CALL_STATUS_CONFIG: Record<CallStatus, StatusConfig> = {
  * Get status configuration with fallback for unknown statuses
  */
 export function getCallStatusConfig(status: string): StatusConfig {
-    const normalizedStatus = status.toLowerCase().replace(/[^a-z_]/g, '') as CallStatus;
+    const normalizedStatus = status.toLowerCase().replace(/[^a-z_]/g, '') as CallDisplayStatus;
     return CALL_STATUS_CONFIG[normalizedStatus] || {
         label: status,
         variant: 'secondary' as const,
