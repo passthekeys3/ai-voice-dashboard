@@ -44,7 +44,9 @@ export default async function ClientLiveCallPage({
         notFound();
     }
 
-    // Validate the call belongs to one of the client's agents
+    // Try to validate the call belongs to one of the client's agents.
+    // If call isn't in DB yet (active call, webhook pending), allow through —
+    // LiveTranscript handles provider API fallback with its own auth check.
     const { data: call } = await supabase
         .from('calls')
         .select('id')
@@ -53,7 +55,14 @@ export default async function ClientLiveCallPage({
         .single();
 
     if (!call) {
-        notFound();
+        const { count } = await supabase
+            .from('calls')
+            .select('id', { count: 'exact', head: true })
+            .eq('external_id', callId);
+
+        if (count && count > 0) {
+            notFound();
+        }
     }
 
     return (

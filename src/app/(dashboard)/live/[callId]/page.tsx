@@ -48,7 +48,11 @@ export default async function LiveCallPage({
         notFound();
     }
 
-    // Validate the call belongs to one of the user's agents
+    // Try to validate the call belongs to one of the user's agents.
+    // Skip notFound() if the call isn't in the DB yet — active calls
+    // from the provider API may not have a DB record until the webhook fires.
+    // The LiveTranscript component handles the provider API fallback and
+    // performs its own ownership check via /api/calls/[id]/live.
     const { data: call } = await supabase
         .from('calls')
         .select('id')
@@ -56,8 +60,19 @@ export default async function LiveCallPage({
         .in('agent_id', agentIds.map(a => a.id))
         .single();
 
+    // If call exists in DB but doesn't match user's agents, deny access
+    // If call doesn't exist in DB at all, allow through (provider API fallback)
     if (!call) {
-        notFound();
+        const { count } = await supabase
+            .from('calls')
+            .select('id', { count: 'exact', head: true })
+            .eq('external_id', callId);
+
+        // Call exists but belongs to someone else — deny
+        if (count && count > 0) {
+            notFound();
+        }
+        // Call not in DB at all — let LiveTranscript handle via provider API
     }
 
     return (
