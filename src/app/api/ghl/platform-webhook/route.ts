@@ -5,6 +5,11 @@
  *
  * Receives platform-level events from GoHighLevel:
  * - Location created / updated
+ * - Contact created / updated
+ * - Opportunity created / status updated
+ * - Note created
+ * - Task created
+ * - Appointment created
  *
  * Verifies ED25519 signature using GHL's public key.
  */
@@ -31,19 +36,47 @@ function verifyED25519Signature(rawBody: string, signature: string): boolean {
     }
 }
 
-interface LocationEvent {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseClient = any;
+
+interface GHLWebhookEvent {
     type: string;
     locationId: string;
-    companyId: string;
+    companyId?: string;
+    id?: string;
+    // Location fields
     name?: string;
     address?: string;
     city?: string;
     state?: string;
     country?: string;
-    phone?: string;
-    email?: string;
-    website?: string;
     timezone?: string;
+    // Contact fields
+    contactId?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    tags?: string[];
+    // Opportunity fields
+    opportunityId?: string;
+    pipelineId?: string;
+    pipelineStageId?: string;
+    status?: string;
+    monetaryValue?: number;
+    // Note fields
+    body?: string;
+    // Task fields
+    title?: string;
+    dueDate?: string;
+    assignedTo?: string;
+    // Appointment fields
+    appointmentStatus?: string;
+    startTime?: string;
+    endTime?: string;
+    calendarId?: string;
+    // Generic
+    [key: string]: unknown;
 }
 
 export async function POST(request: NextRequest) {
@@ -64,7 +97,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Parse payload
-        let event: LocationEvent;
+        let event: GHLWebhookEvent;
         try {
             event = JSON.parse(rawBody);
         } catch {
@@ -74,12 +107,35 @@ export async function POST(request: NextRequest) {
         const supabase = createServiceClient();
 
         switch (event.type) {
+            // Location events
             case 'LocationCreate':
                 await handleLocationCreate(supabase, event);
                 break;
-
             case 'LocationUpdate':
                 await handleLocationUpdate(supabase, event);
+                break;
+
+            // Contact events
+            case 'ContactCreate':
+            case 'ContactUpdate':
+                await handleContactEvent(supabase, event);
+                break;
+
+            // Opportunity events
+            case 'OpportunityCreate':
+            case 'OpportunityStatusUpdate':
+                await handleOpportunityEvent(supabase, event);
+                break;
+
+            // Activity events
+            case 'NoteCreate':
+                await handleNoteCreate(supabase, event);
+                break;
+            case 'TaskCreate':
+                await handleTaskCreate(supabase, event);
+                break;
+            case 'AppointmentCreate':
+                await handleAppointmentCreate(supabase, event);
                 break;
 
             default:
@@ -94,16 +150,64 @@ export async function POST(request: NextRequest) {
     }
 }
 
-/**
- * Handle new GHL location created.
- * Logs the event for awareness — no auto-provisioning needed.
- * The agency/client connects via OAuth when they're ready.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handleLocationCreate(supabase: any, event: LocationEvent) {
-    console.log(`GHL location created: id=${event.locationId}, name=${event.name}, company=${event.companyId}`);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Find the agency or client connected to a GHL location.
+ * Returns { agencyId, clientId } if found.
+ */
+async function findConnectedAccount(supabase: SupabaseClient, locationId: string) {
+    // Check client-level first (more specific)
+    const { data: clients } = await supabase
+        .from('clients')
+        .select('id, agency_id, integrations')
+        .filter('integrations->ghl->location_id', 'eq', locationId)
+        .limit(1);
+
+    if (clients && clients.length > 0) {
+        return { agencyId: clients[0].agency_id, clientId: clients[0].id };
+    }
+
+    // Fall back to agency-level
+    const { data: agencies } = await supabase
+        .from('agencies')
+        .select('id, integrations')
+        .filter('integrations->ghl->location_id', 'eq', locationId)
+        .limit(1);
+
+    if (agencies && agencies.length > 0) {
+        return { agencyId: agencies[0].id, clientId: null };
+    }
+
+    return null;
+}
+
+/**
+ * Best-effort log to integration_events table.
+ */
+async function logEvent(supabase: SupabaseClient, data: {
+    provider: string;
+    event_type: string;
+    location_id: string;
+    company_id?: string;
+    agency_id?: string;
+    client_id?: string;
+    metadata?: Record<string, unknown>;
+}) {
     await supabase.from('integration_events').insert({
+        ...data,
+        created_at: new Date().toISOString(),
+    }).then(({ error }: { error: unknown }) => {
+        if (error) console.warn(`Failed to log GHL ${data.event_type} event (table may not exist)`);
+    });
+}
+
+// ─── Event Handlers ──────────────────────────────────────────────────────────
+
+async function handleLocationCreate(supabase: SupabaseClient, event: GHLWebhookEvent) {
+    console.log(`GHL location created: id=${event.locationId}, name=${event.name}`);
+
+    await logEvent(supabase, {
         provider: 'ghl',
         event_type: 'location_create',
         location_id: event.locationId,
@@ -118,22 +222,13 @@ async function handleLocationCreate(supabase: any, event: LocationEvent) {
             email: event.email,
             timezone: event.timezone,
         },
-        created_at: new Date().toISOString(),
-    }).then(({ error }: { error: unknown }) => {
-        if (error) console.warn('Failed to log GHL location create event (table may not exist)');
     });
 }
 
-/**
- * Handle GHL location updated.
- * If this location is connected to an agency or client, sync the updated info.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handleLocationUpdate(supabase: any, event: LocationEvent) {
+async function handleLocationUpdate(supabase: SupabaseClient, event: GHLWebhookEvent) {
     console.log(`GHL location updated: id=${event.locationId}, name=${event.name}`);
 
-    // Check if any agency or client is connected to this location
-    // and update their stored location metadata if so
+    // Sync updated location info to connected agencies
     const { data: agencies } = await supabase
         .from('agencies')
         .select('id, integrations')
@@ -145,18 +240,13 @@ async function handleLocationUpdate(supabase: any, event: LocationEvent) {
             if (integrations.ghl) {
                 integrations.ghl.location_name = event.name;
                 integrations.ghl.location_timezone = event.timezone;
-
-                await supabase
-                    .from('agencies')
-                    .update({ integrations })
-                    .eq('id', agency.id);
-
+                await supabase.from('agencies').update({ integrations }).eq('id', agency.id);
                 console.log(`Synced GHL location update for agency ${agency.id}`);
             }
         }
     }
 
-    // Also sync client-level integrations
+    // Sync to connected clients
     const { data: clients } = await supabase
         .from('clients')
         .select('id, integrations')
@@ -168,29 +258,135 @@ async function handleLocationUpdate(supabase: any, event: LocationEvent) {
             if (integrations.ghl) {
                 integrations.ghl.location_name = event.name;
                 integrations.ghl.location_timezone = event.timezone;
-
-                await supabase
-                    .from('clients')
-                    .update({ integrations })
-                    .eq('id', client.id);
-
+                await supabase.from('clients').update({ integrations }).eq('id', client.id);
                 console.log(`Synced GHL location update for client ${client.id}`);
             }
         }
     }
 
-    // Log the event
-    await supabase.from('integration_events').insert({
+    await logEvent(supabase, {
         provider: 'ghl',
         event_type: 'location_update',
         location_id: event.locationId,
         company_id: event.companyId,
+        metadata: { name: event.name, timezone: event.timezone },
+    });
+}
+
+async function handleContactEvent(supabase: SupabaseClient, event: GHLWebhookEvent) {
+    const isCreate = event.type === 'ContactCreate';
+    console.log(`GHL contact ${isCreate ? 'created' : 'updated'}: ${event.contactId} in location ${event.locationId}`);
+
+    const account = await findConnectedAccount(supabase, event.locationId);
+    if (!account) {
+        console.log(`GHL contact event: no connected account for location ${event.locationId}`);
+        return;
+    }
+
+    await logEvent(supabase, {
+        provider: 'ghl',
+        event_type: isCreate ? 'contact_create' : 'contact_update',
+        location_id: event.locationId,
+        agency_id: account.agencyId,
+        client_id: account.clientId ?? undefined,
         metadata: {
-            name: event.name,
-            timezone: event.timezone,
+            contact_id: event.contactId,
+            first_name: event.firstName,
+            last_name: event.lastName,
+            email: event.email,
+            phone: event.phone,
+            tags: event.tags,
         },
-        created_at: new Date().toISOString(),
-    }).then(({ error }: { error: unknown }) => {
-        if (error) console.warn('Failed to log GHL location update event (table may not exist)');
+    });
+}
+
+async function handleOpportunityEvent(supabase: SupabaseClient, event: GHLWebhookEvent) {
+    const isCreate = event.type === 'OpportunityCreate';
+    console.log(`GHL opportunity ${isCreate ? 'created' : 'status updated'}: ${event.opportunityId} in location ${event.locationId}`);
+
+    const account = await findConnectedAccount(supabase, event.locationId);
+    if (!account) {
+        console.log(`GHL opportunity event: no connected account for location ${event.locationId}`);
+        return;
+    }
+
+    await logEvent(supabase, {
+        provider: 'ghl',
+        event_type: isCreate ? 'opportunity_create' : 'opportunity_status_update',
+        location_id: event.locationId,
+        agency_id: account.agencyId,
+        client_id: account.clientId ?? undefined,
+        metadata: {
+            opportunity_id: event.opportunityId,
+            contact_id: event.contactId,
+            pipeline_id: event.pipelineId,
+            stage_id: event.pipelineStageId,
+            status: event.status,
+            monetary_value: event.monetaryValue,
+            name: event.name,
+        },
+    });
+}
+
+async function handleNoteCreate(supabase: SupabaseClient, event: GHLWebhookEvent) {
+    console.log(`GHL note created in location ${event.locationId}`);
+
+    const account = await findConnectedAccount(supabase, event.locationId);
+    if (!account) return;
+
+    await logEvent(supabase, {
+        provider: 'ghl',
+        event_type: 'note_create',
+        location_id: event.locationId,
+        agency_id: account.agencyId,
+        client_id: account.clientId ?? undefined,
+        metadata: {
+            contact_id: event.contactId,
+            body: typeof event.body === 'string' ? event.body.slice(0, 500) : undefined,
+        },
+    });
+}
+
+async function handleTaskCreate(supabase: SupabaseClient, event: GHLWebhookEvent) {
+    console.log(`GHL task created in location ${event.locationId}`);
+
+    const account = await findConnectedAccount(supabase, event.locationId);
+    if (!account) return;
+
+    await logEvent(supabase, {
+        provider: 'ghl',
+        event_type: 'task_create',
+        location_id: event.locationId,
+        agency_id: account.agencyId,
+        client_id: account.clientId ?? undefined,
+        metadata: {
+            contact_id: event.contactId,
+            title: event.title,
+            due_date: event.dueDate,
+            assigned_to: event.assignedTo,
+        },
+    });
+}
+
+async function handleAppointmentCreate(supabase: SupabaseClient, event: GHLWebhookEvent) {
+    console.log(`GHL appointment created in location ${event.locationId}`);
+
+    const account = await findConnectedAccount(supabase, event.locationId);
+    if (!account) return;
+
+    await logEvent(supabase, {
+        provider: 'ghl',
+        event_type: 'appointment_create',
+        location_id: event.locationId,
+        agency_id: account.agencyId,
+        client_id: account.clientId ?? undefined,
+        metadata: {
+            contact_id: event.contactId,
+            calendar_id: event.calendarId,
+            status: event.appointmentStatus,
+            start_time: event.startTime,
+            end_time: event.endTime,
+            title: event.title,
+        },
     });
 }
