@@ -89,17 +89,17 @@ export async function GET(request: NextRequest) {
         const avgCallDuration = totalCalls > 0 ? totalMinutes / totalCalls : 0;
 
         // Group calls by day (use local date to match user's timezone)
-        const toLocalDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const toDateStr = (d: Date) => d.toISOString().split('T')[0];
         const callsByDay: Record<string, number> = {};
         calls?.forEach(call => {
-            const date = toLocalDate(new Date(call.started_at));
+            const date = toDateStr(new Date(call.started_at));
             callsByDay[date] = (callsByDay[date] || 0) + 1;
         });
 
         // Fill in missing days
         const callsByDayArray: { date: string; count: number }[] = [];
         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-            const dateStr = toLocalDate(d);
+            const dateStr = toDateStr(d);
             callsByDayArray.push({
                 date: dateStr,
                 count: callsByDay[dateStr] || 0,

@@ -35,8 +35,9 @@ export default async function AnalyticsPage({ searchParams }: Props) {
 
     const supabase = createServiceClient();
 
-    // Calculate date range
+    // Calculate date range — endDate is end of today UTC to ensure today's calls are included
     const endDate = new Date();
+    endDate.setUTCHours(23, 59, 59, 999);
     const startDate = days ? new Date() : null;
     if (startDate && days) {
         startDate.setDate(startDate.getDate() - days);
@@ -86,11 +87,11 @@ export default async function AnalyticsPage({ searchParams }: Props) {
             const successRate = totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
             const avgCallDuration = totalCalls > 0 ? totalMinutes / totalCalls : 0;
 
-            // Group calls by day (use local date to match user's timezone)
-            const toLocalDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            // Group calls by day using UTC (server runs in UTC, started_at is UTC)
+            const toDateStr = (d: Date) => d.toISOString().split('T')[0];
             const callsByDay: Record<string, number> = {};
             calls.forEach(call => {
-                const date = toLocalDate(new Date(call.started_at));
+                const date = toDateStr(new Date(call.started_at));
                 callsByDay[date] = (callsByDay[date] || 0) + 1;
             });
 
@@ -110,7 +111,7 @@ export default async function AnalyticsPage({ searchParams }: Props) {
 
             const callsByDayArray: { date: string; count: number }[] = [];
             for (let d = new Date(chartStartDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                const dateStr = toLocalDate(d);
+                const dateStr = toDateStr(d);
                 callsByDayArray.push({ date: dateStr, count: callsByDay[dateStr] || 0 });
             }
 

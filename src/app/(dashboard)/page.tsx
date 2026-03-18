@@ -80,7 +80,7 @@ export default async function DashboardPage() {
     const successRate = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0;
 
     // Calculate call volume data for chart (last 30 days)
-    const toLocalDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const toDateStr = (d: Date) => d.toISOString().split('T')[0];
     const volumeMap = new Map<string, number>();
     const now = new Date();
 
@@ -88,14 +88,14 @@ export default async function DashboardPage() {
     for (let i = 29; i >= 0; i--) {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
-        const dateStr = toLocalDate(date);
+        const dateStr = toDateStr(date);
         volumeMap.set(dateStr, 0);
     }
 
     // Count calls per day
     callStats?.forEach(call => {
         if (call.started_at) {
-            const dateStr = toLocalDate(new Date(call.started_at));
+            const dateStr = toDateStr(new Date(call.started_at));
             if (volumeMap.has(dateStr)) {
                 volumeMap.set(dateStr, (volumeMap.get(dateStr) || 0) + 1);
             }
