@@ -60,6 +60,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Cannot add variants to a running experiment' }, { status: 400 });
         }
 
+        // Enforce max 10 variants
+        const { count: existingCount } = await supabase
+            .from('experiment_variants')
+            .select('id', { count: 'exact', head: true })
+            .eq('experiment_id', experimentId);
+
+        if ((existingCount || 0) >= 10) {
+            return NextResponse.json({ error: 'Maximum 10 variants per experiment' }, { status: 400 });
+        }
+
         const { data: variant, error } = await supabase
             .from('experiment_variants')
             .insert({
@@ -141,7 +151,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             totalWeight += variant.traffic_weight ?? 0;
         }
 
-        if (totalWeight !== 100) {
+        if (Math.abs(totalWeight - 100) > 0.01) {
             return NextResponse.json({
                 error: `Total traffic weight must equal 100% (currently ${totalWeight}%)`
             }, { status: 400 });
@@ -159,6 +169,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         if (!experiment) {
             return NextResponse.json({ error: 'Experiment not found' }, { status: 404 });
+        }
+
+        if (experiment.status === 'running') {
+            return NextResponse.json({
+                error: 'Cannot modify variants while the experiment is running. Pause it first.'
+            }, { status: 400 });
         }
 
         // Fetch existing variant IDs from DB to determine which to delete

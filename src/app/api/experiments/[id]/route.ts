@@ -46,30 +46,30 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Experiment not found' }, { status: 404 });
         }
 
-        // Fetch call metrics per variant using shared computation
+        // Fetch call metrics for all variants in a single query (avoids N+1)
         if (experiment.variants && experiment.variants.length > 0) {
-            const { data: agencyAgents } = await supabase
-                .from('agents')
-                .select('id')
-                .eq('agency_id', user.agency.id);
-            const agencyAgentIds = agencyAgents?.map(a => a.id) || [];
+            const variantIds = experiment.variants.map(v => v.id);
 
+            const { data: allCalls } = await supabase
+                .from('calls')
+                .select('variant_id, duration_seconds, sentiment, status')
+                .in('variant_id', variantIds)
+                .eq('experiment_id', experiment.id);
+
+            // Group calls by variant_id
             const variantCallsMap: Record<string, { duration_seconds?: number; sentiment?: string; status?: string }[]> = {};
-
             for (const variant of experiment.variants) {
-                let query = supabase
-                    .from('calls')
-                    .select('duration_seconds, sentiment, status')
-                    .eq('variant_id', variant.id);
-
-                if (agencyAgentIds.length > 0) {
-                    query = query.in('agent_id', agencyAgentIds);
+                variantCallsMap[variant.id] = [];
+            }
+            for (const call of allCalls || []) {
+                if (call.variant_id && variantCallsMap[call.variant_id]) {
+                    variantCallsMap[call.variant_id].push(call);
                 }
+            }
 
-                const { data: calls } = await query;
-                variantCallsMap[variant.id] = calls || [];
-
-                const metrics = computeVariantMetrics(calls || []);
+            // Compute metrics per variant
+            for (const variant of experiment.variants) {
+                const metrics = computeVariantMetrics(variantCallsMap[variant.id] || []);
                 Object.assign(variant, metrics);
             }
 
@@ -82,14 +82,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 });
 
                 const topTwo = sorted.slice(0, 2);
-                const confidence = computeSignificance(
+                experiment.confidence = computeSignificance(
                     experiment.goal || 'conversion',
                     { calls: variantCallsMap[topTwo[0].id] || [], metrics: topTwo[0] },
                     { calls: variantCallsMap[topTwo[1].id] || [], metrics: topTwo[1] },
                 );
-
-                // Attach confidence to the experiment object
-                experiment.confidence = confidence;
             }
         }
 
@@ -133,7 +130,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         if (body.name !== undefined) updateData.name = body.name;
         if (body.description !== undefined) updateData.description = body.description;
-        if (body.goal !== undefined) updateData.goal = body.goal;
+        if (body.goal !== undefined) {
+            const ALLOWED_GOALS = ['conversion', 'duration', 'sentiment'];
+            if (!ALLOWED_GOALS.includes(body.goal)) {
+                return NextResponse.json({ error: `Goal must be one of: ${ALLOWED_GOALS.join(', ')}` }, { status: 400 });
+            }
+            updateData.goal = body.goal;
+        }
         if (body.status !== undefined) {
             const ALLOWED_STATUSES = ['draft', 'running', 'completed', 'paused'];
             if (!ALLOWED_STATUSES.includes(body.status)) {

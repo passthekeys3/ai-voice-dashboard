@@ -37,47 +37,47 @@ export default async function ExperimentDetailPage({
         notFound();
     }
 
-    // Get all agent IDs for this agency (for scoping variant call queries)
-    const { data: agencyAgents } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('agency_id', user.agency.id);
-    const agencyAgentIds = agencyAgents?.map(a => a.id) || [];
+    // Fetch call metrics for all variants in a single query (avoids N+1)
+    if (experiment.variants && experiment.variants.length > 0) {
+        const variantIds = experiment.variants.map(v => v.id);
 
-    // Calculate metrics for each variant using shared computation
-    const variantCallsMap: Record<string, { duration_seconds?: number; sentiment?: string; status?: string }[]> = {};
+        const { data: allCalls } = await supabase
+            .from('calls')
+            .select('variant_id, duration_seconds, sentiment, status')
+            .in('variant_id', variantIds)
+            .eq('experiment_id', experiment.id);
 
-    for (const variant of experiment.variants || []) {
-        if (agencyAgentIds.length === 0) {
-            Object.assign(variant, computeVariantMetrics([]));
+        // Group calls by variant_id
+        const variantCallsMap: Record<string, { duration_seconds?: number; sentiment?: string; status?: string }[]> = {};
+        for (const variant of experiment.variants) {
             variantCallsMap[variant.id] = [];
-            continue;
+        }
+        for (const call of allCalls || []) {
+            if (call.variant_id && variantCallsMap[call.variant_id]) {
+                variantCallsMap[call.variant_id].push(call);
+            }
         }
 
-        const { data: calls } = await supabase
-            .from('calls')
-            .select('duration_seconds, sentiment, status')
-            .eq('variant_id', variant.id)
-            .in('agent_id', agencyAgentIds);
+        // Compute metrics per variant
+        for (const variant of experiment.variants) {
+            Object.assign(variant, computeVariantMetrics(variantCallsMap[variant.id] || []));
+        }
 
-        variantCallsMap[variant.id] = calls || [];
-        Object.assign(variant, computeVariantMetrics(calls || []));
-    }
+        // Compute statistical significance between top 2 variants
+        if (experiment.variants.length >= 2) {
+            const sorted = [...experiment.variants].sort((a, b) => {
+                const goal = experiment.goal || 'conversion';
+                const metricKey = goal === 'conversion' ? 'conversion_rate' : goal === 'duration' ? 'avg_duration' : 'avg_sentiment';
+                return (b[metricKey] || 0) - (a[metricKey] || 0);
+            });
 
-    // Compute statistical significance between top 2 variants
-    if (experiment.variants && experiment.variants.length >= 2) {
-        const sorted = [...experiment.variants].sort((a, b) => {
-            const goal = experiment.goal || 'conversion';
-            const metricKey = goal === 'conversion' ? 'conversion_rate' : goal === 'duration' ? 'avg_duration' : 'avg_sentiment';
-            return (b[metricKey] || 0) - (a[metricKey] || 0);
-        });
-
-        const topTwo = sorted.slice(0, 2);
-        experiment.confidence = computeSignificance(
-            experiment.goal || 'conversion',
-            { calls: variantCallsMap[topTwo[0].id] || [], metrics: topTwo[0] },
-            { calls: variantCallsMap[topTwo[1].id] || [], metrics: topTwo[1] },
-        );
+            const topTwo = sorted.slice(0, 2);
+            experiment.confidence = computeSignificance(
+                experiment.goal || 'conversion',
+                { calls: variantCallsMap[topTwo[0].id] || [], metrics: topTwo[0] },
+                { calls: variantCallsMap[topTwo[1].id] || [], metrics: topTwo[1] },
+            );
+        }
     }
 
     return (

@@ -104,8 +104,10 @@ export async function POST(request: NextRequest) {
         if (description && description.length > 5000) {
             return NextResponse.json({ error: 'Description is too long' }, { status: 400 });
         }
-        if (goal && goal.length > 2000) {
-            return NextResponse.json({ error: 'Goal is too long' }, { status: 400 });
+
+        const ALLOWED_GOALS = ['conversion', 'duration', 'sentiment'];
+        if (goal && !ALLOWED_GOALS.includes(goal)) {
+            return NextResponse.json({ error: `Goal must be one of: ${ALLOWED_GOALS.join(', ')}` }, { status: 400 });
         }
 
         if (!agent_id) {
@@ -136,7 +138,7 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        if (totalWeight !== 100) {
+        if (Math.abs(totalWeight - 100) > 0.01) {
             return NextResponse.json({
                 error: `Total traffic weight must equal 100% (currently ${totalWeight}%)`
             }, { status: 400 });
@@ -175,13 +177,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Failed to create experiment' }, { status: 500 });
         }
 
-        // Create variants
+        // Ensure exactly one control variant
+        const controlCount = variants.filter((v: { is_control?: boolean }) => v.is_control).length;
         const variantData = variants.map((v: { name: string; prompt: string; traffic_weight: number; is_control?: boolean }, index: number) => ({
             experiment_id: experiment.id,
             name: v.name,
-            prompt: v.prompt,
+            prompt: v.prompt || '',
             traffic_weight: v.traffic_weight,
-            is_control: v.is_control || index === 0,
+            is_control: controlCount === 0 ? index === 0 : !!v.is_control && (controlCount === 1 || index === variants.findIndex((cv: { is_control?: boolean }) => cv.is_control)),
         }));
 
         const { error: varError } = await supabase

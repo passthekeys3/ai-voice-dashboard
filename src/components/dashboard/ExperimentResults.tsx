@@ -52,25 +52,25 @@ export function ExperimentResults({ experiment }: ExperimentResultsProps) {
     const leader = sortedVariants[0];
     const maxMetricValue = Math.max(...variants.map(getMetricValue));
 
-    const handleStatusChange = async (newStatus: 'running' | 'paused' | 'completed') => {
+    const handleStatusChange = async (newStatus: 'running' | 'paused') => {
         setUpdating(true);
         try {
             const res = await fetch(`/api/experiments/${experiment.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    status: newStatus,
-                    ...(newStatus === 'completed' && leader ? { winner_variant_id: leader.id } : {}),
-                }),
+                body: JSON.stringify({ status: newStatus }),
             });
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
                 throw new Error(errData.error || 'Failed to update experiment');
             }
+            toast.success(newStatus === 'running' ? 'Experiment started' : 'Experiment paused');
             router.refresh();
         } catch (err) {
             console.error('Failed to update experiment:', err);
-            alert(err instanceof Error ? err.message : 'Failed to update experiment');
+            toast.error('Failed to update experiment', {
+                description: err instanceof Error ? err.message : 'An error occurred',
+            });
         } finally {
             setUpdating(false);
         }
@@ -337,9 +337,15 @@ export function ExperimentResults({ experiment }: ExperimentResultsProps) {
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-40 whitespace-pre-wrap">
-                                        {variant.prompt}
-                                    </pre>
+                                    {variant.is_control && !variant.prompt ? (
+                                        <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+                                            Uses the agent&apos;s current prompt (no override)
+                                        </p>
+                                    ) : (
+                                        <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-40 whitespace-pre-wrap">
+                                            {variant.prompt}
+                                        </pre>
+                                    )}
                                 </CardContent>
                             </Card>
                         ))}
