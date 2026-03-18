@@ -4,8 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 export default function AnalyticsLoading() {
     return (
         <div className="flex flex-col h-full">
-            {/* Header bar */}
-            <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200/50 dark:border-slate-800/50 px-4 sm:px-6">
+            <header className="flex h-16 flex-shrink-0 items-center justify-between bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6">
                 <Skeleton className="h-5 w-24" />
                 <div className="flex items-center gap-2">
                     <Skeleton className="h-9 w-9 rounded-md" />
@@ -14,45 +13,31 @@ export default function AnalyticsLoading() {
             </header>
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
-                {/* Page title + filter — flex row with title left, filters right */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <Skeleton className="h-8 w-32" />
-                        <Skeleton className="h-4 w-64 mt-2" />
-                    </div>
-                    <Skeleton className="h-10 w-32" />
+                {/* Filter buttons — right aligned */}
+                <div className="flex justify-end">
+                    <Skeleton className="h-10 w-72" />
                 </div>
 
-                {/* KPI Cards — matches AnalyticsCards with border-l-4 accents */}
+                {/* KPI Cards — clean, no colored borders */}
                 <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    {(['blue', 'green', 'amber', 'purple'] as const).map((color) => (
-                        <Card
-                            key={color}
-                            className={`border-l-4 ${
-                                color === 'blue' ? 'border-l-blue-500' :
-                                color === 'green' ? 'border-l-green-500' :
-                                color === 'amber' ? 'border-l-amber-500' :
-                                'border-l-purple-500'
-                            }`}
-                        >
+                    {[1, 2, 3, 4].map((i) => (
+                        <Card key={i}>
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <Skeleton className="h-4 w-24" />
-                                <Skeleton className="h-8 w-8 rounded-lg" />
+                                <Skeleton className="h-4 w-4 rounded" />
                             </CardHeader>
-                            <CardContent className="space-y-2">
+                            <CardContent>
                                 <Skeleton className="h-8 w-20" />
-                                <Skeleton className="h-3 w-16" />
                             </CardContent>
                         </Card>
                     ))}
                 </div>
 
-                {/* Charts — grid gap-4 md:grid-cols-7 (chart 4 + agents 3) */}
+                {/* Charts */}
                 <div className="grid gap-4 md:grid-cols-7">
-                    {/* UsageChart — col-span-4 */}
                     <Card className="md:col-span-4">
                         <CardHeader>
-                            <Skeleton className="h-6 w-28" />
+                            <Skeleton className="h-5 w-28" />
                         </CardHeader>
                         <CardContent>
                             <div className="h-[300px] flex items-end gap-2">
@@ -67,10 +52,9 @@ export default function AnalyticsLoading() {
                         </CardContent>
                     </Card>
 
-                    {/* Calls by Agent — col-span-3 with progress bars */}
                     <Card className="md:col-span-3 min-w-0">
                         <CardHeader>
-                            <Skeleton className="h-6 w-28" />
+                            <Skeleton className="h-5 w-28" />
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
@@ -88,26 +72,19 @@ export default function AnalyticsLoading() {
                     </Card>
                 </div>
 
-                {/* Additional metrics — grid gap-4 md:grid-cols-2 */}
+                {/* Additional metrics */}
                 <div className="grid gap-4 md:grid-cols-2">
-                    <Card>
-                        <CardHeader>
-                            <Skeleton className="h-6 w-40" />
-                        </CardHeader>
-                        <CardContent>
-                            <Skeleton className="h-10 w-24" />
-                            <Skeleton className="h-4 w-56 mt-1" />
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <Skeleton className="h-6 w-28" />
-                        </CardHeader>
-                        <CardContent>
-                            <Skeleton className="h-10 w-20" />
-                            <Skeleton className="h-4 w-40 mt-1" />
-                        </CardContent>
-                    </Card>
+                    {[1, 2].map((i) => (
+                        <Card key={i}>
+                            <CardHeader>
+                                <Skeleton className="h-5 w-40" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-10 w-24" />
+                                <Skeleton className="h-4 w-56 mt-1" />
+                            </CardContent>
+                        </Card>
+                    ))}
                 </div>
             </div>
         </div>

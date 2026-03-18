@@ -5,7 +5,7 @@ export default function LiveLoading() {
     return (
         <div className="flex flex-col h-full">
             {/* Header bar */}
-            <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200/50 dark:border-slate-800/50 px-4 sm:px-6">
+            <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6">
                 <Skeleton className="h-5 w-24" />
                 <div className="flex items-center gap-2">
                     <Skeleton className="h-9 w-9 rounded-md" />
@@ -14,12 +14,6 @@ export default function LiveLoading() {
             </header>
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
-                {/* Page title */}
-                <div>
-                    <Skeleton className="h-8 w-48" />
-                    <Skeleton className="h-4 w-52 mt-2" />
-                </div>
-
                 {/* Status bar — matches ActiveCallsList status line */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
