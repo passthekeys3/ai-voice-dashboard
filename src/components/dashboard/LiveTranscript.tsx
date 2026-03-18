@@ -220,13 +220,13 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell', base
             }
         }, 1000);
 
-        // Fallback polling every 5 seconds (in case Realtime misses an update)
+        // Fallback polling every 2 seconds (in case Realtime misses an update)
         pollIntervalRef.current = setInterval(() => {
             if (isActiveRef.current) {
                 lastUpdateSourceRef.current = 'poll';
                 fetchCall();
             }
-        }, 5000);
+        }, 2000);
 
         return () => {
             supabase.removeChannel(channel);
