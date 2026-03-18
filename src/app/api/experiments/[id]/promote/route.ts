@@ -41,6 +41,11 @@ export async function POST(
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
         const body = bodyOrError as unknown as PromoteRequestBody;
+
+        if (!body.variant_id || !isValidUuid(body.variant_id)) {
+            return NextResponse.json({ error: 'Valid variant_id is required' }, { status: 400 });
+        }
+
         const supabase = await createClient();
 
         // Get experiment with variants
@@ -74,6 +79,26 @@ export async function POST(
 
         if (!winnerVariant) {
             return NextResponse.json({ error: 'Variant not found' }, { status: 404 });
+        }
+
+        // Control variant already uses the agent's current prompt — skip provider update
+        if (winnerVariant.is_control) {
+            // Just mark the experiment as completed with the control as winner
+            await supabase
+                .from('experiments')
+                .update({
+                    status: 'completed',
+                    winner_variant_id: body.variant_id,
+                    end_date: new Date().toISOString(),
+                })
+                .eq('id', id)
+                .eq('agency_id', user.agency.id);
+
+            return NextResponse.json({
+                success: true,
+                message: `Control variant "${winnerVariant.name}" won — agent prompt unchanged`,
+                variant: winnerVariant,
+            });
         }
 
         const agent = experiment.agents;

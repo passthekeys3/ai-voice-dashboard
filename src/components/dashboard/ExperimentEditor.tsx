@@ -264,7 +264,7 @@ export function ExperimentEditor({ experiment, agents }: ExperimentEditorProps) 
                                             </span>
                                         )}
                                     </div>
-                                    {variants.length > 2 && (
+                                    {variants.length > 2 && !variant.is_control && (
                                         <Button
                                             variant="ghost"
                                             size="icon"

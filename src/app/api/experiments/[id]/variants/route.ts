@@ -27,6 +27,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id: experimentId } = await params;
+        if (!isValidUuid(experimentId)) {
+            return NextResponse.json({ error: 'Invalid experiment ID format' }, { status: 400 });
+        }
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
         const { name, prompt, traffic_weight, is_control } = bodyOrError;
@@ -101,6 +104,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         const { id: experimentId } = await params;
+        if (!isValidUuid(experimentId)) {
+            return NextResponse.json({ error: 'Invalid experiment ID format' }, { status: 400 });
+        }
         const bodyOrError = await safeParseJson(request);
         if (bodyOrError instanceof NextResponse) return bodyOrError;
         const { variants } = bodyOrError;
@@ -117,7 +123,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Maximum 10 variants per experiment' }, { status: 400 });
         }
 
-        // Validate individual variant fields
+        // Validate individual variant fields and total weight
+        let totalWeight = 0;
         for (const variant of variants) {
             if (variant.name !== undefined && typeof variant.name !== 'string') {
                 return NextResponse.json({ error: 'Variant name must be a string' }, { status: 400 });
@@ -131,6 +138,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             if (variant.traffic_weight !== undefined && (typeof variant.traffic_weight !== 'number' || variant.traffic_weight < 0 || variant.traffic_weight > 100)) {
                 return NextResponse.json({ error: 'Traffic weight must be 0-100' }, { status: 400 });
             }
+            totalWeight += variant.traffic_weight ?? 0;
+        }
+
+        if (totalWeight !== 100) {
+            return NextResponse.json({
+                error: `Total traffic weight must equal 100% (currently ${totalWeight}%)`
+            }, { status: 400 });
         }
 
         const supabase = await createClient();
