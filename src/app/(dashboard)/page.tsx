@@ -78,20 +78,29 @@ export default async function DashboardPage() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    // Use agency's calling window timezone, or default to America/New_York
+    const userTimezone = user.agency.calling_window?.timezone_override || 'America/New_York';
+
     const { data: volumeRows } = await supabase.rpc('get_call_volume_by_day', {
         p_agent_ids: agentIds,
         p_since: thirtyDaysAgo.toISOString(),
         p_until: now.toISOString(),
         ...(clientId ? { p_client_id: clientId } : {}),
+        p_timezone: userTimezone,
     });
 
-    // Fill in missing days with 0
-    const toDateStr = (d: Date) => d.toISOString().split('T')[0];
+    // Fill in missing days with 0, using the user's timezone for date strings
+    const toLocaleDateStr = (d: Date) => {
+        const year = d.toLocaleString('en-CA', { timeZone: userTimezone, year: 'numeric' });
+        const month = d.toLocaleString('en-CA', { timeZone: userTimezone, month: '2-digit' });
+        const day = d.toLocaleString('en-CA', { timeZone: userTimezone, day: '2-digit' });
+        return `${year}-${month}-${day}`;
+    };
     const volumeMap = new Map<string, number>();
     for (let i = 29; i >= 0; i--) {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
-        volumeMap.set(toDateStr(date), 0);
+        volumeMap.set(toLocaleDateStr(date), 0);
     }
     if (Array.isArray(volumeRows)) {
         for (const row of volumeRows) {

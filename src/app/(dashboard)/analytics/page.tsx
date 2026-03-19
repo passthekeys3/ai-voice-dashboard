@@ -72,12 +72,16 @@ export default async function AnalyticsPage({ searchParams }: Props) {
             ...(clientId ? { p_client_id: clientId } : {}),
         });
 
-        // Call volume by day via RPC
+        // Use agency's calling window timezone, or default to America/New_York
+        const userTimezone = user.agency.calling_window?.timezone_override || 'America/New_York';
+
+        // Call volume by day via RPC (timezone-aware)
         const { data: volumeRows } = await supabase.rpc('get_call_volume_by_day', {
             p_agent_ids: agentIds,
             p_since: sinceDate,
             p_until: endDate.toISOString(),
             ...(clientId ? { p_client_id: clientId } : {}),
+            p_timezone: userTimezone,
         });
 
         // Calls by agent via RPC
@@ -97,8 +101,13 @@ export default async function AnalyticsPage({ searchParams }: Props) {
             const successRate = totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
             const avgCallDuration = totalCalls > 0 ? totalMinutes / totalCalls : 0;
 
-            // Fill in missing days from volume RPC results
-            const toDateStr = (d: Date) => d.toISOString().split('T')[0];
+            // Fill in missing days from volume RPC results (timezone-aware)
+            const toDateStr = (d: Date) => {
+                const year = d.toLocaleString('en-CA', { timeZone: userTimezone, year: 'numeric' });
+                const month = d.toLocaleString('en-CA', { timeZone: userTimezone, month: '2-digit' });
+                const day = d.toLocaleString('en-CA', { timeZone: userTimezone, day: '2-digit' });
+                return `${year}-${month}-${day}`;
+            };
             const volumeMap = new Map<string, number>();
             if (Array.isArray(volumeRows)) {
                 for (const row of volumeRows) {
