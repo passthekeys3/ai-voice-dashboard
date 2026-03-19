@@ -357,10 +357,7 @@ function DemoKPICard({
 function DemoKPICardStatic({ kpi }: { kpi: typeof MOCK_KPI[number] }) {
     return (
         <div
-            className={cn(
-                'rounded-lg border border-border bg-card overflow-hidden border-l-[3px]',
-                theme.border,
-            )}
+            className="rounded-lg border border-border bg-card overflow-hidden"
         >
             <div className="px-2.5 py-2">
                 <div className="flex items-center justify-between mb-1">
