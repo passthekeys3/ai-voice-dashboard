@@ -200,8 +200,6 @@ export default async function SettingsPage() {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
-                <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
-
                 {/* AI Call Analysis Usage */}
                 {user.profile.role === 'agency_admin' && (
                     <Suspense fallback={<BillingSkeleton />}>

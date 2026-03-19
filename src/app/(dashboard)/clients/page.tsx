@@ -29,13 +29,7 @@ export default async function ClientsPage() {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h2 className="text-2xl font-bold tracking-tight">Clients</h2>
-                        <p className="text-muted-foreground">
-                            Manage your client sub-accounts
-                        </p>
-                    </div>
+                <div className="flex items-center justify-end">
                     <CreateClientDialog />
                 </div>
 

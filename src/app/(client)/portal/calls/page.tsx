@@ -55,12 +55,11 @@ export default async function ClientCallsPage() {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h2 className="text-2xl font-bold tracking-tight">Call History</h2>
+                {permissions.can_export_calls && (
+                    <div className="flex justify-end">
+                        <ExportCallsButton />
                     </div>
-                    {permissions.can_export_calls && <ExportCallsButton />}
-                </div>
+                )}
 
                 <CallsPageClient
                     initialCalls={(calls || []) as (Call & { agents: { name: string; provider: string } })[]}

@@ -31,22 +31,19 @@ export default async function WorkflowsPage() {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <h2 className="text-2xl font-bold tracking-tight">Workflows</h2>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Button variant="outline" asChild>
-                            <Link href="/workflows/history">
-                                <History className="mr-2 h-4 w-4" />
-                                View History
-                            </Link>
-                        </Button>
-                        <Button asChild>
-                            <Link href="/workflows/new">
-                                <Plus className="mr-2 h-4 w-4" />
-                                Create Workflow
-                            </Link>
-                        </Button>
-                    </div>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Button variant="outline" asChild>
+                        <Link href="/workflows/history">
+                            <History className="mr-2 h-4 w-4" />
+                            View History
+                        </Link>
+                    </Button>
+                    <Button asChild>
+                        <Link href="/workflows/new">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Create Workflow
+                        </Link>
+                    </Button>
                 </div>
 
                 <WorkflowsList
