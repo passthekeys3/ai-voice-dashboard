@@ -64,21 +64,23 @@ export default async function ClientAgentsPage() {
     return (
         <div className="flex flex-col h-full">
             <Header
-                title="Agents"
                 userName={user.profile.full_name}
                 userEmail={user.email}
                 userAvatar={user.profile.avatar_url}
-                actions={canCreate ? (
-                    <CreateAgentButton
-                        clients={clients}
-                        phoneNumbers={phoneNumbers.map(pn => ({ ...pn, agent_id: pn.agent_id ?? undefined }))}
-                        availableProviders={availableProviders}
-                        basePath="/portal"
-                    />
-                ) : undefined}
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Agents</h2>
+                    {canCreate && (
+                        <CreateAgentButton
+                            clients={clients}
+                            phoneNumbers={phoneNumbers.map(pn => ({ ...pn, agent_id: pn.agent_id ?? undefined }))}
+                            availableProviders={availableProviders}
+                            basePath="/portal"
+                        />
+                    )}
+                </div>
 
                 <FilterableAgentGrid
                     agents={(agents || []) as (Agent & { clients: { name: string } | null })[]}

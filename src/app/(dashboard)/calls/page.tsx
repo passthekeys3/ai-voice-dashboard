@@ -33,14 +33,16 @@ export default async function CallsPage() {
     return (
         <div className="flex flex-col h-full">
             <Header
-                title="Call History"
                 userName={user.profile.full_name}
                 userEmail={user.email}
                 userAvatar={user.profile.avatar_url}
-                actions={(isAdmin || permissions.can_export_calls) ? <ExportCallsButton /> : undefined}
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Call History</h2>
+                    {(isAdmin || permissions.can_export_calls) && <ExportCallsButton />}
+                </div>
 
                 <CallsPageClient
                     initialCalls={(calls || []) as (Call & { agents: { name: string; provider: string } })[]}

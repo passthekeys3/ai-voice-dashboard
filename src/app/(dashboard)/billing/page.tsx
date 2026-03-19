@@ -83,13 +83,13 @@ export default async function BillingPage() {
     return (
         <div className="flex flex-col h-full">
             <Header
-                title="Billing"
                 userName={user.profile.full_name}
                 userEmail={user.email}
                 userAvatar={user.profile.avatar_url}
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto overflow-x-hidden">
+                <h2 className="text-lg font-semibold">Billing</h2>
                 {/* Subscription Management */}
                 {isAdmin && (
                     <Suspense fallback={<SectionSkeleton />}>

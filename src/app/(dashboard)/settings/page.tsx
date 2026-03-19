@@ -193,13 +193,13 @@ export default async function SettingsPage() {
     return (
         <div className="flex flex-col h-full">
             <Header
-                title="Settings"
                 userName={user.profile.full_name}
                 userEmail={user.email}
                 userAvatar={user.profile.avatar_url}
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
+                <h2 className="text-lg font-semibold">Settings</h2>
                 {/* AI Call Analysis Usage */}
                 {user.profile.role === 'agency_admin' && (
                     <Suspense fallback={<BillingSkeleton />}>

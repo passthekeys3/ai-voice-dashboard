@@ -37,14 +37,16 @@ export default async function ScheduledCallsPage() {
     return (
         <div className="flex flex-col h-full">
             <Header
-                title="Scheduled Calls"
                 userName={user.profile.full_name}
                 userEmail={user.email}
                 userAvatar={user.profile.avatar_url}
-                actions={<ScheduleCallButton agents={agents || []} />}
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Scheduled Calls</h2>
+                    <ScheduleCallButton agents={agents || []} />
+                </div>
 
                 <ScheduledCallsList
                     upcomingCalls={upcomingCalls}
