@@ -161,7 +161,7 @@ export function BillingSection() {
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Billing & Subscription</CardTitle>
+                    <CardTitle>Subscription</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <Skeleton className="h-8 w-32" />
@@ -185,7 +185,7 @@ export function BillingSection() {
             <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="min-w-0">
-                        <CardTitle>Billing & Subscription</CardTitle>
+                        <CardTitle>Subscription</CardTitle>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                         {getPlanTypeBadge(planType)}
