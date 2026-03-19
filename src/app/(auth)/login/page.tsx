@@ -64,10 +64,9 @@ function LoginForm() {
     };
 
     return (
-        <Card className="w-full max-w-md border-l-4 border-l-blue-500">
+        <Card className="w-full max-w-md">
             <CardHeader className="text-center pb-2">
                 <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
-                <p className="text-muted-foreground mt-1">Sign in to your account to continue</p>
             </CardHeader>
 
             <CardContent>
@@ -118,12 +117,13 @@ function LoginForm() {
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                 tabIndex={-1}
                                 aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                aria-pressed={showPassword}
                             >
                                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                         </div>
                     </div>
-                    <Button type="submit" className="w-full rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg" disabled={loading}>
+                    <Button type="submit" className="w-full" disabled={loading}>
                         {loading ? (
                             <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -148,7 +148,7 @@ function LoginForm() {
                 {/* Google OAuth */}
                 <Button
                     variant="outline"
-                    className="w-full rounded-full"
+                    className="w-full"
                     disabled={loading || googleLoading}
                     onClick={async () => {
                         setGoogleLoading(true);
@@ -193,7 +193,7 @@ function LoginForm() {
 export default function LoginPage() {
     return (
         <Suspense fallback={
-            <Card className="w-full max-w-md border-l-4 border-l-blue-500 animate-pulse">
+            <Card className="w-full max-w-md  animate-pulse">
                 <CardHeader className="text-center space-y-2">
                     <div className="h-7 bg-muted rounded w-48 mx-auto" />
                     <div className="h-4 bg-muted rounded w-64 mx-auto" />
@@ -207,7 +207,7 @@ export default function LoginPage() {
                         <div className="h-4 bg-muted rounded w-16" />
                         <div className="h-10 bg-muted rounded" />
                     </div>
-                    <div className="h-10 bg-muted rounded-full" />
+                    <div className="h-10 bg-muted rounded" />
                 </CardContent>
             </Card>
         }>

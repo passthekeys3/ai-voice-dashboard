@@ -89,10 +89,10 @@ export default function SignupPage() {
 
     if (success) {
         return (
-            <Card className="w-full max-w-md border-l-4 border-l-green-500 text-center">
+            <Card className="w-full max-w-md text-center">
                 <CardContent className="pt-6">
-                    <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-6">
-                        <Mail className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-6">
+                        <Mail className="h-6 w-6 text-muted-foreground" />
                     </div>
                     <h1 className="text-2xl font-bold tracking-tight">Check your email</h1>
                     <p className="text-muted-foreground mt-2 text-base">
@@ -102,7 +102,7 @@ export default function SignupPage() {
                     <p className="text-sm text-muted-foreground mt-6">
                         Didn&apos;t receive the email? Check your spam folder.
                     </p>
-                    <Button variant="outline" className="w-full mt-4 rounded-full" asChild>
+                    <Button variant="outline" className="w-full mt-4" asChild>
                         <Link href="/login">Back to Login</Link>
                     </Button>
                 </CardContent>
@@ -111,17 +111,16 @@ export default function SignupPage() {
     }
 
     return (
-        <Card className="w-full max-w-md border-l-4 border-l-green-500">
+        <Card className="w-full max-w-md">
             <CardHeader className="text-center pb-2">
                 <h1 className="text-2xl font-bold tracking-tight">Create your account</h1>
-                <p className="text-muted-foreground mt-1">Start your voice AI agency today</p>
             </CardHeader>
 
             <CardContent>
                 {/* Google OAuth */}
                 <Button
                     variant="outline"
-                    className="w-full rounded-full mb-4"
+                    className="w-full mb-4"
                     disabled={loading || googleLoading}
                     onClick={async () => {
                         setGoogleLoading(true);
@@ -231,6 +230,7 @@ export default function SignupPage() {
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             tabIndex={-1}
                             aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            aria-pressed={showPassword}
                         >
                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -259,6 +259,7 @@ export default function SignupPage() {
                         type="button"
                         onClick={() => setShowPromo(!showPromo)}
                         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        aria-expanded={showPromo}
                     >
                         {showPromo ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                         Have a promo code?
@@ -276,7 +277,7 @@ export default function SignupPage() {
                         </div>
                     )}
                 </div>
-                <Button type="submit" className="w-full rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? (
                         <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />

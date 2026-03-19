@@ -38,10 +38,10 @@ export default function ForgotPasswordPage() {
 
     if (sent) {
         return (
-            <Card className="w-full max-w-md border-l-4 border-l-amber-500 text-center">
+            <Card className="w-full max-w-md text-center">
                 <CardContent className="pt-6">
-                    <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-6">
-                        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-6">
+                        <CheckCircle className="h-6 w-6 text-muted-foreground" />
                     </div>
                     <h1 className="text-2xl font-bold tracking-tight">Check Your Email</h1>
                     <p className="text-muted-foreground mt-2">
@@ -51,7 +51,7 @@ export default function ForgotPasswordPage() {
                         Click the link in the email to reset your password.
                         If you don&apos;t see it, check your spam folder.
                     </p>
-                    <Button variant="outline" className="w-full mt-6 rounded-full" asChild>
+                    <Button variant="outline" className="w-full mt-6" asChild>
                         <Link href="/login">
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Back to Login
@@ -63,10 +63,10 @@ export default function ForgotPasswordPage() {
     }
 
     return (
-        <Card className="w-full max-w-md border-l-4 border-l-amber-500">
+        <Card className="w-full max-w-md">
             <CardHeader className="text-center pb-2">
-                <div className="mx-auto w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mb-6">
-                    <Mail className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-6">
+                    <Mail className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <h1 className="text-2xl font-bold tracking-tight">Reset Password</h1>
                 <p className="text-muted-foreground mt-1">
@@ -94,7 +94,7 @@ export default function ForgotPasswordPage() {
                         />
                     </div>
 
-                    <Button type="submit" className="w-full rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg" disabled={loading}>
+                    <Button type="submit" className="w-full" disabled={loading}>
                         {loading ? (
                             <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

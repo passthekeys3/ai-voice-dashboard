@@ -47,10 +47,9 @@ export default function CompleteSignupPage() {
     };
 
     return (
-        <Card className="w-full max-w-md border-l-4 border-l-green-500">
+        <Card className="w-full max-w-md">
             <CardHeader className="text-center pb-2">
                 <h1 className="text-2xl font-bold tracking-tight">One more step</h1>
-                <p className="text-muted-foreground mt-1">Set up your agency to get started</p>
             </CardHeader>
 
             <CardContent>
@@ -77,6 +76,7 @@ export default function CompleteSignupPage() {
                             type="button"
                             onClick={() => setShowPromo(!showPromo)}
                             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            aria-expanded={showPromo}
                         >
                             {showPromo ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                             Have a promo code?
@@ -96,7 +96,7 @@ export default function CompleteSignupPage() {
                     </div>
                     <Button
                         type="submit"
-                        className="w-full rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+                        className="w-full"
                         disabled={loading}
                     >
                         {loading ? (

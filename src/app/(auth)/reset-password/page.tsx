@@ -70,10 +70,10 @@ function ResetPasswordContent() {
 
     if (success) {
         return (
-            <Card className="w-full max-w-md border-l-4 border-l-green-500 text-center">
+            <Card className="w-full max-w-md text-center">
                 <CardContent className="pt-6">
-                    <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-6">
-                        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-6">
+                        <CheckCircle className="h-6 w-6 text-muted-foreground" />
                     </div>
                     <h1 className="text-2xl font-bold tracking-tight">Password Updated!</h1>
                     <p className="text-muted-foreground mt-2">
@@ -85,10 +85,10 @@ function ResetPasswordContent() {
     }
 
     return (
-        <Card className="w-full max-w-md border-l-4 border-l-purple-500">
+        <Card className="w-full max-w-md">
             <CardHeader className="text-center pb-2">
-                <div className="mx-auto w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mb-6">
-                    <Lock className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-6">
+                    <Lock className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <h1 className="text-2xl font-bold tracking-tight">Set New Password</h1>
                 <p className="text-muted-foreground mt-1">
@@ -130,7 +130,7 @@ function ResetPasswordContent() {
                         />
                     </div>
 
-                    <Button type="submit" className="w-full rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg" disabled={loading}>
+                    <Button type="submit" className="w-full" disabled={loading}>
                         {loading ? (
                             <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -149,7 +149,7 @@ function ResetPasswordContent() {
 export default function ResetPasswordPage() {
     return (
         <Suspense fallback={
-            <Card className="w-full max-w-md border-l-4 border-l-purple-500 text-center animate-pulse">
+            <Card className="w-full max-w-md text-center animate-pulse">
                 <CardHeader>
                     <div className="mx-auto w-12 h-12 bg-muted rounded-full mb-6" />
                     <div className="h-7 bg-muted rounded w-48 mx-auto" />
