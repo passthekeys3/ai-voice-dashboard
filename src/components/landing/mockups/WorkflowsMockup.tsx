@@ -6,6 +6,7 @@ import {
     Calendar,
     Send,
     ChevronDown,
+    Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -121,6 +122,7 @@ function FlowCardItem({ card, index, isInView }: { card: FlowCard; index: number
                         </div>
                     )}
                 </div>
+                <Settings2 className="h-3 w-3 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
             </div>
         </div>
     );
@@ -162,10 +164,7 @@ export function WorkflowsMockup({ isInView }: WorkflowsMockupProps) {
                     animationPlayState: isInView ? 'running' : 'paused',
                 }}
             >
-                <div>
-                    <div className="text-[11px] font-semibold">Post-Call Workflow</div>
-                    <div className="text-[9px] text-muted-foreground">Automate actions after every call</div>
-                </div>
+                <div className="text-[11px] font-semibold">Post-Call Workflow</div>
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400">
                     <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
                     Active

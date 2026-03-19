@@ -1,6 +1,6 @@
 'use client';
 
-import { Sparkles, Send, Play, Bot, MessageSquare } from 'lucide-react';
+import { Sparkles, Send, MessageSquare, Mic, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /* ─── Mock Data ─── */
@@ -24,7 +24,7 @@ function ChatBubble({ message, index, isInView }: { message: typeof CHAT_MESSAGE
     return (
         <div
             className={cn(
-                'flex animate-fade-up',
+                'flex gap-2 animate-fade-up',
                 isUser ? 'justify-end' : 'justify-start'
             )}
             style={{
@@ -35,18 +35,16 @@ function ChatBubble({ message, index, isInView }: { message: typeof CHAT_MESSAGE
             }}
         >
             {!isUser && (
-                <div className="flex-shrink-0 mr-1.5 mt-1">
-                    <div className="p-1 rounded-md bg-violet-100 dark:bg-violet-900/30">
-                        <Sparkles className="h-2.5 w-2.5 text-violet-600 dark:text-violet-400" />
-                    </div>
+                <div className="flex-shrink-0 w-5 h-5 rounded-full bg-violet-600 flex items-center justify-center mt-1">
+                    <Sparkles className="h-2.5 w-2.5 text-white" />
                 </div>
             )}
             <div
                 className={cn(
-                    'rounded-lg px-2.5 py-1.5 max-w-[85%]',
+                    'max-w-[85%] px-3 py-2',
                     isUser
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-muted'
+                        ? 'rounded-2xl bg-primary text-primary-foreground'
+                        : 'rounded-2xl bg-muted'
                 )}
             >
                 <p className="text-[9px] leading-relaxed">{message.text}</p>
@@ -58,7 +56,7 @@ function ChatBubble({ message, index, isInView }: { message: typeof CHAT_MESSAGE
 function PreviewPanel({ isInView }: { isInView: boolean }) {
     return (
         <div
-            className="hidden sm:flex flex-col border-l border-border/50 bg-muted/20 p-3 animate-fade-up"
+            className="hidden sm:flex flex-col border-l border-border bg-slate-50 dark:bg-slate-950 p-3 animate-fade-up"
             style={{
                 opacity: isInView ? undefined : 0,
                 animationDelay: '500ms',
@@ -66,13 +64,22 @@ function PreviewPanel({ isInView }: { isInView: boolean }) {
                 animationPlayState: isInView ? 'running' : 'paused',
             }}
         >
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                Preview
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3">
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Preview
+                </div>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[7px] font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                    Draft
+                </span>
             </div>
 
             {/* Agent name */}
             <div className="space-y-1 mb-3">
-                <label className="text-[9px] font-medium text-muted-foreground">Agent Name</label>
+                <label className="flex items-center gap-1 text-[8px] font-medium uppercase tracking-wider text-muted-foreground">
+                    <Bot className="h-2.5 w-2.5" />
+                    Agent Name
+                </label>
                 <div className="rounded-md border border-border bg-card px-2 py-1.5">
                     <span className="text-[10px] font-medium">Sarah &mdash; Dental Receptionist</span>
                 </div>
@@ -80,16 +87,34 @@ function PreviewPanel({ isInView }: { isInView: boolean }) {
 
             {/* Voice */}
             <div className="space-y-1 mb-3">
-                <label className="text-[9px] font-medium text-muted-foreground">Voice</label>
+                <label className="flex items-center gap-1 text-[8px] font-medium uppercase tracking-wider text-muted-foreground">
+                    <Mic className="h-2.5 w-2.5" />
+                    Voice
+                </label>
                 <div className="rounded-md border border-border bg-card px-2 py-1.5 flex items-center justify-between">
                     <span className="text-[10px]">Chloe &mdash; Warm, Professional</span>
-                    <Play className="h-2.5 w-2.5 text-muted-foreground" />
+                </div>
+            </div>
+
+            {/* Provider */}
+            <div className="space-y-1 mb-3">
+                <label className="text-[8px] font-medium uppercase tracking-wider text-muted-foreground">Provider</label>
+                <div className="flex gap-1">
+                    <div className="flex-1 text-[9px] px-2 py-1 rounded-md border border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 font-medium text-center">
+                        Retell
+                    </div>
+                    <div className="flex-1 text-[9px] px-2 py-1 rounded-md border border-input bg-background text-muted-foreground text-center">
+                        Vapi
+                    </div>
+                    <div className="flex-1 text-[9px] px-2 py-1 rounded-md border border-input bg-background text-muted-foreground text-center">
+                        Bland
+                    </div>
                 </div>
             </div>
 
             {/* First message */}
             <div className="space-y-1 mb-4">
-                <label className="text-[9px] font-medium text-muted-foreground">First Message</label>
+                <label className="text-[8px] font-medium uppercase tracking-wider text-muted-foreground">First Message</label>
                 <div className="rounded-md border border-border bg-card px-2 py-2">
                     <p className="text-[9px] leading-relaxed text-muted-foreground italic">
                         &ldquo;Hi! I&apos;m Sarah from Bright Smiles Dental. How can I help you today?&rdquo;
@@ -99,9 +124,9 @@ function PreviewPanel({ isInView }: { isInView: boolean }) {
 
             {/* Create button */}
             <div className="mt-auto">
-                <div className="w-full rounded-md bg-gradient-to-r from-blue-500 to-blue-600 text-white text-center py-1.5">
+                <div className="w-full rounded-md bg-violet-600 text-white text-center py-1.5">
                     <span className="text-[10px] font-medium flex items-center justify-center gap-1.5">
-                        <Bot className="h-3 w-3" />
+                        <Sparkles className="h-3 w-3" />
                         Create Agent
                     </span>
                 </div>
@@ -120,10 +145,10 @@ export function BuilderMockup({ isInView }: BuilderMockupProps) {
     return (
         <div className="flex aspect-[16/12]">
             {/* Chat panel */}
-            <div className="flex-1 flex flex-col p-3 min-w-0">
+            <div className="flex-1 flex flex-col p-3 min-w-0 border-r border-border/50 sm:max-w-[55%]">
                 {/* Header */}
                 <div
-                    className="flex items-center gap-2 mb-3 animate-fade-up"
+                    className="flex items-center gap-2 mb-3 pb-3 border-b border-border animate-fade-up"
                     style={{
                         opacity: isInView ? undefined : 0,
                         animationDelay: '100ms',
@@ -131,7 +156,7 @@ export function BuilderMockup({ isInView }: BuilderMockupProps) {
                         animationPlayState: isInView ? 'running' : 'paused',
                     }}
                 >
-                    <div className="p-1.5 rounded-md bg-gradient-to-br from-violet-500 to-purple-600">
+                    <div className="p-1.5 rounded-lg bg-violet-600">
                         <Sparkles className="h-3 w-3 text-white" />
                     </div>
                     <div>
@@ -141,7 +166,7 @@ export function BuilderMockup({ isInView }: BuilderMockupProps) {
                 </div>
 
                 {/* Chat messages */}
-                <div className="flex-1 space-y-2 mt-1 overflow-hidden">
+                <div className="flex-1 space-y-2.5 mt-1 overflow-hidden">
                     {CHAT_MESSAGES.map((msg, i) => (
                         <ChatBubble key={i} message={msg} index={i} isInView={isInView} />
                     ))}
@@ -149,7 +174,7 @@ export function BuilderMockup({ isInView }: BuilderMockupProps) {
 
                 {/* Input bar */}
                 <div
-                    className="flex items-center gap-1.5 mt-2 rounded-lg border border-border bg-card px-2 py-1.5 animate-fade-up"
+                    className="flex items-center gap-1.5 mt-2 rounded-lg border border-border bg-card px-2.5 py-2 animate-fade-up"
                     style={{
                         opacity: isInView ? undefined : 0,
                         animationDelay: '200ms',
@@ -159,7 +184,7 @@ export function BuilderMockup({ isInView }: BuilderMockupProps) {
                 >
                     <MessageSquare className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                     <span className="flex-1 text-[9px] text-muted-foreground">Describe your agent...</span>
-                    <div className="p-1 rounded-md bg-blue-600">
+                    <div className="p-1 rounded-md bg-violet-600">
                         <Send className="h-2.5 w-2.5 text-white" />
                     </div>
                 </div>
