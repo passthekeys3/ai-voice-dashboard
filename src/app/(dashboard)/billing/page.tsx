@@ -97,29 +97,31 @@ export default async function BillingPage() {
                     </Suspense>
                 )}
 
-                {/* Current Period Usage */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Current Period</CardTitle>
-                        <CardDescription>{monthName}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid gap-4 md:grid-cols-3">
-                            <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground">Total Calls</p>
-                                <p className="text-3xl font-bold">{totalCalls}</p>
+                {/* Current Period Usage — only for non-admins (admins see it in BillingSection) */}
+                {!isAdmin && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Current Period</CardTitle>
+                            <CardDescription>{monthName}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid gap-4 md:grid-cols-3">
+                                <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">Total Calls</p>
+                                    <p className="text-2xl font-bold">{totalCalls}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">Total Duration</p>
+                                    <p className="text-2xl font-bold">{totalDuration}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">Cost (Provider)</p>
+                                    <p className="text-2xl font-bold">${totalCost.toFixed(2)}</p>
+                                </div>
                             </div>
-                            <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground">Total Duration</p>
-                                <p className="text-3xl font-bold">{totalDuration}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground">Cost (Provider)</p>
-                                <p className="text-3xl font-bold">${totalCost.toFixed(2)}</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Stripe Connect — Client Billing */}
                 {isAdmin && (
