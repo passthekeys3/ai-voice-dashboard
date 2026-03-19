@@ -23,6 +23,7 @@ import {
     X,
     Building2,
     BookOpen,
+    Mail,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,9 @@ interface Branding {
     primary_color?: string;
     accent_color?: string;
     company_name?: string;
+    support_email?: string;
+    support_phone?: string;
+    website_url?: string;
 }
 
 interface ClientPermissions {
@@ -207,8 +211,24 @@ function SidebarContent({
                 })}
             </nav>
 
-            {/* Docs & Logout */}
+            {/* Contact & Logout */}
             <div className="relative z-10 border-t border-white/10 p-3 space-y-1">
+                {basePath === '/portal' && (branding?.support_email || branding?.support_phone) && (
+                    <div className="px-3 py-2 space-y-1 mb-1">
+                        {branding.support_email && (
+                            <a href={`mailto:${branding.support_email}`} className="flex items-center gap-2 text-xs text-white/50 hover:text-white/80 transition-colors truncate">
+                                <Mail className="h-3.5 w-3.5 shrink-0" />
+                                {branding.support_email}
+                            </a>
+                        )}
+                        {branding.support_phone && (
+                            <a href={`tel:${branding.support_phone}`} className="flex items-center gap-2 text-xs text-white/50 hover:text-white/80 transition-colors">
+                                <Phone className="h-3.5 w-3.5 shrink-0" />
+                                {branding.support_phone}
+                            </a>
+                        )}
+                    </div>
+                )}
                 <a
                     href="https://docs.buildvoiceai.com"
                     target="_blank"

@@ -48,7 +48,6 @@ export function SettingsForm({ agency }: SettingsFormProps) {
         name: agency.name,
         companyName: agency.branding?.company_name || '',
         primaryColor: agency.branding?.primary_color || '#0f172a',
-        secondaryColor: agency.branding?.secondary_color || '#1e293b',
         accentColor: agency.branding?.accent_color || '#3b82f6',
         logoUrl: agency.branding?.logo_url || '',
         faviconUrl: agency.branding?.favicon_url || '',
@@ -164,7 +163,6 @@ export function SettingsForm({ agency }: SettingsFormProps) {
                         ...agency.branding,
                         company_name: formData.companyName,
                         primary_color: formData.primaryColor,
-                        secondary_color: formData.secondaryColor,
                         accent_color: formData.accentColor,
                         logo_url: formData.logoUrl,
                         favicon_url: formData.faviconUrl,
@@ -198,9 +196,6 @@ export function SettingsForm({ agency }: SettingsFormProps) {
     const validateBranding = (): string | null => {
         if (formData.primaryColor && !HEX_COLOR_PATTERN.test(formData.primaryColor)) {
             return 'Primary color must be a valid hex color (e.g. #0f172a)';
-        }
-        if (formData.secondaryColor && !HEX_COLOR_PATTERN.test(formData.secondaryColor)) {
-            return 'Secondary color must be a valid hex color (e.g. #1e293b)';
         }
         if (formData.accentColor && !HEX_COLOR_PATTERN.test(formData.accentColor)) {
             return 'Accent color must be a valid hex color (e.g. #3b82f6)';
@@ -435,24 +430,6 @@ export function SettingsForm({ agency }: SettingsFormProps) {
                                         onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
                                         className="flex-1"
                                         aria-label="Primary color hex value"
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="secondaryColor">Secondary</Label>
-                                <div className="flex gap-2">
-                                    <Input
-                                        id="secondaryColor"
-                                        type="color"
-                                        value={formData.secondaryColor}
-                                        onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
-                                        className="w-12 h-10 p-1"
-                                    />
-                                    <Input
-                                        value={formData.secondaryColor}
-                                        onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
-                                        className="flex-1"
-                                        aria-label="Secondary color hex value"
                                     />
                                 </div>
                             </div>

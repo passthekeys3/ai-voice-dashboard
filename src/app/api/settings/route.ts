@@ -82,7 +82,7 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
             const brandingConfig = branding as Record<string, unknown>;
             const MAX_STRING = 500;
             // Validate color fields
-            for (const colorField of ['primary_color', 'accent_color', 'sidebar_color', 'text_color']) {
+            for (const colorField of ['primary_color', 'accent_color']) {
                 if (brandingConfig[colorField] !== undefined && brandingConfig[colorField] !== null && brandingConfig[colorField] !== '') {
                     if (typeof brandingConfig[colorField] !== 'string' || !HEX_COLOR_PATTERN.test(brandingConfig[colorField] as string)) {
                         return NextResponse.json({ error: `Invalid ${colorField}: must be a hex color (e.g. #FF0000)` }, { status: 400 });
