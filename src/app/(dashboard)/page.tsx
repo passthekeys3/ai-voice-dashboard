@@ -60,6 +60,8 @@ export default async function DashboardPage() {
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     const now = new Date();
+    // Extend to end of today UTC to ensure today's calls are included
+    now.setUTCHours(23, 59, 59, 999);
 
     const { data: statsRow } = await supabase.rpc('get_dashboard_stats', {
         p_agent_ids: agentIds,
