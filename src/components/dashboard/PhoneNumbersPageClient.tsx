@@ -29,10 +29,8 @@ export function PhoneNumbersPageClient({ initialPhoneNumbers, agents, configured
 
     return (
         <>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Phone Numbers</h2>
-                </div>
+            <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Phone Numbers</h2>
                 <div className="flex flex-wrap gap-2">
                     <SyncPhoneNumbersButton onSyncComplete={refetch} />
                     <BuyPhoneNumberButton
