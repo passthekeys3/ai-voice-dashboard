@@ -32,10 +32,15 @@ export function FilterableAgentGrid({ agents, agentPhoneMap, configBasePath }: F
             <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-16">
                     <Plus className="h-8 w-8 text-muted-foreground/40 mb-3" />
-                    <h3 className="text-lg font-medium mb-2">No agents yet</h3>
-                    <p className="text-muted-foreground text-center max-w-md mb-6">
-                        Click &quot;Sync Agents&quot; to import your voice agents from Retell, Vapi, or Bland.
+                    <h3 className="text-lg font-medium mb-1">No agents yet</h3>
+                    <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
+                        Sync your agents from Retell, Vapi, or Bland — or build one from scratch with the AI Agent Builder.
                     </p>
+                    <div className="flex gap-2">
+                        <a href="/agent-builder" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+                            Build with AI
+                        </a>
+                    </div>
                 </CardContent>
             </Card>
         );

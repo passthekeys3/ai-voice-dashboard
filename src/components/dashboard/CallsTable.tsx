@@ -184,9 +184,9 @@ function EmptyState() {
         <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-16">
                 <Phone className="h-8 w-8 text-muted-foreground/40 mb-3" />
-                <h3 className="text-lg font-medium mb-2">No calls yet</h3>
-                <p className="text-muted-foreground text-center max-w-md mb-6">
-                    When your agents make or receive calls, they will appear here.
+                <h3 className="text-lg font-medium mb-1">No calls yet</h3>
+                <p className="text-sm text-muted-foreground text-center max-w-sm">
+                    Call logs, transcripts, and recordings appear here once your agents handle their first call.
                 </p>
             </CardContent>
         </Card>

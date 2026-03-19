@@ -254,18 +254,33 @@ export function Header({ userName, userEmail, userAvatar, onSync }: HeaderProps)
                     </Button>
                 )}
 
-                {/* Docs link */}
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    aria-label="Documentation"
-                    asChild
-                >
-                    <a href="https://docs.buildvoiceai.com" target="_blank" rel="noopener noreferrer">
-                        <HelpCircle className="h-4 w-4" />
-                    </a>
-                </Button>
+                {/* Help menu */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            aria-label="Help"
+                        >
+                            <HelpCircle className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem asChild>
+                            <Link href="/onboarding" className="flex items-center gap-2">
+                                <RefreshCw className="h-3.5 w-3.5" />
+                                Setup Guide
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <a href="https://docs.buildvoiceai.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                                <BookOpen className="h-3.5 w-3.5" />
+                                Documentation
+                            </a>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
 
                 {/* Dark mode toggle */}
                 <Button

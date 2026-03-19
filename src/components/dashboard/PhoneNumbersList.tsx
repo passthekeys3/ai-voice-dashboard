@@ -104,12 +104,11 @@ export function PhoneNumbersList({ phoneNumbers, agents, onDataChange }: PhoneNu
     if (phoneNumbers.length === 0) {
         return (
             <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                    <PhoneIcon className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No phone numbers yet</h3>
-                    <p className="text-muted-foreground text-center max-w-md">
-                        Purchase phone numbers to enable inbound calls to your AI agents.
-                        Numbers are charged at approximately $2/month.
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                    <PhoneIcon className="h-8 w-8 text-muted-foreground/40 mb-3" />
+                    <h3 className="text-lg font-medium mb-1">No phone numbers yet</h3>
+                    <p className="text-sm text-muted-foreground text-center max-w-sm">
+                        Purchase a number to receive inbound calls. Each number is assigned to an agent and costs ~$2/month.
                     </p>
                 </CardContent>
             </Card>

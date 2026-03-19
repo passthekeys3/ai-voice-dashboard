@@ -70,6 +70,9 @@ export default function CompleteSignupPage() {
                             required
                             autoFocus
                         />
+                        <p className="text-xs text-muted-foreground">
+                            This is how your clients will see you
+                        </p>
                     </div>
                     <div>
                         <button

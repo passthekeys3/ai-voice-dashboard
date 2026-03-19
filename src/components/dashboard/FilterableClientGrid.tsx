@@ -48,9 +48,9 @@ export function FilterableClientGrid({ clients }: FilterableClientGridProps) {
             <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-16">
                     <Users className="h-8 w-8 text-muted-foreground/40 mb-3" />
-                    <h3 className="text-lg font-medium mb-2">No clients yet</h3>
-                    <p className="text-muted-foreground text-center max-w-md mb-6">
-                        Add your first business client to manage their voice AI agents.
+                    <h3 className="text-lg font-medium mb-1">No clients yet</h3>
+                    <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
+                        Clients are the businesses you manage. Each gets their own agents, call history, and portal access.
                     </p>
                     <CreateClientDialog />
                 </CardContent>

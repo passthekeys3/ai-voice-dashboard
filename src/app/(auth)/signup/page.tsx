@@ -14,7 +14,6 @@ import { GoogleIcon } from '@/components/icons/GoogleIcon';
 export default function SignupPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
     const [fullName, setFullName] = useState('');
     const [agencyName, setAgencyName] = useState('');
     const [promoCode, setPromoCode] = useState('');
@@ -38,11 +37,6 @@ export default function SignupPage() {
 
         if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
             setError('Password must include uppercase, lowercase, and a number');
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            setError('Passwords do not match');
             return;
         }
 
@@ -238,21 +232,6 @@ export default function SignupPage() {
                     <p className={`text-xs ${password.length > 0 && (password.length < 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) ? 'text-red-500' : 'text-muted-foreground'}`}>
                         Min 8 characters with uppercase, lowercase, and a number
                     </p>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                        id="confirmPassword"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        minLength={8}
-                        required
-                    />
-                    {confirmPassword.length > 0 && password !== confirmPassword && (
-                        <p className="text-xs text-red-500">Passwords do not match</p>
-                    )}
                 </div>
                 <div>
                     <button
