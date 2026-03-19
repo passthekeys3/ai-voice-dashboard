@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import {
     Plug, Loader2, RotateCcw, Settings2, CheckCircle2,
-    ArrowRight, MessageSquare, Key, Calendar, Link2, Unlink, AlertTriangle,
+    Database, MessageSquare, Key, Calendar, Link2, Unlink, AlertTriangle,
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import type { IntegrationSource } from '@/lib/integrations/resolve';
@@ -53,7 +53,7 @@ const INTEGRATIONS: IntegrationMeta[] = [
         key: 'ghl',
         name: 'GoHighLevel',
         description: 'CRM automation — contacts, pipelines, appointments',
-        icon: <ArrowRight className="h-4 w-4" />,
+        icon: <Database className="h-4 w-4" />,
         fields: [
             { name: 'location_id', label: 'Location ID', type: 'text', placeholder: 'GHL Location ID', description: 'Override the agency location for this client (optional).' },
             { name: 'enabled', label: 'Enabled', type: 'toggle' },
@@ -65,7 +65,7 @@ const INTEGRATIONS: IntegrationMeta[] = [
         key: 'hubspot',
         name: 'HubSpot',
         description: 'CRM sync — contacts, deals, call logging',
-        icon: <ArrowRight className="h-4 w-4" />,
+        icon: <Database className="h-4 w-4" />,
         fields: [
             { name: 'portal_id', label: 'Portal ID', type: 'text', placeholder: 'HubSpot Portal ID', description: 'Override the agency portal for this client (optional).' },
             { name: 'enabled', label: 'Enabled', type: 'toggle' },
@@ -162,7 +162,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
                 setAgents(clientAgents);
             }
         } catch {
-            toast.error('Failed to load integration settings');
+            toast.error('Could not load integrations. Please refresh the page.');
         } finally {
             setLoading(false);
         }
@@ -248,7 +248,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
             await fetchIntegrations();
             router.refresh();
         } catch {
-            toast.error('Failed to reset integration');
+            toast.error('Could not reset to agency default. Please try again.');
         } finally {
             setSaving(false);
         }
@@ -258,7 +258,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
         const integrationSource = source[key];
         if (integrationSource === 'client') {
             return (
-                <Badge variant="default" className="text-xs bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400 hover:bg-violet-100">
+                <Badge variant="default" className="text-xs">
                     Client Override
                 </Badge>
             );
@@ -329,11 +329,6 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
                         <Plug className="h-5 w-5" />
                         {isPortal ? 'Integrations' : 'Client Integrations'}
                     </CardTitle>
-                    <CardDescription>
-                        {isPortal
-                            ? 'Configure your own integrations or use agency defaults.'
-                            : 'Override agency integration settings for this client. Unset fields fall back to agency defaults.'}
-                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
@@ -363,7 +358,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
                                         <>
                                             {hasClientOAuth(integ.key) ? (
                                                 <>
-                                                    <Badge variant="default" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-100">
+                                                    <Badge variant="default" className="text-xs">
                                                         Connected
                                                     </Badge>
                                                     <Button
@@ -378,7 +373,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => handleOAuthDisconnect(integ)}
-                                                        title="Disconnect this client's CRM"
+                                                        aria-label={`Disconnect ${integ.name}`}
                                                     >
                                                         <Unlink className="h-3.5 w-3.5" />
                                                     </Button>
@@ -422,7 +417,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
                                                     size="sm"
                                                     onClick={() => handleResetToDefault(integ.key)}
                                                     disabled={saving}
-                                                    title="Reset to agency default"
+                                                    aria-label={`Reset ${integ.name} to agency default`}
                                                 >
                                                     <RotateCcw className="h-3.5 w-3.5" />
                                                 </Button>

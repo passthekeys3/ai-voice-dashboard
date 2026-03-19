@@ -4,7 +4,8 @@ import { useState, useMemo } from 'react';
 import { SearchInput } from '@/components/ui/search-input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Bot, Phone } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, Bot, Phone, Search } from 'lucide-react';
 import Link from 'next/link';
 import { CreateClientDialog } from '@/components/dashboard/CreateClientDialog';
 import { cn } from '@/lib/utils';
@@ -79,15 +80,15 @@ export function FilterableClientGrid({ clients }: FilterableClientGridProps) {
                                 href={`/clients/${client.id}`}
                                 className="block"
                             >
-                                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                                <Card className="hover:shadow-md transition-shadow cursor-pointer focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2">
                                     <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
                                         <div className="flex items-center gap-3 min-w-0">
                                             <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 shrink-0">
                                                 <Users className="h-5 w-5 text-slate-600 dark:text-slate-400" />
                                             </div>
                                             <div className="min-w-0">
-                                                <CardTitle className="text-lg truncate">{client.name}</CardTitle>
-                                                <p className="text-sm text-muted-foreground truncate">{client.email}</p>
+                                                <CardTitle className="text-lg truncate" title={client.name}>{client.name}</CardTitle>
+                                                <p className="text-sm text-muted-foreground truncate" title={client.email}>{client.email}</p>
                                             </div>
                                         </div>
                                         <Badge variant={client.is_active ? 'default' : 'secondary'} className="shrink-0">
@@ -132,10 +133,14 @@ export function FilterableClientGrid({ clients }: FilterableClientGridProps) {
                     })}
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <p className="text-muted-foreground">
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Search className="h-6 w-6 text-muted-foreground/40 mb-2" />
+                    <p className="text-muted-foreground mb-3">
                         No clients matching &quot;{search}&quot;
                     </p>
+                    <Button variant="ghost" size="sm" onClick={() => setSearch('')}>
+                        Clear search
+                    </Button>
                 </div>
             )}
         </div>

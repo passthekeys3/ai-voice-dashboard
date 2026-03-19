@@ -290,8 +290,8 @@ export default async function ClientDetailPage({
 
                 {/* ── Configuration ─────────────────────────────── */}
                 <div className="flex items-center gap-3 pt-4">
-                    <Settings className="h-4 w-4 text-muted-foreground" />
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Configuration</h3>
+                    <Settings className="h-4 w-4 text-foreground/60" />
+                    <h3 className="text-sm font-semibold text-foreground/80 uppercase tracking-wider">Configuration</h3>
                     <Separator className="flex-1" />
                 </div>
 
