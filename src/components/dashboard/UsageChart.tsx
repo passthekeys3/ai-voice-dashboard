@@ -56,13 +56,19 @@ export function UsageChart({ data }: UsageChartProps) {
     const fillGradientId = `fillGradient-${id}`;
 
     // Format dates for display
-    const formattedData = data.map((item) => ({
-        ...item,
-        displayDate: new Date(item.date).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-        }),
-    }));
+    // Parse YYYY-MM-DD as local date parts to avoid UTC→local timezone shift
+    // (new Date('2026-03-19') is UTC midnight, which becomes Mar 18 in EST)
+    const formattedData = data.map((item) => {
+        const [year, month, day] = item.date.split('-').map(Number);
+        const localDate = new Date(year, month - 1, day);
+        return {
+            ...item,
+            displayDate: localDate.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+            }),
+        };
+    });
 
     return (
         <Card className="md:col-span-4 min-w-0">
