@@ -19,7 +19,7 @@ export default async function InsightsPage() {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
-                <h2 className="text-2xl font-bold tracking-tight">AI Call Insights</h2>
+                <h2 className="text-lg font-semibold">Insights</h2>
 
                 <InsightsDashboard />
             </div>

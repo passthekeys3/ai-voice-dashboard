@@ -19,7 +19,7 @@ export default async function ClientLiveCallsPage() {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
-                <h2 className="text-2xl font-bold tracking-tight">Live Call Monitoring</h2>
+                <h2 className="text-lg font-semibold">Live Calls</h2>
 
                 {/* aria-live region for screen reader announcements */}
                 <div aria-live="polite" aria-atomic="true">

@@ -52,6 +52,7 @@ export default async function PhoneNumbersPage() {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
+                <h2 className="text-lg font-semibold">Phone Numbers</h2>
                 <PhoneNumbersPageClient
                     initialPhoneNumbers={phoneNumbers || []}
                     agents={(agents || []).map(a => ({ id: a.id, name: a.name, provider: a.provider }))}

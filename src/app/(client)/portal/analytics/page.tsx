@@ -150,13 +150,8 @@ export default async function ClientAnalyticsPage({ searchParams }: Props) {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h2 className="text-2xl font-bold tracking-tight">Analytics</h2>
-                        <p className="text-muted-foreground">
-                            Detailed performance metrics for your voice agents
-                        </p>
-                    </div>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Analytics</h2>
                     <AnalyticsFilters />
                 </div>
 

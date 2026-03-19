@@ -75,7 +75,8 @@ export default async function AgentsPage() {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6">
-                <div className="flex items-center justify-end">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Agents</h2>
                     <div className="flex flex-wrap gap-2">
                         {isAdmin && <SyncButton />}
                         {canCreate && (

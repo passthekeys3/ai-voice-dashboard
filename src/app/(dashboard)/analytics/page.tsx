@@ -154,7 +154,8 @@ export default async function AnalyticsPage({ searchParams }: Props) {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
-                <div className="flex items-center justify-end">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Analytics</h2>
                     <AnalyticsFilters />
                 </div>
 
