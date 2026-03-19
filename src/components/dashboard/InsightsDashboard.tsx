@@ -3,13 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { TimeRangeFilter } from './TimeRangeFilter';
 import {
     Phone,
     Clock,
@@ -65,7 +59,8 @@ export function InsightsDashboard() {
             setLoading(true);
             setError(null);
             try {
-                const response = await fetch(`/api/insights?days=${days}`, {
+                const daysParam = days === 'all' ? '365' : days;
+                const response = await fetch(`/api/insights?days=${daysParam}`, {
                     signal: controller.signal,
                 });
                 if (!response.ok) {
@@ -132,16 +127,7 @@ export function InsightsDashboard() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Insights</h2>
-                <Select value={days} onValueChange={setDays}>
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="7">Last 7 days</SelectItem>
-                        <SelectItem value="30">Last 30 days</SelectItem>
-                        <SelectItem value="90">Last 90 days</SelectItem>
-                    </SelectContent>
-                </Select>
+                <TimeRangeFilter value={days} onChange={setDays} />
             </div>
 
             {/* Stats Cards */}
