@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import {
     Phone,
     Clock,
+    CreditCard,
     DollarSign,
     TrendingUp,
     TrendingDown,
     LayoutDashboard,
     Bot,
+    Radio,
     BarChart3,
     Settings,
     PhoneIncoming,
@@ -132,32 +134,13 @@ const NAV_ITEMS: { name: string; icon: typeof LayoutDashboard; view: DemoView | 
     { name: 'Dashboard', icon: LayoutDashboard, view: 'dashboard' },
     { name: 'Agents', icon: Bot, view: 'agents' },
     { name: 'Calls', icon: Phone, view: 'calls' },
+    { name: 'Live', icon: Radio, view: null },
     { name: 'Analytics', icon: BarChart3, view: 'analytics' },
+    { name: 'Billing', icon: CreditCard, view: null },
     { name: 'Settings', icon: Settings, view: null },
 ];
 
-const cardThemes = {
-    blue: {
-        border: 'border-l-blue-500',
-        iconBg: 'bg-blue-100 dark:bg-blue-900/30',
-        iconColor: 'text-blue-600 dark:text-blue-400',
-    },
-    green: {
-        border: 'border-l-green-500',
-        iconBg: 'bg-green-100 dark:bg-green-900/30',
-        iconColor: 'text-green-600 dark:text-green-400',
-    },
-    amber: {
-        border: 'border-l-amber-500',
-        iconBg: 'bg-amber-100 dark:bg-amber-900/30',
-        iconColor: 'text-amber-600 dark:text-amber-400',
-    },
-    purple: {
-        border: 'border-l-purple-500',
-        iconBg: 'bg-purple-100 dark:bg-purple-900/30',
-        iconColor: 'text-purple-600 dark:text-purple-400',
-    },
-} as const;
+// Card themes removed — real dashboard uses plain muted icons without colored borders
 
 const providerColors = {
     retell: {
@@ -328,13 +311,10 @@ function DemoKPICard({
         duration: 1500,
         delay: 500 + index * 100,
     });
-    const theme = cardThemes[kpi.theme];
-
     return (
         <div
             className={cn(
-                'rounded-lg border border-border bg-card overflow-hidden border-l-[3px]',
-                theme.border,
+                'rounded-lg border border-border bg-card overflow-hidden',
                 'animate-fade-up'
             )}
             style={{
@@ -349,9 +329,7 @@ function DemoKPICard({
                     <span className="text-[10px] font-medium text-muted-foreground">
                         {kpi.title}
                     </span>
-                    <div className={cn('p-1 rounded', theme.iconBg)}>
-                        <kpi.icon className={cn('h-2.5 w-2.5', theme.iconColor)} />
-                    </div>
+                    <kpi.icon className="h-3 w-3 text-muted-foreground/60" />
                 </div>
                 <div className="text-base sm:text-lg font-bold tracking-tight">
                     {kpi.format(animatedValue)}
@@ -377,8 +355,6 @@ function DemoKPICard({
 }
 
 function DemoKPICardStatic({ kpi }: { kpi: typeof MOCK_KPI[number] }) {
-    const theme = cardThemes[kpi.theme];
-
     return (
         <div
             className={cn(
@@ -391,9 +367,7 @@ function DemoKPICardStatic({ kpi }: { kpi: typeof MOCK_KPI[number] }) {
                     <span className="text-[10px] font-medium text-muted-foreground">
                         {kpi.title}
                     </span>
-                    <div className={cn('p-1 rounded', theme.iconBg)}>
-                        <kpi.icon className={cn('h-2.5 w-2.5', theme.iconColor)} />
-                    </div>
+                    <kpi.icon className="h-3 w-3 text-muted-foreground/60" />
                 </div>
                 <div className="text-base sm:text-lg font-bold tracking-tight">
                     {kpi.format(kpi.value)}
