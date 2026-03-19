@@ -130,8 +130,8 @@ export function InsightsDashboard() {
 
     return (
         <div className="space-y-6">
-            {/* Time Filter */}
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Insights</h2>
                 <Select value={days} onValueChange={setDays}>
                     <SelectTrigger className="w-[180px]">
                         <SelectValue />
