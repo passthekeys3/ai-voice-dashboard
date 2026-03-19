@@ -53,7 +53,7 @@ const statusConfig: Record<string, {
 }> = {
     completed: {
         icon: CheckCircle2,
-        className: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 shadow-sm shadow-emerald-100 dark:shadow-emerald-900/20',
+        className: 'bg-muted text-muted-foreground border-border',
         label: 'Completed',
     },
     failed: {
@@ -220,10 +220,7 @@ const DirectionBadge = memo(function DirectionBadge({ direction }: { direction: 
 
     return (
         <div className="flex items-center gap-1.5 text-sm">
-            <Icon className={cn(
-                'h-4 w-4',
-                isInbound ? 'text-blue-500' : 'text-violet-500'
-            )} />
+            <Icon className="h-4 w-4 text-muted-foreground" />
             <span className="capitalize">{direction}</span>
         </div>
     );

@@ -115,7 +115,8 @@ export default async function DashboardPage() {
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-5 sm:space-y-6">
-                {/* KPI Cards — no heading needed, the cards speak for themselves */}
+                {/* KPI Cards */}
+                <p className="text-xs text-muted-foreground">Last 90 days</p>
                 <AnalyticsCards
                     totalCalls={totalCalls}
                     totalMinutes={totalMinutes}
@@ -155,15 +156,15 @@ export default async function DashboardPage() {
                                         <Link
                                             key={agent.id}
                                             href={`/agents/${agent.id}`}
-                                            className="flex items-center justify-between py-2 px-2 -mx-2 rounded-md text-sm hover:bg-muted/50 transition-colors"
+                                            className="flex items-center justify-between py-2 px-2 -mx-2 rounded-md text-sm hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none transition-colors"
                                         >
                                             <span className="font-medium truncate">{agent.name}</span>
-                                            <span className="text-xs text-muted-foreground shrink-0 ml-2">{agent.provider}</span>
+                                            <span className="text-[11px] font-medium text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded shrink-0 ml-2">{agent.provider}</span>
                                         </Link>
                                     ))
                                 ) : (
                                     <p className="text-muted-foreground text-sm py-4">
-                                        No agents yet. Add your API keys in Settings, then sync.
+                                        No agents yet. Add your API keys in <Link href="/settings" className="underline hover:text-foreground">Settings</Link>, then sync.
                                     </p>
                                 )}
                             </div>
@@ -173,7 +174,12 @@ export default async function DashboardPage() {
 
                 {/* Recent Calls */}
                 <div>
-                    <h3 className="text-lg font-semibold mb-3">Recent Calls</h3>
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-semibold">Recent Calls</h3>
+                        <Link href="/calls" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                            View all &rarr;
+                        </Link>
+                    </div>
                     <CallsTable calls={(recentCalls || []) as (Call & { agents: { name: string; provider: string } })[]} />
                 </div>
             </div>
