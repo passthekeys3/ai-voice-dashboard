@@ -52,14 +52,10 @@ export default async function ClientCallsPage() {
                 userName={user.profile.full_name}
                 userEmail={user.email}
                 userAvatar={user.profile.avatar_url}
+                actions={permissions.can_export_calls ? <ExportCallsButton /> : undefined}
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6">
-                {permissions.can_export_calls && (
-                    <div className="flex justify-end">
-                        <ExportCallsButton />
-                    </div>
-                )}
 
                 <CallsPageClient
                     initialCalls={(calls || []) as (Call & { agents: { name: string; provider: string } })[]}

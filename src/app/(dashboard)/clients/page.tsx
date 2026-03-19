@@ -26,13 +26,10 @@ export default async function ClientsPage() {
                 userName={user.profile.full_name}
                 userEmail={user.email}
                 userAvatar={user.profile.avatar_url}
+                actions={<CreateClientDialog />}
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6">
-                <div className="flex items-center justify-end">
-                    <CreateClientDialog />
-                </div>
-
                 <FilterableClientGrid clients={clients || []} />
             </div>
         </div>

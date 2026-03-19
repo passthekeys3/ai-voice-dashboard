@@ -28,23 +28,25 @@ export default async function WorkflowsPage() {
                 userName={user.profile.full_name}
                 userEmail={user.email}
                 userAvatar={user.profile.avatar_url}
+                actions={
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href="/workflows/history">
+                                <History className="mr-2 h-4 w-4" />
+                                View History
+                            </Link>
+                        </Button>
+                        <Button size="sm" asChild>
+                            <Link href="/workflows/new">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Create Workflow
+                            </Link>
+                        </Button>
+                    </div>
+                }
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                    <Button variant="outline" asChild>
-                        <Link href="/workflows/history">
-                            <History className="mr-2 h-4 w-4" />
-                            View History
-                        </Link>
-                    </Button>
-                    <Button asChild>
-                        <Link href="/workflows/new">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Create Workflow
-                        </Link>
-                    </Button>
-                </div>
 
                 <WorkflowsList
                     workflows={workflows || []}

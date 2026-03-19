@@ -23,9 +23,10 @@ interface HeaderProps {
     userEmail: string;
     userAvatar?: string;
     onSync?: () => Promise<void>;
+    actions?: React.ReactNode;
 }
 
-export function Header({ title = 'Dashboard', userName, userEmail, userAvatar, onSync }: HeaderProps) {
+export function Header({ title = 'Dashboard', userName, userEmail, userAvatar, onSync, actions }: HeaderProps) {
     const [syncing, setSyncing] = useState(false);
     const { theme, setTheme } = useTheme();
 
@@ -54,9 +55,10 @@ export function Header({ title = 'Dashboard', userName, userEmail, userAvatar, o
         .slice(0, 2);
 
     return (
-        <header className="flex h-16 flex-shrink-0 items-center justify-between backdrop-blur-sm bg-white/80 dark:bg-slate-950/80 border-b border-slate-200/50 dark:border-slate-800/50 px-4 sm:px-6 relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-slate-300 after:to-transparent dark:after:via-slate-700">
-            <div className="flex items-center gap-4">
+        <header className="flex h-16 flex-shrink-0 items-center justify-between bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6">
+            <div className="flex items-center gap-3">
                 <h1 className="text-lg font-semibold">{title}</h1>
+                {actions}
             </div>
 
             <div className="flex items-center gap-2">

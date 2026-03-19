@@ -41,18 +41,18 @@ export default async function TestingPage() {
                 userName={user.profile.full_name}
                 userEmail={user.email}
                 userAvatar={user.profile.avatar_url}
+                actions={
+                    <Button size="sm" asChild>
+                        <Link href="/testing/new">
+                            <Plus className="mr-2 h-4 w-4" />
+                            New Test Suite
+                        </Link>
+                    </Button>
+                }
             />
 
             <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-auto">
                 <TierGate currentTier={currentTier} requiredFeature="agent_testing" label="Agent Testing">
-                    <div className="flex justify-end">
-                        <Button asChild>
-                            <Link href="/testing/new">
-                                <Plus className="mr-2 h-4 w-4" />
-                                New Test Suite
-                            </Link>
-                        </Button>
-                    </div>
 
                     <TestSuitesList suites={suites || []} />
                 </TierGate>
