@@ -25,15 +25,13 @@ const ANALYTICS_KPI = [
         title: 'Total Calls',
         value: '1,247',
         icon: Phone,
-        theme: 'blue' as const,
         trend: '+12.5%',
         trendUp: true,
     },
     {
         title: 'Avg Duration',
-        value: '3:42',
+        value: '3m 42s',
         icon: Clock,
-        theme: 'green' as const,
         trend: '+8.3%',
         trendUp: true,
     },
@@ -41,7 +39,6 @@ const ANALYTICS_KPI = [
         title: 'Success Rate',
         value: '94.2%',
         icon: TrendingUp,
-        theme: 'purple' as const,
         trend: '+2.1%',
         trendUp: true,
     },
@@ -49,7 +46,6 @@ const ANALYTICS_KPI = [
         title: 'Total Cost',
         value: '$186.40',
         icon: DollarSign,
-        theme: 'amber' as const,
         trend: '-5.7%',
         trendUp: false,
     },
@@ -66,46 +62,17 @@ const ANALYTICS_CHART_DATA = [
 ];
 
 const CALLS_BY_AGENT = [
-    { name: 'Sarah', percentage: 45, color: 'from-green-500 to-emerald-500' },
-    { name: 'Marcus', percentage: 28, color: 'from-green-400 to-emerald-400' },
-    { name: 'Emma', percentage: 18, color: 'from-green-300 to-emerald-300' },
+    { name: 'Sarah', percentage: 45 },
+    { name: 'Marcus', percentage: 28 },
+    { name: 'Emma', percentage: 18 },
 ];
-
-const cardThemes = {
-    blue: {
-        border: 'border-l-blue-500',
-        iconBg: 'bg-blue-100 dark:bg-blue-900/30',
-        iconColor: 'text-blue-600 dark:text-blue-400',
-    },
-    green: {
-        border: 'border-l-green-500',
-        iconBg: 'bg-green-100 dark:bg-green-900/30',
-        iconColor: 'text-green-600 dark:text-green-400',
-    },
-    amber: {
-        border: 'border-l-amber-500',
-        iconBg: 'bg-amber-100 dark:bg-amber-900/30',
-        iconColor: 'text-amber-600 dark:text-amber-400',
-    },
-    purple: {
-        border: 'border-l-purple-500',
-        iconBg: 'bg-purple-100 dark:bg-purple-900/30',
-        iconColor: 'text-purple-600 dark:text-purple-400',
-    },
-} as const;
 
 /* ─── Sub-components ─── */
 
 function KPICard({ kpi, index, isInView }: { kpi: typeof ANALYTICS_KPI[number]; index: number; isInView: boolean }) {
-    const theme = cardThemes[kpi.theme];
-
     return (
         <div
-            className={cn(
-                'rounded-lg border border-border bg-card overflow-hidden border-l-[3px]',
-                theme.border,
-                'animate-fade-up'
-            )}
+            className="rounded-lg border border-border bg-card animate-fade-up"
             style={{
                 opacity: isInView ? undefined : 0,
                 animationDelay: `${200 + index * 80}ms`,
@@ -114,19 +81,17 @@ function KPICard({ kpi, index, isInView }: { kpi: typeof ANALYTICS_KPI[number]; 
             }}
         >
             <div className="px-2 py-1.5">
-                <div className="flex items-center justify-between mb-0.5">
+                <div className="flex items-center justify-between mb-1">
                     <span className="text-[9px] font-medium text-muted-foreground">{kpi.title}</span>
-                    <div className={cn('p-0.5 rounded', theme.iconBg)}>
-                        <kpi.icon className={cn('h-2 w-2', theme.iconColor)} />
-                    </div>
+                    <kpi.icon className="h-2.5 w-2.5 text-muted-foreground/40" />
                 </div>
-                <div className="text-sm sm:text-base font-bold tracking-tight">{kpi.value}</div>
+                <div className="text-sm sm:text-base font-semibold tracking-tight">{kpi.value}</div>
                 <div
                     className={cn(
-                        'flex items-center gap-0.5 text-[8px] font-semibold mt-0.5',
+                        'flex items-center gap-0.5 text-[8px] font-medium mt-0.5',
                         kpi.trendUp
                             ? 'text-green-600 dark:text-green-400'
-                            : 'text-green-600 dark:text-green-400' // cost going down = good
+                            : 'text-red-600 dark:text-red-400'
                     )}
                 >
                     {kpi.trendUp ? (
@@ -162,19 +127,14 @@ function AnalyticsChart({ isInView }: { isInView: boolean }) {
                     <AreaChart data={ANALYTICS_CHART_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                         <defs>
                             <linearGradient id="mockupAnalyticsFill" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0.4} />
-                                <stop offset="50%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0.15} />
-                                <stop offset="100%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0.05} />
-                            </linearGradient>
-                            <linearGradient id="mockupAnalyticsStroke" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="hsl(142, 71%, 45%)" />
-                                <stop offset="100%" stopColor="hsl(160, 84%, 39%)" />
+                                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.15} />
+                                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.02} />
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.3} vertical={false} />
-                        <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={8} tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)' }} />
-                        <YAxis stroke="var(--muted-foreground)" fontSize={8} tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)' }} width={25} />
-                        <Area type="monotone" dataKey="count" stroke="url(#mockupAnalyticsStroke)" strokeWidth={2} fillOpacity={1} fill="url(#mockupAnalyticsFill)" animationDuration={1200} animationEasing="ease-out" />
+                        <CartesianGrid stroke="#f1f5f9" strokeOpacity={1} vertical={false} />
+                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={8} tickLine={false} axisLine={false} tick={{ fill: '#94a3b8' }} />
+                        <YAxis stroke="#94a3b8" fontSize={8} tickLine={false} axisLine={false} tick={{ fill: '#94a3b8' }} width={25} />
+                        <Area type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#mockupAnalyticsFill)" animationDuration={1200} animationEasing="ease-out" />
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
@@ -206,7 +166,7 @@ function CallsByAgentBars({ isInView }: { isInView: boolean }) {
                         </div>
                         <div className="h-1.5 rounded-full bg-muted">
                             <div
-                                className={cn('h-1.5 rounded-full bg-gradient-to-r', agent.color, 'transition-all duration-700')}
+                                className="h-1.5 rounded-full bg-blue-500 transition-all duration-700"
                                 style={{ width: isInView ? `${agent.percentage}%` : '0%' }}
                             />
                         </div>
