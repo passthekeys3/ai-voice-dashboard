@@ -1,11 +1,15 @@
 /**
  * Retell Webhook Handler
  *
- * Processes 4 event types from Retell:
+ * Processes 8 event types from Retell:
  *   - call_started: call initiated → upsert + post-processing pipeline
  *   - call_ended: call completed → upsert + post-processing pipeline
  *   - call_analyzed: analysis ready → selective update (summary/sentiment only)
  *   - transcript_updated: live transcript → upsert + broadcast
+ *   - transfer_started: call transfer initiated → update call metadata
+ *   - transfer_bridged: transfer connected → update call metadata
+ *   - transfer_cancelled: transfer failed/cancelled → update call metadata
+ *   - transfer_ended: transfer completed → update call metadata
  *
  * Provider-specific logic (parsing, SDK signature, transcript format) stays here.
  * Post-upsert processing is handled by the shared pipeline in lib/webhooks/post-process.ts.
@@ -24,8 +28,12 @@ import Retell from 'retell-sdk';
 
 // ── Payload Types ────────────────────────────────────────
 
+type RetellEventType =
+    | 'call_started' | 'call_ended' | 'call_analyzed' | 'transcript_updated'
+    | 'transfer_started' | 'transfer_bridged' | 'transfer_cancelled' | 'transfer_ended';
+
 interface RetellWebhookPayload {
-    event: 'call_started' | 'call_ended' | 'call_analyzed' | 'transcript_updated';
+    event: RetellEventType;
     call: {
         call_id: string;
         agent_id: string;
@@ -48,11 +56,17 @@ interface RetellWebhookPayload {
             product_costs?: Array<{ product: string; cost: number; unit_price?: number }>;
         };
         metadata?: Record<string, unknown>;
+        // Transfer-specific fields
+        transfer_to?: string;
+        transfer_reason?: string;
     };
     transcript_with_tool_calls?: Array<{ role: string; content?: string; words?: unknown[] }>;
 }
 
-const ALLOWED_EVENTS = ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'] as const;
+const ALLOWED_EVENTS: readonly RetellEventType[] = [
+    'call_started', 'call_ended', 'call_analyzed', 'transcript_updated',
+    'transfer_started', 'transfer_bridged', 'transfer_cancelled', 'transfer_ended',
+] as const;
 
 // ── Main Handler ─────────────────────────────────────────
 
@@ -120,6 +134,11 @@ export async function POST(request: NextRequest) {
         // ── Call Analyzed (selective update only) ─────────
         if (payload.event === 'call_analyzed') {
             return handleCallAnalyzed(supabase, payload);
+        }
+
+        // ── Transfer Events ──────────────────────────────
+        if (payload.event.startsWith('transfer_')) {
+            return handleTransferEvent(supabase, payload);
         }
 
         // ── Call Started / Ended: Parse & Upsert ─────────
@@ -307,6 +326,64 @@ async function handleCallAnalyzed(
 
         if (error) console.error('Error updating call_analyzed:', error.code);
     }
+
+    return NextResponse.json({ received: true });
+}
+
+// ── Helper: Transfer Events ─────────────────────────────
+
+async function handleTransferEvent(
+    supabase: ReturnType<typeof createServiceClient>,
+    payload: RetellWebhookPayload,
+) {
+    const transferEvent = payload.event; // transfer_started | transfer_bridged | transfer_cancelled | transfer_ended
+    const callId = payload.call.call_id;
+
+    console.info(`[RETELL WEBHOOK] Transfer event: ${transferEvent}, call=${callId}, to=${payload.call.transfer_to || 'unknown'}`);
+
+    // Update call metadata with transfer info
+    const { data: existingCall } = await supabase
+        .from('calls')
+        .select('metadata')
+        .eq('external_id', callId)
+        .single();
+
+    const currentMetadata = (existingCall?.metadata as Record<string, unknown>) || {};
+    const transfers = (currentMetadata.transfers as Array<Record<string, unknown>>) || [];
+
+    if (transferEvent === 'transfer_started') {
+        // Add a new transfer entry
+        transfers.push({
+            status: 'started',
+            transfer_to: payload.call.transfer_to || null,
+            reason: payload.call.transfer_reason || null,
+            started_at: new Date().toISOString(),
+        });
+    } else {
+        // Update the latest transfer entry
+        const latest = transfers[transfers.length - 1];
+        if (latest) {
+            if (transferEvent === 'transfer_bridged') {
+                latest.status = 'bridged';
+                latest.bridged_at = new Date().toISOString();
+            } else if (transferEvent === 'transfer_cancelled') {
+                latest.status = 'cancelled';
+                latest.cancelled_at = new Date().toISOString();
+            } else if (transferEvent === 'transfer_ended') {
+                latest.status = 'ended';
+                latest.ended_at = new Date().toISOString();
+            }
+        }
+    }
+
+    const { error } = await supabase
+        .from('calls')
+        .update({
+            metadata: { ...currentMetadata, transfers, last_transfer_status: transferEvent.replace('transfer_', '') },
+        })
+        .eq('external_id', callId);
+
+    if (error) console.error('Error updating transfer event:', error.code);
 
     return NextResponse.json({ received: true });
 }

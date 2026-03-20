@@ -75,6 +75,8 @@ export async function GET(
                         responsiveness: retellAgent.responsiveness,
                         llm_id: llmId,
                         prompt: llmPrompt,
+                        enable_safety_guardrails: retellAgent.enable_safety_guardrails ?? false,
+                        safety_guardrails_categories: retellAgent.safety_guardrails_categories ?? [],
                     }
                 });
             } catch (err) {
@@ -177,12 +179,14 @@ export async function PATCH(
                 // First, get the current agent to find LLM ID
                 const retellAgent = await getRetellAgent(apiKey, agent.external_id);
 
-                // Update agent settings (name, voice, language, responsiveness)
+                // Update agent settings (name, voice, language, responsiveness, guardrails)
                 const updateData: Record<string, unknown> = {};
                 if (body.agent_name !== undefined) updateData.agent_name = body.agent_name;
                 if (body.voice_id !== undefined) updateData.voice_id = body.voice_id;
                 if (body.language !== undefined) updateData.language = body.language;
                 if (body.responsiveness !== undefined) updateData.responsiveness = body.responsiveness;
+                if (body.enable_safety_guardrails !== undefined) updateData.enable_safety_guardrails = body.enable_safety_guardrails;
+                if (body.safety_guardrails_categories !== undefined) updateData.safety_guardrails_categories = body.safety_guardrails_categories;
 
                 if (Object.keys(updateData).length > 0) {
                     await updateRetellAgent(apiKey, agent.external_id, updateData);
@@ -202,6 +206,8 @@ export async function PATCH(
                     responsiveness: body.responsiveness !== undefined ? body.responsiveness : agent.config?.responsiveness,
                     llm_prompt: body.prompt !== undefined ? body.prompt : agent.config?.llm_prompt,
                     llm_id: retellAgent.response_engine?.llm_id,
+                    enable_safety_guardrails: body.enable_safety_guardrails !== undefined ? body.enable_safety_guardrails : agent.config?.enable_safety_guardrails,
+                    safety_guardrails_categories: body.safety_guardrails_categories !== undefined ? body.safety_guardrails_categories : agent.config?.safety_guardrails_categories,
                 };
 
                 await supabase

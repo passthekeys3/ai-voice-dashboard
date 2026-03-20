@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, Sparkles, Loader2, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Sparkles, Loader2, ChevronDown, ChevronUp, RefreshCw, Shield } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 
 interface PromptSuggestion {
@@ -135,6 +135,14 @@ export function AgentEditor({
         (config as { responsiveness?: number }).responsiveness ?? 0.8
     );
 
+    // Safety guardrails state (Retell only)
+    const [guardrailsEnabled, setGuardrailsEnabled] = useState(
+        (config as { enable_safety_guardrails?: boolean }).enable_safety_guardrails ?? false
+    );
+    const [guardrailCategories, setGuardrailCategories] = useState<string[]>(
+        (config as { safety_guardrails_categories?: string[] }).safety_guardrails_categories ?? []
+    );
+
     // Dynamic voice list (fetched from API for Retell, from known lists for Vapi)
     const [voices, setVoices] = useState<{ id: string; name: string; provider?: string }[]>([]);
     const [loadingVoices, setLoadingVoices] = useState(false);
@@ -218,6 +226,8 @@ export function AgentEditor({
                         if (data.data.voice_provider !== undefined) setVoiceProvider(data.data.voice_provider);
                         if (data.data.language !== undefined) setLanguage(data.data.language);
                         if (data.data.responsiveness !== undefined) setResponsiveness(data.data.responsiveness);
+                        if (data.data.enable_safety_guardrails !== undefined) setGuardrailsEnabled(data.data.enable_safety_guardrails);
+                        if (data.data.safety_guardrails_categories !== undefined) setGuardrailCategories(data.data.safety_guardrails_categories);
                         setPromptFetchFailed(false);
                     }
                 } else {
@@ -273,6 +283,8 @@ export function AgentEditor({
                 providerPayload.voice_id = voiceId;
                 providerPayload.language = language;
                 providerPayload.responsiveness = responsiveness;
+                providerPayload.enable_safety_guardrails = guardrailsEnabled;
+                providerPayload.safety_guardrails_categories = guardrailCategories;
             } else if (provider === 'vapi') {
                 providerPayload.voice_id = voiceId;
                 providerPayload.voice_provider = voiceProvider;
@@ -354,6 +366,9 @@ export function AgentEditor({
                         <TabsTrigger value="voice" className="flex-1">Voice & Language</TabsTrigger>
                     )}
                     <TabsTrigger value="prompt" className="flex-1">Prompt</TabsTrigger>
+                    {provider === 'retell' && (
+                        <TabsTrigger value="safety" className="flex-1">Safety</TabsTrigger>
+                    )}
                     <TabsTrigger value="webhooks" className="flex-1">Webhooks</TabsTrigger>
                 </TabsList>
 
@@ -685,6 +700,80 @@ export function AgentEditor({
                         )}
                     </Card>
                 </TabsContent>
+
+                {/* Safety Guardrails (Retell only) */}
+                {provider === 'retell' && (
+                    <TabsContent value="safety" className="space-y-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Shield className="h-5 w-5" />
+                                    Safety Guardrails
+                                </CardTitle>
+                                <CardDescription>
+                                    Block jailbreak attempts and filter harmful content categories
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <Label htmlFor="guardrails" className="text-base">Enable Guardrails</Label>
+                                        <p className="text-sm text-muted-foreground">
+                                            Automatically block jailbreak attempts and filter unsafe output
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        id="guardrails"
+                                        checked={guardrailsEnabled}
+                                        onCheckedChange={setGuardrailsEnabled}
+                                    />
+                                </div>
+
+                                {guardrailsEnabled && (
+                                    <div className="space-y-3">
+                                        <Label>Content Categories to Block</Label>
+                                        <p className="text-sm text-muted-foreground">
+                                            Select which categories of harmful content the agent should refuse to engage with.
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {[
+                                                { id: 'harassment', label: 'Harassment & Bullying', desc: 'Threats, intimidation, targeted abuse' },
+                                                { id: 'violence', label: 'Violence & Harm', desc: 'Graphic violence, self-harm instructions' },
+                                                { id: 'gambling', label: 'Gambling', desc: 'Gambling promotion or facilitation' },
+                                                { id: 'regulated_advice', label: 'Regulated Advice', desc: 'Unauthorized medical, legal, financial advice' },
+                                                { id: 'sexual_exploitation', label: 'Sexual Exploitation', desc: 'Explicit sexual content or exploitation' },
+                                                { id: 'child_safety', label: 'Child Safety', desc: 'Content endangering minors' },
+                                            ].map((category) => (
+                                                <div
+                                                    key={category.id}
+                                                    className="flex items-start gap-3 p-3 rounded-lg border border-border"
+                                                >
+                                                    <Switch
+                                                        id={`guardrail-${category.id}`}
+                                                        checked={guardrailCategories.includes(category.id)}
+                                                        onCheckedChange={(checked: boolean) => {
+                                                            setGuardrailCategories(prev =>
+                                                                checked
+                                                                    ? [...prev, category.id]
+                                                                    : prev.filter(c => c !== category.id)
+                                                            );
+                                                        }}
+                                                    />
+                                                    <div>
+                                                        <Label htmlFor={`guardrail-${category.id}`} className="text-sm font-medium">
+                                                            {category.label}
+                                                        </Label>
+                                                        <p className="text-xs text-muted-foreground">{category.desc}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                )}
 
                 {/* Webhooks */}
                 <TabsContent value="webhooks" className="space-y-4">

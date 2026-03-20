@@ -27,12 +27,17 @@ export interface RetellAgent {
     webhook_events?: string[];
     is_published?: boolean;
     version?: number;
+    enable_safety_guardrails?: boolean;
+    safety_guardrails_categories?: string[];
     created_at: string;
     last_modification_timestamp: number;
 }
 
-/** Required webhook events for live transcript support */
-export const REQUIRED_WEBHOOK_EVENTS = ['call_started', 'call_ended', 'call_analyzed', 'transcript_updated'];
+/** Required webhook events for live transcript + transfer tracking */
+export const REQUIRED_WEBHOOK_EVENTS = [
+    'call_started', 'call_ended', 'call_analyzed', 'transcript_updated',
+    'transfer_started', 'transfer_bridged', 'transfer_cancelled', 'transfer_ended',
+];
 
 export interface RetellLLM {
     llm_id: string;
@@ -166,6 +171,8 @@ export async function updateRetellAgent(
         webhook_url: string | null;
         language: string;
         webhook_events: string[];
+        enable_safety_guardrails: boolean;
+        safety_guardrails_categories: string[];
     }>
 ): Promise<RetellAgent> {
     return retellFetch<RetellAgent>(apiKey, `/update-agent/${encodeURIComponent(agentId)}`, {

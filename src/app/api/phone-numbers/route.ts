@@ -121,7 +121,19 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
         const provider = requestedProvider || (agency?.retell_api_key ? 'retell' : agency?.vapi_api_key ? 'vapi' : agency?.bland_api_key ? 'bland' : null);
 
         if (provider === 'retell' && agency?.retell_api_key) {
-            // Purchase number from Retell
+            // Resolve agent external_id for Retell assignment
+            let agentExternalId: string | undefined;
+            if (agent_id) {
+                const { data: agentRow } = await supabase
+                    .from('agents')
+                    .select('external_id')
+                    .eq('id', agent_id)
+                    .eq('agency_id', user.agency.id)
+                    .single();
+                agentExternalId = agentRow?.external_id || undefined;
+            }
+
+            // Purchase number from Retell with weighted agent list (deprecated single-agent fields March 2026)
             const retellResponse = await fetch('https://api.retellai.com/v2/create-phone-number', {
                 method: 'POST',
                 headers: {
@@ -130,6 +142,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
                 },
                 body: JSON.stringify({
                     area_code: parseInt(area_code),
+                    ...(agentExternalId ? { inbound_agents: [{ agent_id: agentExternalId, weight: 100 }] } : {}),
                 }),
                 signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
