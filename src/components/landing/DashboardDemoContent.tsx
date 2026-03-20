@@ -382,12 +382,12 @@ function DemoChart({ isInView }: { isInView: boolean }) {
                     <AreaChart data={MOCK_CHART_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                         <defs>
                             <linearGradient id="demoCallsGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="var(--foreground)" stopOpacity={0.15} />
-                                <stop offset="100%" stopColor="var(--foreground)" stopOpacity={0.02} />
+                                <stop offset="0%" stopColor="hsl(221, 83%, 53%)" stopOpacity={0.15} />
+                                <stop offset="100%" stopColor="hsl(221, 83%, 53%)" stopOpacity={0.02} />
                             </linearGradient>
                             <linearGradient id="demoStrokeGradient" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="var(--foreground)" />
-                                <stop offset="100%" stopColor="var(--foreground)" />
+                                <stop offset="0%" stopColor="hsl(221, 83%, 53%)" />
+                                <stop offset="100%" stopColor="hsl(221, 83%, 53%)" />
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.3} vertical={false} />
@@ -556,7 +556,7 @@ function DemoAgentCard({ agent }: { agent: typeof MOCK_AGENT_CARDS[number] }) {
 
             {/* Status */}
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-medium bg-muted text-muted-foreground">
-                <span className="h-1.5 w-1.5 rounded-full bg-foreground/50" />
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
                 {agent.active ? 'Active' : 'Inactive'}
             </span>
         </div>
@@ -650,12 +650,12 @@ function DemoChartLarge() {
                     <AreaChart data={MOCK_CHART_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                         <defs>
                             <linearGradient id="analyticsCallsGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="var(--foreground)" stopOpacity={0.15} />
-                                <stop offset="100%" stopColor="var(--foreground)" stopOpacity={0.02} />
+                                <stop offset="0%" stopColor="hsl(221, 83%, 53%)" stopOpacity={0.15} />
+                                <stop offset="100%" stopColor="hsl(221, 83%, 53%)" stopOpacity={0.02} />
                             </linearGradient>
                             <linearGradient id="analyticsStrokeGradient" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="var(--foreground)" />
-                                <stop offset="100%" stopColor="var(--foreground)" />
+                                <stop offset="0%" stopColor="hsl(221, 83%, 53%)" />
+                                <stop offset="100%" stopColor="hsl(221, 83%, 53%)" />
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.3} vertical={false} />
@@ -682,7 +682,7 @@ function CallsByAgentCard() {
                         </div>
                         <div className="h-1.5 rounded-full bg-muted">
                             <div
-                                className="h-1.5 rounded-full bg-foreground/70 transition-all duration-700"
+                                className="h-1.5 rounded-full bg-blue-500 transition-all duration-700"
                                 style={{ width: `${agent.percentage}%` }}
                             />
                         </div>
