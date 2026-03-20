@@ -119,7 +119,7 @@ export function AgentBuilderPreview({
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
                     {/* Success summary card */}
-                    <Card className="border-green-500/30 bg-gradient-to-r from-green-500/5 to-emerald-500/5">
+                    <Card className="border-green-500/30 bg-green-50 dark:bg-green-950/20">
                         <CardContent className="p-4 space-y-3">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/40">

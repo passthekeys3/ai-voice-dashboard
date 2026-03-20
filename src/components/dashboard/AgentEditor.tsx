@@ -597,7 +597,7 @@ export function AgentEditor({
                         >
                             <div className="flex items-center justify-between">
                                 <CardTitle className="flex items-center gap-2 text-base">
-                                    <div className="p-1 rounded-md bg-gradient-to-br from-violet-500 to-purple-600">
+                                    <div className="p-1 rounded-md bg-violet-600">
                                         <Sparkles className="h-3.5 w-3.5 text-white" />
                                     </div>
                                     AI Prompt Suggestions

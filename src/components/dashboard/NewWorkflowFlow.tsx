@@ -173,10 +173,10 @@ export function NewWorkflowFlow({ agents, clientId, context }: NewWorkflowFlowPr
         return (
             <div className="space-y-6">
                 {/* AI Option */}
-                <Card className="border-violet-200 dark:border-violet-800 bg-gradient-to-br from-violet-50/50 to-purple-50/50 dark:from-violet-950/20 dark:to-purple-950/20">
+                <Card className="border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
+                            <div className="p-1.5 rounded-lg bg-violet-600">
                                 <Sparkles className="h-4 w-4 text-white" />
                             </div>
                             Describe with AI
@@ -217,7 +217,7 @@ export function NewWorkflowFlow({ agents, clientId, context }: NewWorkflowFlowPr
                 <Card className="border-violet-200 dark:border-violet-800">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
+                            <div className="p-1.5 rounded-lg bg-violet-600">
                                 <Sparkles className="h-4 w-4 text-white" />
                             </div>
                             Describe Your Workflow

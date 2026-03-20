@@ -88,7 +88,7 @@ export default function NewTestSuitePage() {
 
     return (
         <div className="flex flex-col h-full">
-            <header className="flex h-16 flex-shrink-0 items-center backdrop-blur-sm bg-white/80 dark:bg-slate-950/80 border-b border-slate-200/50 dark:border-slate-800/50 px-4 sm:px-6 relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-slate-300 after:to-transparent dark:after:via-slate-700">
+            <header className="flex h-16 flex-shrink-0 items-center bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6">
                 <h1 className="text-lg font-semibold flex items-center gap-2">
                     <TestTube2 className="h-5 w-5" />
                     New Test Suite

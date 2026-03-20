@@ -126,7 +126,7 @@ export function AgentBuilderChat({
             {/* Header */}
             <div className="flex-shrink-0 px-6 py-4 border-b border-border">
                 <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
+                    <div className="p-1.5 rounded-lg bg-violet-600">
                         <Sparkles className="h-4 w-4 text-white" />
                     </div>
                     <div>
@@ -143,7 +143,7 @@ export function AgentBuilderChat({
                 {isEmpty ? (
                     <div className="flex flex-col items-center justify-center h-full space-y-6 py-8">
                         <div className="text-center space-y-2">
-                            <div className="p-3 rounded-2xl bg-gradient-to-br from-violet-500/10 to-purple-600/10 inline-block">
+                            <div className="p-3 rounded-2xl bg-violet-500/10 inline-block">
                                 <Sparkles className="h-8 w-8 text-violet-500" />
                             </div>
                             <h3 className="text-lg font-semibold mt-3">Build your AI voice agent</h3>
@@ -277,7 +277,7 @@ function MessageBubble({ message }: { message: BuilderMessage }) {
     return (
         <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
             {!isUser && (
-                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-violet-600 flex items-center justify-center">
                     <Sparkles className="h-3.5 w-3.5 text-white" />
                 </div>
             )}

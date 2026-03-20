@@ -19,3 +19,6 @@ if (dsn) {
         replaysOnErrorSampleRate: 0,
     });
 }
+
+// Required by Sentry SDK for client-side navigation tracking
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
