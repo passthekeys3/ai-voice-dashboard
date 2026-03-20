@@ -100,9 +100,9 @@ const MOCK_CALLS = [
 ];
 
 const MOCK_AGENTS = [
-    { name: 'Sarah - Dental Receptionist', active: true },
-    { name: 'Marcus - Sales Qualifier', active: true },
-    { name: 'Emma - Support Tier 1', active: true },
+    { name: 'Sarah - Dental Receptionist', provider: 'retell' },
+    { name: 'Marcus - Sales Qualifier', provider: 'vapi' },
+    { name: 'Emma - Support Tier 1', provider: 'retell' },
 ];
 
 const MOCK_AGENT_CARDS = [
@@ -142,18 +142,6 @@ const NAV_ITEMS: { name: string; icon: typeof LayoutDashboard; view: DemoView | 
 
 // Card themes removed — real dashboard uses plain muted icons without colored borders
 
-const providerColors = {
-    retell: {
-        iconBg: 'bg-blue-100 dark:bg-blue-900/30',
-        iconColor: 'text-blue-600 dark:text-blue-400',
-        badgeBg: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-    },
-    vapi: {
-        iconBg: 'bg-purple-100 dark:bg-purple-900/30',
-        iconColor: 'text-purple-600 dark:text-purple-400',
-        badgeBg: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-    },
-} as const;
 
 /* ─── Shared Sub-components ─── */
 
@@ -266,29 +254,13 @@ function MobileHeader({
 }
 
 function StatusBadge({ status }: { status: string }) {
-    const isCompleted = status === 'completed';
     return (
         <span
             className={cn(
-                'inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-medium',
-                isCompleted
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-            )}
-        >
-            {isCompleted ? 'Completed' : 'In Progress'}
-        </span>
-    );
-}
-
-function CallsStatusBadge({ status }: { status: string }) {
-    return (
-        <span
-            className={cn(
-                'inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-medium',
-                status === 'completed' && 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-                status === 'failed' && 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-                status === 'in_progress' && 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                'inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-medium border',
+                status === 'completed' && 'bg-muted text-muted-foreground border-border',
+                status === 'failed' && 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800',
+                status === 'in_progress' && 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800',
             )}
         >
             {status === 'completed' ? 'Completed' : status === 'failed' ? 'Failed' : 'In Progress'}
@@ -410,13 +382,12 @@ function DemoChart({ isInView }: { isInView: boolean }) {
                     <AreaChart data={MOCK_CHART_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                         <defs>
                             <linearGradient id="demoCallsGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="hsl(262, 83%, 58%)" stopOpacity={0.4} />
-                                <stop offset="50%" stopColor="hsl(221, 83%, 53%)" stopOpacity={0.2} />
-                                <stop offset="100%" stopColor="hsl(221, 83%, 53%)" stopOpacity={0.05} />
+                                <stop offset="0%" stopColor="var(--foreground)" stopOpacity={0.15} />
+                                <stop offset="100%" stopColor="var(--foreground)" stopOpacity={0.02} />
                             </linearGradient>
                             <linearGradient id="demoStrokeGradient" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="hsl(262, 83%, 58%)" />
-                                <stop offset="100%" stopColor="hsl(221, 83%, 53%)" />
+                                <stop offset="0%" stopColor="var(--foreground)" />
+                                <stop offset="100%" stopColor="var(--foreground)" />
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.3} vertical={false} />
@@ -441,12 +412,15 @@ function DemoAgentsList({ isInView }: { isInView: boolean }) {
                 animationPlayState: isInView ? 'running' : 'paused',
             }}
         >
-            <div className="text-[11px] font-semibold mb-2">Your Agents</div>
-            <div className="space-y-2">
+            <div className="flex items-center justify-between mb-2">
+                <div className="text-[11px] font-semibold">Agents</div>
+                <span className="text-[9px] text-muted-foreground">View all →</span>
+            </div>
+            <div className="space-y-1">
                 {MOCK_AGENTS.map((agent) => (
-                    <div key={agent.name} className="flex items-center justify-between">
+                    <div key={agent.name} className="flex items-center justify-between py-1 px-1 -mx-1 rounded hover:bg-muted/50 transition-colors">
                         <span className="text-[10px] font-medium truncate">{agent.name}</span>
-                        <span className="flex-shrink-0 h-1.5 w-1.5 rounded-full bg-green-500" />
+                        <span className="text-[8px] font-medium text-muted-foreground/70 bg-muted px-1 py-0.5 rounded shrink-0 ml-1">{agent.provider}</span>
                     </div>
                 ))}
             </div>
@@ -529,11 +503,8 @@ function DashboardView({ isInView, hasAnimated }: { isInView: boolean; hasAnimat
                 }}
             >
                 <h3 className="text-sm sm:text-base font-bold tracking-tight">
-                    Welcome back
+                    Dashboard
                 </h3>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Here&apos;s an overview of your voice AI performance
-                </p>
             </div>
 
             {/* KPI Cards */}
@@ -556,25 +527,20 @@ function DashboardView({ isInView, hasAnimated }: { isInView: boolean; hasAnimat
 }
 
 function DemoAgentCard({ agent }: { agent: typeof MOCK_AGENT_CARDS[number] }) {
-    const colors = providerColors[agent.provider];
-
     return (
         <div className={cn(
             'rounded-lg border border-border bg-card p-3 relative overflow-hidden',
             'transition-all duration-200 hover:shadow-md hover:-translate-y-0.5'
         )}>
             {/* Provider badge */}
-            <span className={cn(
-                'absolute top-2 right-2 px-1.5 py-0.5 rounded text-[8px] font-medium capitalize',
-                colors.badgeBg
-            )}>
+            <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[8px] font-medium capitalize bg-muted text-muted-foreground">
                 {agent.provider}
             </span>
 
             {/* Icon + Name */}
             <div className="flex items-center gap-2 mb-2">
-                <div className={cn('p-1.5 rounded-md', colors.iconBg)}>
-                    <Bot className={cn('h-3.5 w-3.5', colors.iconColor)} />
+                <div className="p-1.5 rounded-md bg-muted">
+                    <Bot className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
                 <div className="min-w-0">
                     <div className="text-[11px] font-semibold truncate">{agent.name}</div>
@@ -584,21 +550,13 @@ function DemoAgentCard({ agent }: { agent: typeof MOCK_AGENT_CARDS[number] }) {
 
             {/* Phone number */}
             <div className="flex items-center gap-1.5 mb-2">
-                <Phone className="h-2.5 w-2.5 text-green-600" />
+                <Phone className="h-2.5 w-2.5 text-muted-foreground" />
                 <span className="text-[9px] font-mono text-muted-foreground">{agent.phone}</span>
             </div>
 
             {/* Status */}
-            <span className={cn(
-                'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-medium',
-                agent.active
-                    ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                    : 'bg-muted text-muted-foreground'
-            )}>
-                <span className={cn(
-                    'h-1.5 w-1.5 rounded-full',
-                    agent.active ? 'bg-green-500 animate-pulse' : 'bg-gray-400 dark:bg-gray-500'
-                )} />
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-medium bg-muted text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-foreground/50" />
                 {agent.active ? 'Active' : 'Inactive'}
             </span>
         </div>
@@ -610,14 +568,9 @@ function AgentsView() {
         <>
             {/* Header */}
             <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="text-sm sm:text-base font-bold tracking-tight">Your Agents</h3>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                        Manage your voice AI agents
-                    </p>
-                </div>
+                <h3 className="text-sm sm:text-base font-bold tracking-tight">Agents</h3>
                 <span
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-medium bg-gradient-to-r from-violet-500 to-purple-600 text-white"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-medium bg-primary text-primary-foreground"
                 >
                     <Sparkles className="h-3 w-3" />
                     Build with AI
@@ -638,12 +591,7 @@ function CallsView() {
     return (
         <>
             {/* Header */}
-            <div>
-                <h3 className="text-sm sm:text-base font-bold tracking-tight">Call History</h3>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                    View and analyze all voice calls
-                </p>
-            </div>
+            <h3 className="text-sm sm:text-base font-bold tracking-tight">Calls</h3>
 
             {/* Full calls table */}
             <div className="rounded-lg border border-border bg-card p-3 min-w-0">
@@ -669,13 +617,13 @@ function CallsView() {
                                     )}
                                 >
                                     <td className="py-1.5 pr-2 font-medium truncate max-w-[100px]">{call.agent}</td>
-                                    <td className="py-1.5 pr-2"><CallsStatusBadge status={call.status} /></td>
+                                    <td className="py-1.5 pr-2"><StatusBadge status={call.status} /></td>
                                     <td className="py-1.5 pr-2 hidden sm:table-cell">
                                         <span className="flex items-center gap-1 text-muted-foreground">
                                             {call.direction === 'inbound' ? (
-                                                <PhoneIncoming className="h-2.5 w-2.5 text-blue-500" />
+                                                <PhoneIncoming className="h-2.5 w-2.5" />
                                             ) : (
-                                                <PhoneOutgoing className="h-2.5 w-2.5 text-purple-500" />
+                                                <PhoneOutgoing className="h-2.5 w-2.5" />
                                             )}
                                             <span className="capitalize">{call.direction}</span>
                                         </span>
@@ -702,13 +650,12 @@ function DemoChartLarge() {
                     <AreaChart data={MOCK_CHART_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                         <defs>
                             <linearGradient id="analyticsCallsGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="hsl(262, 83%, 58%)" stopOpacity={0.4} />
-                                <stop offset="50%" stopColor="hsl(221, 83%, 53%)" stopOpacity={0.2} />
-                                <stop offset="100%" stopColor="hsl(221, 83%, 53%)" stopOpacity={0.05} />
+                                <stop offset="0%" stopColor="var(--foreground)" stopOpacity={0.15} />
+                                <stop offset="100%" stopColor="var(--foreground)" stopOpacity={0.02} />
                             </linearGradient>
                             <linearGradient id="analyticsStrokeGradient" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="hsl(262, 83%, 58%)" />
-                                <stop offset="100%" stopColor="hsl(221, 83%, 53%)" />
+                                <stop offset="0%" stopColor="var(--foreground)" />
+                                <stop offset="100%" stopColor="var(--foreground)" />
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.3} vertical={false} />
@@ -735,7 +682,7 @@ function CallsByAgentCard() {
                         </div>
                         <div className="h-1.5 rounded-full bg-muted">
                             <div
-                                className="h-1.5 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-700"
+                                className="h-1.5 rounded-full bg-foreground/70 transition-all duration-700"
                                 style={{ width: `${agent.percentage}%` }}
                             />
                         </div>
@@ -767,12 +714,7 @@ function AnalyticsView() {
     return (
         <>
             {/* Header */}
-            <div>
-                <h3 className="text-sm sm:text-base font-bold tracking-tight">Analytics</h3>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Detailed performance metrics for your voice agents
-                </p>
-            </div>
+            <h3 className="text-sm sm:text-base font-bold tracking-tight">Analytics</h3>
 
             {/* KPI Cards — static (no animation) */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
