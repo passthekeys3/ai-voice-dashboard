@@ -229,9 +229,26 @@ export default function SignupPage() {
                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                     </div>
-                    <p className={`text-xs ${password.length > 0 && (password.length < 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) ? 'text-red-500' : 'text-muted-foreground'}`}>
-                        Min 8 characters with uppercase, lowercase, and a number
-                    </p>
+                    {password.length > 0 ? (
+                        <ul className="text-xs space-y-0.5 mt-1">
+                            <li className={password.length >= 8 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}>
+                                {password.length >= 8 ? '✓' : '○'} 8+ characters
+                            </li>
+                            <li className={/[a-z]/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}>
+                                {/[a-z]/.test(password) ? '✓' : '○'} Lowercase letter
+                            </li>
+                            <li className={/[A-Z]/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}>
+                                {/[A-Z]/.test(password) ? '✓' : '○'} Uppercase letter
+                            </li>
+                            <li className={/[0-9]/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}>
+                                {/[0-9]/.test(password) ? '✓' : '○'} Number
+                            </li>
+                        </ul>
+                    ) : (
+                        <p className="text-xs text-muted-foreground">
+                            Min 8 characters with uppercase, lowercase, and a number
+                        </p>
+                    )}
                 </div>
                 <div>
                     <button

@@ -49,8 +49,6 @@ export default async function AuthLayout({
 
     return (
         <div className="min-h-screen flex flex-col bg-background">
-            {/* Gradient glow backdrop (matches landing page hero) */}
-            <div className="hero-glow fixed inset-0 pointer-events-none" aria-hidden="true" />
 
             {/* Inject brand colors as CSS variables */}
             <style
@@ -113,7 +111,7 @@ export default async function AuthLayout({
             </main>
 
             {/* Footer */}
-            <footer className="relative z-10 py-6 px-4 text-center text-sm text-muted-foreground/60 animate-fade-up" style={{ animationDelay: '160ms', animationFillMode: 'both' }}>
+            <footer className="relative z-10 py-6 px-4 text-center text-sm text-muted-foreground animate-fade-up" style={{ animationDelay: '160ms', animationFillMode: 'both' }}>
                 {branding?.footer_text || (
                     <>
                         {companyName ? `© ${new Date().getFullYear()} ${companyName}` : 'Powered by BuildVoiceAI'}
