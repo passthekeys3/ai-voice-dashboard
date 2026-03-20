@@ -71,9 +71,6 @@ export default async function EditWorkflowPage({
                     </Button>
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight">{workflow.name}</h2>
-                        <p className="text-muted-foreground">
-                            Modify your workflow configuration
-                        </p>
                     </div>
                 </div>
 

@@ -40,6 +40,7 @@ export default function NewTestSuitePage() {
                 if (data.data) setAgents(data.data);
             } catch (err) {
                 console.error('Failed to load agents:', err);
+                toast.error('Failed to load agents');
             } finally {
                 setAgentsLoading(false);
             }

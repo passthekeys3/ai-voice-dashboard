@@ -98,9 +98,6 @@ export default async function AgentDetailPage({
                         </div>
                         <div>
                             <h2 className="text-2xl font-bold tracking-tight">{agent.name}</h2>
-                            <p className="text-muted-foreground">
-                                {agent.clients?.name || 'Unassigned'}
-                            </p>
                         </div>
                     </div>
                     <Badge className={providerStyles[agent.provider as keyof typeof providerStyles]}>

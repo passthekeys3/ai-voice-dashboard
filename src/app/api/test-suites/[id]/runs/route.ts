@@ -142,7 +142,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             }
 
             // Verify agency ownership through the experiment
-            const experiment = variant.experiment as unknown as { agency_id: string }[] | null;
+            // Supabase returns joined relations as arrays when using (column) syntax
+            const experiment = variant.experiment as { agency_id: string }[] | null;
             if (!experiment?.[0] || experiment[0].agency_id !== user.agency.id) {
                 return NextResponse.json({ error: 'Experiment variant not found' }, { status: 404 });
             }

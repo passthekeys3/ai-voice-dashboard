@@ -57,9 +57,6 @@ export default async function NewWorkflowPage({
                     </Button>
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight">Create Workflow</h2>
-                        <p className="text-muted-foreground">
-                            Set up automated actions for your calls
-                        </p>
                     </div>
                 </div>
 

@@ -19,12 +19,12 @@ interface PersonaSelectorProps {
 }
 
 const TEMPERAMENT_EMOJI: Record<string, string> = {
-    angry: '\uD83D\uDE20',
-    friendly: '\uD83D\uDE0A',
-    confused: '\uD83D\uDE15',
-    impatient: '\u23F1\uFE0F',
-    skeptical: '\uD83E\uDD28',
-    neutral: '\uD83D\uDE10',
+    angry: '😠',
+    friendly: '😊',
+    confused: '😕',
+    impatient: '⏱️',
+    skeptical: '🤨',
+    neutral: '😐',
 };
 
 export function PersonaSelector({ value, onChange, personas: externalPersonas }: PersonaSelectorProps) {

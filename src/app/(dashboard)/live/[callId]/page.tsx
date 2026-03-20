@@ -93,9 +93,6 @@ export default async function LiveCallPage({
                     </Button>
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight">Live Transcript</h2>
-                        <p className="text-muted-foreground">
-                            Watching call in real-time
-                        </p>
                     </div>
                 </div>
 

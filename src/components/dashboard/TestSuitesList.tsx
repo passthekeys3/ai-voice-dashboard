@@ -38,7 +38,7 @@ function getRunStatusBadge(run: TestRun) {
         const total = run.passed_cases + run.failed_cases + run.errored_cases;
         if (run.failed_cases === 0 && run.errored_cases === 0) {
             return (
-                <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                <Badge variant="secondary" className="text-green-700 dark:text-green-400">
                     <CheckCircle2 className="h-3 w-3 mr-1" />
                     {run.passed_cases}/{total} Passed
                 </Badge>

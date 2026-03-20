@@ -7,12 +7,13 @@ import { TestRunResults } from '@/components/dashboard/TestRunResults';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2, TestTube2 } from 'lucide-react';
 import { isValidUuid } from '@/lib/validation';
-import type { TestRun, TestResult } from '@/types';
+import type { TestRun, TestResult, SuccessCriterion } from '@/types';
+import { toast } from 'sonner';
 
 type FullRun = TestRun & {
     test_suite?: { id: string; name: string };
     test_results?: (TestResult & {
-        test_case?: { id: string; name: string; scenario: string; success_criteria: unknown[]; tags: string[] };
+        test_case?: { id: string; name: string; scenario: string; success_criteria: SuccessCriterion[]; tags: string[] };
         persona?: { id: string; name: string; traits: Record<string, string> };
     })[];
 };
@@ -44,6 +45,7 @@ export default function TestRunPage() {
             }
         } catch (err) {
             console.error('Failed to fetch run:', err);
+            toast.error('Failed to load test run');
         } finally {
             setLoading(false);
         }

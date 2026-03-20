@@ -46,9 +46,6 @@ export default async function NewExperimentPage() {
                         </Button>
                         <div>
                             <h2 className="text-2xl font-bold tracking-tight">New Experiment</h2>
-                            <p className="text-muted-foreground">
-                                Test different prompts to optimize performance
-                            </p>
                         </div>
                     </div>
 

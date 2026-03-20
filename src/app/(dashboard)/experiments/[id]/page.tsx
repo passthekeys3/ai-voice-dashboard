@@ -98,9 +98,6 @@ export default async function ExperimentDetailPage({
                     </Button>
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight">{experiment.name}</h2>
-                        <p className="text-muted-foreground">
-                            {experiment.description || `Testing ${experiment.variants?.length || 0} variants`}
-                        </p>
                     </div>
                 </div>
 

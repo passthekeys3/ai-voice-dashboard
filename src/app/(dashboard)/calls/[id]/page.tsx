@@ -88,9 +88,6 @@ export default async function CallDetailPage({
                         </div>
                         <div>
                             <h2 className="text-2xl font-bold tracking-tight">Call Details</h2>
-                            <p className="text-muted-foreground">
-                                {call.agents?.name || 'Unknown Agent'}
-                            </p>
                         </div>
                     </div>
                     <Badge className={statusStyles[call.status] || statusStyles.queued}>
