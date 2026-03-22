@@ -1,0 +1,112 @@
+# BuildVoiceAI — Complete Platform Reference
+
+> BuildVoiceAI is a white-label AI voice agent platform for agencies and businesses. Users describe what they want their phone agent to do in plain English, and the platform generates, deploys, and manages the agent — including voice selection, call scripts, phone number provisioning, and post-call CRM automation. No coding required.
+
+## Platform Overview
+
+BuildVoiceAI covers four core workflows:
+
+1. **Build**: Describe your agent in natural language. The system generates the conversation flow, selects a voice, and configures the phone number. Agents are typically live within 30 minutes.
+2. **Monitor**: View call volume, success rates, costs, and duration in a unified dashboard. Click any call to read the full transcript or listen to the recording. Live call monitoring shows transcripts in real-time.
+3. **Automate**: Post-call workflows automatically update CRM contacts, create deals, book appointments, and send follow-ups. Workflows are configurable per-agent with conditional logic.
+4. **Scale**: White-label the entire platform for agency clients. Clients get a branded dashboard — your logo, your domain, their data only. They never see BuildVoiceAI branding.
+
+## Voice Providers
+
+Three providers are supported, each with distinct strengths:
+
+- **Retell AI**: Low-latency conversational agents with built-in LLM, knowledge base support, call transfer, and safety guardrails. Supports A/B testing across prompt variants.
+- **Vapi**: Flexible voice AI with multiple TTS providers (OpenAI, ElevenLabs, PlayHT, Deepgram), model selection (GPT-4o, Claude, etc.), and custom tool calling.
+- **Bland**: Visual pathway-based conversation design for complex multi-branch call flows.
+
+All providers support inbound and outbound calls, call recording, transcript generation, and webhook-based event delivery.
+
+## CRM Integrations
+
+- **GoHighLevel (GHL)**: OAuth per-client, contact sync, deal creation, call activity logging, appointment booking, tag management. Platform webhook with ED25519 signature verification.
+- **HubSpot**: OAuth per-client, contact sync, deal creation, call/meeting/note engagement logging, custom property support (ai_call_tags). Token refresh with singleton promise pattern.
+- **Calendly**: Coming soon — OAuth-based appointment scheduling.
+- **Slack**: Coming soon — Real-time call notifications and summaries.
+
+## Pricing
+
+All plans include a 14-day free trial. No credit card required to start.
+
+### Self-Service Plans (bring your own API keys)
+- **Starter — $67/month**: 3 clients, 3 voice agents, call analytics, email support
+- **Growth — $147/month**: 10 clients, 15 voice agents, CRM integrations, white-label portal, A/B testing
+- **Agency — $297/month**: 25 clients, unlimited agents, full white-label, API access, priority support
+
+### Managed Plans (platform-hosted API keys, done-for-you setup)
+- **Starter — $97/month**: 3 clients, 3 agents, $0.15/min voice usage
+- **Growth — $197/month**: 10 clients, 15 agents, CRM integrations, $0.12/min voice usage
+- **Agency — $397/month**: 25 clients, unlimited agents, full white-label, $0.10/min voice usage
+
+Annual billing saves 2 months on all plans.
+
+## Common Use Cases
+
+- **Dental receptionist**: Appointment booking, insurance verification, patient intake, after-hours call handling
+- **Real estate lead qualification**: Property inquiries, showing scheduling, lead scoring, CRM updates
+- **Sales follow-up**: Outbound call campaigns, appointment setting, lead re-engagement
+- **Customer support**: Tier-1 ticket handling, FAQ responses, human escalation for complex issues
+- **After-hours call handling**: 24/7 availability, message taking, emergency routing, callback scheduling
+
+## Key Features
+
+- Natural language agent builder with AI-generated conversation flows
+- Multi-provider support (Retell AI, Vapi, Bland) with provider-agnostic architecture
+- White-label client portals with custom domains, logos, and colors
+- GoHighLevel and HubSpot CRM integrations with per-client OAuth
+- Post-call workflow automation (CRM updates, appointments, notifications)
+- Real-time call analytics dashboard with timezone-aware date grouping
+- A/B experiment system for prompt optimization across variants
+- Phone number management (purchase, port, assign to agents)
+- Call recording playback and searchable transcript history
+- Agent safety guardrails with content category filtering
+- Call transfer tracking with full audit trail
+- Test suite system with AI-generated scenarios and persona-based testing
+- Stripe billing with usage-based overage tracking
+- Knowledge base management for agent context
+- Embeddable voice widget for websites
+
+## Technical Architecture
+
+- **Frontend**: Next.js 16, React 19, TypeScript 5, Tailwind CSS, shadcn/ui
+- **Backend**: Supabase (PostgreSQL with row-level security), Vercel serverless functions
+- **Auth**: Supabase Auth with email/password and magic links
+- **Payments**: Stripe with Stripe Connect for agency billing
+- **Email**: Resend for transactional emails
+- **Monitoring**: Sentry for error tracking and performance
+- **Analytics**: Vercel Analytics and Speed Insights
+
+## Security
+
+- All data encrypted at rest (AES-256) and in transit (TLS 1.3)
+- Row-level security (RLS) enforces strict tenant isolation
+- API keys encrypted with AES-256 before storage
+- SSRF protection on webhook URLs (blocks private IP ranges)
+- ED25519 webhook signature verification (GHL)
+- HMAC-SHA256 webhook signature verification (HubSpot)
+- Retell SDK signature verification on all inbound webhooks
+- CSP headers with strict source whitelisting
+- HSTS with 1-year max-age
+- Customer data never used to train AI models
+
+## Company
+
+- **Website**: https://buildvoiceai.com
+- **Contact**: hello@buildvoiceai.com
+- **Privacy Policy**: https://buildvoiceai.com/privacy
+- **Terms of Service**: https://buildvoiceai.com/terms
+- **Blog**: https://buildvoiceai.com/blog
+
+## Key Pages
+
+- [Homepage](https://buildvoiceai.com): Landing page with interactive agent builder demo
+- [Pricing](https://buildvoiceai.com/#pricing): Plan comparison with Self-Service and Managed tiers
+- [Blog](https://buildvoiceai.com/blog): Guides, tutorials, and industry insights
+- [Sign up](https://buildvoiceai.com/signup): Start a free 14-day trial
+- [Privacy Policy](https://buildvoiceai.com/privacy): Data handling and security practices
+- [Terms of Service](https://buildvoiceai.com/terms): Platform usage terms and compliance obligations
+- [FAQ](https://buildvoiceai.com/#faq): Common questions about setup, integrations, and billing

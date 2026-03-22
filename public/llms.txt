@@ -1,5 +1,7 @@
 # BuildVoiceAI
 
+> For the complete reference, see [llms-full.txt](https://buildvoiceai.com/llms-full.txt)
+
 > BuildVoiceAI is an AI voice agent platform for agencies and businesses. Users describe what they want their phone agent to do in plain English, and the platform generates, deploys, and manages the agent — including voice selection, call scripts, phone number provisioning, and post-call CRM automation. No coding required.
 
 ## What it does
@@ -24,11 +26,14 @@ Three providers are supported: Retell AI, Vapi, and Bland. Agents can run A/B ex
 
 ## Pricing
 
-All plans include a 14-day free trial.
+All plans include a 14-day free trial. Self-Service (bring your own keys) and Managed (done-for-you) tiers available.
 
-- **Starter — $49/month**: Up to 3 voice agents, 500 minutes included, call analytics dashboard, email support.
-- **Growth — $149/month** (recommended): Up to 15 voice agents, 2,000 minutes included, CRM integrations (GHL + HubSpot), white-label client portal.
-- **Agency — $399/month**: Unlimited voice agents, 10,000 minutes included, full white-label platform, API access, dedicated support.
+- **Self-Service Starter — $67/month**: 3 clients, 3 agents, call analytics, email support.
+- **Self-Service Growth — $147/month**: 10 clients, 15 agents, CRM integrations, white-label portal, A/B testing.
+- **Self-Service Agency — $297/month**: 25 clients, unlimited agents, full white-label, API access, priority support.
+- **Managed Starter — $97/month**: 3 clients, 3 agents, platform-hosted keys, $0.15/min.
+- **Managed Growth — $197/month**: 10 clients, 15 agents, CRM integrations, $0.12/min.
+- **Managed Agency — $397/month**: 25 clients, unlimited agents, full white-label, $0.10/min.
 
 ## Common use cases
 

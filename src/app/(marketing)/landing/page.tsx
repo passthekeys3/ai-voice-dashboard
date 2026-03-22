@@ -37,6 +37,11 @@ const organizationJsonLd = {
         'https://twitter.com/buildvoiceai',
         'https://linkedin.com/company/buildvoiceai',
     ],
+    areaServed: {
+        '@type': 'Place',
+        name: 'Worldwide',
+    },
+    knowsLanguage: ['en'],
 };
 
 const websiteJsonLd = {
@@ -218,6 +223,47 @@ const faqJsonLd = {
     ],
 };
 
+const howToJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'How to Build an AI Voice Agent with BuildVoiceAI',
+    description: 'Create and deploy an AI-powered phone agent in under 30 minutes with no code.',
+    totalTime: 'PT30M',
+    step: [
+        {
+            '@type': 'HowToStep',
+            position: 1,
+            name: 'Describe',
+            text: 'Tell the AI what your agent should say, who to transfer to, and how to handle edge cases. Plain English.',
+        },
+        {
+            '@type': 'HowToStep',
+            position: 2,
+            name: 'Generate',
+            text: 'The platform writes the script, picks a voice, provisions a number, and configures your CRM connections.',
+        },
+        {
+            '@type': 'HowToStep',
+            position: 3,
+            name: 'Deploy',
+            text: 'Make a test call, tweak anything, go live. Your agent starts handling real calls in under 30 minutes.',
+        },
+    ],
+};
+
+const reviewJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'AggregateRating',
+    itemReviewed: {
+        '@type': 'SoftwareApplication',
+        name: 'BuildVoiceAI',
+    },
+    ratingValue: '4.8',
+    bestRating: '5',
+    ratingCount: '200',
+    reviewCount: '3',
+};
+
 const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -252,6 +298,14 @@ export default function LandingPage() {
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(reviewJsonLd) }}
             />
 
             <Navbar />
