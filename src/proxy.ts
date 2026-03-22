@@ -18,10 +18,14 @@ const publicRoutes = [
     '/robots.txt',    // Robots
     '/privacy',       // Public legal pages
     '/terms',
+    '/solutions',     // Public industry solution pages
     '/icon',          // Auto-generated images (favicon, apple icon, OG, logo)
     '/apple-icon',
     '/opengraph-image',
     '/logo',
+    '/manifest',      // PWA manifest
+    '/llms.txt',      // AI-friendly content
+    '/llms-full.txt', // AI-friendly full reference
 ];
 
 // Platform domains that should NOT be treated as custom domains
