@@ -1,17 +1,20 @@
 import type { Metadata } from 'next';
+import dynamic from 'next/dynamic';
 import { Navbar } from '@/components/landing/Navbar';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { DashboardDemo } from '@/components/landing/DashboardDemo';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
-import { ProductSection } from '@/components/landing/ProductSection';
-import { IntegrationLogosSection } from '@/components/landing/IntegrationLogosSection';
-import { StatsBar } from '@/components/landing/StatsBar';
-import { SocialProofSection } from '@/components/landing/SocialProofSection';
-import { PricingSection } from '@/components/landing/PricingSection';
-import { FAQSection } from '@/components/landing/FAQSection';
-import { AISummarySection } from '@/components/landing/AISummarySection';
-import { FinalCTA } from '@/components/landing/FinalCTA';
-import { Footer } from '@/components/landing/Footer';
+
+// Lazy-load below-the-fold sections to reduce initial JS bundle
+const ProductSection = dynamic(() => import('@/components/landing/ProductSection').then(m => ({ default: m.ProductSection })));
+const IntegrationLogosSection = dynamic(() => import('@/components/landing/IntegrationLogosSection').then(m => ({ default: m.IntegrationLogosSection })));
+const StatsBar = dynamic(() => import('@/components/landing/StatsBar').then(m => ({ default: m.StatsBar })));
+const SocialProofSection = dynamic(() => import('@/components/landing/SocialProofSection').then(m => ({ default: m.SocialProofSection })));
+const PricingSection = dynamic(() => import('@/components/landing/PricingSection').then(m => ({ default: m.PricingSection })));
+const FAQSection = dynamic(() => import('@/components/landing/FAQSection').then(m => ({ default: m.FAQSection })));
+const AISummarySection = dynamic(() => import('@/components/landing/AISummarySection').then(m => ({ default: m.AISummarySection })));
+const FinalCTA = dynamic(() => import('@/components/landing/FinalCTA').then(m => ({ default: m.FinalCTA })));
+const Footer = dynamic(() => import('@/components/landing/Footer').then(m => ({ default: m.Footer })));
 
 export const metadata: Metadata = {
     title: 'BuildVoiceAI — AI Voice Agent Platform for Agencies & Businesses',

@@ -257,7 +257,7 @@ function StatusBadge({ status }: { status: string }) {
     return (
         <span
             className={cn(
-                'inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-medium border',
+                'inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border',
                 status === 'completed' && 'bg-muted text-muted-foreground border-border',
                 status === 'failed' && 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800',
                 status === 'in_progress' && 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800',
@@ -420,7 +420,7 @@ function DemoAgentsList({ isInView }: { isInView: boolean }) {
                 {MOCK_AGENTS.map((agent) => (
                     <div key={agent.name} className="flex items-center justify-between py-1 px-1 -mx-1 rounded hover:bg-muted/50 transition-colors">
                         <span className="text-[10px] font-medium truncate">{agent.name}</span>
-                        <span className="text-[8px] font-medium text-muted-foreground/70 bg-muted px-1 py-0.5 rounded shrink-0 ml-1">{agent.provider}</span>
+                        <span className="text-[9px] font-medium text-muted-foreground bg-muted px-1 py-0.5 rounded shrink-0 ml-1">{agent.provider}</span>
                     </div>
                 ))}
             </div>
@@ -533,7 +533,7 @@ function DemoAgentCard({ agent }: { agent: typeof MOCK_AGENT_CARDS[number] }) {
             'transition-all duration-200 hover:shadow-md hover:-translate-y-0.5'
         )}>
             {/* Provider badge */}
-            <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[8px] font-medium capitalize bg-muted text-muted-foreground">
+            <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-medium capitalize bg-muted text-muted-foreground">
                 {agent.provider}
             </span>
 
@@ -555,7 +555,7 @@ function DemoAgentCard({ agent }: { agent: typeof MOCK_AGENT_CARDS[number] }) {
             </div>
 
             {/* Status */}
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-medium bg-muted text-muted-foreground">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-muted text-muted-foreground">
                 <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
                 {agent.active ? 'Active' : 'Inactive'}
             </span>

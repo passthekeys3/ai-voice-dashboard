@@ -55,7 +55,7 @@ function BrowserBar({ isInView }: { isInView: boolean }) {
             {/* URL bar */}
             <div className="flex-1 flex items-center justify-center">
                 <div className="px-3 py-0.5 rounded-md bg-background/80 border border-border/30">
-                    <span className="text-[8px] text-muted-foreground font-mono">portal.acmevoice.ai</span>
+                    <span className="text-[9px] text-muted-foreground font-mono">portal.acmevoice.ai</span>
                 </div>
             </div>
         </div>
@@ -112,7 +112,7 @@ function PortalContent({ isInView }: { isInView: boolean }) {
             >
                 <div className="flex items-center gap-1.5 rounded-md border border-border bg-muted/30 px-2 py-1 flex-1 max-w-[140px]">
                     <Search className="h-2.5 w-2.5 text-muted-foreground" />
-                    <span className="text-[8px] text-muted-foreground">Search...</span>
+                    <span className="text-[9px] text-muted-foreground">Search...</span>
                 </div>
                 <div className="flex items-center gap-1">
                     <div className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
@@ -150,7 +150,7 @@ function PortalContent({ isInView }: { isInView: boolean }) {
                             }}
                         >
                             <div className="flex items-center justify-between mb-1">
-                                <div className="text-[8px] text-muted-foreground font-medium">{metric.label}</div>
+                                <div className="text-[9px] text-muted-foreground font-medium">{metric.label}</div>
                                 <metric.icon className="h-2.5 w-2.5 text-muted-foreground/40" />
                             </div>
                             <div className="text-sm sm:text-base font-semibold tracking-tight">{metric.value}</div>

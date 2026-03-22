@@ -135,7 +135,7 @@ export function IntegrationLogosSection() {
                     {integrations.map(({ name, Logo }) => (
                         <div
                             key={name}
-                            className="flex items-center gap-2 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors duration-200"
+                            className="flex items-center gap-2 text-muted-foreground/60 hover:text-muted-foreground transition-colors duration-200"
                         >
                             <Logo />
                             <span className="text-sm font-medium">{name}</span>

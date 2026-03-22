@@ -76,7 +76,7 @@ function PreviewPanel({ isInView }: { isInView: boolean }) {
 
             {/* Agent name */}
             <div className="space-y-1 mb-3">
-                <label className="flex items-center gap-1 text-[8px] font-medium uppercase tracking-wider text-muted-foreground">
+                <label className="flex items-center gap-1 text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
                     <Bot className="h-2.5 w-2.5" />
                     Agent Name
                 </label>
@@ -87,7 +87,7 @@ function PreviewPanel({ isInView }: { isInView: boolean }) {
 
             {/* Voice */}
             <div className="space-y-1 mb-3">
-                <label className="flex items-center gap-1 text-[8px] font-medium uppercase tracking-wider text-muted-foreground">
+                <label className="flex items-center gap-1 text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
                     <Mic className="h-2.5 w-2.5" />
                     Voice
                 </label>
@@ -98,7 +98,7 @@ function PreviewPanel({ isInView }: { isInView: boolean }) {
 
             {/* Provider */}
             <div className="space-y-1 mb-3">
-                <label className="text-[8px] font-medium uppercase tracking-wider text-muted-foreground">Provider</label>
+                <label className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">Provider</label>
                 <div className="flex gap-1">
                     <div className="flex-1 text-[9px] px-2 py-1 rounded-md border border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 font-medium text-center">
                         Retell
@@ -114,7 +114,7 @@ function PreviewPanel({ isInView }: { isInView: boolean }) {
 
             {/* First message */}
             <div className="space-y-1 mb-4">
-                <label className="text-[8px] font-medium uppercase tracking-wider text-muted-foreground">First Message</label>
+                <label className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">First Message</label>
                 <div className="rounded-md border border-border bg-card px-2 py-2">
                     <p className="text-[9px] leading-relaxed text-muted-foreground italic">
                         &ldquo;Hi! I&apos;m Sarah from Bright Smiles Dental. How can I help you today?&rdquo;

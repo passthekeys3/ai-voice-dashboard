@@ -88,7 +88,7 @@ function KPICard({ kpi, index, isInView }: { kpi: typeof ANALYTICS_KPI[number]; 
                 <div className="text-sm sm:text-base font-semibold tracking-tight">{kpi.value}</div>
                 <div
                     className={cn(
-                        'flex items-center gap-0.5 text-[8px] font-medium mt-0.5',
+                        'flex items-center gap-0.5 text-[9px] font-medium mt-0.5',
                         kpi.trendUp
                             ? 'text-green-600 dark:text-green-400'
                             : 'text-red-600 dark:text-red-400'

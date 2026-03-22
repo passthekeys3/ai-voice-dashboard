@@ -82,7 +82,7 @@ function FlowCardItem({ card, index, isInView }: { card: FlowCard; index: number
                     </div>
                     <div className="text-[9px] text-muted-foreground mt-0.5">{card.subtitle}</div>
                     {card.detail && (
-                        <div className="inline-flex items-center mt-1.5 px-1.5 py-0.5 rounded text-[8px] font-medium bg-muted text-foreground">
+                        <div className="inline-flex items-center mt-1.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-muted text-foreground">
                             {card.detail}
                         </div>
                     )}
@@ -130,7 +130,7 @@ export function WorkflowsMockup({ isInView }: WorkflowsMockupProps) {
                 }}
             >
                 <div className="text-[11px] font-semibold">Post-Call Workflow</div>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-medium bg-muted text-muted-foreground">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-muted text-muted-foreground">
                     <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                     Active
                 </span>
