@@ -24,6 +24,7 @@ export const viewport: Viewport = {
 
 // Default metadata for the platform
 const DEFAULT_METADATA: Metadata = {
+    metadataBase: new URL('https://buildvoiceai.com'),
     title: "Voice AI Dashboard",
     description: "White-label voice AI agency dashboard",
     // icons auto-detected from src/app/icon.tsx and apple-icon.tsx
@@ -42,6 +43,7 @@ export async function generateMetadata(): Promise<Metadata> {
             const title = branding.company_name || agency.name || DEFAULT_METADATA.title;
 
             return {
+                metadataBase: new URL('https://buildvoiceai.com'),
                 title: {
                     default: title as string,
                     template: `%s | ${title}`,

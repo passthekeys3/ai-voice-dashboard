@@ -46,6 +46,11 @@ const websiteJsonLd = {
     url: SITE_URL,
     description:
         'AI Voice Agents for Agencies & Businesses — build, monitor, automate, and scale.',
+    potentialAction: {
+        '@type': 'SearchAction',
+        target: `${SITE_URL}/blog?q={search_term_string}`,
+        'query-input': 'required name=search_term_string',
+    },
 };
 
 const softwareJsonLd = {
@@ -217,12 +222,10 @@ const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-        {
-            '@type': 'ListItem',
-            position: 1,
-            name: 'Home',
-            item: SITE_URL,
-        },
+        { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+        { '@type': 'ListItem', position: 2, name: 'Blog', item: `${SITE_URL}/blog` },
+        { '@type': 'ListItem', position: 3, name: 'Privacy', item: `${SITE_URL}/privacy` },
+        { '@type': 'ListItem', position: 4, name: 'Terms', item: `${SITE_URL}/terms` },
     ],
 };
 
