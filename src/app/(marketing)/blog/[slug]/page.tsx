@@ -58,6 +58,8 @@ export default async function BlogPostPage({
     const relatedPosts = getRelatedPosts(slug, post.tags);
     const faqs = extractFAQs(post.content);
 
+    const postUrl = `${SITE_URL}/blog/${slug}`;
+
     const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'BlogPosting',
@@ -74,8 +76,12 @@ export default async function BlogPostPage({
             '@type': 'Organization',
             name: 'BuildVoiceAI',
             url: SITE_URL,
+            logo: { '@type': 'ImageObject', url: `${SITE_URL}/logo` },
         },
-        url: `${SITE_URL}/blog/${slug}`,
+        url: postUrl,
+        mainEntityOfPage: { '@type': 'WebPage', '@id': postUrl },
+        inLanguage: 'en-US',
+        keywords: post.tags?.join(', '),
     };
 
     const breadcrumbJsonLd = {

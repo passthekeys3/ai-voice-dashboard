@@ -13,12 +13,22 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: 0.7,
     }));
 
+    const solutions = ['dental', 'real-estate', 'sales', 'customer-support'];
+
+    const solutionEntries: MetadataRoute.Sitemap = solutions.map((slug) => ({
+        url: `${SITE_URL}/solutions/${slug}`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly' as const,
+        priority: 0.8,
+    }));
+
     return [
         {
             url: SITE_URL,
             lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 1,
+            images: [`${SITE_URL}/opengraph-image`],
         },
         {
             url: `${SITE_URL}/blog`,
@@ -26,6 +36,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
             changeFrequency: 'weekly',
             priority: 0.8,
         },
+        ...solutionEntries,
         ...blogEntries,
         {
             url: `${SITE_URL}/privacy`,

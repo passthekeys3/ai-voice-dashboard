@@ -251,17 +251,40 @@ const howToJsonLd = {
     ],
 };
 
-const reviewJsonLd = {
+const reviewsJsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'AggregateRating',
-    itemReviewed: {
-        '@type': 'SoftwareApplication',
-        name: 'BuildVoiceAI',
+    '@type': 'SoftwareApplication',
+    name: 'BuildVoiceAI',
+    aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: '4.8',
+        bestRating: '5',
+        ratingCount: '200',
+        reviewCount: '3',
     },
-    ratingValue: '4.8',
-    bestRating: '5',
-    ratingCount: '200',
-    reviewCount: '3',
+    review: [
+        {
+            '@type': 'Review',
+            author: { '@type': 'Person', name: 'Rachel Simmons' },
+            reviewRating: { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
+            reviewBody: 'We replaced our entire call center with three voice agents. Setup took an afternoon — our CRM was syncing by dinner.',
+            datePublished: '2026-02-15',
+        },
+        {
+            '@type': 'Review',
+            author: { '@type': 'Person', name: 'Marcus Tran' },
+            reviewRating: { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
+            reviewBody: 'I white-labeled BuildVoiceAI for my agency clients in a day. They think we built it. The margin on this is unreal.',
+            datePublished: '2026-02-20',
+        },
+        {
+            '@type': 'Review',
+            author: { '@type': 'Person', name: 'Sofia Gutierrez' },
+            reviewRating: { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
+            reviewBody: 'Our booking rate went from 30% to 68% once the AI agent started handling after-hours calls. It never misses a lead.',
+            datePublished: '2026-03-01',
+        },
+    ],
 };
 
 const breadcrumbJsonLd = {
@@ -305,7 +328,7 @@ export default function LandingPage() {
             />
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(reviewJsonLd) }}
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(reviewsJsonLd) }}
             />
 
             <Navbar />

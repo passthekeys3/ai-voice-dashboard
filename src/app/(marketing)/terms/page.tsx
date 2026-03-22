@@ -4,6 +4,8 @@ import Link from 'next/link';
 export const metadata: Metadata = {
     title: 'Terms of Service - BuildVoiceAI',
     description: 'BuildVoiceAI terms of service — the rules governing use of our platform.',
+    alternates: { canonical: 'https://buildvoiceai.com/terms' },
+    robots: { index: true, follow: true },
 };
 
 export default function TermsPage() {
