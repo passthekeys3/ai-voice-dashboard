@@ -80,16 +80,52 @@ interface ApiWebhooksConfigProps {
     appUrl: string;
 }
 
-/** Generate a pdy_sk_ prefixed API key (64 hex chars) */
+// ── Constants ────────────────────────────────────────────
+
+/** Prefix for all generated API keys — makes them identifiable in logs */
+const API_KEY_PREFIX = 'pdy_sk_';
+
+/** How long success/copy feedback stays visible (ms) */
+const FEEDBACK_DURATION_MS = 3000;
+const COPY_FEEDBACK_DURATION_MS = 2000;
+
+/** API endpoints used by this component */
+const ENDPOINTS = {
+    settings: '/api/settings',
+    deliveries: '/api/webhook-deliveries',
+    testWebhook: '/api/webhooks/test',
+    triggerCall: '/api/trigger-call',
+} as const;
+
+// ── Helpers ──────────────────────────────────────────────
+
+/** Generate a pdy_sk_ prefixed API key (64 hex chars from 32 random bytes) */
 function generateApiKey(): string {
     const bytes = new Uint8Array(32);
     crypto.getRandomValues(bytes);
     const hex = Array.from(bytes)
         .map((b) => b.toString(16).padStart(2, '0'))
         .join('');
-    return `pdy_sk_${hex}`;
+    return `${API_KEY_PREFIX}${hex}`;
 }
 
+/** Mask a string for display — shows only last N chars */
+function maskSecret(value: string, visibleChars = 0): string {
+    return visibleChars > 0
+        ? '\u2022'.repeat(16) + value.slice(-visibleChars)
+        : '\u2022'.repeat(16);
+}
+
+/**
+ * API / Webhooks configuration dialog.
+ *
+ * Two tabs:
+ *   Settings — API key management, enable/disable, default agent, webhook URL, delivery log
+ *   Docs     — Endpoint reference, auth, request body schema, cURL example, Zapier config
+ *
+ * State is optimistically updated — UI changes immediately, then reverts on save failure.
+ * The API key is shown only once after generation (server stores a hash, not the raw key).
+ */
 export function ApiWebhooksConfig({
     open,
     onOpenChange,
@@ -137,7 +173,7 @@ export function ApiWebhooksConfig({
     const fetchDeliveries = async () => {
         setLoadingDeliveries(true);
         try {
-            const res = await fetch('/api/webhook-deliveries');
+            const res = await fetch(ENDPOINTS.deliveries);
             if (res.ok) {
                 const data = await res.json();
                 setDeliveries(data.deliveries || []);
@@ -154,7 +190,7 @@ export function ApiWebhooksConfig({
         setTestResult(null);
         setError(null);
         try {
-            const res = await fetch('/api/webhooks/test', { method: 'POST' });
+            const res = await fetch(ENDPOINTS.testWebhook, { method: 'POST' });
             const data = await res.json();
             setTestResult(data);
             // Refresh deliveries after test
@@ -174,7 +210,7 @@ export function ApiWebhooksConfig({
         setError(null);
         setSuccess(null);
         try {
-            const res = await fetch('/api/settings', {
+            const res = await fetch(ENDPOINTS.settings, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ integrations: { api: updates } }),
@@ -191,7 +227,7 @@ export function ApiWebhooksConfig({
             }
             setSuccess('Settings saved');
             if (successTimerRef.current) clearTimeout(successTimerRef.current);
-            successTimerRef.current = setTimeout(() => setSuccess(null), 3000);
+            successTimerRef.current = setTimeout(() => setSuccess(null), FEEDBACK_DURATION_MS);
             return true;
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save');
@@ -254,13 +290,13 @@ export function ApiWebhooksConfig({
             await navigator.clipboard.writeText(text);
             setCopiedItem(id);
             if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
-            copyTimerRef.current = setTimeout(() => setCopiedItem(null), 2000);
+            copyTimerRef.current = setTimeout(() => setCopiedItem(null), COPY_FEEDBACK_DURATION_MS);
         } catch {
             setError('Failed to copy to clipboard');
         }
     };
 
-    const curlExample = `curl -X POST ${appUrl}/api/trigger-call \\
+    const curlExample = `curl -X POST ${appUrl}${ENDPOINTS.triggerCall} \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -273,7 +309,7 @@ export function ApiWebhooksConfig({
     }
   }'`;
 
-    const zapierNote = `Endpoint: ${appUrl}/api/trigger-call
+    const zapierNote = `Endpoint: ${appUrl}${ENDPOINTS.triggerCall}
 Method: POST
 Auth: Bearer Token (your API key)`;
 
@@ -370,7 +406,7 @@ Auth: Bearer Token (your API key)`;
                                                 {newKey ? (
                                                     <>
                                                         <span className="flex-1 break-all">
-                                                            {showKey ? newKey : '\u2022'.repeat(20) + newKey.slice(-4)}
+                                                            {showKey ? newKey : maskSecret(newKey, 4)}
                                                         </span>
                                                         <button
                                                             onClick={() => setShowKey(!showKey)}
@@ -545,7 +581,7 @@ Auth: Bearer Token (your API key)`;
                                         </p>
                                         <div className="flex items-center gap-2">
                                             <code className="flex-1 rounded-md border bg-muted/50 px-3 py-1.5 text-sm font-mono truncate">
-                                                {showSigningSecret ? signingSecret : '••••••••••••••••'}
+                                                {showSigningSecret ? signingSecret : maskSecret(signingSecret)}
                                             </code>
                                             <Button
                                                 variant="ghost"
@@ -611,7 +647,7 @@ Auth: Bearer Token (your API key)`;
                                                                 <td className="px-2 py-1.5 font-mono">{d.event}</td>
                                                                 <td className="px-2 py-1.5">
                                                                     {d.success ? (
-                                                                        <Badge variant="default" className="bg-green-600 text-white text-[10px] px-1 py-0">
+                                                                        <Badge variant="secondary" className="text-green-700 dark:text-green-400 text-[10px] px-1 py-0">
                                                                             {d.status_code || 'OK'}
                                                                         </Badge>
                                                                     ) : (
@@ -646,15 +682,15 @@ Auth: Bearer Token (your API key)`;
                             <div className="space-y-2">
                                 <Label className="text-sm font-medium">Endpoint</Label>
                                 <div className="flex items-center gap-2">
-                                    <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white text-xs">POST</Badge>
+                                    <Badge variant="secondary" className="text-green-700 dark:text-green-400 text-xs">POST</Badge>
                                     <code className="flex-1 rounded-md border bg-muted/50 px-3 py-1.5 text-sm font-mono">
-                                        {appUrl}/api/trigger-call
+                                        {appUrl}{ENDPOINTS.triggerCall}
                                     </code>
                                     <Button
                                         variant="ghost"
                                         size="icon"
                                         className="h-8 w-8"
-                                        onClick={() => handleCopy(`${appUrl}/api/trigger-call`, 'endpoint')}
+                                        onClick={() => handleCopy(`${appUrl}${ENDPOINTS.triggerCall}`, 'endpoint')}
                                         title="Copy endpoint URL"
                                         aria-label="Copy endpoint URL"
                                     >
