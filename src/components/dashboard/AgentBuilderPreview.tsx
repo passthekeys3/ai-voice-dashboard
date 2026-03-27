@@ -14,9 +14,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { AgentBuilderIntegrationCard } from './AgentBuilderIntegrationCard';
 import { AgentBuilderVoicePicker } from './AgentBuilderVoicePicker';
 import { TestCall } from './TestCall';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import type { AgentDraft, BuilderContext } from '@/lib/agent-builder/types';
 import type { WorkflowTemplate } from '@/lib/agent-builder/templates';
 import type { CreatedAgentData } from './AgentBuilder';
+import { RETELL_VOICE_MODELS, RETELL_LLM_MODELS, VAPI_LLM_MODELS, TELEPHONY_COST_PER_MIN } from '@/lib/constants/config';
 import Link from 'next/link';
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -254,6 +262,64 @@ export function AgentBuilderPreview({
                                 }
                             />
                         </Section>
+
+                        {/* Voice Model (Retell only) */}
+                        {draft.provider === 'retell' && (
+                            <Section icon={<Mic className="h-3.5 w-3.5" />} label="Voice Model">
+                                <Select
+                                    value={draft.voiceModel || 'eleven_v3'}
+                                    onValueChange={(value: string) => onDraftUpdate({ voiceModel: value })}
+                                >
+                                    <SelectTrigger className="text-sm">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {RETELL_VOICE_MODELS.map((m) => (
+                                            <SelectItem key={m.value} value={m.value}>
+                                                <span>{m.label}</span>
+                                                <span className="text-muted-foreground ml-2 text-xs">{m.description}</span>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </Section>
+                        )}
+
+                        {/* LLM Model (Retell + Vapi) */}
+                        {draft.provider !== 'bland' && (
+                            <Section icon={<Bot className="h-3.5 w-3.5" />} label="LLM Model">
+                                <Select
+                                    value={draft.llmModel || (draft.provider === 'retell' ? 'gpt-4.1' : 'gpt-4o')}
+                                    onValueChange={(value: string) => onDraftUpdate({ llmModel: value })}
+                                >
+                                    <SelectTrigger className="text-sm">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {(draft.provider === 'retell' ? RETELL_LLM_MODELS : VAPI_LLM_MODELS).map((m) => (
+                                            <SelectItem key={m.value} value={m.value}>
+                                                <span>{m.label}</span>
+                                                <span className="text-muted-foreground ml-2 text-xs">{m.description}</span>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </Section>
+                        )}
+
+                        {/* Cost Estimate */}
+                        {draft.provider === 'retell' && (() => {
+                            const voiceCost = RETELL_VOICE_MODELS.find(m => m.value === draft.voiceModel)?.costPerMin ?? 0.08;
+                            const llmCost = RETELL_LLM_MODELS.find(m => m.value === draft.llmModel)?.costPerMin ?? 0.01;
+                            const total = voiceCost + llmCost + TELEPHONY_COST_PER_MIN;
+                            return (
+                                <div className="flex items-center gap-2 px-1 py-1.5 text-xs text-muted-foreground">
+                                    <Zap className="h-3 w-3" />
+                                    <span>Est. ~${total.toFixed(3)}/min</span>
+                                    <span className="text-[10px]">(voice ${voiceCost.toFixed(3)} + LLM ${llmCost.toFixed(3)} + tel ${TELEPHONY_COST_PER_MIN.toFixed(3)})</span>
+                                </div>
+                            );
+                        })()}
 
                         {/* First Message */}
                         <Section icon={<MessageSquare className="h-3.5 w-3.5" />} label="First Message">

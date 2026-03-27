@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-import { updateRetellAgent, getRetellAgent, getRetellLLM, updateRetellLLM } from '@/lib/providers/retell';
+import { updateRetellAgent, getRetellAgent, getRetellLLM, updateRetellLLM, type UpdateRetellLLMParams } from '@/lib/providers/retell';
 import { getVapiAssistant, updateVapiAssistant, extractVapiSystemPrompt, usesVapiMessagesFormat } from '@/lib/providers/vapi';
 import { getBlandPathway, updateBlandPathway } from '@/lib/providers/bland';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
@@ -56,12 +56,14 @@ export async function GET(
                 // Get LLM details if agent has a response_engine with llm_id
                 let llmPrompt = '';
                 let llmId = '';
+                let llmModel = '';
 
                 if (retellAgent.response_engine?.type === 'retell-llm' && retellAgent.response_engine.llm_id) {
                     llmId = retellAgent.response_engine.llm_id;
                     try {
                         const llm = await getRetellLLM(apiKey, llmId);
                         llmPrompt = llm.general_prompt || '';
+                        llmModel = llm.model || '';
                     } catch (err) {
                         console.error('Error fetching LLM:', err instanceof Error ? err.message : 'Unknown error');
                     }
@@ -71,9 +73,11 @@ export async function GET(
                     data: {
                         agent_name: retellAgent.agent_name,
                         voice_id: retellAgent.voice_id,
+                        voice_model: retellAgent.voice_model || agent.config?.voice_model || '',
                         language: retellAgent.language,
                         responsiveness: retellAgent.responsiveness,
                         llm_id: llmId,
+                        llm_model: llmModel || agent.config?.llm_model || '',
                         prompt: llmPrompt,
                         enable_safety_guardrails: retellAgent.enable_safety_guardrails ?? false,
                         safety_guardrails_categories: retellAgent.safety_guardrails_categories ?? [],
@@ -183,6 +187,7 @@ export async function PATCH(
                 const updateData: Record<string, unknown> = {};
                 if (body.agent_name !== undefined) updateData.agent_name = body.agent_name;
                 if (body.voice_id !== undefined) updateData.voice_id = body.voice_id;
+                if (body.voice_model !== undefined) updateData.voice_model = body.voice_model;
                 if (body.language !== undefined) updateData.language = body.language;
                 if (body.responsiveness !== undefined) updateData.responsiveness = body.responsiveness;
                 if (body.enable_safety_guardrails !== undefined) updateData.enable_safety_guardrails = body.enable_safety_guardrails;
@@ -192,9 +197,14 @@ export async function PATCH(
                     await updateRetellAgent(apiKey, agent.external_id, updateData);
                 }
 
-                // Update LLM prompt if provided (allow clearing with empty string)
-                if (body.prompt !== undefined && retellAgent.response_engine?.llm_id) {
-                    await updateRetellLLM(apiKey, retellAgent.response_engine.llm_id, { general_prompt: body.prompt });
+                // Update LLM prompt and/or model if provided
+                if (retellAgent.response_engine?.llm_id) {
+                    const llmUpdate: UpdateRetellLLMParams = {};
+                    if (body.prompt !== undefined) llmUpdate.general_prompt = body.prompt;
+                    if (body.llm_model !== undefined) llmUpdate.model = body.llm_model;
+                    if (Object.keys(llmUpdate).length > 0) {
+                        await updateRetellLLM(apiKey, retellAgent.response_engine.llm_id, llmUpdate);
+                    }
                 }
 
                 // Store in local config (use !== undefined checks to allow clearing values)
@@ -202,9 +212,11 @@ export async function PATCH(
                     ...agent.config,
                     agent_name: body.agent_name !== undefined ? body.agent_name : agent.config?.agent_name,
                     voice_id: body.voice_id !== undefined ? body.voice_id : agent.config?.voice_id,
+                    voice_model: body.voice_model !== undefined ? body.voice_model : agent.config?.voice_model,
                     language: body.language !== undefined ? body.language : agent.config?.language,
                     responsiveness: body.responsiveness !== undefined ? body.responsiveness : agent.config?.responsiveness,
                     llm_prompt: body.prompt !== undefined ? body.prompt : agent.config?.llm_prompt,
+                    llm_model: body.llm_model !== undefined ? body.llm_model : agent.config?.llm_model,
                     llm_id: retellAgent.response_engine?.llm_id,
                     enable_safety_guardrails: body.enable_safety_guardrails !== undefined ? body.enable_safety_guardrails : agent.config?.enable_safety_guardrails,
                     safety_guardrails_categories: body.safety_guardrails_categories !== undefined ? body.safety_guardrails_categories : agent.config?.safety_guardrails_categories,

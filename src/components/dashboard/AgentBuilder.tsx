@@ -46,6 +46,8 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
         firstMessage: '',
         voiceId: '',
         voiceName: '',
+        voiceModel: 'eleven_v3',
+        llmModel: defaultProvider === 'retell' ? 'gpt-4.1' : 'gpt-4o',
         language: 'en',
         integrations: [],
     });
@@ -321,10 +323,12 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
         setDraft(prev => {
             const newDraft = { ...prev, ...updates };
 
-            // When provider changes, clear voice selection so user picks from new provider's voices
+            // When provider changes, clear voice selection and reset model defaults
             if (updates.provider && updates.provider !== prev.provider) {
                 newDraft.voiceId = '';
                 newDraft.voiceName = '';
+                newDraft.voiceModel = updates.provider === 'retell' ? 'eleven_v3' : '';
+                newDraft.llmModel = updates.provider === 'retell' ? 'gpt-4.1' : 'gpt-4o';
             }
 
             return newDraft;

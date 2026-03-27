@@ -9,6 +9,8 @@ export interface AgentDraft {
     firstMessage: string;
     voiceId: string;
     voiceName: string;
+    voiceModel: string;
+    llmModel: string;
     language: string;
     integrations: IntegrationSelection[];
 }

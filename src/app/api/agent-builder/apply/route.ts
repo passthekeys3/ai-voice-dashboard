@@ -156,7 +156,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
                 body: JSON.stringify({
                     general_prompt: safeSystemPrompt,
                     begin_message: safeFirstMessage || null,
-                    model: 'gpt-4o',
+                    model: draft.llmModel || 'gpt-4.1',
                     start_speaker: 'agent',
                 }),
                 signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
@@ -182,6 +182,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
                 body: JSON.stringify({
                     agent_name: safeName,
                     voice_id: draft.voiceId,
+                    ...(draft.voiceModel ? { voice_model: draft.voiceModel } : {}),
                     response_engine: {
                         type: 'retell-llm',
                         llm_id: retellLlm.llm_id,
@@ -225,8 +226,10 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
                     voice: { provider: '11labs', voiceId: draft.voiceId },
                     firstMessage: safeFirstMessage || undefined,
                     model: {
-                        provider: 'openai',
-                        model: 'gpt-4o',
+                        provider: (draft.llmModel?.startsWith('claude') ? 'anthropic'
+                            : draft.llmModel?.startsWith('gemini') ? 'google'
+                            : 'openai'),
+                        model: draft.llmModel || 'gpt-4o',
                         messages: [
                             {
                                 role: 'system',
@@ -286,9 +289,14 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
             first_message: safeFirstMessage || undefined,
             language: safeLanguage,
         };
-        // Vapi needs the voice provider stored for future updates
-        if (provider === 'vapi') {
+        if (provider === 'retell') {
+            agentConfig.voice_model = draft.voiceModel || 'eleven_v3';
+            agentConfig.llm_model = draft.llmModel || 'gpt-4.1';
+        } else if (provider === 'vapi') {
             agentConfig.voice_provider = '11labs';
+            agentConfig.llm_model = draft.llmModel || 'gpt-4o';
+            agentConfig.llm_provider = draft.llmModel?.startsWith('claude') ? 'anthropic'
+                : draft.llmModel?.startsWith('gemini') ? 'google' : 'openai';
         }
 
         const { data: agent, error: dbError } = await supabase

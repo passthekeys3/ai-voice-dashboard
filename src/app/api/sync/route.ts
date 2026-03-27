@@ -114,7 +114,7 @@ export async function POST() {
                 // Fetch existing agents for this agency/provider
                 const { data: existingAgents, error: fetchError } = await supabase
                     .from('agents')
-                    .select('id, external_id, name')
+                    .select('id, external_id, name, config')
                     .eq('agency_id', user.agency.id)
                     .eq('provider', provider);
 
@@ -128,8 +128,23 @@ export async function POST() {
                     existingAgents?.map(a => [a.external_id, a]) || []
                 );
 
+                // Skip agents assigned via platform admin (key_source: 'platform')
+                // Query at DB level for reliability (config is JSONB)
+                const { data: platformAgentsForSync } = await supabase
+                    .from('agents')
+                    .select('external_id')
+                    .eq('agency_id', user.agency.id)
+                    .eq('provider', provider)
+                    .filter('config->>key_source', 'eq', 'platform');
+
+                const platformExternalIds = new Set(
+                    (platformAgentsForSync || []).map(a => a.external_id)
+                );
+
                 // Prepare batch upsert data
-                const toUpsert = externalAgents.map(extAgent => {
+                const toUpsert = externalAgents
+                    .filter(extAgent => !platformExternalIds.has(extAgent.externalId))
+                    .map(extAgent => {
                     const existing = existingMap.get(extAgent.externalId);
                     if (existing) {
                         console.info(`[SYNC] ${label}: will update agent ${existing.id} "${existing.name}" → "${extAgent.name}"`);

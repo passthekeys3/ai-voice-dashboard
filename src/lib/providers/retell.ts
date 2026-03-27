@@ -12,6 +12,7 @@ export interface RetellAgent {
     agent_id: string;
     agent_name: string;
     voice_id: string;
+    voice_model?: string;
     llm_websocket_url?: string;
     webhook_url?: string;
     language?: string;
@@ -149,6 +150,7 @@ export async function createRetellAgent(
     config: {
         agent_name: string;
         voice_id: string;
+        voice_model?: string;
         llm_websocket_url?: string;
         webhook_url?: string;
         language?: string;
@@ -167,6 +169,7 @@ export async function updateRetellAgent(
     config: Partial<{
         agent_name: string;
         voice_id: string;
+        voice_model: string;
         llm_websocket_url: string;
         webhook_url: string | null;
         language: string;

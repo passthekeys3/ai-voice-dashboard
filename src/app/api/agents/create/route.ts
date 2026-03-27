@@ -28,6 +28,8 @@ export async function POST(request: NextRequest) {
             name,
             provider: requestedProvider,
             voice_id,
+            voice_model,
+            llm_model,
             system_prompt,
             first_message,
             client_id,
@@ -80,21 +82,32 @@ export async function POST(request: NextRequest) {
         const vapiKey = agency?.vapi_api_key ? (decrypt(agency.vapi_api_key) ?? undefined) : undefined;
         const blandKey = agency?.bland_api_key ? (decrypt(agency.bland_api_key) ?? undefined) : undefined;
 
+        // Platform keys as fallback (for managed agencies without their own keys)
+        const platformRetellKey = process.env.PLATFORM_RETELL_API_KEY;
+        const platformVapiKey = process.env.PLATFORM_VAPI_API_KEY;
+        const platformBlandKey = process.env.PLATFORM_BLAND_API_KEY;
+
         // Determine which provider to use (requested > auto-select: retell → vapi → bland)
+        // Falls through to platform keys when agency has none configured
         const provider = requestedProvider || (
             retellKey ? 'retell'
             : vapiKey ? 'vapi'
             : blandKey ? 'bland'
+            : platformRetellKey ? 'retell'
+            : platformVapiKey ? 'vapi'
+            : platformBlandKey ? 'bland'
             : null
         );
 
         const apiKeyMap: Record<string, string | undefined> = {
-            retell: retellKey,
-            vapi: vapiKey,
-            bland: blandKey,
+            retell: retellKey || platformRetellKey,
+            vapi: vapiKey || platformVapiKey,
+            bland: blandKey || platformBlandKey,
         };
 
         const apiKey = apiKeyMap[provider as string];
+        const ownKeyMap: Record<string, string | undefined> = { retell: retellKey, vapi: vapiKey, bland: blandKey };
+        const usingPlatformKey = !!(provider && !ownKeyMap[provider]);
 
         if (!provider || !apiKey) {
             return NextResponse.json({
@@ -127,7 +140,7 @@ export async function POST(request: NextRequest) {
                 body: JSON.stringify({
                     general_prompt: system_prompt || undefined,
                     begin_message: first_message || null,
-                    model: 'gpt-4o',
+                    model: llm_model || 'gpt-4.1',
                     start_speaker: 'agent',
                 }),
                 signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
@@ -152,6 +165,7 @@ export async function POST(request: NextRequest) {
                 body: JSON.stringify({
                     agent_name: name.trim(),
                     voice_id,
+                    ...(voice_model ? { voice_model } : {}),
                     response_engine: {
                         type: 'retell-llm',
                         llm_id: retellLlm.llm_id,
@@ -191,17 +205,26 @@ export async function POST(request: NextRequest) {
             }
 
             agentConfig.voice_id = voice_id;
+            agentConfig.voice_model = voice_model || 'eleven_v3';
+            agentConfig.llm_model = llm_model || 'gpt-4.1';
             agentConfig.system_prompt = system_prompt;
             agentConfig.first_message = first_message;
 
         } else if (provider === 'vapi') {
+            // Derive Vapi model provider from model name
+            const vapiModelName = llm_model || 'gpt-4o';
+            const vapiModelProvider = vapiModelName.startsWith('claude') ? 'anthropic'
+                : vapiModelName.startsWith('gemini') ? 'google'
+                : 'openai';
+
             // Create a Vapi assistant
             try {
+
                 const vapiConfig: Parameters<typeof createVapiAssistant>[1] = {
                     name: name.trim(),
                     model: {
-                        provider: 'openai',
-                        model: 'gpt-4o',
+                        provider: vapiModelProvider,
+                        model: vapiModelName,
                         systemPrompt: system_prompt || undefined,
                     },
                     firstMessage: first_message || undefined,
@@ -223,6 +246,8 @@ export async function POST(request: NextRequest) {
 
             agentConfig.system_prompt = system_prompt;
             agentConfig.first_message = first_message;
+            agentConfig.llm_model = vapiModelName;
+            agentConfig.llm_provider = vapiModelProvider;
             if (voice_id) {
                 agentConfig.voice_id = voice_id;
                 agentConfig.voice_provider = '11labs';
@@ -249,6 +274,11 @@ export async function POST(request: NextRequest) {
 
         } else {
             return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
+        }
+
+        // Mark platform-key agents so sync doesn't overwrite them
+        if (usingPlatformKey) {
+            agentConfig.key_source = 'platform';
         }
 
         // Store in our database

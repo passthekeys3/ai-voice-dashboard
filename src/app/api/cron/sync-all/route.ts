@@ -128,15 +128,28 @@ export async function POST(request: NextRequest) {
                         // ─── Sync Agents ───
                         const externalAgents: NormalizedAgent[] = await providerClient.listAgents();
 
-                        const agentsToUpsert = externalAgents.map(extAgent => ({
-                            agency_id: agency.id,
-                            ...(clientId ? { client_id: clientId } : {}),
-                            name: extAgent.name,
-                            provider,
-                            external_id: extAgent.externalId,
-                            config: extAgent.config,
-                            updated_at: new Date().toISOString(),
-                        }));
+                        // Skip agents that were assigned via platform admin (key_source: 'platform')
+                        // to prevent sync from overwriting their agency/client assignment
+                        const { data: platformAgents } = await supabase
+                            .from('agents')
+                            .select('external_id')
+                            .eq('agency_id', agency.id)
+                            .eq('provider', provider)
+                            .filter('config->>key_source', 'eq', 'platform');
+
+                        const platformExternalIds = new Set((platformAgents || []).map(a => a.external_id));
+
+                        const agentsToUpsert = externalAgents
+                            .filter(extAgent => !platformExternalIds.has(extAgent.externalId))
+                            .map(extAgent => ({
+                                agency_id: agency.id,
+                                ...(clientId ? { client_id: clientId } : {}),
+                                name: extAgent.name,
+                                provider,
+                                external_id: extAgent.externalId,
+                                config: extAgent.config,
+                                updated_at: new Date().toISOString(),
+                            }));
 
                         if (agentsToUpsert.length > 0) {
                             const { error: agentUpsertError, data: upsertedAgents } = await supabase
