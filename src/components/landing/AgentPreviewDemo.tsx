@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { Send, Sparkles, Loader2, Bot, MessageSquare, ArrowRight } from 'lucide-react';
+import { Send, Sparkles, Loader2, Bot, MessageSquare, ArrowRight, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,41 @@ const STARTER_PROMPTS = [
         prompt: 'Create a customer support agent that handles inquiries, troubleshoots issues, and escalates to humans when needed.',
     },
 ];
+
+/** Max previews per hour (matches API rate limit) */
+const MAX_PREVIEWS_PER_HOUR = 3;
+
+/**
+ * Pre-generated responses for the 4 starter prompts.
+ * Avoids an API call + Claude latency for the most common interactions.
+ * These are hand-crafted to match what Claude would generate.
+ */
+const CACHED_STARTER_PREVIEWS: Record<string, AgentPreview> = {
+    'Dental Receptionist': {
+        name: 'Sophie — Dental Receptionist',
+        firstMessage: "Hi, thank you for calling! This is Sophie. I can help you schedule an appointment, answer insurance questions, or assist with rescheduling. How can I help you today?",
+        voiceCharacteristics: { gender: 'female', tone: 'warm & professional', accent: 'American' },
+        systemPromptExcerpt: "You are Sophie, a friendly and efficient dental office receptionist. You speak in a warm, reassuring tone. Your primary responsibilities are booking appointments, answering questions about insurance coverage and accepted plans, handling rescheduling...",
+    },
+    'Real Estate Assistant': {
+        name: 'Marcus — Real Estate Assistant',
+        firstMessage: "Hey there! This is Marcus. I help match buyers with the right properties. Mind if I ask a few quick questions about what you're looking for — budget, location, that kind of thing?",
+        voiceCharacteristics: { gender: 'male', tone: 'confident & approachable', accent: 'American' },
+        systemPromptExcerpt: "You are Marcus, a knowledgeable real estate assistant. You're personable but efficient. Your job is to qualify potential buyers by understanding their budget range, preferred neighborhoods, property type, and timeline. You schedule showings...",
+    },
+    'Sales Follow-up': {
+        name: 'Ava — Sales Follow-up',
+        firstMessage: "Hi! This is Ava calling from the team. I wanted to follow up on the interest you showed — do you have a couple minutes to chat about how we can help?",
+        voiceCharacteristics: { gender: 'female', tone: 'energetic & persuasive', accent: 'American' },
+        systemPromptExcerpt: "You are Ava, a sharp and personable sales follow-up agent. You're enthusiastic but never pushy. Your goal is to re-engage leads who've shown interest, qualify their needs, answer product questions with confidence, and book demo calls...",
+    },
+    'Customer Support': {
+        name: 'James — Customer Support',
+        firstMessage: "Hello! Thanks for reaching out. I'm James, and I'm here to help. Could you tell me a bit about what's going on so I can get this sorted for you?",
+        voiceCharacteristics: { gender: 'male', tone: 'calm & empathetic', accent: 'American' },
+        systemPromptExcerpt: "You are James, a patient and solution-oriented customer support agent. You listen carefully, acknowledge frustrations, and focus on resolving issues efficiently. When you can't solve something directly, you escalate to a human agent...",
+    },
+};
 
 interface AgentPreview {
     name?: string;
@@ -147,9 +182,31 @@ export function AgentPreviewDemo() {
         handleGenerate(prompt);
     };
 
-    const handleStarterClick = (starterPrompt: string) => {
-        setPrompt(starterPrompt);
-        handleGenerate(starterPrompt);
+    const handleStarterClick = (starter: typeof STARTER_PROMPTS[number]) => {
+        setPrompt(starter.prompt);
+
+        // Use cached preview if available — instant, no API call, no rate limit consumed
+        const cached = CACHED_STARTER_PREVIEWS[starter.title];
+        if (cached) {
+            setError(null);
+            setStreamingText('');
+            setPreview(cached);
+            return;
+        }
+
+        // Fallback to live generation for any uncached prompts
+        handleGenerate(starter.prompt);
+    };
+
+    /** Reset the demo back to initial state */
+    const handleReset = () => {
+        abortRef.current?.abort();
+        setPrompt('');
+        setStreamingText('');
+        setPreview(null);
+        setError(null);
+        setIsGenerating(false);
+        textareaRef.current?.focus();
     };
 
     const showResults = isGenerating || streamingText || preview;
@@ -197,7 +254,7 @@ export function AgentPreviewDemo() {
                     {STARTER_PROMPTS.map((starter) => (
                         <button
                             key={starter.title}
-                            onClick={() => handleStarterClick(starter.prompt)}
+                            onClick={() => handleStarterClick(starter)}
                             className="px-3 py-1 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors whitespace-nowrap shrink-0"
                         >
                             {starter.title}
@@ -301,12 +358,18 @@ export function AgentPreviewDemo() {
                             )}
                         </div>
 
-                        {/* CTA */}
+                        {/* CTA + Reset */}
                         {preview && !isGenerating && (
                             <div className="px-4 py-3 border-t border-border flex items-center justify-between gap-3">
-                                <p className="text-sm text-muted-foreground">
-                                    Ready to deploy this agent?
-                                </p>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleReset}
+                                    className="text-muted-foreground"
+                                >
+                                    <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                                    Try another
+                                </Button>
                                 <Button size="sm" asChild>
                                     <Link href="/signup">
                                         Sign up to create it
@@ -319,10 +382,10 @@ export function AgentPreviewDemo() {
                 </Card>
             )}
 
-            {/* Remaining hint */}
-            {remaining !== null && remaining > 0 && remaining < 3 && !error && (
+            {/* Remaining count — always visible once a live generation has been made */}
+            {remaining !== null && remaining > 0 && !error && (
                 <p className="text-center text-xs text-muted-foreground">
-                    {remaining} preview{remaining === 1 ? '' : 's'} remaining &middot;{' '}
+                    {remaining} of {MAX_PREVIEWS_PER_HOUR} custom preview{remaining === 1 ? '' : 's'} remaining &middot;{' '}
                     <Link href="/signup" className="underline hover:text-foreground">
                         Sign up for unlimited
                     </Link>
