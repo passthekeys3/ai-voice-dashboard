@@ -17,20 +17,15 @@ export default async function AdminAgentsPage() {
 
     const supabase = createServiceClient();
 
-    // Fetch all agencies for the assignment dropdown
+    // Fetch all agencies for the assignment dropdown (include plan_type for sorting)
     const { data: agencies } = await supabase
         .from('agencies')
-        .select('id, name')
+        .select('id, name, plan_type')
         .order('name');
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight">Platform Agents</h1>
-                <p className="text-muted-foreground">
-                    Manage agents on the platform Retell account and assign them to agencies.
-                </p>
-            </div>
+        <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
+            <h1 className="text-2xl font-bold">Platform Agents</h1>
             <PlatformAgentsTable agencies={agencies || []} />
         </div>
     );

@@ -137,9 +137,10 @@ function SidebarContent({
         ? [...filteredNavigation, ...adminNavigation]
         : filteredNavigation;
 
-    // Add "Managed" link for platform admins who are also agency admins
+    // Add admin links for platform admins who are also agency admins
     if (isPlatformAdminProp && isAgencyAdmin) {
         combinedNavigation.push({ name: 'Managed', href: '/admin/accounts', icon: Building2 });
+        combinedNavigation.push({ name: 'Platform Agents', href: '/admin/agents', icon: Bot });
     }
 
     // Apply basePath prefix for client portal navigation

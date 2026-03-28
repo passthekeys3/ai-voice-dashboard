@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,11 +20,13 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Loader2, Link2, Link2Off } from 'lucide-react';
+import { toast } from '@/lib/toast';
 
 interface PlatformAgent {
     external_id: string;
     name: string;
     voice_id: string;
+    voice_name?: string;
     created_at: string;
     assigned_agency_id: string | null;
     assigned_agency_name: string | null;
@@ -34,6 +36,7 @@ interface PlatformAgent {
 interface Agency {
     id: string;
     name: string;
+    plan_type?: string;
 }
 
 interface PlatformAgentsTableProps {
@@ -46,6 +49,16 @@ export function PlatformAgentsTable({ agencies }: PlatformAgentsTableProps) {
     const [error, setError] = useState<string | null>(null);
     const [assigningId, setAssigningId] = useState<string | null>(null);
     const [selectedAgency, setSelectedAgency] = useState<Record<string, string>>({});
+
+    // Sort agencies: managed first, then alphabetical
+    const sortedAgencies = useMemo(() =>
+        [...agencies].sort((a, b) => {
+            const aManaged = a.plan_type === 'managed' ? 0 : 1;
+            const bManaged = b.plan_type === 'managed' ? 0 : 1;
+            if (aManaged !== bManaged) return aManaged - bManaged;
+            return a.name.localeCompare(b.name);
+        }),
+    [agencies]);
 
     const fetchAgents = useCallback(async () => {
         try {
@@ -80,13 +93,14 @@ export function PlatformAgentsTable({ agencies }: PlatformAgentsTableProps) {
 
             if (!res.ok) {
                 const data = await res.json();
-                alert(data.error || 'Failed to assign agent');
+                toast.error('Failed to assign agent', { description: data.error });
                 return;
             }
 
+            toast.success('Agent assigned');
             await fetchAgents();
         } catch {
-            alert('Failed to assign agent');
+            toast.error('Failed to assign agent');
         } finally {
             setAssigningId(null);
         }
@@ -103,13 +117,14 @@ export function PlatformAgentsTable({ agencies }: PlatformAgentsTableProps) {
 
             if (!res.ok) {
                 const data = await res.json();
-                alert(data.error || 'Failed to unassign agent');
+                toast.error('Failed to unassign agent', { description: data.error });
                 return;
             }
 
+            toast.success('Agent unassigned');
             await fetchAgents();
         } catch {
-            alert('Failed to unassign agent');
+            toast.error('Failed to unassign agent');
         } finally {
             setAssigningId(null);
         }
@@ -162,7 +177,7 @@ export function PlatformAgentsTable({ agencies }: PlatformAgentsTableProps) {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Agent</TableHead>
-                                    <TableHead>Voice ID</TableHead>
+                                    <TableHead>Voice</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Assign To</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
@@ -172,8 +187,10 @@ export function PlatformAgentsTable({ agencies }: PlatformAgentsTableProps) {
                                 {agents.map((agent) => (
                                     <TableRow key={agent.external_id}>
                                         <TableCell className="font-medium">{agent.name}</TableCell>
-                                        <TableCell className="text-muted-foreground text-xs font-mono">
-                                            {agent.voice_id}
+                                        <TableCell className="text-muted-foreground text-sm">
+                                            {agent.voice_name || (
+                                                <span className="text-xs font-mono">{agent.voice_id}</span>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             {agent.assigned_agency_id ? (
@@ -196,9 +213,10 @@ export function PlatformAgentsTable({ agencies }: PlatformAgentsTableProps) {
                                                         <SelectValue placeholder="Select agency" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {agencies.map((a) => (
+                                                        {sortedAgencies.map((a) => (
                                                             <SelectItem key={a.id} value={a.id}>
                                                                 {a.name}
+                                                                {a.plan_type === 'managed' ? ' ●' : ''}
                                                             </SelectItem>
                                                         ))}
                                                     </SelectContent>

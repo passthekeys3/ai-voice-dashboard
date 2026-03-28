@@ -65,6 +65,7 @@ export async function GET() {
                 external_id: agent.agent_id,
                 name: agent.agent_name,
                 voice_id: agent.voice_id,
+                voice_name: agent.voice_model || null,
                 created_at: agent.created_at,
                 assigned_agency_id: dbAgent?.agency_id || null,
                 assigned_agency_name: dbAgent ? agencyMap.get(dbAgent.agency_id) || null : null,
