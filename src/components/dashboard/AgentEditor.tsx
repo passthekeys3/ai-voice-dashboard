@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, Sparkles, Loader2, ChevronDown, ChevronUp, RefreshCw, Shield, Zap } from 'lucide-react';
+import { AlertTriangle, Sparkles, Loader2, ChevronDown, ChevronUp, RefreshCw, Shield, Zap, Info } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { RETELL_VOICE_MODELS, RETELL_LLM_MODELS, VAPI_LLM_MODELS, TELEPHONY_COST_PER_MIN } from '@/lib/constants/config';
 
@@ -565,7 +565,7 @@ export function AgentEditor({
                                     <SelectContent>
                                         {(provider === 'retell' ? RETELL_LLM_MODELS : VAPI_LLM_MODELS).map((m) => (
                                             <SelectItem key={m.value} value={m.value}>
-                                                {m.label} — {m.description}
+                                                {m.label} — ${m.costPerMin.toFixed(3)}/min
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -573,18 +573,42 @@ export function AgentEditor({
                             </div>
 
                             {/* Cost Estimate (Retell) */}
-                            {provider === 'retell' && (
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
-                                    <Zap className="h-3.5 w-3.5" />
-                                    <span>
-                                        Est. ~${(
-                                            (RETELL_VOICE_MODELS.find(m => m.value === voiceModel)?.costPerMin ?? 0.08) +
-                                            (RETELL_LLM_MODELS.find(m => m.value === llmModel)?.costPerMin ?? 0.01) +
-                                            TELEPHONY_COST_PER_MIN
-                                        ).toFixed(3)}/min
-                                    </span>
-                                </div>
-                            )}
+                            {provider === 'retell' && (() => {
+                                const voiceCost = RETELL_VOICE_MODELS.find(m => m.value === voiceModel)?.costPerMin ?? 0.08;
+                                const llmCost = RETELL_LLM_MODELS.find(m => m.value === llmModel)?.costPerMin ?? 0.045;
+                                const telCost = TELEPHONY_COST_PER_MIN;
+                                const total = voiceCost + llmCost + telCost;
+                                return (
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                                        <Zap className="h-3.5 w-3.5 shrink-0" />
+                                        <span>Est. ~${total.toFixed(3)}/min</span>
+                                        <div className="relative group ml-auto" tabIndex={0} role="button" aria-label="Show cost breakdown">
+                                            <Info className="h-3.5 w-3.5 cursor-help text-muted-foreground/70 group-hover:text-foreground group-focus-within:text-foreground transition-colors" />
+                                            <div className="absolute bottom-full right-0 mb-2 w-52 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto transition-opacity z-50">
+                                                <p className="font-medium text-xs mb-2">Cost breakdown</p>
+                                                <div className="space-y-1 text-[11px]">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Voice model</span>
+                                                        <span>${voiceCost.toFixed(3)}/min</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">LLM</span>
+                                                        <span>${llmCost.toFixed(3)}/min</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Telephony</span>
+                                                        <span>${telCost.toFixed(3)}/min</span>
+                                                    </div>
+                                                    <div className="flex justify-between border-t pt-1 mt-1 font-medium">
+                                                        <span>Total</span>
+                                                        <span>${total.toFixed(3)}/min</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             {/* Language */}
                             <div className="space-y-2">
