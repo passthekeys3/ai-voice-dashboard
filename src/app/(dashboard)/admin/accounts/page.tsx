@@ -35,7 +35,7 @@ export default async function AdminAccountsPage() {
     // Parallel fetch: agent counts, client counts, and usage stats
     let agentCounts: Record<string, number> = {};
     let clientCounts: Record<string, number> = {};
-    let usageStats: Record<string, { minutes: number; cost_cents: number }> = {};
+    const usageStats: Record<string, { minutes: number; cost_cents: number }> = {};
 
     if (agencyIds.length > 0) {
         const now = new Date();
