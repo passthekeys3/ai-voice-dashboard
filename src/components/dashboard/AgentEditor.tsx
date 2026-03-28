@@ -17,8 +17,9 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, Sparkles, Loader2, ChevronDown, ChevronUp, RefreshCw, Shield } from 'lucide-react';
+import { AlertTriangle, Sparkles, Loader2, ChevronDown, ChevronUp, RefreshCw, Shield, Zap } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
+import { RETELL_VOICE_MODELS, RETELL_LLM_MODELS, VAPI_LLM_MODELS, TELEPHONY_COST_PER_MIN } from '@/lib/constants/config';
 
 interface PromptSuggestion {
     title: string;
@@ -135,6 +136,14 @@ export function AgentEditor({
         (config as { responsiveness?: number }).responsiveness ?? 0.8
     );
 
+    // Voice model & LLM model state
+    const [voiceModel, setVoiceModel] = useState(
+        (config as { voice_model?: string }).voice_model || 'eleven_v3'
+    );
+    const [llmModel, setLlmModel] = useState(
+        (config as { llm_model?: string }).llm_model || (provider === 'retell' ? 'gpt-4.1' : 'gpt-4o')
+    );
+
     // Safety guardrails state (Retell only)
     const [guardrailsEnabled, setGuardrailsEnabled] = useState(
         (config as { enable_safety_guardrails?: boolean }).enable_safety_guardrails ?? false
@@ -226,6 +235,8 @@ export function AgentEditor({
                         if (data.data.voice_provider !== undefined) setVoiceProvider(data.data.voice_provider);
                         if (data.data.language !== undefined) setLanguage(data.data.language);
                         if (data.data.responsiveness !== undefined) setResponsiveness(data.data.responsiveness);
+                        if (data.data.voice_model) setVoiceModel(data.data.voice_model);
+                        if (data.data.llm_model) setLlmModel(data.data.llm_model);
                         if (data.data.enable_safety_guardrails !== undefined) setGuardrailsEnabled(data.data.enable_safety_guardrails);
                         if (data.data.safety_guardrails_categories !== undefined) setGuardrailCategories(data.data.safety_guardrails_categories);
                         setPromptFetchFailed(false);
@@ -281,6 +292,8 @@ export function AgentEditor({
             // Provider-specific fields
             if (provider === 'retell') {
                 providerPayload.voice_id = voiceId;
+                providerPayload.voice_model = voiceModel;
+                providerPayload.llm_model = llmModel;
                 providerPayload.language = language;
                 providerPayload.responsiveness = responsiveness;
                 providerPayload.enable_safety_guardrails = guardrailsEnabled;
@@ -289,6 +302,11 @@ export function AgentEditor({
                 providerPayload.voice_id = voiceId;
                 providerPayload.voice_provider = voiceProvider;
                 providerPayload.language = language;
+                // Derive Vapi model provider from model name
+                const vapiProvider = llmModel.startsWith('claude') ? 'anthropic'
+                    : llmModel.startsWith('gemini') ? 'google' : 'openai';
+                providerPayload.model = llmModel;
+                providerPayload.model_provider = vapiProvider;
             }
 
             const providerResponse = await fetch(`/api/agents/${agentId}/provider`, {
@@ -517,6 +535,56 @@ export function AgentEditor({
                                     </Select>
                                 )}
                             </div>
+
+                            {/* Voice Model (Retell only) */}
+                            {provider === 'retell' && (
+                                <div className="space-y-2">
+                                    <Label>Voice Model</Label>
+                                    <Select value={voiceModel} onValueChange={setVoiceModel}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select voice model" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {RETELL_VOICE_MODELS.map((m) => (
+                                                <SelectItem key={m.value} value={m.value}>
+                                                    {m.label} — {m.description}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+
+                            {/* LLM Model (Retell + Vapi) */}
+                            <div className="space-y-2">
+                                <Label>LLM Model</Label>
+                                <Select value={llmModel} onValueChange={setLlmModel}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select LLM model" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {(provider === 'retell' ? RETELL_LLM_MODELS : VAPI_LLM_MODELS).map((m) => (
+                                            <SelectItem key={m.value} value={m.value}>
+                                                {m.label} — {m.description}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Cost Estimate (Retell) */}
+                            {provider === 'retell' && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                                    <Zap className="h-3.5 w-3.5" />
+                                    <span>
+                                        Est. ~${(
+                                            (RETELL_VOICE_MODELS.find(m => m.value === voiceModel)?.costPerMin ?? 0.08) +
+                                            (RETELL_LLM_MODELS.find(m => m.value === llmModel)?.costPerMin ?? 0.01) +
+                                            TELEPHONY_COST_PER_MIN
+                                        ).toFixed(3)}/min
+                                    </span>
+                                </div>
+                            )}
 
                             {/* Language */}
                             <div className="space-y-2">
