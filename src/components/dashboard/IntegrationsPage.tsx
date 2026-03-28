@@ -111,8 +111,8 @@ const integrations: Integration[] = [
         ],
     },
     {
-        name: 'Google Calendar',
-        description: 'Check availability and book events automatically',
+        name: 'Google Workspace',
+        description: 'Calendar, Contacts, and Sheets — all in one connection',
         logo: <GoogleCalendarLogo />,
         bgClassName: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
         comingSoon: false,
@@ -120,10 +120,10 @@ const integrations: Integration[] = [
         oauthUrl: '/api/auth/google-calendar',
         connectionKey: 'google_calendar',
         features: [
-            'Check free/busy slots',
-            'Create calendar events',
-            'Send attendee invitations',
-            'Business hours awareness',
+            'Check availability & book calendar events',
+            'Look up Google Contacts for caller context',
+            'Export call logs & analytics to Sheets',
+            'Read lead lists from Sheets for outbound',
         ],
     },
     {
