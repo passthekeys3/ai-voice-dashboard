@@ -12,7 +12,7 @@ import {
     withErrorHandling,
 } from '@/lib/api/response';
 import { VALID_BILLING_TYPES } from '@/lib/constants/config';
-import { getTierFromPriceId, getTierConfig } from '@/lib/billing/tiers';
+import { getTierFromPriceId, getTierConfig, isSubscriptionActive } from '@/lib/billing/tiers';
 import { maskClientApiKeys } from '@/lib/clients/mask-keys';
 
 export const GET = withErrorHandling(async () => {
@@ -52,6 +52,16 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
 
     if (!isAgencyAdmin(user)) {
         return forbidden();
+    }
+
+    // Block expired/inactive subscriptions from creating clients
+    const subError = isSubscriptionActive(
+        user.agency.subscription_status,
+        user.agency.subscription_price_id,
+        user.agency.beta_ends_at,
+    );
+    if (subError) {
+        return forbidden(subError);
     }
 
     const body = await request.json();

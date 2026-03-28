@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { FeedbackWidget } from '@/components/dashboard/FeedbackWidget';
 import { ImpersonationBanner } from '@/components/dashboard/ImpersonationBanner';
 import { isPlatformAdmin } from '@/lib/admin';
+import { isSubscriptionActive } from '@/lib/billing/tiers';
 
 // Paths that are accessible without an active subscription
 const UNGATED_PATHS = ['/billing', '/settings'];
@@ -27,11 +28,15 @@ export default async function DashboardLayout({
     const isImpersonating = user.isImpersonating === true;
 
     // Subscription gating — skip during impersonation (admin needs full access)
+    // Uses isSubscriptionActive to also catch expired betas before the daily cron runs
     if (!isImpersonating) {
-        const activeStatuses = ['active', 'trialing'];
-        const hasActiveSub = activeStatuses.includes(user.agency.subscription_status || '');
+        const subError = isSubscriptionActive(
+            user.agency.subscription_status,
+            user.agency.subscription_price_id,
+            user.agency.beta_ends_at,
+        );
 
-        if (!hasActiveSub) {
+        if (subError) {
             const headersList = await headers();
             const pathname = headersList.get('x-pathname') || '/';
             const isUngatedPath = UNGATED_PATHS.some(p => pathname.startsWith(p));

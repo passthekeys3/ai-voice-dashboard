@@ -7,6 +7,7 @@ import { createVapiAssistant } from '@/lib/providers/vapi';
 import { createBlandPathway } from '@/lib/providers/bland';
 import { safeParseJson } from '@/lib/validation';
 import { MAX_PROMPT_LENGTH } from '@/lib/constants/config';
+import { isSubscriptionActive } from '@/lib/billing/tiers';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
@@ -20,6 +21,16 @@ export async function POST(request: NextRequest) {
 
         if (!isAgencyAdmin(user)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // Block expired/inactive subscriptions from creating agents
+        const subError = isSubscriptionActive(
+            user.agency.subscription_status,
+            user.agency.subscription_price_id,
+            user.agency.beta_ends_at,
+        );
+        if (subError) {
+            return NextResponse.json({ error: subError }, { status: 403 });
         }
 
         const bodyOrError = await safeParseJson(request);

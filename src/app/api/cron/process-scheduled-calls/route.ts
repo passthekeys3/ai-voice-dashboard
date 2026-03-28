@@ -5,6 +5,7 @@ import { initiateCall, type CallInitiationParams } from '@/lib/calls/initiate';
 import { isWithinCallingWindow, getNextValidCallTime } from '@/lib/timezone/detector';
 import { applyExperiment } from '@/lib/experiments/apply';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
+import { isSubscriptionActive } from '@/lib/billing/tiers';
 
 // This endpoint should be called by a cron job every minute
 // Example: Vercel Cron, or external service like cron-job.org
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
         // Find all pending calls that are due
         const { data: dueCalls, error: fetchError } = await supabase
             .from('scheduled_calls')
-            .select('*, agent:agents(external_id, provider, agency_id, client_id, agencies(calling_window))')
+            .select('*, agent:agents(external_id, provider, agency_id, client_id, agencies(calling_window, subscription_status, subscription_price_id, beta_ends_at))')
             .eq('status', 'pending')
             .lte('scheduled_at', now)
             .order('scheduled_at', { ascending: true })
@@ -100,6 +101,28 @@ export async function POST(request: NextRequest) {
                         console.info(`Scheduled call ${call.id} rescheduled to ${nextValid.toISOString()} (outside calling window in ${leadTimezone})`);
                         continue;
                     }
+                }
+
+                // Verify agency has active subscription before making calls
+                const agencyData = call.agent?.agencies;
+                const subError = isSubscriptionActive(
+                    agencyData?.subscription_status,
+                    agencyData?.subscription_price_id,
+                    agencyData?.beta_ends_at,
+                );
+                if (subError) {
+                    // Fail permanently — don't retry, subscription won't fix itself between retries
+                    await supabase
+                        .from('scheduled_calls')
+                        .update({
+                            status: 'failed',
+                            error_message: subError,
+                            updated_at: new Date().toISOString(),
+                        })
+                        .eq('id', call.id);
+                    results.push({ id: call.id, status: 'failed', error: subError });
+                    console.warn(`Scheduled call ${call.id} blocked: ${subError}`);
+                    continue;
                 }
 
                 // Determine provider and API key (resolves client → agency fallback)

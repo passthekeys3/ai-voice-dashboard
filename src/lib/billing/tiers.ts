@@ -72,6 +72,34 @@ export function tierGateError(feature: TierFeature): string {
 const ACTIVE_STATUSES = new Set(['active', 'trialing']);
 
 /**
+ * Check if an agency's subscription is active and not expired.
+ * Handles both paid subscriptions and beta trials.
+ *
+ * Use this for operations that should be blocked when an agency's
+ * subscription lapses (call processing, resource creation, etc.).
+ *
+ * @returns `null` if active, or an error message string if inactive/expired.
+ */
+export function isSubscriptionActive(
+    subscriptionStatus: string | null | undefined,
+    subscriptionPriceId?: string | null,
+    betaEndsAt?: string | null,
+): string | null {
+    // Beta expiry: block even if status is still 'trialing' (cron may not have run yet)
+    if (subscriptionPriceId === BETA_PRICE_ID && betaEndsAt) {
+        if (new Date(betaEndsAt) < new Date()) {
+            return 'Beta trial has expired. Please subscribe to a paid plan.';
+        }
+    }
+
+    if (!subscriptionStatus || !ACTIVE_STATUSES.has(subscriptionStatus)) {
+        return 'Subscription is not active.';
+    }
+
+    return null;
+}
+
+/**
  * Check if an agency has access to a tier-gated feature.
  * Validates both the subscription tier AND the subscription status
  * (blocks past_due, canceled, incomplete, etc.).
