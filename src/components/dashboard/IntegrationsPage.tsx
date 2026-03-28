@@ -129,8 +129,7 @@ const integrations: Integration[] = [
         description: 'Generate scheduling links and manage bookings',
         logo: <CalendlyLogo />,
         bgClassName: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
-        comingSoon: false,
-        requiredFeature: 'crm_integrations',
+        comingSoon: true,
         oauthUrl: '/api/auth/calendly',
         connectionKey: 'calendly',
         features: [
@@ -145,8 +144,7 @@ const integrations: Integration[] = [
         description: 'Get real-time call notifications in your channels',
         logo: <SlackLogo />,
         bgClassName: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400',
-        comingSoon: false,
-        requiredFeature: 'crm_integrations',
+        comingSoon: true,
         oauthUrl: '/api/auth/slack',
         connectionKey: 'slack',
         features: [
