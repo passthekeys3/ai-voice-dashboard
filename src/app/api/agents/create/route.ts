@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-import { decrypt } from '@/lib/crypto';
 import { publishRetellAgent } from '@/lib/providers/retell';
+import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
 import { createVapiAssistant } from '@/lib/providers/vapi';
 import { createBlandPathway } from '@/lib/providers/bland';
 import { safeParseJson } from '@/lib/validation';
@@ -81,44 +81,26 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Get API keys for all providers
-        const { data: agency } = await supabase
-            .from('agencies')
-            .select('retell_api_key, vapi_api_key, bland_api_key')
-            .eq('id', user.agency.id)
-            .single();
-
-        // Decrypt API keys (stored encrypted in DB)
-        const retellKey = agency?.retell_api_key ? (decrypt(agency.retell_api_key) ?? undefined) : undefined;
-        const vapiKey = agency?.vapi_api_key ? (decrypt(agency.vapi_api_key) ?? undefined) : undefined;
-        const blandKey = agency?.bland_api_key ? (decrypt(agency.bland_api_key) ?? undefined) : undefined;
-
-        // Platform keys as fallback (for managed agencies without their own keys)
-        const platformRetellKey = process.env.PLATFORM_RETELL_API_KEY;
-        const platformVapiKey = process.env.PLATFORM_VAPI_API_KEY;
-        const platformBlandKey = process.env.PLATFORM_BLAND_API_KEY;
+        // Resolve API keys using the shared key resolution logic.
+        // Managed agencies are always routed to platform keys (enforced in resolveProviderApiKeys).
+        const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id);
 
         // Determine which provider to use (requested > auto-select: retell → vapi → bland)
-        // Falls through to platform keys when agency has none configured
         const provider = requestedProvider || (
-            retellKey ? 'retell'
-            : vapiKey ? 'vapi'
-            : blandKey ? 'bland'
-            : platformRetellKey ? 'retell'
-            : platformVapiKey ? 'vapi'
-            : platformBlandKey ? 'bland'
+            resolvedKeys.retell_api_key ? 'retell'
+            : resolvedKeys.vapi_api_key ? 'vapi'
+            : resolvedKeys.bland_api_key ? 'bland'
             : null
         );
 
-        const apiKeyMap: Record<string, string | undefined> = {
-            retell: retellKey || platformRetellKey,
-            vapi: vapiKey || platformVapiKey,
-            bland: blandKey || platformBlandKey,
+        const apiKeyMap: Record<string, string | null> = {
+            retell: resolvedKeys.retell_api_key,
+            vapi: resolvedKeys.vapi_api_key,
+            bland: resolvedKeys.bland_api_key,
         };
 
         const apiKey = apiKeyMap[provider as string];
-        const ownKeyMap: Record<string, string | undefined> = { retell: retellKey, vapi: vapiKey, bland: blandKey };
-        const usingPlatformKey = !!(provider && !ownKeyMap[provider]);
+        const usingPlatformKey = !!(provider && resolvedKeys.source[provider as keyof typeof resolvedKeys.source] === 'platform');
 
         if (!provider || !apiKey) {
             return NextResponse.json({
