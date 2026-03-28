@@ -24,7 +24,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Search, ArrowRight } from 'lucide-react';
+import { Search, ArrowRight, Bot } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from '@/lib/toast';
 
 type PlanType = 'self_service' | 'managed';
@@ -183,7 +184,15 @@ export function ManagedAccountsTable({ agencies }: ManagedAccountsTableProps) {
                                 Click &quot;Manage&quot; to access an agency&apos;s dashboard. Toggle plan type to mark agencies as managed.
                             </CardDescription>
                         </div>
-                        <Badge variant="secondary">{managedCount} managed / {agencies.length} total</Badge>
+                        <div className="flex items-center gap-3">
+                            <Badge variant="secondary">{managedCount} managed / {agencies.length} total</Badge>
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href="/admin/agents">
+                                    <Bot className="mr-1.5 h-3.5 w-3.5" />
+                                    Platform Agents
+                                </Link>
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent>
