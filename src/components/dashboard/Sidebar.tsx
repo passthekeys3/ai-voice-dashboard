@@ -140,7 +140,8 @@ function SidebarContent({
     // Add admin links for platform admins who are also agency admins
     if (isPlatformAdminProp && isAgencyAdmin) {
         combinedNavigation.push({ name: 'Managed', href: '/admin/accounts', icon: Building2 });
-        combinedNavigation.push({ name: 'Platform Agents', href: '/admin/agents', icon: Bot });
+        // Platform Agents (/admin/agents) is intentionally hidden from sidebar —
+        // accessible by direct URL only. Still gated by isPlatformAdmin on the route.
     }
 
     // Apply basePath prefix for client portal navigation
