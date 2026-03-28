@@ -110,10 +110,14 @@ export const GET = withErrorHandling(async (_request: NextRequest) => {
             return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
         }
 
-        // Get current month date range for usage stats
+        // Use billing period dates when available, fall back to calendar month
         const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const periodStart = agency.subscription_current_period_start
+            ? new Date(agency.subscription_current_period_start)
+            : new Date(now.getFullYear(), now.getMonth(), 1);
+        const periodEnd = agency.subscription_current_period_end
+            ? new Date(agency.subscription_current_period_end)
+            : new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
         // Get agents for this agency
         const { data: agents } = await supabase
@@ -124,21 +128,21 @@ export const GET = withErrorHandling(async (_request: NextRequest) => {
         const agentIds = agents?.map(a => a.id) || [];
 
         let usageData = {
-            period_start: startOfMonth.toISOString(),
-            period_end: endOfMonth.toISOString(),
+            period_start: periodStart.toISOString(),
+            period_end: periodEnd.toISOString(),
             total_calls: 0,
             total_minutes: 0,
             total_cost: 0,
         };
 
         if (agentIds.length > 0) {
-            // Get calls for the current month
+            // Get calls for the current billing period
             const { data: calls } = await supabase
                 .from('calls')
                 .select('duration_seconds, cost_cents')
                 .in('agent_id', agentIds)
-                .gte('started_at', startOfMonth.toISOString())
-                .lte('started_at', endOfMonth.toISOString());
+                .gte('started_at', periodStart.toISOString())
+                .lte('started_at', periodEnd.toISOString());
 
             const totalCalls = calls?.length || 0;
             const totalSeconds = calls?.reduce((sum, c) => sum + (c.duration_seconds || 0), 0) || 0;
@@ -147,8 +151,8 @@ export const GET = withErrorHandling(async (_request: NextRequest) => {
             const totalCost = totalCostCents / 100;
 
             usageData = {
-                period_start: startOfMonth.toISOString(),
-                period_end: endOfMonth.toISOString(),
+                period_start: periodStart.toISOString(),
+                period_end: periodEnd.toISOString(),
                 total_calls: totalCalls,
                 total_minutes: totalMinutes,
                 total_cost: Math.round(totalCost * 100) / 100,

@@ -110,9 +110,16 @@ export function AgentCard({ agent, phoneNumber, showDelete = true, configBasePat
                         </p>
                     </div>
                 </div>
-                <Badge className={providerStyles[agent.provider] || providerStyles.retell}>
-                    {agent.provider === 'bland' ? 'Bland.ai' : agent.provider}
-                </Badge>
+                <div className="flex items-center gap-1.5">
+                    {agent.config?.key_source === 'platform' && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-700">
+                            Platform
+                        </Badge>
+                    )}
+                    <Badge className={providerStyles[agent.provider] || providerStyles.retell}>
+                        {agent.provider === 'bland' ? 'Bland.ai' : agent.provider}
+                    </Badge>
+                </div>
             </CardHeader>
             <CardContent>
                 {phoneNumber && (

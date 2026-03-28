@@ -128,7 +128,7 @@ interface TierDefinition {
     yearlyPriceId: string;
 }
 
-interface TierConfig {
+export interface TierConfig {
     tier: PlanTier;
     planType: PlanType;
     name: string;
@@ -153,7 +153,7 @@ const TIER_CONFIGS: TierConfig[] = [
         displayName: 'Starter',
         monthlyPrice: 67,
         yearlyPrice: 670,  // 10 × $67
-        yearlyMonthly: 56, // $670 / 12
+        yearlyMonthly: Math.round(670 / 12),
         perMinuteRate: PLATFORM_PER_MINUTE_RATE,
         limits: {
             maxAgents: Infinity,
@@ -178,7 +178,7 @@ const TIER_CONFIGS: TierConfig[] = [
         displayName: 'Growth',
         monthlyPrice: 147,
         yearlyPrice: 1470,  // 10 × $147
-        yearlyMonthly: 123, // $1470 / 12
+        yearlyMonthly: Math.round(1470 / 12),
         perMinuteRate: PLATFORM_PER_MINUTE_RATE,
         limits: {
             maxAgents: Infinity,
@@ -203,7 +203,7 @@ const TIER_CONFIGS: TierConfig[] = [
         displayName: 'Agency',
         monthlyPrice: 297,
         yearlyPrice: 2970,  // 10 × $297
-        yearlyMonthly: 248, // $2970 / 12
+        yearlyMonthly: Math.round(2970 / 12),
         perMinuteRate: PLATFORM_PER_MINUTE_RATE,
         limits: {
             maxAgents: Infinity,
@@ -227,7 +227,7 @@ const TIER_CONFIGS: TierConfig[] = [
         displayName: 'Starter',
         monthlyPrice: 97,
         yearlyPrice: 970,  // 10 × $97
-        yearlyMonthly: 81, // $970 / 12
+        yearlyMonthly: Math.round(970 / 12),
         perMinuteRate: PLATFORM_PER_MINUTE_RATE,
         limits: {
             maxAgents: Infinity,
@@ -252,7 +252,7 @@ const TIER_CONFIGS: TierConfig[] = [
         displayName: 'Growth',
         monthlyPrice: 197,
         yearlyPrice: 1970,  // 10 × $197
-        yearlyMonthly: 164, // $1970 / 12
+        yearlyMonthly: Math.round(1970 / 12),
         perMinuteRate: PLATFORM_PER_MINUTE_RATE,
         limits: {
             maxAgents: Infinity,
@@ -278,7 +278,7 @@ const TIER_CONFIGS: TierConfig[] = [
         displayName: 'Agency',
         monthlyPrice: 397,
         yearlyPrice: 3970,  // 10 × $397
-        yearlyMonthly: 331, // $3970 / 12
+        yearlyMonthly: Math.round(3970 / 12),
         perMinuteRate: PLATFORM_PER_MINUTE_RATE,
         limits: {
             maxAgents: Infinity,
@@ -412,7 +412,9 @@ export const BETA_PRICE_ID = 'beta_agency';
 export function getTierFromPriceId(priceId: string): { tier: PlanTier; planType: PlanType } | null {
     if (!priceId) return null;
 
-    // Beta trial agencies get full Agency-tier access
+    // Beta trial agencies get full Agency-tier access.
+    // planType defaults to self_service; the agency's actual plan_type column
+    // is the source of truth and should be checked separately when needed.
     if (priceId === BETA_PRICE_ID) {
         return { tier: 'agency', planType: 'self_service' };
     }
@@ -468,7 +470,9 @@ export function checkTierLimits(
     planType: PlanType = 'self_service',
     usage: { agentCount: number; callMinutes: number; clientCount: number }
 ): { exceeded: boolean; details: string[] } {
-    const def = getTierDefinition(tier, planType);
+    // Use getTierConfig (no env vars needed) instead of getTierDefinition
+    // so limit checks work even when Stripe price IDs aren't configured (dev/staging)
+    const def = getTierConfig(tier, planType);
     if (!def) return { exceeded: true, details: ['Tier not configured — limits cannot be verified'] };
 
     const details: string[] = [];
@@ -492,5 +496,21 @@ export function checkTierLimits(
  */
 export function getTierConfig(tier: PlanTier, planType: PlanType = 'self_service'): TierConfig | null {
     return TIER_CONFIGS.find(c => c.tier === tier && c.planType === planType) || null;
+}
+
+/**
+ * Get all unique tier names (starter, growth, agency) with configs for both plan types.
+ * Used by PricingTable to avoid duplicating pricing data.
+ */
+export function getAllTierConfigs(): { tier: PlanTier; selfService: TierConfig; managed: TierConfig }[] {
+    const tiers: PlanTier[] = ['starter', 'growth', 'agency'];
+    return tiers
+        .map(tier => {
+            const selfService = TIER_CONFIGS.find(c => c.tier === tier && c.planType === 'self_service');
+            const managed = TIER_CONFIGS.find(c => c.tier === tier && c.planType === 'managed');
+            if (!selfService || !managed) return null;
+            return { tier, selfService, managed };
+        })
+        .filter((t): t is NonNullable<typeof t> => t !== null);
 }
 

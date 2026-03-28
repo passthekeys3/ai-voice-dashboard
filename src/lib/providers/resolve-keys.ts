@@ -38,14 +38,36 @@ export async function resolveProviderApiKeys(
     agencyId: string,
     clientId?: string | null,
 ): Promise<ResolvedApiKeys> {
-    // Always fetch agency keys
+    // Fetch agency keys + plan_type to determine key resolution strategy
     const { data: agency } = await supabase
         .from('agencies')
-        .select('retell_api_key, vapi_api_key, bland_api_key')
+        .select('retell_api_key, vapi_api_key, bland_api_key, plan_type')
         .eq('id', agencyId)
         .single();
 
-    // Fetch client keys only when a client is specified
+    const isManaged = agency?.plan_type === 'managed';
+
+    // Platform keys (env vars) — metered billing applies when used
+    const platformRetellKey = process.env.PLATFORM_RETELL_API_KEY || null;
+    const platformVapiKey = process.env.PLATFORM_VAPI_API_KEY || null;
+    const platformBlandKey = process.env.PLATFORM_BLAND_API_KEY || null;
+
+    // Managed agencies always use platform keys to ensure consistent metered billing.
+    // Skip client/agency key lookups entirely — all calls route through our platform account.
+    if (isManaged) {
+        return {
+            retell_api_key: platformRetellKey,
+            vapi_api_key: platformVapiKey,
+            bland_api_key: platformBlandKey,
+            source: {
+                retell: platformRetellKey ? 'platform' : null,
+                vapi: platformVapiKey ? 'platform' : null,
+                bland: platformBlandKey ? 'platform' : null,
+            },
+        };
+    }
+
+    // Fetch client keys only when a client is specified (self-service path)
     let clientKeys: {
         retell_api_key?: string | null;
         vapi_api_key?: string | null;
@@ -61,11 +83,6 @@ export async function resolveProviderApiKeys(
             .single();
         clientKeys = client;
     }
-
-    // Platform keys (env vars) serve as final fallback — metered billing applies when used
-    const platformRetellKey = process.env.PLATFORM_RETELL_API_KEY || null;
-    const platformVapiKey = process.env.PLATFORM_VAPI_API_KEY || null;
-    const platformBlandKey = process.env.PLATFORM_BLAND_API_KEY || null;
 
     const resolve = (
         clientKey: string | null | undefined,

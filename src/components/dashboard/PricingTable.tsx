@@ -5,116 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Loader2 } from 'lucide-react';
+import { getAllTierConfigs, PLATFORM_PER_MINUTE_RATE } from '@/lib/billing/tiers';
 import type { PlanTier, PlanType } from '@/types/database';
 
 type BillingInterval = 'monthly' | 'yearly';
 
-interface TierConfig {
-    tier: PlanTier;
-    displayName: string;
-    selfServicePrice: number;
-    managedPrice: number;
-    selfServiceYearlyMonthly: number;
-    managedYearlyMonthly: number;
-    selfServiceYearlyTotal: number;
-    managedYearlyTotal: number;
-    includedClients: number;
-    selfServiceOverage: number;
-    managedOverage: number;
-    selfServiceFeatures: string[];
-    managedFeatures: string[];
-}
-
-// Per-minute rate when using platform keys (applied to Self-Service w/ platform keys + all Managed)
-const PER_MINUTE_RATE = 0.15;
-
-// Must match TIER_CONFIGS in src/lib/billing/tiers.ts
-const TIERS: TierConfig[] = [
-    {
-        tier: 'starter',
-        displayName: 'Starter',
-        selfServicePrice: 67,
-        managedPrice: 97,
-        selfServiceYearlyMonthly: 56,
-        managedYearlyMonthly: 81,
-        selfServiceYearlyTotal: 670,
-        managedYearlyTotal: 970,
-        includedClients: 3,
-        selfServiceOverage: 15,
-        managedOverage: 20,
-        selfServiceFeatures: [
-            '3 Clients included',
-            'Unlimited agents',
-            'AI Agent Builder',
-            'Custom domain',
-            'Call analytics',
-            'Workflow automation',
-            'Email support',
-        ],
-        managedFeatures: [
-            '3 Clients included',
-            'Done-for-you agent setup',
-            'AI Agent Builder',
-            'Custom domain',
-            'Call analytics',
-            'Workflow automation',
-            'Priority support',
-        ],
-    },
-    {
-        tier: 'growth',
-        displayName: 'Growth',
-        selfServicePrice: 147,
-        managedPrice: 197,
-        selfServiceYearlyMonthly: 123,
-        managedYearlyMonthly: 164,
-        selfServiceYearlyTotal: 1470,
-        managedYearlyTotal: 1970,
-        includedClients: 10,
-        selfServiceOverage: 12,
-        managedOverage: 17,
-        selfServiceFeatures: [
-            '10 Clients included',
-            'All Starter features',
-            'CRM integrations (GHL + HubSpot)',
-            'Stripe Connect client billing',
-        ],
-        managedFeatures: [
-            '10 Clients included',
-            'All Starter features',
-            'Done-for-you integrations',
-            'CRM integrations (GHL + HubSpot)',
-            'Stripe Connect client billing',
-        ],
-    },
-    {
-        tier: 'agency',
-        displayName: 'Agency',
-        selfServicePrice: 297,
-        managedPrice: 397,
-        selfServiceYearlyMonthly: 248,
-        managedYearlyMonthly: 331,
-        selfServiceYearlyTotal: 2970,
-        managedYearlyTotal: 3970,
-        includedClients: 25,
-        selfServiceOverage: 10,
-        managedOverage: 15,
-        selfServiceFeatures: [
-            '25 Clients included',
-            'All features',
-            'White-label platform',
-            'API access',
-            'Priority support',
-        ],
-        managedFeatures: [
-            '25 Clients included',
-            'All features',
-            'Done-for-you white-label setup',
-            'API access',
-            'Dedicated support',
-        ],
-    },
-];
+// Derive pricing data from the single source of truth in tiers.ts
+const TIERS = getAllTierConfigs();
 
 interface PricingTableProps {
     currentTier?: PlanTier | null;
@@ -169,8 +66,8 @@ export function PricingTable({
             {/* Plan type description */}
             <p className="text-center text-sm text-muted-foreground max-w-lg mx-auto">
                 {planType === 'self_service'
-                    ? 'Build and manage your own AI voice agents. Use your own API keys for flat-rate pricing, or our platform keys for $0.15/min.'
-                    : 'We build and manage your AI agents for you. All calls use our platform at $0.15/min.'}
+                    ? `Build and manage your own AI voice agents. Use your own API keys for flat-rate pricing, or our platform keys for $${PLATFORM_PER_MINUTE_RATE}/min.`
+                    : `We build and manage your AI agents for you. All calls use our platform at $${PLATFORM_PER_MINUTE_RATE}/min.`}
             </p>
 
             {/* Billing interval toggle */}
@@ -203,22 +100,17 @@ export function PricingTable({
             </div>
 
             <div className="grid gap-6 md:grid-cols-3">
-                {TIERS.map((tier) => {
-                    const isCurrent = currentTier === tier.tier && currentPlanType === planType;
-                    const isRecommended = tier.tier === 'growth';
-                    const isLoading = loading && loadingTier === tier.tier;
-                    const isSelfService = planType === 'self_service';
+                {TIERS.map(({ tier, selfService, managed }) => {
+                    const config = planType === 'self_service' ? selfService : managed;
+                    const isCurrent = currentTier === tier && currentPlanType === planType;
+                    const isRecommended = tier === 'growth';
+                    const isLoading = loading && loadingTier === tier;
 
-                    const monthlyPrice = isSelfService ? tier.selfServicePrice : tier.managedPrice;
-                    const yearlyMonthly = isSelfService ? tier.selfServiceYearlyMonthly : tier.managedYearlyMonthly;
-                    const yearlyTotal = isSelfService ? tier.selfServiceYearlyTotal : tier.managedYearlyTotal;
-                    const displayPrice = interval === 'yearly' ? yearlyMonthly : monthlyPrice;
-                    const overageRate = isSelfService ? tier.selfServiceOverage : tier.managedOverage;
-                    const features = isSelfService ? tier.selfServiceFeatures : tier.managedFeatures;
+                    const displayPrice = interval === 'yearly' ? config.yearlyMonthly : config.monthlyPrice;
 
                     return (
                         <Card
-                            key={`${tier.tier}-${planType}`}
+                            key={`${tier}-${planType}`}
                             className={`relative flex flex-col ${
                                 isRecommended ? 'border-primary shadow-md' : ''
                             } ${isCurrent ? 'border-green-500 bg-green-50/50 dark:bg-green-950/10' : ''}`}
@@ -237,24 +129,24 @@ export function PricingTable({
                             )}
 
                             <CardHeader className="pb-4">
-                                <CardTitle>{tier.displayName}</CardTitle>
+                                <CardTitle>{config.displayName}</CardTitle>
                                 <CardDescription>
                                     <span className="text-3xl font-bold text-foreground">${displayPrice}</span>
                                     <span className="text-muted-foreground">/month</span>
                                     {interval === 'yearly' && (
                                         <span className="block text-xs text-muted-foreground mt-1">
-                                            ${yearlyTotal}/year — save ${monthlyPrice * 12 - yearlyTotal}
+                                            ${config.yearlyPrice}/year — save ${config.monthlyPrice * 12 - config.yearlyPrice}
                                         </span>
                                     )}
                                     {/* Per-minute rate indicator */}
                                     {planType === 'managed' && (
                                         <span className="block text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">
-                                            + ${PER_MINUTE_RATE}/min for calls
+                                            + ${PLATFORM_PER_MINUTE_RATE}/min for calls
                                         </span>
                                     )}
                                     {planType === 'self_service' && (
                                         <span className="block text-xs text-muted-foreground mt-1">
-                                            ${PER_MINUTE_RATE}/min with platform keys
+                                            ${PLATFORM_PER_MINUTE_RATE}/min with platform keys
                                         </span>
                                     )}
                                 </CardDescription>
@@ -263,12 +155,12 @@ export function PricingTable({
                             <CardContent className="flex flex-col flex-1">
                                 {/* Client limit + overage */}
                                 <div className="mb-4 p-3 bg-muted/50 rounded-lg text-sm">
-                                    <p className="font-medium">{tier.includedClients} clients included</p>
-                                    <p className="text-muted-foreground">${overageRate}/additional client</p>
+                                    <p className="font-medium">{config.limits.maxClients} clients included</p>
+                                    <p className="text-muted-foreground">${config.limits.additionalClientPrice}/additional client</p>
                                 </div>
 
                                 <ul className="space-y-2.5 flex-1 mb-6">
-                                    {features.map((feature) => (
+                                    {config.features.map((feature) => (
                                         <li key={feature} className="flex items-start gap-2 text-sm">
                                             <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
                                             {feature}
@@ -280,7 +172,7 @@ export function PricingTable({
                                     className="w-full"
                                     variant={isCurrent ? 'outline' : isRecommended ? 'default' : 'outline'}
                                     disabled={isCurrent || loading}
-                                    onClick={() => onSelectTier(tier.tier, interval, planType)}
+                                    onClick={() => onSelectTier(tier, interval, planType)}
                                 >
                                     {isLoading ? (
                                         <>
@@ -290,7 +182,7 @@ export function PricingTable({
                                     ) : isCurrent ? (
                                         'Current Plan'
                                     ) : currentTier ? (
-                                        `Switch to ${tier.displayName}`
+                                        `Switch to ${config.displayName}`
                                     ) : (
                                         buttonLabel
                                     )}

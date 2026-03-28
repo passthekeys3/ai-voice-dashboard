@@ -5,121 +5,19 @@ import Link from 'next/link';
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useInView } from '@/hooks/useInView';
+import { getAllTierConfigs, PLATFORM_PER_MINUTE_RATE } from '@/lib/billing/tiers';
 
 type PlanType = 'self_service' | 'managed';
 
-interface PlanConfig {
-    name: string;
-    selfServicePrice: number;
-    managedPrice: number;
-    selfServiceYearlyMonthly: number;
-    managedYearlyMonthly: number;
-    selfServiceYearlyTotal: number;
-    managedYearlyTotal: number;
-    includedClients: number;
-    selfServiceOverage: number;
-    managedOverage: number;
-    selfServiceFeatures: string[];
-    managedFeatures: string[];
-    cta: string;
-    href: string;
-    recommended: boolean;
-}
+// Derive pricing from the single source of truth in tiers.ts
+const TIER_CONFIGS = getAllTierConfigs();
 
-const PER_MINUTE_RATE = 0.15;
-
-const plans: PlanConfig[] = [
-    {
-        name: 'Starter',
-        selfServicePrice: 67,
-        managedPrice: 97,
-        selfServiceYearlyMonthly: 56,
-        managedYearlyMonthly: 81,
-        selfServiceYearlyTotal: 670,
-        managedYearlyTotal: 970,
-        includedClients: 3,
-        selfServiceOverage: 15,
-        managedOverage: 20,
-        selfServiceFeatures: [
-            '3 Clients included',
-            'Unlimited agents',
-            'AI Agent Builder',
-            'Custom domain',
-            'Call analytics',
-            'Workflow automation',
-            'Email support',
-        ],
-        managedFeatures: [
-            '3 Clients included',
-            'Done-for-you agent setup',
-            'AI Agent Builder',
-            'Custom domain',
-            'Call analytics',
-            'Workflow automation',
-            'Priority support',
-        ],
-        cta: 'Get started',
-        href: '/signup',
-        recommended: false,
-    },
-    {
-        name: 'Growth',
-        selfServicePrice: 147,
-        managedPrice: 197,
-        selfServiceYearlyMonthly: 123,
-        managedYearlyMonthly: 164,
-        selfServiceYearlyTotal: 1470,
-        managedYearlyTotal: 1970,
-        includedClients: 10,
-        selfServiceOverage: 12,
-        managedOverage: 17,
-        selfServiceFeatures: [
-            '10 Clients included',
-            'All Starter features',
-            'CRM integrations (GHL + HubSpot)',
-            'Stripe Connect client billing',
-        ],
-        managedFeatures: [
-            '10 Clients included',
-            'All Starter features',
-            'Done-for-you integrations',
-            'CRM integrations (GHL + HubSpot)',
-            'Stripe Connect client billing',
-        ],
-        cta: 'Get started',
-        href: '/signup',
-        recommended: true,
-    },
-    {
-        name: 'Agency',
-        selfServicePrice: 297,
-        managedPrice: 397,
-        selfServiceYearlyMonthly: 248,
-        managedYearlyMonthly: 331,
-        selfServiceYearlyTotal: 2970,
-        managedYearlyTotal: 3970,
-        includedClients: 25,
-        selfServiceOverage: 10,
-        managedOverage: 15,
-        selfServiceFeatures: [
-            '25 Clients included',
-            'All features',
-            'White-label platform',
-            'API access',
-            'Priority support',
-        ],
-        managedFeatures: [
-            '25 Clients included',
-            'All features',
-            'Done-for-you white-label setup',
-            'API access',
-            'Dedicated support',
-        ],
-        cta: 'Get started',
-        href: '/signup',
-        recommended: false,
-    },
-];
+// Landing-page-specific metadata per tier
+const LANDING_META: Record<string, { cta: string; href: string; recommended: boolean }> = {
+    starter: { cta: 'Get started', href: '/signup', recommended: false },
+    growth: { cta: 'Get started', href: '/signup', recommended: true },
+    agency: { cta: 'Get started', href: '/signup', recommended: false },
+};
 
 export function PricingSection() {
     const [isYearly, setIsYearly] = useState(false);
@@ -175,8 +73,8 @@ export function PricingSection() {
                 {/* Plan type description */}
                 <p className={`text-center text-sm text-muted-foreground max-w-lg mx-auto mt-4 mb-6 animate-on-scroll stagger-3 ${headerVisible ? 'is-visible' : ''}`}>
                     {isSelfService
-                        ? 'Build and manage your own AI voice agents. Use your own API keys for flat-rate pricing, or our platform keys for $0.15/min.'
-                        : 'We build and manage your AI agents for you. All calls use our platform at $0.15/min.'}
+                        ? `Build and manage your own AI voice agents. Use your own API keys for flat-rate pricing, or our platform keys for $${PLATFORM_PER_MINUTE_RATE}/min.`
+                        : `We build and manage your AI agents for you. All calls use our platform at $${PLATFORM_PER_MINUTE_RATE}/min.`}
                 </p>
 
                 {/* Billing toggle */}
@@ -210,24 +108,21 @@ export function PricingSection() {
 
                 {/* Plan cards */}
                 <div ref={gridRef} className="grid gap-6 md:grid-cols-3">
-                    {plans.map((plan, index) => {
-                        const monthlyPrice = isSelfService ? plan.selfServicePrice : plan.managedPrice;
-                        const yearlyMonthly = isSelfService ? plan.selfServiceYearlyMonthly : plan.managedYearlyMonthly;
-                        const yearlyTotal = isSelfService ? plan.selfServiceYearlyTotal : plan.managedYearlyTotal;
-                        const displayPrice = isYearly ? yearlyMonthly : monthlyPrice;
-                        const overageRate = isSelfService ? plan.selfServiceOverage : plan.managedOverage;
-                        const features = isSelfService ? plan.selfServiceFeatures : plan.managedFeatures;
+                    {TIER_CONFIGS.map(({ tier, selfService, managed }, index) => {
+                        const config = isSelfService ? selfService : managed;
+                        const meta = LANDING_META[tier];
+                        const displayPrice = isYearly ? config.yearlyMonthly : config.monthlyPrice;
 
                         return (
                             <div
-                                key={`${plan.name}-${planType}`}
+                                key={`${tier}-${planType}`}
                                 className={`
                                     relative rounded-xl border p-8 flex flex-col
                                     transition-all duration-200
                                     hover:-translate-y-1 hover:shadow-lg
                                     animate-on-scroll-scale
                                     ${gridVisible ? 'is-visible' : ''}
-                                    ${plan.recommended
+                                    ${meta.recommended
                                         ? 'border-foreground/20 shadow-sm'
                                         : 'border-border'
                                     }
@@ -237,7 +132,7 @@ export function PricingSection() {
                                     animationFillMode: 'both',
                                 }}
                             >
-                                {plan.recommended && (
+                                {meta.recommended && (
                                     <>
                                         <div
                                             className="absolute -inset-px rounded-xl bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-transparent pointer-events-none"
@@ -250,38 +145,38 @@ export function PricingSection() {
                                 )}
 
                                 <div className="relative z-10 pb-4">
-                                    <h3 className="text-lg font-semibold">{plan.name}</h3>
+                                    <h3 className="text-lg font-semibold">{config.displayName}</h3>
                                     <div className="mt-3">
                                         <span className="text-3xl font-bold">${displayPrice}</span>
                                         <span className="text-muted-foreground text-sm ml-1">/month</span>
                                     </div>
                                     {isYearly && (
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            ${yearlyTotal}/year — save ${monthlyPrice * 12 - yearlyTotal}
+                                            ${config.yearlyPrice}/year — save ${config.monthlyPrice * 12 - config.yearlyPrice}
                                         </p>
                                     )}
                                     {!isSelfService && (
                                         <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">
-                                            + ${PER_MINUTE_RATE}/min for calls
+                                            + ${PLATFORM_PER_MINUTE_RATE}/min for calls
                                         </p>
                                     )}
                                     {isSelfService && (
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            ${PER_MINUTE_RATE}/min with platform keys
+                                            ${PLATFORM_PER_MINUTE_RATE}/min with platform keys
                                         </p>
                                     )}
                                 </div>
 
                                 {/* Client limit + overage */}
                                 <div className="relative z-10 mb-4 p-3 bg-muted/30 rounded-lg text-sm">
-                                    <p className="font-medium">{plan.includedClients} clients included</p>
-                                    <p className="text-muted-foreground">${overageRate}/additional client</p>
+                                    <p className="font-medium">{config.limits.maxClients} clients included</p>
+                                    <p className="text-muted-foreground">${config.limits.additionalClientPrice}/additional client</p>
                                 </div>
 
                                 <div className="relative z-10 h-px bg-border mb-5" />
 
                                 <ul className="relative z-10 space-y-2.5 mb-8 flex-1">
-                                    {features.map((feature) => (
+                                    {config.features.map((feature) => (
                                         <li key={feature} className="text-sm text-muted-foreground flex items-start gap-2">
                                             <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
                                             {feature}
@@ -290,11 +185,11 @@ export function PricingSection() {
                                 </ul>
 
                                 <Button
-                                    variant={plan.recommended ? 'default' : 'outline'}
+                                    variant={meta.recommended ? 'default' : 'outline'}
                                     className="relative z-10 w-full rounded-full active:scale-[0.98] transition-[transform,background-color,box-shadow,border-color] duration-200"
                                     asChild
                                 >
-                                    <Link href={plan.href}>{plan.cta}</Link>
+                                    <Link href={meta.href}>{meta.cta}</Link>
                                 </Button>
                             </div>
                         );

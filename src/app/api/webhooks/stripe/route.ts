@@ -142,7 +142,8 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
         return;
     }
 
-    // Clear subscription data but keep customer_id and plan_type for future use
+    // Clear subscription data but keep customer_id and plan_type for future use.
+    // plan_type is intentionally preserved so re-subscribing defaults to their previous preference.
     const { error: updateError } = await supabase
         .from('agencies')
         .update({
@@ -187,7 +188,9 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
         if (admin?.email && invoice.amount_paid) {
             const tierInfo = getTierFromPriceId(agency.subscription_price_id || '');
-            const planName = tierInfo ? tierInfo.tier.charAt(0).toUpperCase() + tierInfo.tier.slice(1) : 'Subscription';
+            const tierLabel = tierInfo ? tierInfo.tier.charAt(0).toUpperCase() + tierInfo.tier.slice(1) : '';
+            const typeLabel = tierInfo?.planType === 'managed' ? 'Managed ' : '';
+            const planName = tierLabel ? `${typeLabel}${tierLabel}` : 'Subscription';
             const amount = `$${(invoice.amount_paid / 100).toFixed(2)}`;
             const invoiceUrl = invoice.hosted_invoice_url || undefined;
 
@@ -229,7 +232,9 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 
         if (admin?.email) {
             const tierInfo2 = getTierFromPriceId(agency.subscription_price_id || '');
-            const planName = tierInfo2 ? tierInfo2.tier.charAt(0).toUpperCase() + tierInfo2.tier.slice(1) : 'Subscription';
+            const tierLabel2 = tierInfo2 ? tierInfo2.tier.charAt(0).toUpperCase() + tierInfo2.tier.slice(1) : '';
+            const typeLabel2 = tierInfo2?.planType === 'managed' ? 'Managed ' : '';
+            const planName = tierLabel2 ? `${typeLabel2}${tierLabel2}` : 'Subscription';
             const amount = invoice.amount_due ? `$${(invoice.amount_due / 100).toFixed(2)}` : 'your subscription';
 
             await sendEmail({

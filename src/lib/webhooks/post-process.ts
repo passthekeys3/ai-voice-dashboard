@@ -318,6 +318,11 @@ async function reportPlatformUsage(supabase: SupabaseClient, call: ProcessedCall
                 timestamp: Math.floor(new Date(call.endedAt || Date.now()).getTime() / 1000),
                 identifier: `${call.provider}_call_${call.callId}`,
             });
+        } else {
+            console.error(
+                `BILLING GAP: Agency ${call.agencyId} used platform keys for ${call.provider} call ${call.callId} ` +
+                `(${Math.ceil(call.durationSeconds / 60)} min) but has no stripe_customer_id — call went unbilled`
+            );
         }
     } catch (err) {
         console.error(`Failed to report metered usage for ${call.provider} call:`, err instanceof Error ? err.message : 'Unknown error');
