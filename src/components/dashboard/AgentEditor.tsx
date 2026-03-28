@@ -547,7 +547,7 @@ export function AgentEditor({
                                         <SelectContent>
                                             {RETELL_VOICE_MODELS.map((m) => (
                                                 <SelectItem key={m.value} value={m.value}>
-                                                    {m.label} — {m.description}
+                                                    {m.label} — ${m.costPerMin.toFixed(3)}/min
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>

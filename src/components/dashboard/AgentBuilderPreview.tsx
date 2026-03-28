@@ -277,7 +277,7 @@ export function AgentBuilderPreview({
                                         {RETELL_VOICE_MODELS.map((m) => (
                                             <SelectItem key={m.value} value={m.value}>
                                                 <span>{m.label}</span>
-                                                <span className="text-muted-foreground ml-2 text-xs">{m.description}</span>
+                                                <span className="text-muted-foreground ml-2 text-xs">${m.costPerMin.toFixed(3)}/min</span>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
