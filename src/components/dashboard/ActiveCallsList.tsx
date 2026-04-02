@@ -210,13 +210,13 @@ export function ActiveCallsList({ basePath = '', canEndCalls = true }: ActiveCal
             {calls.length > 0 ? (
                 <div className="grid gap-4">
                     {calls.map((call) => (
-                        <Card key={call.id} className="border-l-4 border-l-green-500 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <Card key={call.id} className="border-l-4 border-l-primary animate-in fade-in slide-in-from-top-2 duration-300">
                             <CardContent className="py-4">
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                     <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                                         <div className="relative shrink-0">
-                                            <Radio className="h-8 w-8 text-green-500" />
-                                            <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-500 animate-pulse"></span>
+                                            <Radio className="h-8 w-8 text-primary" />
+                                            <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary animate-pulse"></span>
                                         </div>
                                         <div className="min-w-0">
                                             <div className="flex flex-wrap items-center gap-1 sm:gap-2">
@@ -227,7 +227,7 @@ export function ActiveCallsList({ basePath = '', canEndCalls = true }: ActiveCal
                                                 <span className="truncate">{formatPhoneNumber(call) || 'Unknown'}</span>
                                             </div>
                                             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1 text-sm text-muted-foreground">
-                                                <Badge variant="outline" className="text-green-600 tabular-nums">
+                                                <Badge variant="outline" className="text-muted-foreground tabular-nums">
                                                     {formatDuration(call.duration_seconds)} elapsed
                                                 </Badge>
                                                 <span className="capitalize">{call.direction}</span>
@@ -278,7 +278,7 @@ export function ActiveCallsList({ basePath = '', canEndCalls = true }: ActiveCal
                         <h3 className="text-lg font-medium mb-2">No active calls</h3>
                         <p className="text-muted-foreground text-center max-w-md">
                             When calls are in progress, they&apos;ll appear here in real-time.
-                            <span className="block mt-2 text-green-600 text-sm">
+                            <span className="block mt-2 text-muted-foreground text-sm">
                                 Auto-refreshing every 2 seconds
                             </span>
                         </p>

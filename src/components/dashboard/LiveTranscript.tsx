@@ -363,8 +363,8 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell', base
                         <div className="flex items-center gap-4">
                             {call.is_active ? (
                                 <div className="relative">
-                                    <Radio className="h-8 w-8 text-green-500" />
-                                    <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-500 animate-pulse"></span>
+                                    <Radio className="h-8 w-8 text-primary" />
+                                    <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary animate-pulse"></span>
                                 </div>
                             ) : (
                                 <AlertCircle className="h-8 w-8 text-gray-400" />
@@ -383,7 +383,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell', base
                                         <span className="tabular-nums">{formatDuration(call.duration_seconds)}</span>
                                     </Badge>
                                     {call.is_active ? (
-                                        <Badge className="bg-green-500">
+                                        <Badge className="bg-primary">
                                             <span className="relative flex h-2 w-2 mr-1">
                                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
                                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
@@ -395,7 +395,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell', base
                                     )}
                                     <ConnectionStatus status={connectionStatus} />
                                     {lastUpdateInfo && call.is_active && (
-                                        <span className={`flex items-center gap-1 text-xs ${lastUpdateInfo.source === 'realtime' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                                        <span className={`flex items-center gap-1 text-xs ${lastUpdateInfo.source === 'realtime' ? 'text-primary/80 dark:text-primary/70' : 'text-yellow-600 dark:text-yellow-400'}`}>
                                             {lastUpdateInfo.source === 'realtime' ? (
                                                 <Zap className="h-3 w-3" />
                                             ) : (
@@ -506,7 +506,7 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell', base
                     <CardTitle className="text-lg flex items-center gap-2">
                         Live Transcript
                         {call.is_active && (
-                            <span className="text-xs font-normal text-green-600 dark:text-green-400">
+                            <span className="text-xs font-normal text-primary/80 dark:text-primary/70">
                                 (live)
                             </span>
                         )}
@@ -573,13 +573,13 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell', base
                         ) : call.is_active ? (
                             <div className="flex items-center justify-center h-full text-muted-foreground">
                                 <div className="text-center">
-                                    <Radio className="h-8 w-8 mx-auto mb-2 text-green-500 animate-pulse" />
+                                    <Radio className="h-8 w-8 mx-auto mb-2 text-primary animate-pulse" />
                                     <p className="font-medium">Call in progress</p>
                                     <p className="text-sm mt-1">Waiting for conversation to begin...</p>
                                     <div className="flex justify-center gap-1 mt-4">
-                                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></span>
-                                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '150ms' }}></span>
-                                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></span>
+                                        <span className="w-2 h-2 bg-primary/60 rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></span>
+                                        <span className="w-2 h-2 bg-primary/60 rounded-full animate-pulse" style={{ animationDelay: '150ms' }}></span>
+                                        <span className="w-2 h-2 bg-primary/60 rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></span>
                                     </div>
                                 </div>
                             </div>

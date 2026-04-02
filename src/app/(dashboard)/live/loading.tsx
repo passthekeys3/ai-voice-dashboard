@@ -26,7 +26,7 @@ export default function LiveLoading() {
                 {/* Active call cards — single-column list with green left border */}
                 <div className="space-y-4">
                     {[1, 2].map((i) => (
-                        <Card key={i} className="border-l-4 border-l-green-500">
+                        <Card key={i} className="border-l-4 border-l-primary">
                             <CardContent className="py-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4">
