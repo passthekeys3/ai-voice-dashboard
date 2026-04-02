@@ -126,6 +126,15 @@ export async function GET(request: NextRequest) {
                 }
             } catch (err) {
                 console.error('Error fetching Bland voices:', err instanceof Error ? err.message : 'Unknown error');
+                // Fallback: provide curated Bland default voices when API fails
+                allVoices.push(
+                    { id: 'matt', name: 'Matt', provider: 'bland' },
+                    { id: 'mason', name: 'Mason', provider: 'bland' },
+                    { id: 'ryan', name: 'Ryan', provider: 'bland' },
+                    { id: 'adriana', name: 'Adriana', provider: 'bland' },
+                    { id: 'tina', name: 'Tina', provider: 'bland' },
+                    { id: 'evelyn', name: 'Evelyn', provider: 'bland' },
+                );
             }
         }
 

@@ -210,7 +210,8 @@ export async function POST(request: NextRequest) {
                     model: {
                         provider: vapiModelProvider,
                         model: vapiModelName,
-                        systemPrompt: system_prompt || undefined,
+                        // Use messages array format (newer Vapi convention, consistent with agent-builder/apply)
+                        ...(system_prompt ? { messages: [{ role: 'system', content: system_prompt }] } : {}),
                     },
                     firstMessage: first_message || undefined,
                     serverUrl: `${appUrl}/api/webhooks/vapi`,
@@ -255,6 +256,7 @@ export async function POST(request: NextRequest) {
             }
 
             agentConfig.system_prompt = system_prompt;
+            agentConfig.first_message = first_message;
             if (voice_id) agentConfig.voice_id = voice_id;
 
         } else if (provider === 'elevenlabs') {
@@ -364,7 +366,10 @@ export async function POST(request: NextRequest) {
                             'Authorization': apiKey,
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ pathway_id: externalId }),
+                        body: JSON.stringify({
+                            pathway_id: externalId,
+                            webhook: `${appUrl}/api/webhooks/bland`,
+                        }),
                         signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                     });
 

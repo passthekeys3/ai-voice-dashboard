@@ -213,10 +213,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                         const externalAgentId = await resolveAgentExternalId(agentId);
 
                         if (externalAgentId) {
+                            const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`;
                             const blandRes = await fetch(`https://api.bland.ai/v1/inbound/${encodeURIComponent(existing.external_id)}`, {
                                 method: 'POST',
                                 headers: { 'Authorization': agency.bland_api_key, 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ pathway_id: externalAgentId }),
+                                body: JSON.stringify({ pathway_id: externalAgentId, webhook: `${appUrl}/api/webhooks/bland` }),
                                 signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
                             });
                             if (!blandRes.ok) {

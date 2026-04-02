@@ -634,7 +634,7 @@ export function SettingsForm({ agency }: SettingsFormProps) {
                         Voice Provider API Keys
                     </CardTitle>
                     <CardDescription>
-                        Connect your Retell, Vapi, or Bland accounts to sync agents and calls
+                        Connect your Retell, Vapi, Bland, or ElevenLabs accounts to sync agents and calls
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -776,7 +776,7 @@ export function SettingsForm({ agency }: SettingsFormProps) {
                         <Button
                             variant="outline"
                             onClick={handleSyncAgents}
-                            disabled={syncing || (!hasKey('retellApiKey', formData.retellApiKey) && !hasKey('vapiApiKey', formData.vapiApiKey) && !hasKey('vapiPublicKey', formData.vapiPublicKey) && !hasKey('blandApiKey', formData.blandApiKey))}
+                            disabled={syncing || (!hasKey('retellApiKey', formData.retellApiKey) && !hasKey('vapiApiKey', formData.vapiApiKey) && !hasKey('vapiPublicKey', formData.vapiPublicKey) && !hasKey('blandApiKey', formData.blandApiKey) && !hasKey('elevenlabsApiKey', formData.elevenlabsApiKey))}
                         >
                             {syncing ? (
                                 <>

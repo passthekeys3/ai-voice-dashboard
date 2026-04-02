@@ -137,6 +137,11 @@ export function AgentEditor({
         (config as { responsiveness?: number }).responsiveness ?? 0.8
     );
 
+    // First message state (ElevenLabs)
+    const [firstMessage, setFirstMessage] = useState(
+        (config as { first_message?: string }).first_message || ''
+    );
+
     // Voice model & LLM model state
     const [voiceModel, setVoiceModel] = useState(
         (config as { voice_model?: string }).voice_model || 'eleven_v3'
@@ -254,6 +259,7 @@ export function AgentEditor({
                         if (data.data.responsiveness !== undefined) setResponsiveness(data.data.responsiveness);
                         if (data.data.voice_model) setVoiceModel(data.data.voice_model);
                         if (data.data.llm_model) setLlmModel(data.data.llm_model);
+                        if (data.data.first_message !== undefined) setFirstMessage(data.data.first_message);
                         if (data.data.enable_safety_guardrails !== undefined) setGuardrailsEnabled(data.data.enable_safety_guardrails);
                         if (data.data.safety_guardrails_categories !== undefined) setGuardrailCategories(data.data.safety_guardrails_categories);
                         setPromptFetchFailed(false);
@@ -320,10 +326,12 @@ export function AgentEditor({
                 providerPayload.voice_model = voiceModel;
                 providerPayload.llm_model = llmModel;
                 providerPayload.language = language;
+                providerPayload.first_message = firstMessage;
             } else if (provider === 'vapi') {
                 providerPayload.voice_id = voiceId;
                 providerPayload.voice_provider = voiceProvider;
                 providerPayload.language = language;
+                providerPayload.first_message = firstMessage;
                 // Derive Vapi model provider from model name
                 const vapiProvider = llmModel.startsWith('claude') ? 'anthropic'
                     : llmModel.startsWith('gemini') ? 'google' : 'openai';
@@ -720,6 +728,24 @@ export function AgentEditor({
                                     This prompt defines how your agent behaves and what knowledge it has.
                                 </p>
                             </div>
+
+                            {/* First Message (ElevenLabs + Vapi) */}
+                            {(provider === 'elevenlabs' || provider === 'vapi') && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="firstMessage">First Message</Label>
+                                    <Textarea
+                                        id="firstMessage"
+                                        value={firstMessage}
+                                        onChange={(e) => setFirstMessage(e.target.value)}
+                                        placeholder="Hello! How can I help you today?"
+                                        rows={3}
+                                        className="text-sm"
+                                    />
+                                    <p className="text-sm text-muted-foreground">
+                                        The greeting your agent says when a conversation starts.
+                                    </p>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 

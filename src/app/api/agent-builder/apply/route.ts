@@ -4,6 +4,7 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getTemplateById, getTemplateActions } from '@/lib/agent-builder/templates';
 import { publishRetellAgent } from '@/lib/providers/retell';
 import { createElevenLabsAgent } from '@/lib/providers/elevenlabs';
+import { createBlandPathway } from '@/lib/providers/bland';
 import { resolveProviderApiKeys, autoSelectProvider } from '@/lib/providers/resolve-keys';
 import { isValidUuid } from '@/lib/validation';
 import { withErrorHandling } from '@/lib/api/response';
@@ -54,16 +55,17 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
         if (draft.name.length > MAX_NAME_LENGTH) {
             return NextResponse.json({ error: `Agent name must be under ${MAX_NAME_LENGTH} characters` }, { status: 400 });
         }
-        if (!draft?.voiceId || typeof draft.voiceId !== 'string') {
-            return NextResponse.json({ error: 'Voice selection is required' }, { status: 400 });
-        }
-        if (draft.voiceId.length > MAX_VOICE_ID_LENGTH) {
-            return NextResponse.json({ error: 'Invalid voice ID' }, { status: 400 });
-        }
-        // Reject voice IDs that contain characters invalid for all providers
-        // (prevents injection via crafted voice IDs)
-        if (!/^[a-zA-Z0-9_\-.:]+$/.test(draft.voiceId)) {
-            return NextResponse.json({ error: 'Invalid voice ID format' }, { status: 400 });
+        // Voice is required for all providers except Bland (pathway-level voices)
+        if (draft.provider !== 'bland') {
+            if (!draft?.voiceId || typeof draft.voiceId !== 'string') {
+                return NextResponse.json({ error: 'Voice selection is required' }, { status: 400 });
+            }
+            if (draft.voiceId.length > MAX_VOICE_ID_LENGTH) {
+                return NextResponse.json({ error: 'Invalid voice ID' }, { status: 400 });
+            }
+            if (!/^[a-zA-Z0-9_\-.:]+$/.test(draft.voiceId)) {
+                return NextResponse.json({ error: 'Invalid voice ID format' }, { status: 400 });
+            }
         }
         if (!draft?.systemPrompt || typeof draft.systemPrompt !== 'string' || !draft.systemPrompt.trim()) {
             return NextResponse.json({ error: 'System prompt is required' }, { status: 400 });
@@ -144,6 +146,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
         }
 
         // Create agent on provider
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`;
         let externalId: string;
 
         if (provider === 'retell') {
@@ -215,7 +218,6 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
             }
         } else if (provider === 'vapi') {
             // Vapi agent creation
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`;
             const vapiResponse = await fetch('https://api.vapi.ai/assistant', {
                 method: 'POST',
                 headers: {
@@ -255,7 +257,6 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
             externalId = vapiAgent.id;
         } else if (provider === 'elevenlabs') {
             // ElevenLabs agent creation
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`;
             const elevenlabsAgent = await createElevenLabsAgent(apiKey, {
                 name: safeName,
                 prompt: safeSystemPrompt,
@@ -270,31 +271,21 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
             externalId = elevenlabsAgent.agent_id;
         } else {
             // Bland pathway creation
-            // Bland uses Pathways (visual flowcharts) as the agent concept.
-            // Programmatic creation creates a minimal pathway — users can refine it in the Bland dashboard.
-            const blandResponse = await fetch('https://api.bland.ai/v1/pathway/create', {
-                method: 'POST',
-                headers: {
-                    'authorization': apiKey,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
+            // Uses Pathways (visual flowcharts) as the agent concept.
+            // Programmatic creation creates a minimal pathway — users refine it in the Bland dashboard.
+            try {
+                const blandPathway = await createBlandPathway(apiKey, {
                     name: safeName,
                     description: safeSystemPrompt,
-                }),
-                signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
-            });
-
-            if (!blandResponse.ok) {
-                console.error('Bland create pathway error:', blandResponse.status, await blandResponse.text());
+                });
+                externalId = blandPathway.id;
+            } catch (err) {
+                console.error('Bland create pathway error:', err instanceof Error ? err.message : 'Unknown error');
                 return NextResponse.json(
                     { error: 'Failed to create agent on voice provider' },
                     { status: 500 }
                 );
             }
-
-            const blandPathway = await blandResponse.json();
-            externalId = blandPathway.pathway_id;
         }
 
         // Store in database
@@ -375,8 +366,23 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
                     if (!phoneUpdateRes.ok) {
                         console.warn('Failed to update phone number in Vapi:', phoneUpdateRes.status);
                     }
+                } else if (provider === 'bland') {
+                    const phoneUpdateRes = await fetch(`https://api.bland.ai/v1/inbound/${encodeURIComponent(phoneNumber.external_id)}`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': apiKey,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            pathway_id: externalId,
+                            webhook: `${appUrl}/api/webhooks/bland`,
+                        }),
+                        signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
+                    });
+                    if (!phoneUpdateRes.ok) {
+                        console.warn('Failed to update phone number in Bland:', phoneUpdateRes.status);
+                    }
                 }
-                // Note: Bland phone assignment is done at call time via pathway_id, not per-number
 
                 await supabase
                     .from('phone_numbers')

@@ -117,6 +117,7 @@ export async function GET(
                     data: {
                         agent_name: pathway.name,
                         prompt: pathway.description || '',
+                        first_message: agent.config?.first_message || '',
                     }
                 });
             } catch (err) {
@@ -368,10 +369,12 @@ export async function PATCH(
                 }
 
                 // Store in local config (use !== undefined checks to allow clearing values)
+                // Store in local config (first_message stored locally — not supported by Bland API)
                 const newConfig = {
                     ...agent.config,
                     agent_name: body.agent_name !== undefined ? body.agent_name : agent.config?.agent_name,
                     prompt: body.prompt !== undefined ? body.prompt : agent.config?.prompt,
+                    first_message: body.first_message !== undefined ? body.first_message : agent.config?.first_message,
                 };
 
                 await supabase

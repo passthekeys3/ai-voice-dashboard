@@ -399,7 +399,8 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
         }
     }, [isCreating, phoneNumbers]);
 
-    const isReadyToCreate = !!(draft.name && draft.voiceId && draft.systemPrompt);
+    // Voice is required for all providers except Bland (which uses pathway-level voices)
+    const isReadyToCreate = !!(draft.name && draft.systemPrompt && (draft.voiceId || draft.provider === 'bland'));
 
     return (
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">

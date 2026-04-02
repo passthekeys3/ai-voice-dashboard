@@ -10,6 +10,9 @@ import { listRetellAgents } from '@/lib/providers/retell';
  * Lists all agents on the PLATFORM_RETELL_API_KEY account,
  * cross-referenced with DB to show which are assigned to which agency.
  * Platform admin only.
+ *
+ * TODO: Extend to list agents from all platform provider keys
+ * (PLATFORM_VAPI_API_KEY, PLATFORM_BLAND_API_KEY, PLATFORM_ELEVENLABS_API_KEY).
  */
 export async function GET() {
     try {
