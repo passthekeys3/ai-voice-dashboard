@@ -2,9 +2,11 @@
  * AI Agent Builder Types
  */
 
+import type { VoiceProvider } from '@/types';
+
 export interface AgentDraft {
     name: string;
-    provider: 'retell' | 'vapi' | 'bland';
+    provider: VoiceProvider;
     systemPrompt: string;
     firstMessage: string;
     voiceId: string;

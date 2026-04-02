@@ -5,6 +5,7 @@ import { listVapiPhoneNumbers } from '@/lib/providers/vapi';
 import { listBlandPhoneNumbers } from '@/lib/providers/bland';
 import { decrypt } from '@/lib/crypto';
 import { withErrorHandling } from '@/lib/api/response';
+import { PROVIDER_KEY_SELECT, type ProviderKeyRow } from '@/lib/constants/config';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
@@ -25,18 +26,19 @@ export const POST = withErrorHandling(async (_request: NextRequest) => {
         // Get API keys for all providers
         const { data: agency } = await supabase
             .from('agencies')
-            .select('retell_api_key, vapi_api_key, bland_api_key')
+            .select(PROVIDER_KEY_SELECT)
             .eq('id', user.agency.id)
-            .single();
+            .single() as { data: ProviderKeyRow | null };
 
         // Decrypt API keys from DB
         if (agency) {
             agency.retell_api_key = decrypt(agency.retell_api_key) ?? agency.retell_api_key;
             agency.vapi_api_key = decrypt(agency.vapi_api_key) ?? agency.vapi_api_key;
             agency.bland_api_key = decrypt(agency.bland_api_key) ?? agency.bland_api_key;
+            agency.elevenlabs_api_key = decrypt(agency.elevenlabs_api_key) ?? agency.elevenlabs_api_key;
         }
 
-        if (!agency?.retell_api_key && !agency?.vapi_api_key && !agency?.bland_api_key) {
+        if (!agency?.retell_api_key && !agency?.vapi_api_key && !agency?.bland_api_key && !agency?.elevenlabs_api_key) {
             return NextResponse.json({ error: 'No API keys configured' }, { status: 400 });
         }
 

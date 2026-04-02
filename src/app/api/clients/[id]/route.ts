@@ -18,6 +18,7 @@ import { isValidUuid } from '@/lib/validation';
 import { encrypt } from '@/lib/crypto';
 import { maskClientApiKeys } from '@/lib/clients/mask-keys';
 import { API_KEY_PATTERN, API_KEY_MAX_LENGTH } from '@/lib/integrations/validate-integrations';
+import { PROVIDER_KEY_FIELDS } from '@/lib/constants/config';
 
 // Admin client for auth user deletion (same pattern as invite route)
 const supabaseAdmin = createSupabaseAdmin(
@@ -126,7 +127,7 @@ export const PATCH = withErrorHandling(async (
     if (body.next_billing_date !== undefined) updateData.next_billing_date = body.next_billing_date;
 
     // Voice provider API keys (per-client override — null/empty clears the key)
-    for (const keyField of ['retell_api_key', 'vapi_api_key', 'vapi_public_key', 'bland_api_key'] as const) {
+    for (const keyField of [...PROVIDER_KEY_FIELDS, 'vapi_public_key'] as const) {
         if (body[keyField] !== undefined) {
             if (body[keyField] === '' || body[keyField] === null) {
                 updateData[keyField] = null; // Clear the key → fall back to agency key

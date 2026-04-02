@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { VoiceProvider } from '@/types';
 
 import { requireAuth } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
@@ -85,7 +86,7 @@ export default async function ClientAgentDetailPage({
                 {canEdit ? (
                     <AgentEditor
                         agentId={agent.id}
-                        provider={agent.provider as 'retell' | 'vapi' | 'bland'}
+                        provider={agent.provider as VoiceProvider}
                         isActive={agent.is_active}
                         clientId={agent.client_id}
                         clients={[]}

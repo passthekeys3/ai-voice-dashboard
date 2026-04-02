@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Phone, PhoneOff, Mic, MicOff, Loader2, PhoneOutgoing, CheckCircle2 } from 'lucide-react';
 import type { RetellWebClient as BaseRetellWebClient } from 'retell-client-js-sdk';
+import type { VoiceProvider } from '@/types';
 
 // Extend the SDK type with methods that exist at runtime but aren't in the type definitions
 interface RetellWebClient extends BaseRetellWebClient {
@@ -26,7 +27,7 @@ interface VapiInstance {
 interface TestCallProps {
     agentId: string;
     agentName: string;
-    provider: 'retell' | 'vapi' | 'bland';
+    provider: VoiceProvider;
 }
 
 export function TestCall({ agentId, agentName, provider }: TestCallProps) {

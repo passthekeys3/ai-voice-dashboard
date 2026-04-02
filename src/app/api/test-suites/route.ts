@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { VoiceProvider } from '@/types';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { checkFeatureAccess } from '@/lib/billing/tiers';
 import { decrypt } from '@/lib/crypto';
 import { getAgentPrompt } from '@/lib/testing/get-agent-prompt';
 import { safeParseJson } from '@/lib/validation';
+import { PROVIDER_KEY_SELECT, type ProviderKeyRow } from '@/lib/constants/config';
 
 // GET /api/test-suites - List all test suites
 export async function GET(request: NextRequest) {
@@ -124,21 +126,23 @@ export async function POST(request: NextRequest) {
             // Get provider credentials
             const { data: agency } = await supabase
                 .from('agencies')
-                .select('retell_api_key, vapi_api_key, bland_api_key')
+                .select(PROVIDER_KEY_SELECT)
                 .eq('id', user.agency.id)
-                .single();
+                .single() as { data: ProviderKeyRow | null };
 
             const apiKey = decrypt(
                 agent.provider === 'retell'
                     ? agency?.retell_api_key
                     : agent.provider === 'bland'
                     ? agency?.bland_api_key
+                    : agent.provider === 'elevenlabs'
+                    ? agency?.elevenlabs_api_key
                     : agency?.vapi_api_key
             );
 
             if (apiKey && agent.config?.external_id) {
                 const result = await getAgentPrompt({
-                    provider: agent.provider as 'retell' | 'vapi' | 'bland',
+                    provider: agent.provider as VoiceProvider,
                     apiKey,
                     externalId: agent.config.external_id,
                     localConfig: agent.config,

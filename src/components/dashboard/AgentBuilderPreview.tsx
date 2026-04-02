@@ -22,16 +22,11 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import type { AgentDraft, BuilderContext } from '@/lib/agent-builder/types';
+import type { VoiceProvider } from '@/types';
 import type { WorkflowTemplate } from '@/lib/agent-builder/templates';
 import type { CreatedAgentData } from './AgentBuilder';
-import { RETELL_VOICE_MODELS, RETELL_LLM_MODELS, VAPI_LLM_MODELS, TELEPHONY_COST_PER_MIN } from '@/lib/constants/config';
+import { RETELL_VOICE_MODELS, RETELL_LLM_MODELS, VAPI_LLM_MODELS, ELEVENLABS_LLM_MODELS, ELEVENLABS_VOICE_MODELS, TELEPHONY_COST_PER_MIN, PROVIDER_LABELS } from '@/lib/constants/config';
 import Link from 'next/link';
-
-const PROVIDER_LABELS: Record<string, string> = {
-    retell: 'Retell AI',
-    vapi: 'Vapi',
-    bland: 'Bland.ai',
-};
 
 interface AgentBuilderPreviewProps {
     draft: AgentDraft;
@@ -43,7 +38,7 @@ interface AgentBuilderPreviewProps {
     phoneNumbers: { id: string; phone_number: string; nickname?: string; agent_id?: string | null }[];
     context: BuilderContext;
     availableTemplates: WorkflowTemplate[];
-    availableProviders: ('retell' | 'vapi' | 'bland')[];
+    availableProviders: VoiceProvider[];
     /** Set after successful agent creation — triggers the success/test state */
     createdAgent?: CreatedAgentData | null;
 }
@@ -164,7 +159,7 @@ export function AgentBuilderPreview({
                         <TestCall
                             agentId={createdAgent.agent_id}
                             agentName={draft.name}
-                            provider={draft.provider as 'retell' | 'vapi' | 'bland'}
+                            provider={draft.provider}
                         />
                     )}
 
@@ -263,18 +258,18 @@ export function AgentBuilderPreview({
                             />
                         </Section>
 
-                        {/* Voice Model (Retell only) */}
-                        {draft.provider === 'retell' && (
+                        {/* Voice Model (Retell + ElevenLabs) */}
+                        {(draft.provider === 'retell' || draft.provider === 'elevenlabs') && (
                             <Section icon={<Mic className="h-3.5 w-3.5" />} label="Voice Model">
                                 <Select
-                                    value={draft.voiceModel || 'eleven_v3'}
+                                    value={draft.voiceModel || (draft.provider === 'elevenlabs' ? 'eleven_flash_v2' : 'eleven_v3')}
                                     onValueChange={(value: string) => onDraftUpdate({ voiceModel: value })}
                                 >
                                     <SelectTrigger className="text-sm">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {RETELL_VOICE_MODELS.map((m) => (
+                                        {(draft.provider === 'elevenlabs' ? ELEVENLABS_VOICE_MODELS : RETELL_VOICE_MODELS).map((m) => (
                                             <SelectItem key={m.value} value={m.value}>
                                                 <span>{m.label}</span>
                                                 <span className="text-muted-foreground ml-2 text-xs">${m.costPerMin.toFixed(3)}/min</span>
@@ -285,18 +280,18 @@ export function AgentBuilderPreview({
                             </Section>
                         )}
 
-                        {/* LLM Model (Retell + Vapi) */}
+                        {/* LLM Model (Retell + Vapi + ElevenLabs) */}
                         {draft.provider !== 'bland' && (
                             <Section icon={<Bot className="h-3.5 w-3.5" />} label="LLM Model">
                                 <Select
-                                    value={draft.llmModel || (draft.provider === 'retell' ? 'gpt-4.1' : 'gpt-4o')}
+                                    value={draft.llmModel || (draft.provider === 'retell' ? 'gpt-4.1' : draft.provider === 'elevenlabs' ? 'gemini-2.5-flash' : 'gpt-4o')}
                                     onValueChange={(value: string) => onDraftUpdate({ llmModel: value })}
                                 >
                                     <SelectTrigger className="text-sm">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {(draft.provider === 'retell' ? RETELL_LLM_MODELS : VAPI_LLM_MODELS).map((m) => (
+                                        {(draft.provider === 'retell' ? RETELL_LLM_MODELS : draft.provider === 'elevenlabs' ? ELEVENLABS_LLM_MODELS : VAPI_LLM_MODELS).map((m) => (
                                             <SelectItem key={m.value} value={m.value}>
                                                 <span>{m.label}</span>
                                                 <span className="text-muted-foreground ml-2 text-xs">${m.costPerMin.toFixed(3)}/min</span>
@@ -308,9 +303,14 @@ export function AgentBuilderPreview({
                         )}
 
                         {/* Cost Estimate */}
-                        {draft.provider === 'retell' && (() => {
-                            const voiceCost = RETELL_VOICE_MODELS.find(m => m.value === draft.voiceModel)?.costPerMin ?? 0.08;
-                            const llmCost = RETELL_LLM_MODELS.find(m => m.value === draft.llmModel)?.costPerMin ?? 0.045;
+                        {(draft.provider === 'retell' || draft.provider === 'elevenlabs') && (() => {
+                            const isEL = draft.provider === 'elevenlabs';
+                            const voiceCost = isEL
+                                ? (ELEVENLABS_VOICE_MODELS.find(m => m.value === draft.voiceModel)?.costPerMin ?? 0.04)
+                                : (RETELL_VOICE_MODELS.find(m => m.value === draft.voiceModel)?.costPerMin ?? 0.08);
+                            const llmCost = isEL
+                                ? (ELEVENLABS_LLM_MODELS.find(m => m.value === draft.llmModel)?.costPerMin ?? 0.005)
+                                : (RETELL_LLM_MODELS.find(m => m.value === draft.llmModel)?.costPerMin ?? 0.045);
                             const telCost = TELEPHONY_COST_PER_MIN;
                             const total = voiceCost + llmCost + telCost;
                             return (

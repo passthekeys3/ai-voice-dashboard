@@ -154,6 +154,7 @@ function sanitizeAgencyForClient(agency: Agency): Agency {
         vapi_api_key: mask(agency.vapi_api_key),
         vapi_public_key: mask(agency.vapi_public_key),
         bland_api_key: mask(agency.bland_api_key),
+        elevenlabs_api_key: mask(agency.elevenlabs_api_key),
         integrations: safeIntegrations,
     };
 }

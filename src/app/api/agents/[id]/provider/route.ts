@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { VoiceProvider } from '@/types';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { updateRetellAgent, getRetellAgent, getRetellLLM, updateRetellLLM, type UpdateRetellLLMParams } from '@/lib/providers/retell';
 import { getVapiAssistant, updateVapiAssistant, extractVapiSystemPrompt, usesVapiMessagesFormat } from '@/lib/providers/vapi';
 import { getBlandPathway, updateBlandPathway } from '@/lib/providers/bland';
+import { getElevenLabsAgent, updateElevenLabsAgent } from '@/lib/providers/elevenlabs';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 import { isValidUuid } from '@/lib/validation';
 
@@ -42,7 +44,7 @@ export async function GET(
 
         // Resolve API keys (client key → agency key fallback)
         const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, agent.client_id);
-        const apiKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
+        const apiKey = getProviderKey(resolvedKeys, agent.provider as VoiceProvider);
 
         if (!apiKey) {
             return NextResponse.json({ error: 'No API key configured for this provider' }, { status: 400 });
@@ -121,6 +123,26 @@ export async function GET(
                 console.error('Error fetching Bland pathway:', err instanceof Error ? err.message : 'Unknown error');
                 return NextResponse.json({ error: 'Failed to fetch from provider' }, { status: 500 });
             }
+        } else if (agent.provider === 'elevenlabs') {
+            try {
+                const elAgent = await getElevenLabsAgent(apiKey, agent.external_id);
+                const convConfig = elAgent.conversation_config;
+
+                return NextResponse.json({
+                    data: {
+                        agent_name: elAgent.name || '',
+                        voice_id: convConfig?.tts?.voice_id || '',
+                        voice_model: convConfig?.tts?.model_id || agent.config?.voice_model || '',
+                        language: convConfig?.agent?.language || 'en',
+                        prompt: convConfig?.agent?.prompt?.prompt || '',
+                        llm_model: convConfig?.agent?.prompt?.llm || agent.config?.llm_model || '',
+                        first_message: convConfig?.agent?.first_message || '',
+                    }
+                });
+            } catch (err) {
+                console.error('Error fetching ElevenLabs agent:', err instanceof Error ? err.message : 'Unknown error');
+                return NextResponse.json({ error: 'Failed to fetch from provider' }, { status: 500 });
+            }
         }
 
         return NextResponse.json({ error: 'No API key configured for this provider' }, { status: 400 });
@@ -171,7 +193,7 @@ export async function PATCH(
             ? body._original_client_id   // Client assignment is changing — use original keys
             : agent.client_id;           // Normal update — use current keys
         const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, keyResolutionClientId);
-        const apiKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
+        const apiKey = getProviderKey(resolvedKeys, agent.provider as VoiceProvider);
 
         if (!apiKey) {
             return NextResponse.json({ error: 'No API key configured for this provider' }, { status: 400 });
@@ -364,6 +386,51 @@ export async function PATCH(
 
             } catch (err) {
                 console.error('Error updating Bland pathway:', err instanceof Error ? err.message : 'Unknown error');
+                return NextResponse.json(
+                    { error: 'Failed to update agent on provider' },
+                    { status: 500 }
+                );
+            }
+        } else if (agent.provider === 'elevenlabs') {
+            try {
+                const updateData: Parameters<typeof updateElevenLabsAgent>[2] = {};
+
+                if (body.agent_name !== undefined) updateData.name = body.agent_name;
+                if (body.prompt !== undefined) updateData.prompt = body.prompt;
+                if (body.first_message !== undefined) updateData.firstMessage = body.first_message;
+                if (body.llm_model !== undefined) updateData.llmModel = body.llm_model;
+                if (body.voice_model !== undefined) updateData.voiceModel = body.voice_model;
+                if (body.voice_id !== undefined) updateData.voiceId = body.voice_id;
+                if (body.language !== undefined) updateData.language = body.language;
+
+                if (Object.keys(updateData).length > 0) {
+                    await updateElevenLabsAgent(apiKey, agent.external_id, updateData);
+                }
+
+                // Store in local config
+                const newConfig = {
+                    ...agent.config,
+                    agent_name: body.agent_name !== undefined ? body.agent_name : agent.config?.agent_name,
+                    prompt: body.prompt !== undefined ? body.prompt : agent.config?.prompt,
+                    first_message: body.first_message !== undefined ? body.first_message : agent.config?.first_message,
+                    llm_model: body.llm_model !== undefined ? body.llm_model : agent.config?.llm_model,
+                    voice_model: body.voice_model !== undefined ? body.voice_model : agent.config?.voice_model,
+                    voice_id: body.voice_id !== undefined ? body.voice_id : agent.config?.voice_id,
+                    language: body.language !== undefined ? body.language : agent.config?.language,
+                };
+
+                await supabase
+                    .from('agents')
+                    .update({
+                        config: newConfig,
+                        ...(body.agent_name !== undefined ? { name: body.agent_name } : {}),
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', id)
+                    .eq('agency_id', user.agency.id);
+
+            } catch (err) {
+                console.error('Error updating ElevenLabs agent:', err instanceof Error ? err.message : 'Unknown error');
                 return NextResponse.json(
                     { error: 'Failed to update agent on provider' },
                     { status: 500 }

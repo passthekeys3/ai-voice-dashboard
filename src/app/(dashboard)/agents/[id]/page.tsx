@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { VoiceProvider } from '@/types';
 
 import { requireAuth, isAgencyAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
@@ -156,7 +157,7 @@ export default async function AgentDetailPage({
                     <div className="space-y-6">
                         <AgentEditor
                             agentId={agent.id}
-                            provider={agent.provider as 'retell' | 'vapi' | 'bland'}
+                            provider={agent.provider as VoiceProvider}
                             isActive={agent.is_active}
                             clientId={agent.client_id}
                             clients={clients}
@@ -168,15 +169,15 @@ export default async function AgentDetailPage({
                             <TestCall
                                 agentId={agent.id}
                                 agentName={agent.name}
-                                provider={agent.provider as 'retell' | 'vapi' | 'bland'}
+                                provider={agent.provider as VoiceProvider}
                             />
                         )}
 
-                        {isAdmin && (agent.provider === 'retell' || agent.provider === 'vapi' || agent.provider === 'bland') && (
+                        {isAdmin && (agent.provider === 'retell' || agent.provider === 'vapi' || agent.provider === 'bland' || agent.provider === 'elevenlabs') && (
                             <>
                                 <KnowledgeBaseEditor
                                     agentId={agent.id}
-                                    provider={agent.provider as 'retell' | 'vapi' | 'bland'}
+                                    provider={agent.provider as VoiceProvider}
                                 />
                                 <WidgetSettings
                                     agentId={agent.id}

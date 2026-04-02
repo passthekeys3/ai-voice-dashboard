@@ -35,6 +35,7 @@ const providerIconStyles: Record<string, string> = {
     retell: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400',
     vapi: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400',
     bland: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400',
+    elevenlabs: 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400',
 };
 
 function formatPhoneNumber(number: string) {
@@ -54,9 +55,10 @@ export function AgentCard({ agent, phoneNumber, showDelete = true, configBasePat
         retell: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
         vapi: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
         bland: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+        elevenlabs: 'bg-purple-100 text-purple-600 border-purple-200 dark:bg-purple-900 dark:text-purple-400 dark:border-purple-800',
     };
 
-    const providerDisplayName = agent.provider === 'bland' ? 'Bland.ai' : agent.provider.charAt(0).toUpperCase() + agent.provider.slice(1);
+    const providerDisplayName = agent.provider === 'bland' ? 'Bland.ai' : agent.provider === 'elevenlabs' ? 'ElevenLabs' : agent.provider.charAt(0).toUpperCase() + agent.provider.slice(1);
 
     const handleDelete = async () => {
         setDeleting(true);

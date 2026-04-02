@@ -6,7 +6,7 @@
 import { getRetellAgent, getRetellLLM } from '@/lib/providers/retell';
 import { getVapiAssistant, extractVapiSystemPrompt } from '@/lib/providers/vapi';
 import { getBlandPathway } from '@/lib/providers/bland';
-import type { AgentConfig } from '@/types';
+import type { AgentConfig, VoiceProvider } from '@/types';
 
 export interface AgentPromptResult {
     prompt: string;
@@ -14,7 +14,7 @@ export interface AgentPromptResult {
 }
 
 export async function getAgentPrompt(params: {
-    provider: 'retell' | 'vapi' | 'bland';
+    provider: VoiceProvider;
     apiKey: string;
     externalId: string;
     localConfig?: AgentConfig;
@@ -52,6 +52,14 @@ export async function getAgentPrompt(params: {
                 return {
                     prompt: pathway.description,
                 };
+            }
+        } else if (provider === 'elevenlabs') {
+            // ElevenLabs stores prompts in the local config
+            if (localConfig) {
+                const prompt = (localConfig.system_prompt as string) || (localConfig.prompt as string);
+                if (prompt) {
+                    return { prompt };
+                }
             }
         }
     } catch (error) {

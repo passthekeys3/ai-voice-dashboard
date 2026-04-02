@@ -9,6 +9,7 @@ import type {
   TranscriptLine,
   ConnectionStatus,
 } from '@/types/realtime';
+import type { VoiceProvider } from '@/types';
 import { parseTranscript } from '@/lib/utils/transcript';
 
 interface UseRealtimeCallsOptions {
@@ -94,7 +95,7 @@ export function useRealtimeCalls({
             from_number?: string;
             to_number?: string;
             direction: string;
-            provider: 'retell' | 'vapi' | 'bland';
+            provider: VoiceProvider;
           };
 
           // Only add if it's an active call

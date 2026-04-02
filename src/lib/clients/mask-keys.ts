@@ -1,6 +1,7 @@
 import { decrypt } from '@/lib/crypto';
+import { PROVIDER_KEY_FIELDS } from '@/lib/constants/config';
 
-const API_KEY_FIELDS = ['retell_api_key', 'vapi_api_key', 'vapi_public_key', 'bland_api_key'] as const;
+const API_KEY_FIELDS = [...PROVIDER_KEY_FIELDS, 'vapi_public_key'] as const;
 
 /**
  * Mask provider API keys on a client record for safe frontend display.

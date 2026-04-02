@@ -11,6 +11,8 @@ import {
 } from '@/lib/api/response';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 import { isValidExternalId } from '@/lib/validation';
+import type { VoiceProvider } from '@/types';
+import { VOICE_PROVIDERS } from '@/lib/constants/config';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -40,8 +42,7 @@ export const POST = withErrorHandling(async (
     const supabase = await createClient();
 
     // Validate provider param
-    const validProviders = ['retell', 'vapi', 'bland'];
-    if (!validProviders.includes(providerParam)) {
+    if (!(VOICE_PROVIDERS as readonly string[]).includes(providerParam)) {
         return badRequest('Unsupported provider');
     }
 
@@ -72,7 +73,7 @@ export const POST = withErrorHandling(async (
 
     // Resolve API key: client key → agency key fallback
     const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, clientId);
-    const apiKey = getProviderKey(resolvedKeys, provider as 'retell' | 'vapi' | 'bland');
+    const apiKey = getProviderKey(resolvedKeys, provider as VoiceProvider);
 
     if (!apiKey) {
         return badRequest(`${provider} API key not configured`);
@@ -117,6 +118,8 @@ export const POST = withErrorHandling(async (
             console.error('Failed to end Bland call:', endResponse.status);
             return externalServiceError('Bland', 'Failed to end call');
         }
+    } else if (provider === 'elevenlabs') {
+        return badRequest('ElevenLabs does not support programmatic call ending');
     } else {
         return badRequest('Unsupported provider');
     }

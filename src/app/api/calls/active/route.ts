@@ -5,6 +5,7 @@ import { listBlandActiveCalls } from '@/lib/providers/bland';
 import { listVapiCalls } from '@/lib/providers/vapi';
 import { decrypt } from '@/lib/crypto';
 import { getRedisClient } from '@/lib/redis';
+import { PROVIDER_KEY_SELECT, type ProviderKeyRow } from '@/lib/constants/config';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 const ACTIVE_CALLS_CACHE_TTL = 8; // seconds — balance between freshness and provider API load
@@ -47,17 +48,18 @@ export async function GET(_request: NextRequest) {
         // Get agency's API keys for all providers (decrypt from DB)
         const { data: agencyRaw } = await supabase
             .from('agencies')
-            .select('retell_api_key, vapi_api_key, bland_api_key')
+            .select(PROVIDER_KEY_SELECT)
             .eq('id', user.agency.id)
-            .single();
+            .single() as { data: ProviderKeyRow | null };
 
         const agency = agencyRaw ? {
             retell_api_key: decrypt(agencyRaw.retell_api_key) ?? agencyRaw.retell_api_key,
             vapi_api_key: decrypt(agencyRaw.vapi_api_key) ?? agencyRaw.vapi_api_key,
             bland_api_key: decrypt(agencyRaw.bland_api_key) ?? agencyRaw.bland_api_key,
+            elevenlabs_api_key: decrypt(agencyRaw.elevenlabs_api_key) ?? agencyRaw.elevenlabs_api_key,
         } : null;
 
-        if (!agency?.retell_api_key && !agency?.vapi_api_key && !agency?.bland_api_key) {
+        if (!agency?.retell_api_key && !agency?.vapi_api_key && !agency?.bland_api_key && !agency?.elevenlabs_api_key) {
             return NextResponse.json({ data: [] });
         }
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { VoiceProvider } from '@/types';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         // Resolve API keys (client-level override when applicable)
         const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, agent.client_id);
-        const providerKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
+        const providerKey = getProviderKey(resolvedKeys, agent.provider as VoiceProvider);
 
         if (agent.provider === 'retell') {
             if (!providerKey) {

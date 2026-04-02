@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
+import { VOICE_PROVIDERS } from '@/lib/constants/config';
 import {
     unauthorized,
     forbidden,
@@ -56,7 +57,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     const validationError = validateRequest([
         { field: 'name', value: name, required: true, type: 'string', minLength: 1, maxLength: 100 },
         { field: 'provider', value: provider, required: true, type: 'string', custom: (v) =>
-            ['retell', 'vapi', 'bland'].includes(v as string) ? null : 'provider must be retell, vapi, or bland'
+            (VOICE_PROVIDERS as readonly string[]).includes(v as string) ? null : 'provider must be retell, vapi, bland, or elevenlabs'
         },
         { field: 'external_id', value: external_id, required: true, type: 'string' },
     ]);

@@ -16,11 +16,13 @@ export interface ResolvedApiKeys {
     retell_api_key: string | null;
     vapi_api_key: string | null;
     bland_api_key: string | null;
+    elevenlabs_api_key: string | null;
     /** Which source each key came from (useful for billing & debugging) */
     source: {
         retell: KeySource;
         vapi: KeySource;
         bland: KeySource;
+        elevenlabs: KeySource;
     };
 }
 
@@ -41,7 +43,7 @@ export async function resolveProviderApiKeys(
     // Fetch agency keys + plan_type to determine key resolution strategy
     const { data: agency } = await supabase
         .from('agencies')
-        .select('retell_api_key, vapi_api_key, bland_api_key, plan_type')
+        .select('retell_api_key, vapi_api_key, bland_api_key, elevenlabs_api_key, plan_type')
         .eq('id', agencyId)
         .single();
 
@@ -51,6 +53,7 @@ export async function resolveProviderApiKeys(
     const platformRetellKey = process.env.PLATFORM_RETELL_API_KEY || null;
     const platformVapiKey = process.env.PLATFORM_VAPI_API_KEY || null;
     const platformBlandKey = process.env.PLATFORM_BLAND_API_KEY || null;
+    const platformElevenlabsKey = process.env.PLATFORM_ELEVENLABS_API_KEY || null;
 
     // Managed agencies always use platform keys to ensure consistent metered billing.
     // Skip client/agency key lookups entirely — all calls route through our platform account.
@@ -59,10 +62,12 @@ export async function resolveProviderApiKeys(
             retell_api_key: platformRetellKey,
             vapi_api_key: platformVapiKey,
             bland_api_key: platformBlandKey,
+            elevenlabs_api_key: platformElevenlabsKey,
             source: {
                 retell: platformRetellKey ? 'platform' : null,
                 vapi: platformVapiKey ? 'platform' : null,
                 bland: platformBlandKey ? 'platform' : null,
+                elevenlabs: platformElevenlabsKey ? 'platform' : null,
             },
         };
     }
@@ -72,12 +77,13 @@ export async function resolveProviderApiKeys(
         retell_api_key?: string | null;
         vapi_api_key?: string | null;
         bland_api_key?: string | null;
+        elevenlabs_api_key?: string | null;
     } | null = null;
 
     if (clientId) {
         const { data: client } = await supabase
             .from('clients')
-            .select('retell_api_key, vapi_api_key, bland_api_key')
+            .select('retell_api_key, vapi_api_key, bland_api_key, elevenlabs_api_key')
             .eq('id', clientId)
             .eq('agency_id', agencyId) // Cross-tenant protection
             .single();
@@ -99,15 +105,18 @@ export async function resolveProviderApiKeys(
     const retell = resolve(clientKeys?.retell_api_key, agency?.retell_api_key, platformRetellKey);
     const vapi = resolve(clientKeys?.vapi_api_key, agency?.vapi_api_key, platformVapiKey);
     const bland = resolve(clientKeys?.bland_api_key, agency?.bland_api_key, platformBlandKey);
+    const elevenlabs = resolve(clientKeys?.elevenlabs_api_key, agency?.elevenlabs_api_key, platformElevenlabsKey);
 
     return {
         retell_api_key: retell.key,
         vapi_api_key: vapi.key,
         bland_api_key: bland.key,
+        elevenlabs_api_key: elevenlabs.key,
         source: {
             retell: retell.source,
             vapi: vapi.source,
             bland: bland.source,
+            elevenlabs: elevenlabs.source,
         },
     };
 }
@@ -123,6 +132,7 @@ export function getProviderKey(
         case 'retell': return keys.retell_api_key;
         case 'vapi': return keys.vapi_api_key;
         case 'bland': return keys.bland_api_key;
+        case 'elevenlabs': return keys.elevenlabs_api_key;
     }
 }
 
@@ -136,6 +146,7 @@ export function autoSelectProvider(
     if (keys.retell_api_key) return { provider: 'retell', apiKey: keys.retell_api_key };
     if (keys.vapi_api_key) return { provider: 'vapi', apiKey: keys.vapi_api_key };
     if (keys.bland_api_key) return { provider: 'bland', apiKey: keys.bland_api_key };
+    if (keys.elevenlabs_api_key) return { provider: 'elevenlabs', apiKey: keys.elevenlabs_api_key };
     return null;
 }
 
@@ -147,15 +158,18 @@ export function decryptAgencyKeys(agency: {
     retell_api_key?: string | null;
     vapi_api_key?: string | null;
     bland_api_key?: string | null;
+    elevenlabs_api_key?: string | null;
 }): ResolvedApiKeys {
     return {
         retell_api_key: decrypt(agency.retell_api_key) ?? null,
         vapi_api_key: decrypt(agency.vapi_api_key) ?? null,
         bland_api_key: decrypt(agency.bland_api_key) ?? null,
+        elevenlabs_api_key: decrypt(agency.elevenlabs_api_key) ?? null,
         source: {
             retell: agency.retell_api_key ? 'agency' : null,
             vapi: agency.vapi_api_key ? 'agency' : null,
             bland: agency.bland_api_key ? 'agency' : null,
+            elevenlabs: agency.elevenlabs_api_key ? 'agency' : null,
         },
     };
 }

@@ -109,6 +109,39 @@ function VapiLogo({ className }: LogoProps) {
     );
 }
 
+function BlandLogo({ className }: LogoProps) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="currentColor"
+            className={className}
+            aria-hidden="true"
+        >
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H8v-2h3v2zm0-4H8V8h3v4zm5 4h-3v-6h3v6z" />
+        </svg>
+    );
+}
+
+function ElevenLabsLogo({ className }: LogoProps) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="currentColor"
+            className={className}
+            aria-hidden="true"
+        >
+            <rect x="8" y="3" width="3" height="18" rx="1.5" />
+            <rect x="13" y="3" width="3" height="18" rx="1.5" />
+        </svg>
+    );
+}
+
 const integrations = [
     { name: 'GoHighLevel', Logo: GoHighLevelLogo },
     { name: 'HubSpot', Logo: HubSpotLogo },
@@ -116,6 +149,8 @@ const integrations = [
     { name: 'Slack', Logo: SlackLogo },
     { name: 'Retell', Logo: RetellLogo },
     { name: 'Vapi', Logo: VapiLogo },
+    { name: 'Bland', Logo: BlandLogo },
+    { name: 'ElevenLabs', Logo: ElevenLabsLogo },
 ];
 
 export function IntegrationLogosSection() {

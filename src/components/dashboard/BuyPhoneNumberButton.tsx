@@ -21,6 +21,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Plus, Loader2, PhoneIcon, MapPin, Info } from 'lucide-react';
+import { PROVIDER_LABELS } from '@/lib/constants/config';
 
 interface BuyPhoneNumberButtonProps {
     agents: { id: string; name: string; provider?: string }[];
@@ -42,12 +43,6 @@ const POPULAR_AREA_CODES = [
     { code: '720', region: 'Denver, CO' },
     { code: '503', region: 'Portland, OR' },
 ];
-
-const PROVIDER_LABELS: Record<string, string> = {
-    retell: 'Retell AI',
-    vapi: 'Vapi',
-    bland: 'Bland AI',
-};
 
 export function BuyPhoneNumberButton({ agents, configuredProviders, onPurchaseComplete }: BuyPhoneNumberButtonProps) {
     const [open, setOpen] = useState(false);

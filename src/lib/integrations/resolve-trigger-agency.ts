@@ -8,8 +8,10 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AgencyTriggerRow } from '@/types';
+// Note: AGENCY_SELECT uses a literal string (not PROVIDER_KEY_SELECT) because
+// Supabase needs the literal for TypeScript type inference on the result.
 
-const AGENCY_SELECT = 'id, integrations, calling_window, retell_api_key, vapi_api_key, bland_api_key, subscription_price_id, subscription_status, beta_ends_at';
+const AGENCY_SELECT = 'id, integrations, calling_window, retell_api_key, vapi_api_key, bland_api_key, elevenlabs_api_key, subscription_price_id, subscription_status, beta_ends_at';
 
 export type ResolveTriggerResult =
     | { ok: true; agency: AgencyTriggerRow }

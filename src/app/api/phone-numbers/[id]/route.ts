@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { safeParseJson, isValidUuid } from '@/lib/validation';
 import { decrypt } from '@/lib/crypto';
+import { PROVIDER_KEY_SELECT, type ProviderKeyRow } from '@/lib/constants/config';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -133,15 +134,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         if (existing.external_id && existing.provider) {
             const { data: agency } = await supabase
                 .from('agencies')
-                .select('retell_api_key, vapi_api_key, bland_api_key')
+                .select(PROVIDER_KEY_SELECT)
                 .eq('id', user.agency.id)
-                .single();
+                .single() as { data: ProviderKeyRow | null };
 
             // Decrypt API keys from DB
             if (agency) {
                 agency.retell_api_key = decrypt(agency.retell_api_key) ?? agency.retell_api_key;
                 agency.vapi_api_key = decrypt(agency.vapi_api_key) ?? agency.vapi_api_key;
                 agency.bland_api_key = decrypt(agency.bland_api_key) ?? agency.bland_api_key;
+                agency.elevenlabs_api_key = decrypt(agency.elevenlabs_api_key) ?? agency.elevenlabs_api_key;
             }
 
             // Helper: resolve agent's external_id by our internal ID
@@ -286,9 +288,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         // Get API keys and release from the appropriate provider
         const { data: agency } = await supabase
             .from('agencies')
-            .select('retell_api_key, vapi_api_key, bland_api_key')
+            .select(PROVIDER_KEY_SELECT)
             .eq('id', user.agency.id)
-            .single();
+            .single() as { data: ProviderKeyRow | null };
 
         // Decrypt API keys from DB
         if (agency) {

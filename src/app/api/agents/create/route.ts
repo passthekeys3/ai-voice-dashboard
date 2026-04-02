@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { publishRetellAgent } from '@/lib/providers/retell';
-import { resolveProviderApiKeys } from '@/lib/providers/resolve-keys';
+import { resolveProviderApiKeys, autoSelectProvider, getProviderKey } from '@/lib/providers/resolve-keys';
+import type { VoiceProvider } from '@/types';
 import { createVapiAssistant } from '@/lib/providers/vapi';
 import { createBlandPathway } from '@/lib/providers/bland';
+import { createElevenLabsAgent } from '@/lib/providers/elevenlabs';
 import { safeParseJson } from '@/lib/validation';
-import { MAX_PROMPT_LENGTH } from '@/lib/constants/config';
+import { MAX_PROMPT_LENGTH, VOICE_PROVIDERS } from '@/lib/constants/config';
 import { isSubscriptionActive } from '@/lib/billing/tiers';
 
 const PROVIDER_API_TIMEOUT = 15_000;
@@ -56,8 +58,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Validate provider if explicitly requested
-        const VALID_PROVIDERS = ['retell', 'vapi', 'bland'];
-        if (requestedProvider && !VALID_PROVIDERS.includes(requestedProvider)) {
+        if (requestedProvider && !(VOICE_PROVIDERS as readonly string[]).includes(requestedProvider)) {
             return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
         }
 
@@ -85,21 +86,12 @@ export async function POST(request: NextRequest) {
         // Managed agencies are always routed to platform keys (enforced in resolveProviderApiKeys).
         const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id);
 
-        // Determine which provider to use (requested > auto-select: retell → vapi → bland)
-        const provider = requestedProvider || (
-            resolvedKeys.retell_api_key ? 'retell'
-            : resolvedKeys.vapi_api_key ? 'vapi'
-            : resolvedKeys.bland_api_key ? 'bland'
-            : null
-        );
-
-        const apiKeyMap: Record<string, string | null> = {
-            retell: resolvedKeys.retell_api_key,
-            vapi: resolvedKeys.vapi_api_key,
-            bland: resolvedKeys.bland_api_key,
-        };
-
-        const apiKey = apiKeyMap[provider as string];
+        // Determine which provider to use (requested > auto-select: retell → vapi → bland → elevenlabs)
+        const autoSelected = autoSelectProvider(resolvedKeys);
+        const provider = requestedProvider || autoSelected?.provider || null;
+        const apiKey = requestedProvider
+            ? getProviderKey(resolvedKeys, requestedProvider as VoiceProvider)
+            : autoSelected?.apiKey || null;
         const usingPlatformKey = !!(provider && resolvedKeys.source[provider as keyof typeof resolvedKeys.source] === 'platform');
 
         if (!provider || !apiKey) {
@@ -263,6 +255,33 @@ export async function POST(request: NextRequest) {
             }
 
             agentConfig.system_prompt = system_prompt;
+            if (voice_id) agentConfig.voice_id = voice_id;
+
+        } else if (provider === 'elevenlabs') {
+            // Create an ElevenLabs Conversational AI agent
+            try {
+                const elAgent = await createElevenLabsAgent(apiKey, {
+                    name: name.trim(),
+                    prompt: system_prompt || undefined,
+                    firstMessage: first_message || undefined,
+                    llmModel: llm_model || 'gemini-2.5-flash',
+                    voiceModel: voice_model || 'eleven_flash_v2',
+                    voiceId: voice_id || undefined,
+                    webhookUrl: `${appUrl}/api/webhooks/elevenlabs`,
+                });
+
+                externalId = elAgent.agent_id;
+            } catch (err) {
+                console.error('ElevenLabs create agent error:', err instanceof Error ? err.message : 'Unknown error');
+                return NextResponse.json({
+                    error: 'Failed to create agent on provider'
+                }, { status: 500 });
+            }
+
+            agentConfig.system_prompt = system_prompt;
+            agentConfig.first_message = first_message;
+            agentConfig.llm_model = llm_model || 'gemini-2.5-flash';
+            agentConfig.voice_model = voice_model || 'eleven_flash_v2';
             if (voice_id) agentConfig.voice_id = voice_id;
 
         } else {

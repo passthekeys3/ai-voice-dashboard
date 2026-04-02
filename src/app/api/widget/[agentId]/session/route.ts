@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { VoiceProvider } from '@/types';
 import { createServiceClient } from '@/lib/supabase/server';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 import { checkRateLimitAsync } from '@/lib/rate-limit';
@@ -96,7 +97,7 @@ export async function POST(
 
         // Resolve API keys (client-level override when applicable)
         const resolvedKeys = await resolveProviderApiKeys(supabase, agent.agency_id, agent.client_id);
-        const providerKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
+        const providerKey = getProviderKey(resolvedKeys, agent.provider as VoiceProvider);
 
         // Get agency branding (always from agency level)
         const { data: agency, error: agencyError } = await supabase

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { VoiceProvider } from '@/types';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
@@ -59,7 +60,7 @@ export const GET = withErrorHandling(async (request: NextRequest, { params }: Ro
 
         // Resolve provider API key
         const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, agent.client_id);
-        const apiKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
+        const apiKey = getProviderKey(resolvedKeys, agent.provider as VoiceProvider);
 
         if (!apiKey) {
             return NextResponse.json({ error: `No ${agent.provider} API key configured` }, { status: 400 });
@@ -172,7 +173,7 @@ export const POST = withErrorHandling(async (request: NextRequest, { params }: R
 
         // Resolve provider API key
         const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, agent.client_id);
-        const apiKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
+        const apiKey = getProviderKey(resolvedKeys, agent.provider as VoiceProvider);
 
         if (!apiKey) {
             return NextResponse.json({ error: `No ${agent.provider} API key configured` }, { status: 400 });
@@ -269,7 +270,7 @@ export const DELETE = withErrorHandling(async (request: NextRequest, { params }:
         }
 
         const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, agent.client_id);
-        const apiKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
+        const apiKey = getProviderKey(resolvedKeys, agent.provider as VoiceProvider);
 
         if (!apiKey) {
             return NextResponse.json({ error: `No ${agent.provider} API key configured` }, { status: 400 });

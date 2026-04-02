@@ -77,7 +77,7 @@ export default function PrivacyPage() {
                     <ul className="list-disc pl-4 sm:pl-5 space-y-2">
                         <li><strong>Stripe</strong> — Payment processing and subscription management.</li>
                         <li><strong>Resend</strong> — Transactional email delivery.</li>
-                        <li><strong>Retell AI, Vapi, Bland</strong> — Voice provider integrations (you connect your own accounts).</li>
+                        <li><strong>Retell AI, Vapi, Bland, ElevenLabs</strong> — Voice provider integrations (you connect your own accounts).</li>
                         <li><strong>GoHighLevel, HubSpot</strong> — CRM integrations for syncing contacts, deals, and call activity (you authorize access via OAuth).</li>
                         <li><strong>Vercel</strong> — Application hosting and serverless infrastructure.</li>
                         <li><strong>Sentry</strong> — Error monitoring and performance tracking.</li>

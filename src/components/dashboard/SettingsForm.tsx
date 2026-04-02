@@ -42,6 +42,7 @@ export function SettingsForm({ agency }: SettingsFormProps) {
         vapiApiKey: isMasked(agency.vapi_api_key),
         vapiPublicKey: isMasked(agency.vapi_public_key),
         blandApiKey: isMasked(agency.bland_api_key),
+        elevenlabsApiKey: isMasked(agency.elevenlabs_api_key),
     }));
 
     const [formData, setFormData] = useState({
@@ -61,6 +62,7 @@ export function SettingsForm({ agency }: SettingsFormProps) {
         vapiApiKey: initSecret(agency.vapi_api_key),
         vapiPublicKey: initSecret(agency.vapi_public_key),
         blandApiKey: initSecret(agency.bland_api_key),
+        elevenlabsApiKey: initSecret(agency.elevenlabs_api_key),
     });
 
     // Whether a key exists on the server: either user typed a new value or a masked value was present
@@ -84,6 +86,8 @@ export function SettingsForm({ agency }: SettingsFormProps) {
             else if (!hadMasked.vapiPublicKey) payload.vapi_public_key = null;
             if (formData.blandApiKey) payload.bland_api_key = formData.blandApiKey;
             else if (!hadMasked.blandApiKey) payload.bland_api_key = null;
+            if (formData.elevenlabsApiKey) payload.elevenlabs_api_key = formData.elevenlabsApiKey;
+            else if (!hadMasked.elevenlabsApiKey) payload.elevenlabs_api_key = null;
 
             const response = await fetch('/api/settings', {
                 method: 'PATCH',
@@ -714,6 +718,26 @@ export function SettingsForm({ agency }: SettingsFormProps) {
                             </a>
                         </p>
                     </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="elevenlabsApiKey">ElevenLabs API Key</Label>
+                        <Input
+                            id="elevenlabsApiKey"
+                            type="password"
+                            value={formData.elevenlabsApiKey}
+                            onChange={(e) => {
+                                setFormData({ ...formData, elevenlabsApiKey: e.target.value });
+                                setKeysSaved(false);
+                                setSyncResult(null);
+                            }}
+                            placeholder={hadMasked.elevenlabsApiKey ? `Key set (${agency.elevenlabs_api_key}) — type to replace` : 'Enter your ElevenLabs API key'}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Find your API key at{' '}
+                            <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                elevenlabs.io/app/settings/api-keys
+                            </a>
+                        </p>
+                    </div>
 
                     {keysError && (
                         <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/50 rounded-md">
@@ -732,7 +756,7 @@ export function SettingsForm({ agency }: SettingsFormProps) {
                     <div className="flex gap-3">
                         <Button
                             onClick={handleSaveApiKeys}
-                            disabled={savingKeys || (!hasKey('retellApiKey', formData.retellApiKey) && !hasKey('vapiApiKey', formData.vapiApiKey) && !hasKey('vapiPublicKey', formData.vapiPublicKey) && !hasKey('blandApiKey', formData.blandApiKey))}
+                            disabled={savingKeys || (!hasKey('retellApiKey', formData.retellApiKey) && !hasKey('vapiApiKey', formData.vapiApiKey) && !hasKey('vapiPublicKey', formData.vapiPublicKey) && !hasKey('blandApiKey', formData.blandApiKey) && !hasKey('elevenlabsApiKey', formData.elevenlabsApiKey))}
                             variant={keysSaved ? 'outline' : 'default'}
                         >
                             {savingKeys ? (

@@ -109,6 +109,9 @@ function PreviewPanel({ isInView }: { isInView: boolean }) {
                     <div className="flex-1 text-[9px] px-2 py-1 rounded-md border border-input bg-background text-muted-foreground text-center">
                         Bland
                     </div>
+                    <div className="flex-1 text-[9px] px-2 py-1 rounded-md border border-input bg-background text-muted-foreground text-center">
+                        ElevenLabs
+                    </div>
                 </div>
             </div>
 

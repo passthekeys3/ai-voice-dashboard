@@ -1,3 +1,5 @@
+import type { VoiceProvider } from './database';
+
 // Real-time WebSocket event types for live call monitoring
 
 export type RealtimeEventType =
@@ -54,7 +56,7 @@ export interface ActiveCall {
   from_number?: string;
   to_number?: string;
   direction: string;
-  provider: 'retell' | 'vapi' | 'bland';
+  provider: VoiceProvider;
 }
 
 export interface LiveCallDetails extends ActiveCall {

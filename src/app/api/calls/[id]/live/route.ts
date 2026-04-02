@@ -5,6 +5,7 @@ import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-
 import { getBlandCall } from '@/lib/providers/bland';
 import { isValidExternalId } from '@/lib/validation';
 import { parseTranscript } from '@/lib/utils/transcript';
+import { VOICE_PROVIDERS } from '@/lib/constants/config';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
@@ -25,8 +26,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
         }
         const providerHint = request.nextUrl.searchParams.get('provider') || 'retell';
-        if (!['retell', 'vapi', 'bland'].includes(providerHint)) {
-            return NextResponse.json({ error: 'Invalid provider. Must be retell, vapi, or bland.' }, { status: 400 });
+        if (!(VOICE_PROVIDERS as readonly string[]).includes(providerHint)) {
+            return NextResponse.json({ error: 'Invalid provider. Must be retell, vapi, bland, or elevenlabs.' }, { status: 400 });
         }
         const supabase = await createClient();
 

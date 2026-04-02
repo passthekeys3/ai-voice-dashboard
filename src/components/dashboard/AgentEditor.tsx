@@ -19,7 +19,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Sparkles, Loader2, ChevronDown, ChevronUp, RefreshCw, Shield, Zap, Info } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
-import { RETELL_VOICE_MODELS, RETELL_LLM_MODELS, VAPI_LLM_MODELS, TELEPHONY_COST_PER_MIN } from '@/lib/constants/config';
+import { RETELL_VOICE_MODELS, RETELL_LLM_MODELS, VAPI_LLM_MODELS, ELEVENLABS_LLM_MODELS, ELEVENLABS_VOICE_MODELS, TELEPHONY_COST_PER_MIN } from '@/lib/constants/config';
+import type { VoiceProvider } from '@/types';
 
 interface PromptSuggestion {
     title: string;
@@ -29,7 +30,7 @@ interface PromptSuggestion {
 
 interface AgentEditorProps {
     agentId: string;
-    provider: 'retell' | 'vapi' | 'bland';
+    provider: VoiceProvider;
     isActive: boolean;
     clientId: string | null;
     clients: { id: string; name: string }[];
@@ -141,7 +142,7 @@ export function AgentEditor({
         (config as { voice_model?: string }).voice_model || 'eleven_v3'
     );
     const [llmModel, setLlmModel] = useState(
-        (config as { llm_model?: string }).llm_model || (provider === 'retell' ? 'gpt-4.1' : 'gpt-4o')
+        (config as { llm_model?: string }).llm_model || (provider === 'retell' ? 'gpt-4.1' : provider === 'elevenlabs' ? 'gemini-2.5-flash' : 'gpt-4o')
     );
 
     // Safety guardrails state (Retell only)
@@ -172,6 +173,22 @@ export function AgentEditor({
                     }
                 })
                 .catch(err => console.error('Error fetching voices:', err))
+                .finally(() => setLoadingVoices(false));
+        } else if (provider === 'elevenlabs') {
+            // Fetch voices from ElevenLabs
+            setLoadingVoices(true);
+            fetch('/api/voices?provider=elevenlabs')
+                .then(res => res.ok ? res.json() : null)
+                .then(data => {
+                    if (data?.data) {
+                        setVoices(data.data.map((v: { id: string; name: string; provider?: string }) => ({
+                            id: v.id,
+                            name: v.name,
+                            provider: v.provider,
+                        })));
+                    }
+                })
+                .catch(err => console.error('Error fetching ElevenLabs voices:', err))
                 .finally(() => setLoadingVoices(false));
         } else if (provider === 'vapi') {
             // Use known voice lists based on the selected TTS provider
@@ -298,6 +315,11 @@ export function AgentEditor({
                 providerPayload.responsiveness = responsiveness;
                 providerPayload.enable_safety_guardrails = guardrailsEnabled;
                 providerPayload.safety_guardrails_categories = guardrailCategories;
+            } else if (provider === 'elevenlabs') {
+                providerPayload.voice_id = voiceId;
+                providerPayload.voice_model = voiceModel;
+                providerPayload.llm_model = llmModel;
+                providerPayload.language = language;
             } else if (provider === 'vapi') {
                 providerPayload.voice_id = voiceId;
                 providerPayload.voice_provider = voiceProvider;
@@ -380,7 +402,7 @@ export function AgentEditor({
             <Tabs defaultValue="general" className="w-full">
                 <TabsList className="w-full mb-4">
                     <TabsTrigger value="general" className="flex-1">General</TabsTrigger>
-                    {(provider === 'retell' || provider === 'vapi') && (
+                    {(provider === 'retell' || provider === 'vapi' || provider === 'elevenlabs') && (
                         <TabsTrigger value="voice" className="flex-1">Voice & Language</TabsTrigger>
                     )}
                     <TabsTrigger value="prompt" className="flex-1">Prompt</TabsTrigger>
@@ -536,8 +558,8 @@ export function AgentEditor({
                                 )}
                             </div>
 
-                            {/* Voice Model (Retell only) */}
-                            {provider === 'retell' && (
+                            {/* Voice Model (Retell + ElevenLabs) */}
+                            {(provider === 'retell' || provider === 'elevenlabs') && (
                                 <div className="space-y-2">
                                     <Label>Voice Model</Label>
                                     <Select value={voiceModel} onValueChange={setVoiceModel}>
@@ -545,7 +567,7 @@ export function AgentEditor({
                                             <SelectValue placeholder="Select voice model" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {RETELL_VOICE_MODELS.map((m) => (
+                                            {(provider === 'elevenlabs' ? ELEVENLABS_VOICE_MODELS : RETELL_VOICE_MODELS).map((m) => (
                                                 <SelectItem key={m.value} value={m.value}>
                                                     {m.label} — ${m.costPerMin.toFixed(3)}/min
                                                 </SelectItem>
@@ -555,7 +577,7 @@ export function AgentEditor({
                                 </div>
                             )}
 
-                            {/* LLM Model (Retell + Vapi) */}
+                            {/* LLM Model (Retell + Vapi + ElevenLabs) */}
                             <div className="space-y-2">
                                 <Label>LLM Model</Label>
                                 <Select value={llmModel} onValueChange={setLlmModel}>
@@ -563,7 +585,7 @@ export function AgentEditor({
                                         <SelectValue placeholder="Select LLM model" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {(provider === 'retell' ? RETELL_LLM_MODELS : VAPI_LLM_MODELS).map((m) => (
+                                        {(provider === 'retell' ? RETELL_LLM_MODELS : provider === 'elevenlabs' ? ELEVENLABS_LLM_MODELS : VAPI_LLM_MODELS).map((m) => (
                                             <SelectItem key={m.value} value={m.value}>
                                                 {m.label} — ${m.costPerMin.toFixed(3)}/min
                                             </SelectItem>
@@ -572,10 +594,15 @@ export function AgentEditor({
                                 </Select>
                             </div>
 
-                            {/* Cost Estimate (Retell) */}
-                            {provider === 'retell' && (() => {
-                                const voiceCost = RETELL_VOICE_MODELS.find(m => m.value === voiceModel)?.costPerMin ?? 0.08;
-                                const llmCost = RETELL_LLM_MODELS.find(m => m.value === llmModel)?.costPerMin ?? 0.045;
+                            {/* Cost Estimate (Retell + ElevenLabs) */}
+                            {(provider === 'retell' || provider === 'elevenlabs') && (() => {
+                                const isEL = provider === 'elevenlabs';
+                                const voiceCost = isEL
+                                    ? (ELEVENLABS_VOICE_MODELS.find(m => m.value === voiceModel)?.costPerMin ?? 0.04)
+                                    : (RETELL_VOICE_MODELS.find(m => m.value === voiceModel)?.costPerMin ?? 0.08);
+                                const llmCost = isEL
+                                    ? (ELEVENLABS_LLM_MODELS.find(m => m.value === llmModel)?.costPerMin ?? 0.005)
+                                    : (RETELL_LLM_MODELS.find(m => m.value === llmModel)?.costPerMin ?? 0.045);
                                 const telCost = TELEPHONY_COST_PER_MIN;
                                 const total = voiceCost + llmCost + telCost;
                                 return (

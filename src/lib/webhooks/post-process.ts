@@ -18,10 +18,10 @@ import { analyzeCallTranscript, shouldAnalyzeCall } from '@/lib/analysis/call-an
 import { resolveIntegrations, createTokenRefreshCallback } from '@/lib/integrations/resolve';
 import { executeWorkflows } from '@/lib/workflows/executor';
 import { waitUntil } from '@vercel/functions';
-import type { Workflow } from '@/types';
+import type { Workflow, VoiceProvider } from '@/types';
 
 // ── Normalized call interface ────────────────────────────
-// All 3 providers map their payloads into this shape before calling the pipeline.
+// All 4 providers map their payloads into this shape before calling the pipeline.
 
 export interface ProcessedCall {
     callId: string;
@@ -29,7 +29,7 @@ export interface ProcessedCall {
     agentName: string;
     agencyId: string;
     clientId: string | null;
-    provider: 'retell' | 'vapi' | 'bland';
+    provider: VoiceProvider;
     status: string;
     direction: 'inbound' | 'outbound';
     durationSeconds: number;

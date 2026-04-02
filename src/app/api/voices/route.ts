@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
 import { decrypt } from '@/lib/crypto';
 import { listBlandVoices } from '@/lib/providers/bland';
+import { PROVIDER_KEY_SELECT, type ProviderKeyRow } from '@/lib/constants/config';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
@@ -58,14 +59,15 @@ export async function GET(request: NextRequest) {
         // Get API keys for all providers
         const { data: agency } = await supabase
             .from('agencies')
-            .select('retell_api_key, vapi_api_key, bland_api_key')
+            .select(PROVIDER_KEY_SELECT)
             .eq('id', user.agency.id)
-            .single();
+            .single() as { data: ProviderKeyRow | null };
 
         // Decrypt API keys (stored encrypted in DB)
         const retellKey = agency?.retell_api_key ? decrypt(agency.retell_api_key) : null;
         const vapiKey = agency?.vapi_api_key ? decrypt(agency.vapi_api_key) : null;
         const blandKey = agency?.bland_api_key ? decrypt(agency.bland_api_key) : null;
+        const elevenlabsKey = agency?.elevenlabs_api_key ? decrypt(agency.elevenlabs_api_key) : null;
 
         // Check for provider query param to fetch a specific provider's voices
         const providerParam = request.nextUrl.searchParams.get('provider');
@@ -127,6 +129,36 @@ export async function GET(request: NextRequest) {
             }
         }
 
+        // Fetch ElevenLabs voices
+        if (elevenlabsKey && (!providerParam || providerParam === 'elevenlabs')) {
+            try {
+                const elevenlabsResponse = await fetch('https://api.elevenlabs.io/v1/voices', {
+                    method: 'GET',
+                    headers: {
+                        'xi-api-key': elevenlabsKey,
+                    },
+                    signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
+                });
+
+                if (elevenlabsResponse.ok) {
+                    const data = await elevenlabsResponse.json();
+                    const voices = data.voices || [];
+                    for (const voice of voices) {
+                        allVoices.push({
+                            id: voice.voice_id,
+                            name: voice.name,
+                            provider: 'elevenlabs',
+                            gender: voice.labels?.gender,
+                            accent: voice.labels?.accent,
+                            preview_url: voice.preview_url,
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching ElevenLabs voices:', err instanceof Error ? err.message : 'Unknown error');
+            }
+        }
+
         // Vapi voices: Vapi uses third-party TTS providers (ElevenLabs, PlayHT, etc.)
         // and has no list-voices endpoint. We provide curated ElevenLabs defaults
         // that work out of the box with any Vapi account.
@@ -136,7 +168,7 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        if (allVoices.length === 0 && !retellKey && !vapiKey && !blandKey) {
+        if (allVoices.length === 0 && !retellKey && !vapiKey && !blandKey && !elevenlabsKey) {
             return NextResponse.json({ error: 'No voice provider API key configured' }, { status: 400 });
         }
 

@@ -21,7 +21,7 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
         }
 
         const body = await request.json();
-        const { name, branding, calling_window, retell_api_key, vapi_api_key, vapi_public_key, bland_api_key, integrations } = body;
+        const { name, branding, calling_window, retell_api_key, vapi_api_key, vapi_public_key, bland_api_key, elevenlabs_api_key, integrations } = body;
 
         if (retell_api_key) {
             if (typeof retell_api_key !== 'string' || retell_api_key.length > API_KEY_MAX_LENGTH) {
@@ -56,6 +56,15 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
             }
             if (!API_KEY_PATTERN.test(bland_api_key)) {
                 return NextResponse.json({ error: 'Invalid Bland API key format' }, { status: 400 });
+            }
+        }
+
+        if (elevenlabs_api_key) {
+            if (typeof elevenlabs_api_key !== 'string' || elevenlabs_api_key.length > API_KEY_MAX_LENGTH) {
+                return NextResponse.json({ error: 'Invalid ElevenLabs API key: too long' }, { status: 400 });
+            }
+            if (!API_KEY_PATTERN.test(elevenlabs_api_key)) {
+                return NextResponse.json({ error: 'Invalid ElevenLabs API key format' }, { status: 400 });
             }
         }
 
@@ -162,6 +171,7 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
         if (vapi_api_key !== undefined) updatePayload.vapi_api_key = encrypt(vapi_api_key) ?? null;
         if (vapi_public_key !== undefined) updatePayload.vapi_public_key = encrypt(vapi_public_key) ?? null;
         if (bland_api_key !== undefined) updatePayload.bland_api_key = encrypt(bland_api_key) ?? null;
+        if (elevenlabs_api_key !== undefined) updatePayload.elevenlabs_api_key = encrypt(elevenlabs_api_key) ?? null;
 
         // Deep merge integrations to prevent overwriting sibling/nested keys
         if (integrations !== undefined) {

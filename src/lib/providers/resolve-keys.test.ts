@@ -7,7 +7,8 @@ describe('getProviderKey', () => {
         retell_api_key: 'retell-key-123',
         vapi_api_key: 'vapi-key-456',
         bland_api_key: null,
-        source: { retell: 'agency', vapi: 'client', bland: null },
+        elevenlabs_api_key: null,
+        source: { retell: 'agency', vapi: 'client', bland: null, elevenlabs: null },
     };
 
     it('returns retell key for retell provider', () => {
@@ -29,7 +30,8 @@ describe('autoSelectProvider', () => {
             retell_api_key: 'retell-key',
             vapi_api_key: 'vapi-key',
             bland_api_key: 'bland-key',
-            source: { retell: 'agency', vapi: 'agency', bland: 'agency' },
+            elevenlabs_api_key: null,
+            source: { retell: 'agency', vapi: 'agency', bland: 'agency', elevenlabs: null },
         };
         const result = autoSelectProvider(keys);
         expect(result).toEqual({ provider: 'retell', apiKey: 'retell-key' });
@@ -40,7 +42,8 @@ describe('autoSelectProvider', () => {
             retell_api_key: null,
             vapi_api_key: 'vapi-key',
             bland_api_key: 'bland-key',
-            source: { retell: null, vapi: 'agency', bland: 'agency' },
+            elevenlabs_api_key: null,
+            source: { retell: null, vapi: 'agency', bland: 'agency', elevenlabs: null },
         };
         const result = autoSelectProvider(keys);
         expect(result).toEqual({ provider: 'vapi', apiKey: 'vapi-key' });
@@ -51,7 +54,8 @@ describe('autoSelectProvider', () => {
             retell_api_key: null,
             vapi_api_key: null,
             bland_api_key: 'bland-key',
-            source: { retell: null, vapi: null, bland: 'client' },
+            elevenlabs_api_key: null,
+            source: { retell: null, vapi: null, bland: 'client', elevenlabs: null },
         };
         const result = autoSelectProvider(keys);
         expect(result).toEqual({ provider: 'bland', apiKey: 'bland-key' });
@@ -62,7 +66,8 @@ describe('autoSelectProvider', () => {
             retell_api_key: null,
             vapi_api_key: null,
             bland_api_key: null,
-            source: { retell: null, vapi: null, bland: null },
+            elevenlabs_api_key: null,
+            source: { retell: null, vapi: null, bland: null, elevenlabs: null },
         };
         expect(autoSelectProvider(keys)).toBeNull();
     });

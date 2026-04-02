@@ -1,7 +1,7 @@
 // Database Types - Auto-generated from Supabase schema
 
 export type UserRole = 'agency_admin' | 'agency_member' | 'client_admin' | 'client_member';
-export type VoiceProvider = 'retell' | 'vapi' | 'bland';
+export type VoiceProvider = 'retell' | 'vapi' | 'bland' | 'elevenlabs';
 export type CallStatus = 'completed' | 'failed' | 'in_progress' | 'queued';
 export type CallSentiment = 'positive' | 'negative' | 'neutral';
 export type BillingType = 'subscription' | 'per_minute' | 'one_time';
@@ -20,6 +20,7 @@ export interface Agency {
     vapi_api_key?: string;
     vapi_public_key?: string;
     bland_api_key?: string;
+    elevenlabs_api_key?: string;
     stripe_customer_id?: string;
     // Custom domain support
     custom_domain?: string;
@@ -193,7 +194,7 @@ export interface AgencyIntegrations {
 
 /** Subset of Agency fields selected by trigger webhook routes */
 export type AgencyTriggerRow = Pick<Agency,
-    'id' | 'integrations' | 'calling_window' | 'retell_api_key' | 'vapi_api_key' | 'bland_api_key' |
+    'id' | 'integrations' | 'calling_window' | 'retell_api_key' | 'vapi_api_key' | 'bland_api_key' | 'elevenlabs_api_key' |
     'subscription_price_id' | 'subscription_status' | 'beta_ends_at'
 >;
 
@@ -217,6 +218,7 @@ export interface Client {
     vapi_api_key?: string;
     vapi_public_key?: string;
     bland_api_key?: string;
+    elevenlabs_api_key?: string;
     // Per-client integration overrides (null = use agency defaults)
     integrations?: AgencyIntegrations;
     is_active: boolean;

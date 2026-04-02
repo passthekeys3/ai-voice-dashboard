@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { VoiceProvider } from '@/types';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
@@ -239,7 +240,7 @@ export const DELETE = withErrorHandling(async (
             try {
                 // Resolve keys (client key → agency key fallback)
                 const resolvedKeys = await resolveProviderApiKeys(supabase, user.agency.id, agent.client_id);
-                const apiKey = getProviderKey(resolvedKeys, agent.provider as 'retell' | 'vapi' | 'bland');
+                const apiKey = getProviderKey(resolvedKeys, agent.provider as VoiceProvider);
 
                 if (apiKey) {
                     if (agent.provider === 'retell') {

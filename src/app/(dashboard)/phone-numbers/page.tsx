@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { requireAgencyAdmin } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
+import { getAvailableProviders } from '@/lib/constants/config';
 import { Header } from '@/components/dashboard/Header';
 import { PhoneNumbersPageClient } from '@/components/dashboard/PhoneNumbersPageClient';
 
@@ -31,16 +32,7 @@ export default async function PhoneNumbersPage() {
         .order('name');
 
     // Determine which providers are configured (have API keys)
-    const { data: agency } = await supabase
-        .from('agencies')
-        .select('retell_api_key, vapi_api_key, bland_api_key')
-        .eq('id', user.agency.id)
-        .single();
-
-    const configuredProviders: string[] = [];
-    if (agency?.retell_api_key) configuredProviders.push('retell');
-    if (agency?.vapi_api_key) configuredProviders.push('vapi');
-    if (agency?.bland_api_key) configuredProviders.push('bland');
+    const configuredProviders = getAvailableProviders(user.agency);
 
     return (
         <div className="flex flex-col h-full">

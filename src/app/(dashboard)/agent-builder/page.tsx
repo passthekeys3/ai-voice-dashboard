@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { getUserPermissions } from '@/lib/permissions';
 import { Header } from '@/components/dashboard/Header';
 import { AgentBuilder } from '@/components/dashboard/AgentBuilder';
+import { getAvailableProviders } from '@/lib/constants/config';
 
 export const metadata: Metadata = { title: 'Agent Builder' };
 
@@ -24,7 +25,7 @@ export default async function AgentBuilderPage() {
     const [clientsResult, phoneNumbersResult] = await Promise.all([
         supabase
             .from('clients')
-            .select('id, name, retell_api_key, vapi_api_key, bland_api_key')
+            .select('id, name, retell_api_key, vapi_api_key, bland_api_key, elevenlabs_api_key')
             .eq('agency_id', user.agency.id)
             .order('name'),
         supabase
@@ -44,11 +45,7 @@ export default async function AgentBuilderPage() {
     };
 
     // Determine which providers the agency has configured
-    const availableProviders = [
-        ...(user.agency.retell_api_key ? ['retell' as const] : []),
-        ...(user.agency.vapi_api_key ? ['vapi' as const] : []),
-        ...(user.agency.bland_api_key ? ['bland' as const] : []),
-    ];
+    const availableProviders = getAvailableProviders(user.agency);
 
     return (
         <div className="flex flex-col h-full">

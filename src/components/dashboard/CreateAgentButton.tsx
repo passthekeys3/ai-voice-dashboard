@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select';
 import { Plus, Loader2, Bot, Volume2, Play, Pause } from 'lucide-react';
 import { toast } from '@/lib/toast';
+import { PROVIDER_LABELS } from '@/lib/constants/config';
 
 interface Voice {
     id: string;
@@ -40,12 +41,6 @@ interface PhoneNumber {
     phone_number: string;
     agent_id?: string;
 }
-
-const PROVIDER_LABELS: Record<string, string> = {
-    retell: 'Retell AI',
-    vapi: 'Vapi',
-    bland: 'Bland.ai',
-};
 
 interface CreateAgentButtonProps {
     clients: { id: string; name: string }[];
@@ -78,7 +73,7 @@ export function CreateAgentButton({ clients, phoneNumbers, availableProviders, b
     const [phoneNumberId, setPhoneNumberId] = useState('');
 
     // All providers now support voice selection
-    const supportsVoiceSelection = provider === 'retell' || provider === 'vapi' || provider === 'bland';
+    const supportsVoiceSelection = provider === 'retell' || provider === 'vapi' || provider === 'bland' || provider === 'elevenlabs';
 
     const fetchVoices = useCallback(async (forProvider: string) => {
         setLoadingVoices(true);

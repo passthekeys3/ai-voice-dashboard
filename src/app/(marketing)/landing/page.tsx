@@ -66,10 +66,10 @@ const softwareJsonLd = {
     operatingSystem: 'Web',
     url: SITE_URL,
     description:
-        'BuildVoiceAI is a white-label AI voice agent platform for agencies and businesses. Build AI phone agents from natural language descriptions in under 30 minutes. Supports Retell AI, Vapi, and Bland providers with GoHighLevel and HubSpot CRM integrations.',
+        'BuildVoiceAI is a white-label AI voice agent platform for agencies and businesses. Build AI phone agents from natural language descriptions in under 30 minutes. Supports Retell AI, Vapi, Bland, and ElevenLabs providers with GoHighLevel and HubSpot CRM integrations.',
     featureList: [
         'Natural language AI agent builder',
-        'Multi-provider support (Retell AI, Vapi, Bland)',
+        'Multi-provider support (Retell AI, Vapi, Bland, ElevenLabs)',
         'White-label client portals with custom domains',
         'GoHighLevel and HubSpot CRM integrations',
         'Post-call workflow automation',

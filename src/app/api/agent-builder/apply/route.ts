@@ -3,10 +3,11 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getTemplateById, getTemplateActions } from '@/lib/agent-builder/templates';
 import { publishRetellAgent } from '@/lib/providers/retell';
+import { createElevenLabsAgent } from '@/lib/providers/elevenlabs';
 import { resolveProviderApiKeys, autoSelectProvider } from '@/lib/providers/resolve-keys';
 import { isValidUuid } from '@/lib/validation';
 import { withErrorHandling } from '@/lib/api/response';
-import { MAX_PROMPT_LENGTH } from '@/lib/constants/config';
+import { MAX_PROMPT_LENGTH, VOICE_PROVIDERS } from '@/lib/constants/config';
 const MAX_NAME_LENGTH = 200;
 const MAX_FIRST_MESSAGE_LENGTH = 1000;
 const MAX_VOICE_ID_LENGTH = 200;
@@ -120,12 +121,12 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
 
         if (
             requestedProvider &&
-            ['retell', 'vapi', 'bland'].includes(requestedProvider) &&
+            (VOICE_PROVIDERS as readonly string[]).includes(requestedProvider) &&
             resolvedKeys[`${requestedProvider}_api_key` as keyof typeof resolvedKeys]
         ) {
             // User explicitly chose a provider and it has a valid API key
             provider = requestedProvider;
-            apiKey = resolvedKeys[`${requestedProvider}_api_key` as 'retell_api_key' | 'vapi_api_key' | 'bland_api_key'] as string;
+            apiKey = resolvedKeys[`${requestedProvider}_api_key` as 'retell_api_key' | 'vapi_api_key' | 'bland_api_key' | 'elevenlabs_api_key'] as string;
         } else {
             // Auto-select: Retell → Vapi → Bland
             const auto = autoSelectProvider(resolvedKeys);
@@ -137,7 +138,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
 
         if (!provider || !apiKey) {
             return NextResponse.json(
-                { error: 'No voice provider API key configured. Add a Retell, Vapi, or Bland key in Settings.' },
+                { error: 'No voice provider API key configured. Add a Retell, Vapi, Bland, or ElevenLabs key in Settings.' },
                 { status: 400 }
             );
         }
@@ -252,6 +253,21 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
 
             const vapiAgent = await vapiResponse.json();
             externalId = vapiAgent.id;
+        } else if (provider === 'elevenlabs') {
+            // ElevenLabs agent creation
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`;
+            const elevenlabsAgent = await createElevenLabsAgent(apiKey, {
+                name: safeName,
+                prompt: safeSystemPrompt,
+                firstMessage: safeFirstMessage || undefined,
+                llmModel: draft.llmModel,
+                voiceModel: draft.voiceModel,
+                voiceId: draft.voiceId,
+                language: safeLanguage,
+                webhookUrl: `${appUrl}/api/webhooks/elevenlabs`,
+            });
+
+            externalId = elevenlabsAgent.agent_id;
         } else {
             // Bland pathway creation
             // Bland uses Pathways (visual flowcharts) as the agent concept.

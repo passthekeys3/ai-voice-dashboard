@@ -6,6 +6,7 @@ import { listRetellAgents, ensureAgentWebhookConfig, REQUIRED_WEBHOOK_EVENTS } f
 import { listVapiAssistants, updateVapiAssistant } from '@/lib/providers/vapi';
 import type { VoiceProvider } from '@/types';
 import { decrypt } from '@/lib/crypto';
+import { PROVIDER_KEY_MAP, PROVIDER_KEY_SELECT, type ProviderKeyRow } from '@/lib/constants/config';
 const PROVIDER_API_TIMEOUT = 15_000;
 
 /** One workspace to sync: a provider + API key + optional client scope */
@@ -16,11 +17,9 @@ interface SyncEntry {
     label: string;
 }
 
-const KEY_FIELDS: { field: 'retell_api_key' | 'vapi_api_key' | 'bland_api_key'; provider: VoiceProvider }[] = [
-    { field: 'retell_api_key', provider: 'retell' },
-    { field: 'vapi_api_key', provider: 'vapi' },
-    { field: 'bland_api_key', provider: 'bland' },
-];
+const KEY_FIELDS = (Object.entries(PROVIDER_KEY_MAP) as [VoiceProvider, string][]).map(
+    ([provider, field]) => ({ field, provider })
+);
 
 /**
  * Cron endpoint to sync all agencies' agents and phone numbers
@@ -54,9 +53,9 @@ export async function POST(request: NextRequest) {
         const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
         const { data: agencies, error: agenciesError } = await supabase
             .from('agencies')
-            .select('id, name, retell_api_key, vapi_api_key, bland_api_key')
+            .select(`id, name, ${PROVIDER_KEY_SELECT}`)
             .or(`updated_at.lt.${thirtyMinutesAgo},updated_at.is.null`)
-            .limit(100); // Process up to 100 per cron run (fits within 60s timeout)
+            .limit(100) as { data: (ProviderKeyRow & { id: string; name: string; [key: string]: string | null })[] | null; error: { code: string } | null }; // Process up to 100 per cron run (fits within 60s timeout)
 
         if (agenciesError) {
             console.error('Error fetching agencies:', agenciesError.code);
@@ -100,10 +99,10 @@ export async function POST(request: NextRequest) {
                 // Client-level keys (skip duplicates of agency keys)
                 const { data: clientsWithKeys } = await supabase
                     .from('clients')
-                    .select('id, name, retell_api_key, vapi_api_key, bland_api_key')
+                    .select(`id, name, ${PROVIDER_KEY_SELECT}`)
                     .eq('agency_id', agency.id)
-                    .or('retell_api_key.neq.null,vapi_api_key.neq.null,bland_api_key.neq.null')
-                    .limit(500);
+                    .or('retell_api_key.neq.null,vapi_api_key.neq.null,bland_api_key.neq.null,elevenlabs_api_key.neq.null')
+                    .limit(500) as { data: (ProviderKeyRow & { id: string; name: string; [key: string]: string | null })[] | null };
 
                 for (const clientRecord of clientsWithKeys || []) {
                     for (const { field, provider } of KEY_FIELDS) {

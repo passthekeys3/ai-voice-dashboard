@@ -3,6 +3,9 @@
  * Centralized styling and display configuration
  */
 
+import type { VoiceProvider } from '@/types';
+export type { VoiceProvider } from '@/types';
+
 // Badge variants from the badge component
 // Note: 'error' is mapped to 'destructive' in the actual usage
 export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'live' | 'error';
@@ -185,8 +188,6 @@ export const AGENT_STATUS_CONFIG: Record<AgentStatus, StatusConfig> = {
 // PROVIDER CONFIGURATION
 // =====================================================
 
-export type VoiceProvider = 'retell' | 'vapi' | 'bland';
-
 export interface ProviderConfig {
     label: string;
     color: string;
@@ -212,6 +213,12 @@ export const PROVIDER_CONFIG: Record<VoiceProvider, ProviderConfig> = {
         color: 'text-amber-600',
         bgColor: 'bg-amber-50',
         darkBgColor: 'dark:bg-amber-900/20',
+    },
+    elevenlabs: {
+        label: 'ElevenLabs',
+        color: 'text-purple-700',
+        bgColor: 'bg-purple-100',
+        darkBgColor: 'dark:bg-purple-900/20',
     },
 };
 

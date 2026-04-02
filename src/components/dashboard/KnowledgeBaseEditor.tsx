@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Plus, Trash2, FileText, Link, Type, Database, Upload } from 'lucide-react';
+import { PROVIDER_LABELS } from '@/lib/constants/config';
+import type { VoiceProvider } from '@/types';
 
 interface KBSource {
     source_id: string;
@@ -28,14 +30,8 @@ interface KnowledgeBase {
 
 interface KnowledgeBaseEditorProps {
     agentId: string;
-    provider: 'retell' | 'vapi' | 'bland';
+    provider: VoiceProvider;
 }
-
-const PROVIDER_LABELS: Record<string, string> = {
-    retell: 'Retell',
-    vapi: 'Vapi',
-    bland: 'Bland',
-};
 
 const FILE_SIZE_LIMITS: Record<string, { max: number; label: string }> = {
     retell: { max: 50 * 1024 * 1024, label: '50MB' },

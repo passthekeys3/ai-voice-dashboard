@@ -5,7 +5,7 @@ const SITE_URL = 'https://buildvoiceai.com';
 export const metadata: Metadata = {
     title: 'BuildVoiceAI — AI Voice Agent Platform for Agencies & Businesses',
     description:
-        'BuildVoiceAI is a white-label AI voice agent platform. Build phone agents from natural language in 30 minutes. Supports Retell AI, Vapi, and Bland with GoHighLevel and HubSpot integrations. Plans from $67/month.',
+        'BuildVoiceAI is a white-label AI voice agent platform. Build phone agents from natural language in 30 minutes. Supports Retell AI, Vapi, Bland, and ElevenLabs with GoHighLevel and HubSpot integrations. Plans from $67/month.',
     alternates: {
         canonical: SITE_URL,
     },

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import type { VoiceProvider } from '@/types';
 import { createServiceClient } from '@/lib/supabase/server';
 import { initiateCall, type CallInitiationParams } from '@/lib/calls/initiate';
 import { isWithinCallingWindow, getNextValidCallTime } from '@/lib/timezone/detector';
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
                 }
 
                 const resolvedKeys = await resolveProviderApiKeys(supabase, agencyId, clientId);
-                const providerApiKey = getProviderKey(resolvedKeys, provider as 'retell' | 'vapi' | 'bland');
+                const providerApiKey = getProviderKey(resolvedKeys, provider as VoiceProvider);
 
                 if (!providerApiKey || !externalAgentId) {
                     throw new Error(`Missing ${provider} API key or agent external ID`);
@@ -153,7 +154,7 @@ export async function POST(request: NextRequest) {
                 // Initiate call via provider-agnostic module
                 // Resolve A/B experiment before initiating
                 let callInitParams: CallInitiationParams = {
-                    provider: provider as 'retell' | 'vapi' | 'bland',
+                    provider: provider as VoiceProvider,
                     providerApiKey,
                     externalAgentId,
                     toNumber: call.to_number,

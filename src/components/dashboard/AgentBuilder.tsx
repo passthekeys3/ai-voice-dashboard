@@ -13,6 +13,7 @@ import type {
     IntegrationSelection,
 } from '@/lib/agent-builder/types';
 import { getAvailableTemplates } from '@/lib/agent-builder/templates';
+import type { VoiceProvider } from '@/types';
 import { matchVoicesToDescription } from '@/lib/agent-builder/llm';
 
 /** Data returned from the apply API after successful agent creation */
@@ -28,7 +29,7 @@ interface AgentBuilderProps {
     clients: { id: string; name: string; hasRetellKey?: boolean; hasVapiKey?: boolean; hasBlandKey?: boolean }[];
     phoneNumbers: { id: string; phone_number: string; nickname?: string; agent_id?: string | null }[];
     context: BuilderContext;
-    availableProviders: ('retell' | 'vapi' | 'bland')[];
+    availableProviders: VoiceProvider[];
 }
 
 let messageIdCounter = 0;

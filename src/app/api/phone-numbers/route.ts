@@ -3,8 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { purchaseBlandInboundNumber } from '@/lib/providers/bland';
 import { safeParseJson } from '@/lib/validation';
-import { decrypt } from '@/lib/crypto';
 import { withErrorHandling } from '@/lib/api/response';
+import { decryptAgencyKeys, autoSelectProvider, getProviderKey } from '@/lib/providers/resolve-keys';
+import type { VoiceProvider } from '@/types';
+import { PROVIDER_KEY_SELECT, type ProviderKeyRow } from '@/lib/constants/config';
 
 const PROVIDER_API_TIMEOUT = 15_000;
 
@@ -106,21 +108,20 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
         // Get API keys for all providers
         const { data: agency } = await supabase
             .from('agencies')
-            .select('retell_api_key, vapi_api_key, bland_api_key')
+            .select(PROVIDER_KEY_SELECT)
             .eq('id', user.agency.id)
-            .single();
+            .single() as { data: ProviderKeyRow | null };
 
-        // Decrypt API keys from DB
-        if (agency) {
-            agency.retell_api_key = decrypt(agency.retell_api_key) ?? agency.retell_api_key;
-            agency.vapi_api_key = decrypt(agency.vapi_api_key) ?? agency.vapi_api_key;
-            agency.bland_api_key = decrypt(agency.bland_api_key) ?? agency.bland_api_key;
-        }
+        // Decrypt API keys and auto-select provider
+        const resolvedKeys = decryptAgencyKeys(agency ?? {});
+        const autoSelected = autoSelectProvider(resolvedKeys);
+        const provider = requestedProvider || autoSelected?.provider || null;
 
-        // Determine which provider to use
-        const provider = requestedProvider || (agency?.retell_api_key ? 'retell' : agency?.vapi_api_key ? 'vapi' : agency?.bland_api_key ? 'bland' : null);
+        const apiKey = provider
+            ? (requestedProvider ? getProviderKey(resolvedKeys, requestedProvider as VoiceProvider) : autoSelected?.apiKey || null)
+            : null;
 
-        if (provider === 'retell' && agency?.retell_api_key) {
+        if (provider === 'retell' && apiKey) {
             // Resolve agent external_id for Retell assignment
             let agentExternalId: string | undefined;
             if (agent_id) {
@@ -137,7 +138,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
             const retellResponse = await fetch('https://api.retellai.com/v2/create-phone-number', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${agency.retell_api_key}`,
+                    'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
@@ -175,7 +176,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
             }
 
             return NextResponse.json({ data: phoneNumber }, { status: 201 });
-        } else if (provider === 'vapi' && agency?.vapi_api_key) {
+        } else if (provider === 'vapi' && apiKey) {
             // Purchase number from Vapi (Vapi uses Twilio under the hood)
             // Look up the agent's external_id for assistantId assignment
             let agentExternalId: string | undefined;
@@ -192,7 +193,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
             const vapiResponse = await fetch('https://api.vapi.ai/phone-number', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${agency.vapi_api_key}`,
+                    'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
@@ -231,9 +232,9 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
             }
 
             return NextResponse.json({ data: phoneNumber }, { status: 201 });
-        } else if (provider === 'bland' && agency?.bland_api_key) {
+        } else if (provider === 'bland' && apiKey) {
             // Purchase inbound number from Bland
-            const blandResult = await purchaseBlandInboundNumber(agency.bland_api_key, area_code);
+            const blandResult = await purchaseBlandInboundNumber(apiKey, area_code);
 
             const { data: phoneNumber, error } = await supabase
                 .from('phone_numbers')

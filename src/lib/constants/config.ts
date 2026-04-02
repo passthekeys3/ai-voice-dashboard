@@ -6,7 +6,57 @@
  * File-local constants (used in one place) should stay local.
  */
 
-import type { BillingType } from '@/types';
+import type { BillingType, VoiceProvider, Agency } from '@/types';
+
+// ── Voice Providers ─────────────────────────────────────
+// Single source of truth for all provider-related constants.
+// Adding a new provider? Update these 4 values and everything flows.
+
+/** All supported voice providers (order = auto-select priority) */
+export const VOICE_PROVIDERS: VoiceProvider[] = ['retell', 'vapi', 'bland', 'elevenlabs'];
+
+/** Human-readable provider labels for UI display */
+export const PROVIDER_LABELS: Record<string, string> = {
+    retell: 'Retell AI',
+    vapi: 'Vapi',
+    bland: 'Bland.ai',
+    elevenlabs: 'ElevenLabs',
+};
+
+/** Agency/client DB column names for provider API keys */
+export const PROVIDER_KEY_FIELDS = [
+    'retell_api_key',
+    'vapi_api_key',
+    'bland_api_key',
+    'elevenlabs_api_key',
+] as const;
+
+/** Comma-separated key fields for Supabase .select() queries */
+export const PROVIDER_KEY_SELECT = PROVIDER_KEY_FIELDS.join(', ');
+
+/** Type for the result of a Supabase `.select(PROVIDER_KEY_SELECT)` query */
+export type ProviderKeyRow = {
+    retell_api_key: string | null;
+    vapi_api_key: string | null;
+    bland_api_key: string | null;
+    elevenlabs_api_key: string | null;
+};
+
+/** Map provider name → DB column name */
+export const PROVIDER_KEY_MAP: Record<VoiceProvider, typeof PROVIDER_KEY_FIELDS[number]> = {
+    retell: 'retell_api_key',
+    vapi: 'vapi_api_key',
+    bland: 'bland_api_key',
+    elevenlabs: 'elevenlabs_api_key',
+};
+
+/**
+ * Determine which voice providers an agency has configured (has API key set).
+ * Returns providers in priority order (Retell → Vapi → Bland → ElevenLabs).
+ */
+export function getAvailableProviders(agency: Pick<Agency, 'retell_api_key' | 'vapi_api_key' | 'bland_api_key' | 'elevenlabs_api_key'>): VoiceProvider[] {
+    return VOICE_PROVIDERS.filter(p => !!agency[PROVIDER_KEY_MAP[p]]);
+}
 
 // ── Billing ──────────────────────────────────────────────
 /** Valid billing types for clients */
@@ -75,6 +125,24 @@ export const VAPI_LLM_MODELS = [
     { provider: 'google', value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', description: 'Fast Gemini', costPerMin: 0.005 },
     { provider: 'google', value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', description: 'Capable Gemini', costPerMin: 0.02 },
 ] as const;
+
+/** LLM models available on ElevenLabs Conversational AI */
+export const ELEVENLABS_LLM_MODELS = [
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Default, fast', costPerMin: 0.005 },
+    { value: 'gpt-4o', label: 'GPT-4o', description: 'Balanced', costPerMin: 0.01 },
+    { value: 'gpt-4o-mini', label: 'GPT-4o Mini', description: 'Faster, cheaper', costPerMin: 0.005 },
+    { value: 'claude-sonnet-4-5', label: 'Claude 4.5 Sonnet', description: 'Strong reasoning', costPerMin: 0.04 },
+    { value: 'claude-haiku-4-5', label: 'Claude 4.5 Haiku', description: 'Fast Claude', costPerMin: 0.01 },
+] as const;
+
+/** Voice/TTS models available on ElevenLabs Conversational AI */
+export const ELEVENLABS_VOICE_MODELS = [
+    { value: 'eleven_flash_v2', label: 'Flash v2', description: 'Low latency, fast', costPerMin: 0.04 },
+    { value: 'eleven_v3_conversational', label: 'v3 Conversational', description: 'Highest quality', costPerMin: 0.06 },
+] as const;
+
+/** Default ElevenLabs voice ID (Rachel — warm, clear) */
+export const ELEVENLABS_DEFAULT_VOICE_ID = 'cjVigY5qzO86Huf0OWal';
 
 /** Estimated telephony cost per minute (Retell/Twilio) */
 export const TELEPHONY_COST_PER_MIN = 0.015;

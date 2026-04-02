@@ -13,11 +13,12 @@ BuildVoiceAI covers four core workflows:
 
 ## Voice Providers
 
-Three providers are supported, each with distinct strengths:
+Four providers are supported, each with distinct strengths:
 
 - **Retell AI**: Low-latency conversational agents with built-in LLM, knowledge base support, call transfer, and safety guardrails. Supports A/B testing across prompt variants.
 - **Vapi**: Flexible voice AI with multiple TTS providers (OpenAI, ElevenLabs, PlayHT, Deepgram), model selection (GPT-4o, Claude, etc.), and custom tool calling.
 - **Bland**: Visual pathway-based conversation design for complex multi-branch call flows.
+- **ElevenLabs**: Best-in-class voice quality with 5,000+ voices in 70+ languages. LLM flexibility (GPT-4o, Claude, Gemini) and credit-based pricing at ~$0.05-0.08/min.
 
 All providers support inbound and outbound calls, call recording, transcript generation, and webhook-based event delivery.
 
@@ -55,7 +56,7 @@ Annual billing saves 2 months on all plans.
 ## Key Features
 
 - Natural language agent builder with AI-generated conversation flows
-- Multi-provider support (Retell AI, Vapi, Bland) with provider-agnostic architecture
+- Multi-provider support (Retell AI, Vapi, Bland, ElevenLabs) with provider-agnostic architecture
 - White-label client portals with custom domains, logos, and colors
 - GoHighLevel and HubSpot CRM integrations with per-client OAuth
 - Post-call workflow automation (CRM updates, appointments, notifications)

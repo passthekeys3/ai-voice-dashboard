@@ -16,6 +16,8 @@ import {
     EyeOff,
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
+import { VOICE_PROVIDERS, PROVIDER_KEY_MAP } from '@/lib/constants/config';
+import type { VoiceProvider } from '@/types';
 import Link from 'next/link';
 
 interface OnboardingWizardProps {
@@ -30,7 +32,7 @@ const STEPS: Step[] = ['welcome', 'provider', 'verify', 'complete'];
 
 export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWizardProps) {
     const [step, setStep] = useState<Step>(isOnboarded ? 'complete' : 'welcome');
-    const [provider, setProvider] = useState<'retell' | 'vapi' | 'bland'>('retell');
+    const [provider, setProvider] = useState<VoiceProvider>('retell');
     const [apiKey, setApiKey] = useState('');
     const [showKey, setShowKey] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -59,7 +61,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    [provider === 'retell' ? 'retell_api_key' : provider === 'vapi' ? 'vapi_api_key' : 'bland_api_key']: apiKey,
+                    [PROVIDER_KEY_MAP[provider]]: apiKey,
                 }),
             });
 
@@ -104,7 +106,7 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
         }
     };
 
-    const providerName = provider === 'retell' ? 'Retell' : provider === 'vapi' ? 'VAPI' : 'Bland';
+    const providerName = provider === 'retell' ? 'Retell' : provider === 'vapi' ? 'VAPI' : provider === 'bland' ? 'Bland' : 'ElevenLabs';
 
     return (
         <div className="w-full max-w-lg">
@@ -183,20 +185,22 @@ export function OnboardingWizard({ agency, userName, isOnboarded }: OnboardingWi
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-5">
-                            <Tabs value={provider} onValueChange={(v: string) => { setProvider(v as 'retell' | 'vapi' | 'bland'); setApiKey(''); }}>
-                                <TabsList className="grid w-full grid-cols-3">
+                            <Tabs value={provider} onValueChange={(v: string) => { setProvider(v as VoiceProvider); setApiKey(''); }}>
+                                <TabsList className="grid w-full grid-cols-4">
                                     <TabsTrigger value="retell">Retell</TabsTrigger>
                                     <TabsTrigger value="vapi">VAPI</TabsTrigger>
                                     <TabsTrigger value="bland">Bland</TabsTrigger>
+                                    <TabsTrigger value="elevenlabs">ElevenLabs</TabsTrigger>
                                 </TabsList>
 
-                                {(['retell', 'vapi', 'bland'] as const).map((p) => {
+                                {VOICE_PROVIDERS.map((p) => {
                                     const urls = {
                                         retell: 'https://beta.retellai.com/dashboard',
                                         vapi: 'https://dashboard.vapi.ai',
                                         bland: 'https://app.bland.ai/dashboard',
+                                        elevenlabs: 'https://elevenlabs.io/app/settings/api-keys',
                                     };
-                                    const placeholders = { retell: 'key_...', vapi: 'vapi_...', bland: 'sk-...' };
+                                    const placeholders = { retell: 'key_...', vapi: 'vapi_...', bland: 'sk-...', elevenlabs: 'xi_...' };
 
                                     return (
                                         <TabsContent key={p} value={p} className="space-y-3 mt-4">

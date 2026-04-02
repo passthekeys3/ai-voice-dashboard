@@ -15,7 +15,7 @@ BuildVoiceAI covers four core workflows:
 
 ## Voice providers
 
-Three providers are supported: Retell AI, Vapi, and Bland. Agents can run A/B experiments across providers to find the best performer. All voices use neural models and sound natural and conversational.
+Four providers are supported: Retell AI, Vapi, Bland, and ElevenLabs. Agents can run A/B experiments across providers to find the best performer. All voices use neural models and sound natural and conversational.
 
 ## Integrations
 

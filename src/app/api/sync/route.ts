@@ -5,6 +5,7 @@ import { getProviderClient, type NormalizedAgent, type NormalizedCall } from '@/
 import { listRetellAgents, ensureAgentWebhookConfig, REQUIRED_WEBHOOK_EVENTS } from '@/lib/providers/retell';
 import type { VoiceProvider } from '@/types';
 import { decrypt } from '@/lib/crypto';
+import { PROVIDER_KEY_MAP, PROVIDER_KEY_SELECT, type ProviderKeyRow } from '@/lib/constants/config';
 
 /** One workspace to sync: a provider + API key + optional client scope */
 interface SyncEntry {
@@ -29,9 +30,9 @@ export async function POST() {
 
         const { data: agency, error: agencyError } = await supabase
             .from('agencies')
-            .select('retell_api_key, vapi_api_key, bland_api_key')
+            .select(PROVIDER_KEY_SELECT)
             .eq('id', user.agency.id)
-            .single();
+            .single() as { data: (ProviderKeyRow & { [key: string]: string | null }) | null; error: { code: string } | null };
 
         if (agencyError || !agency) {
             console.error('Agency fetch error:', agencyError?.code);
@@ -43,11 +44,9 @@ export async function POST() {
         const syncEntries: SyncEntry[] = [];
         const seenApiKeys = new Set<string>();
 
-        const keyFields: { field: 'retell_api_key' | 'vapi_api_key' | 'bland_api_key'; provider: VoiceProvider }[] = [
-            { field: 'retell_api_key', provider: 'retell' },
-            { field: 'vapi_api_key', provider: 'vapi' },
-            { field: 'bland_api_key', provider: 'bland' },
-        ];
+        const keyFields = (Object.entries(PROVIDER_KEY_MAP) as [VoiceProvider, string][]).map(
+            ([provider, field]) => ({ field, provider })
+        );
 
         // Agency-level keys (decrypt from DB)
         for (const { field, provider } of keyFields) {
@@ -62,9 +61,9 @@ export async function POST() {
         // Client-level keys (different workspaces only)
         const { data: clientsWithKeys } = await supabase
             .from('clients')
-            .select('id, name, retell_api_key, vapi_api_key, bland_api_key')
+            .select(`id, name, ${PROVIDER_KEY_SELECT}`)
             .eq('agency_id', user.agency.id)
-            .or('retell_api_key.neq.null,vapi_api_key.neq.null,bland_api_key.neq.null');
+            .or('retell_api_key.neq.null,vapi_api_key.neq.null,bland_api_key.neq.null,elevenlabs_api_key.neq.null') as { data: (ProviderKeyRow & { id: string; name: string; [key: string]: string | null })[] | null };
 
         for (const clientRecord of clientsWithKeys || []) {
             for (const { field, provider } of keyFields) {

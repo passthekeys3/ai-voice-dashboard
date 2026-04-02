@@ -5,8 +5,10 @@
  * Used by both the cron processor and the GHL trigger webhook.
  */
 
+import type { VoiceProvider } from '@/types';
+
 export interface CallInitiationParams {
-    provider: 'retell' | 'vapi' | 'bland';
+    provider: VoiceProvider;
     providerApiKey: string;
     externalAgentId: string;
     toNumber: string;
@@ -41,6 +43,8 @@ export async function initiateCall(params: CallInitiationParams): Promise<CallIn
             return initiateVapiCall(params);
         case 'bland':
             return initiateBlandCall(params);
+        case 'elevenlabs':
+            return { success: false, error: 'ElevenLabs does not support outbound calls' };
         default:
             return { success: false, error: `Unsupported provider: ${params.provider}` };
     }

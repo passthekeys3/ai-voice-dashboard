@@ -7,6 +7,7 @@ import type { VoiceProvider, AgentConfig } from '@/types';
 import * as retell from './retell';
 import * as vapi from './vapi';
 import * as bland from './bland';
+import * as elevenlabs from './elevenlabs';
 
 // Normalized agent structure
 export interface NormalizedAgent {
@@ -355,6 +356,94 @@ function createBlandClient(apiKey: string): VoiceProviderClient {
     };
 }
 
+// ElevenLabs implementation
+function createElevenLabsClient(apiKey: string): VoiceProviderClient {
+    const normalizeAgent = (agent: elevenlabs.ElevenLabsAgent): NormalizedAgent => ({
+        externalId: agent.agent_id,
+        name: agent.name || 'Unnamed Agent',
+        provider: 'elevenlabs',
+        voiceId: agent.conversation_config?.tts?.voice_id,
+        config: {
+            voice_id: agent.conversation_config?.tts?.voice_id,
+            prompt: agent.conversation_config?.agent?.prompt?.prompt,
+            language: agent.conversation_config?.agent?.language,
+        } as AgentConfig,
+        createdAt: agent.metadata?.created_at_unix_secs
+            ? new Date(agent.metadata.created_at_unix_secs * 1000).toISOString()
+            : new Date().toISOString(),
+    });
+
+    const normalizeCall = (conv: elevenlabs.ElevenLabsConversation): NormalizedCall => {
+        const durationSeconds = conv.duration_secs || 0;
+
+        let status: NormalizedCall['status'] = 'queued';
+        if (conv.status === 'done') status = 'completed';
+        else if (conv.status === 'failed') status = 'failed';
+        else if (conv.status === 'processing') status = 'in_progress';
+
+        return {
+            externalId: conv.conversation_id,
+            agentExternalId: conv.agent_id,
+            provider: 'elevenlabs',
+            status,
+            direction: 'inbound', // ElevenLabs conversations are typically widget-initiated
+            durationSeconds,
+            costCents: conv.cost ? Math.round(conv.cost * 100) : 0,
+            transcript: elevenlabs.flattenElevenLabsTranscript(conv.transcript),
+            summary: conv.analysis?.call_successful,
+            sentiment: undefined,
+            startedAt: conv.start_time_unix_secs
+                ? new Date(conv.start_time_unix_secs * 1000).toISOString()
+                : new Date().toISOString(),
+            endedAt: conv.end_time_unix_secs
+                ? new Date(conv.end_time_unix_secs * 1000).toISOString()
+                : undefined,
+            metadata: conv.metadata,
+        };
+    };
+
+    return {
+        async listAgents() {
+            const agents = await elevenlabs.listElevenLabsAgents(apiKey);
+            return agents.map(normalizeAgent);
+        },
+        async getAgent(agentId) {
+            const agent = await elevenlabs.getElevenLabsAgent(apiKey, agentId);
+            return normalizeAgent(agent);
+        },
+        async createAgent(config) {
+            const agent = await elevenlabs.createElevenLabsAgent(apiKey, {
+                name: config.name,
+                voiceId: config.voiceId,
+                prompt: config.prompt,
+            });
+            return normalizeAgent(agent);
+        },
+        async updateAgent(agentId, config) {
+            const agent = await elevenlabs.updateElevenLabsAgent(apiKey, agentId, {
+                name: config.name,
+                voiceId: config.voiceId,
+                prompt: config.prompt,
+            });
+            return normalizeAgent(agent);
+        },
+        async deleteAgent(agentId) {
+            await elevenlabs.deleteElevenLabsAgent(apiKey, agentId);
+        },
+        async listCalls(filters) {
+            const result = await elevenlabs.listElevenLabsConversations(apiKey, {
+                agentId: filters?.agentId,
+                pageSize: filters?.limit || 100,
+            });
+            return result.conversations.map(normalizeCall);
+        },
+        async getCall(callId) {
+            const conv = await elevenlabs.getElevenLabsConversation(apiKey, callId);
+            return normalizeCall(conv);
+        },
+    };
+}
+
 // Factory function
 export function getProviderClient(
     provider: VoiceProvider,
@@ -367,6 +456,8 @@ export function getProviderClient(
             return createVapiClient(apiKey);
         case 'bland':
             return createBlandClient(apiKey);
+        case 'elevenlabs':
+            return createElevenLabsClient(apiKey);
         default:
             throw new Error(`Unknown provider: ${provider}`);
     }

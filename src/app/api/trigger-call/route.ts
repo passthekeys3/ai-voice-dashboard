@@ -12,12 +12,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
-import { initiateCall, type CallInitiationParams } from '@/lib/calls/initiate';
-import { detectTimezone, isWithinCallingWindow, getNextValidCallTime } from '@/lib/timezone/detector';
 import { validateApiTriggerPayload } from './validate';
-import { applyExperiment } from '@/lib/experiments/apply';
-import { resolveProviderApiKeys, getProviderKey, decryptAgencyKeys } from '@/lib/providers/resolve-keys';
 import { checkFeatureAccess } from '@/lib/billing/tiers';
+import { PROVIDER_KEY_SELECT, type ProviderKeyRow } from '@/lib/constants/config';
+import { handleTriggerCall, type TriggerContext } from '@/lib/triggers/handler';
 
 export async function OPTIONS() {
     return new NextResponse(null, {
@@ -67,8 +65,18 @@ export async function POST(request: NextRequest) {
         // Look up agency by API key
         const { data: agencies, error: agencyError } = await supabase
             .from('agencies')
-            .select('id, integrations, calling_window, retell_api_key, vapi_api_key, bland_api_key, subscription_price_id, subscription_status, beta_ends_at')
-            .filter('integrations->api->>api_key', 'eq', apiKey);
+            .select(`id, integrations, calling_window, ${PROVIDER_KEY_SELECT}, subscription_price_id, subscription_status, beta_ends_at`)
+            .filter('integrations->api->>api_key', 'eq', apiKey) as {
+                data: (ProviderKeyRow & {
+                    id: string;
+                    integrations: { api?: { enabled?: boolean; api_key?: string; default_agent_id?: string } } | null;
+                    calling_window: { enabled?: boolean; start_hour: number; end_hour: number; days_of_week: number[] } | null;
+                    subscription_price_id: string | null;
+                    subscription_status: string | null;
+                    beta_ends_at: string | null;
+                })[] | null;
+                error: { code: string } | null;
+            };
 
         if (agencyError || !agencies || agencies.length === 0) {
             return NextResponse.json(
@@ -98,270 +106,32 @@ export async function POST(request: NextRequest) {
 
         const apiConfig = agency.integrations?.api;
 
-        // Verify API trigger is enabled
-        if (!apiConfig?.enabled) {
-            return NextResponse.json(
-                { error: 'API trigger is not enabled for this agency' },
-                { status: 403 },
-            );
-        }
-
-        // Resolve which agent to use
-        let agentId = data.agent_id;
-        let agentRecord: { id: string; external_id: string; provider: string; name: string; client_id: string | null } | null = null;
-
-        if (agentId) {
-            // Explicit agent_id provided
-            const { data: agent } = await supabase
-                .from('agents')
-                .select('id, external_id, provider, name, client_id')
-                .eq('id', agentId)
-                .eq('agency_id', agency.id)
-                .single();
-            agentRecord = agent;
-        }
-
-        if (!agentRecord && apiConfig.default_agent_id) {
-            // Fall back to default agent
-            agentId = apiConfig.default_agent_id;
-            const { data: agent } = await supabase
-                .from('agents')
-                .select('id, external_id, provider, name, client_id')
-                .eq('id', agentId)
-                .eq('agency_id', agency.id)
-                .single();
-            agentRecord = agent;
-        }
-
-        if (!agentRecord && data.from_number) {
-            // Fall back to outbound agent assigned to the from_number
-            const { data: phoneNumber } = await supabase
-                .from('phone_numbers')
-                .select('outbound_agent_id')
-                .eq('phone_number', data.from_number)
-                .eq('agency_id', agency.id)
-                .single();
-
-            if (phoneNumber?.outbound_agent_id) {
-                const { data: agent } = await supabase
-                    .from('agents')
-                    .select('id, external_id, provider, name, client_id')
-                    .eq('id', phoneNumber.outbound_agent_id)
-                    .eq('agency_id', agency.id)
-                    .single();
-                agentRecord = agent;
-            }
-        }
-
-        if (!agentRecord) {
-            await logTrigger(supabase, {
-                agency_id: agency.id,
-                phone_number: data.phone_number,
-                contact_name: data.contact_name,
-                status: 'failed',
-                error_message: 'No agent could be resolved. Provide agent_id or set a default agent in Settings.',
-                request_payload: data as unknown as Record<string, unknown>,
-            });
-            return NextResponse.json(
-                { error: 'No agent configured. Provide agent_id or set a default agent in Settings.' },
-                { status: 400 },
-            );
-        }
-
-        // Detect lead timezone
-        const leadTimezone = detectTimezone(data.phone_number);
-
-        // Check calling window
-        const callingWindow = agency.calling_window;
-        let shouldSchedule = false;
-        let scheduledAt: Date | null = null;
-
-        if (data.scheduled_at) {
-            // Explicit schedule time provided
-            scheduledAt = new Date(data.scheduled_at);
-            shouldSchedule = true;
-        } else if (callingWindow?.enabled) {
-            // Check if we're within the calling window (fallback to ET if timezone unknown)
-            const tz = leadTimezone || 'America/New_York';
-            const windowConfig = {
-                startHour: callingWindow.start_hour,
-                endHour: callingWindow.end_hour,
-                daysOfWeek: callingWindow.days_of_week,
-            };
-
-            if (!isWithinCallingWindow(tz, windowConfig)) {
-                scheduledAt = getNextValidCallTime(tz, windowConfig);
-                shouldSchedule = true;
-            }
-        }
-
-        // Resolve provider API key (client key → agency key fallback)
-        const resolvedKeys = agentRecord.client_id
-            ? await resolveProviderApiKeys(supabase, agency.id, agentRecord.client_id)
-            : decryptAgencyKeys(agency);
-        const providerApiKey = getProviderKey(resolvedKeys, agentRecord.provider as 'retell' | 'vapi' | 'bland');
-
-        if (!providerApiKey) {
-            await logTrigger(supabase, {
-                agency_id: agency.id,
-                phone_number: data.phone_number,
-                agent_id: agentRecord.id,
-                contact_name: data.contact_name,
-                status: 'failed',
-                error_message: 'Voice provider API key not configured',
-                request_payload: data as unknown as Record<string, unknown>,
-            });
-            return NextResponse.json(
-                { error: 'Voice provider API key not configured' },
-                { status: 400 },
-            );
-        }
-
-        if (shouldSchedule && scheduledAt) {
-            // Schedule for later
-            const { data: scheduledCall, error: schedError } = await supabase
-                .from('scheduled_calls')
-                .insert({
-                    agency_id: agency.id,
-                    agent_id: agentRecord.id,
-                    to_number: data.phone_number,
-                    contact_name: data.contact_name,
-                    scheduled_at: scheduledAt.toISOString(),
-                    lead_timezone: leadTimezone,
-                    original_scheduled_at: data.scheduled_at || new Date().toISOString(),
-                    timezone_delayed: !data.scheduled_at,
-                    trigger_source: 'api_trigger',
-                    metadata: data.metadata,
-                })
-                .select('id')
-                .single();
-
-            if (schedError) {
-                console.error('API trigger schedule error:', schedError.code);
-                return NextResponse.json({ error: 'Failed to schedule call' }, { status: 500 });
-            }
-
-            await logTrigger(supabase, {
-                agency_id: agency.id,
-                phone_number: data.phone_number,
-                agent_id: agentRecord.id,
-                contact_name: data.contact_name,
-                status: 'scheduled',
-                scheduled_call_id: scheduledCall?.id,
-                request_payload: data as unknown as Record<string, unknown>,
-            });
-
-            return NextResponse.json({
-                success: true,
-                status: 'scheduled',
-                scheduled_at: scheduledAt.toISOString(),
-                lead_timezone: leadTimezone,
-                agent: agentRecord.name,
-                scheduled_call_id: scheduledCall?.id,
-            });
-        }
-
-        // Call immediately — resolve A/B experiment before initiating
-        let callInitParams: CallInitiationParams = {
-            provider: agentRecord.provider as 'retell' | 'vapi' | 'bland',
-            providerApiKey,
-            externalAgentId: agentRecord.external_id,
-            toNumber: data.phone_number,
+        // Build TriggerContext and delegate to shared handler
+        const ctx: TriggerContext = {
+            supabase,
+            agencyId: agency.id,
+            triggerSource: 'api_trigger',
+            triggerConfig: apiConfig ? { enabled: apiConfig.enabled, default_agent_id: apiConfig.default_agent_id } : undefined,
+            callingWindow: agency.calling_window as TriggerContext['callingWindow'],
+            phoneNumber: data.phone_number,
+            contactName: data.contact_name,
+            agentId: data.agent_id,
             fromNumber: data.from_number,
-            metadata: {
-                contact_name: data.contact_name,
-                lead_timezone: leadTimezone,
-                trigger_source: 'api_trigger',
-                ...(data.metadata || {}),
+            scheduledAt: data.scheduled_at,
+            metadata: data.metadata,
+            logTable: 'api_trigger_log',
+            agencyKeys: {
+                retell_api_key: agency.retell_api_key ?? null,
+                vapi_api_key: agency.vapi_api_key ?? null,
+                bland_api_key: agency.bland_api_key ?? null,
+                elevenlabs_api_key: agency.elevenlabs_api_key ?? null,
             },
+            requestPayload: data as unknown as Record<string, unknown>,
         };
 
-        // Apply A/B experiment traffic splitting (if a running experiment exists for this agent)
-        const experimentResult = await applyExperiment({
-            agentId: agentRecord.id,
-            agencyId: agency.id,
-            callParams: callInitParams,
-        });
-        callInitParams = experimentResult.callParams;
-
-        const callResult = await initiateCall(callInitParams);
-
-        if (!callResult.success) {
-            await logTrigger(supabase, {
-                agency_id: agency.id,
-                phone_number: data.phone_number,
-                agent_id: agentRecord.id,
-                contact_name: data.contact_name,
-                status: 'failed',
-                error_message: callResult.error,
-                request_payload: data as unknown as Record<string, unknown>,
-            });
-            return NextResponse.json(
-                { error: callResult.error || 'Failed to initiate call' },
-                { status: 500 },
-            );
-        }
-
-        // Also insert into scheduled_calls as completed for tracking
-        const { data: scheduledCall } = await supabase
-            .from('scheduled_calls')
-            .insert({
-                agency_id: agency.id,
-                agent_id: agentRecord.id,
-                to_number: data.phone_number,
-                contact_name: data.contact_name,
-                scheduled_at: new Date().toISOString(),
-                status: 'completed',
-                external_call_id: callResult.callId,
-                completed_at: new Date().toISOString(),
-                lead_timezone: leadTimezone,
-                trigger_source: 'api_trigger',
-                metadata: data.metadata,
-            })
-            .select('id')
-            .single();
-
-        await logTrigger(supabase, {
-            agency_id: agency.id,
-            phone_number: data.phone_number,
-            agent_id: agentRecord.id,
-            contact_name: data.contact_name,
-            status: 'initiated',
-            scheduled_call_id: scheduledCall?.id,
-            request_payload: data as unknown as Record<string, unknown>,
-        });
-
-        return NextResponse.json({
-            success: true,
-            status: 'initiated',
-            call_id: callResult.callId,
-            lead_timezone: leadTimezone,
-            agent: agentRecord.name,
-        });
+        return handleTriggerCall(ctx);
     } catch (error) {
         console.error('API trigger-call error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
-}
-
-/**
- * Log a trigger event to the api_trigger_log table
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function logTrigger(supabase: any, log: {
-    agency_id: string;
-    phone_number: string;
-    agent_id?: string;
-    contact_name?: string;
-    status: string;
-    scheduled_call_id?: string;
-    call_id?: string;
-    error_message?: string;
-    request_payload?: Record<string, unknown>;
-}) {
-    try {
-        await supabase.from('api_trigger_log').insert(log);
-    } catch (err) {
-        console.error('Failed to log API trigger:', err instanceof Error ? err.message : 'Unknown error');
     }
 }
