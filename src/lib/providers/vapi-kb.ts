@@ -156,7 +156,8 @@ export async function createVapiKnowledgeBase(
         body: JSON.stringify({
             name: params.name,
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            // Gemini 1.5 was shut down by Google; Vapi's enum still lists it but queries fail
+            model: 'gemini-3.5-flash',
             description: params.description || `Knowledge base for ${params.name}`,
             fileIds: params.fileIds,
         }),

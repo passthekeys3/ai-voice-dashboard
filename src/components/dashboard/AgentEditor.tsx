@@ -17,9 +17,10 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, Sparkles, Loader2, ChevronDown, ChevronUp, RefreshCw, Shield, Zap, Info } from 'lucide-react';
+import { AlertTriangle, Sparkles, Loader2, ChevronDown, ChevronUp, RefreshCw, Shield } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
-import { RETELL_VOICE_MODELS, RETELL_LLM_MODELS, VAPI_LLM_MODELS, ELEVENLABS_LLM_MODELS, ELEVENLABS_VOICE_MODELS, TELEPHONY_COST_PER_MIN } from '@/lib/constants/config';
+import { defaultModelsFor, llmModelsFor, voiceModelsFor, formatCostPerMin, isRetellS2SModel, vapiModelProvider } from '@/lib/constants/config';
+import { CostEstimate } from './CostEstimate';
 import type { VoiceProvider } from '@/types';
 
 interface PromptSuggestion {
@@ -144,10 +145,10 @@ export function AgentEditor({
 
     // Voice model & LLM model state
     const [voiceModel, setVoiceModel] = useState(
-        (config as { voice_model?: string }).voice_model || 'eleven_v3'
+        (config as { voice_model?: string }).voice_model || defaultModelsFor(provider).voiceModel
     );
     const [llmModel, setLlmModel] = useState(
-        (config as { llm_model?: string }).llm_model || (provider === 'retell' ? 'gpt-4.1' : provider === 'elevenlabs' ? 'gemini-2.5-flash' : 'gpt-4o')
+        (config as { llm_model?: string }).llm_model || defaultModelsFor(provider).llmModel
     );
 
     // Safety guardrails state (Retell only)
@@ -332,11 +333,8 @@ export function AgentEditor({
                 providerPayload.voice_provider = voiceProvider;
                 providerPayload.language = language;
                 providerPayload.first_message = firstMessage;
-                // Derive Vapi model provider from model name
-                const vapiProvider = llmModel.startsWith('claude') ? 'anthropic'
-                    : llmModel.startsWith('gemini') ? 'google' : 'openai';
                 providerPayload.model = llmModel;
-                providerPayload.model_provider = vapiProvider;
+                providerPayload.model_provider = vapiModelProvider(llmModel);
             }
 
             const providerResponse = await fetch(`/api/agents/${agentId}/provider`, {
@@ -566,8 +564,8 @@ export function AgentEditor({
                                 )}
                             </div>
 
-                            {/* Voice Model (Retell + ElevenLabs) */}
-                            {(provider === 'retell' || provider === 'elevenlabs') && (
+                            {/* Voice Model (Retell + ElevenLabs; speech-to-speech LLMs bring their own voice) */}
+                            {voiceModelsFor(provider).length > 0 && !isRetellS2SModel(llmModel) && (
                                 <div className="space-y-2">
                                     <Label>Voice Model</Label>
                                     <Select value={voiceModel} onValueChange={setVoiceModel}>
@@ -575,9 +573,9 @@ export function AgentEditor({
                                             <SelectValue placeholder="Select voice model" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {(provider === 'elevenlabs' ? ELEVENLABS_VOICE_MODELS : RETELL_VOICE_MODELS).map((m) => (
+                                            {voiceModelsFor(provider).map((m) => (
                                                 <SelectItem key={m.value} value={m.value}>
-                                                    {m.label} — ${m.costPerMin.toFixed(3)}/min
+                                                    {m.label} — {formatCostPerMin(m.costPerMin)}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -593,57 +591,26 @@ export function AgentEditor({
                                         <SelectValue placeholder="Select LLM model" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {(provider === 'retell' ? RETELL_LLM_MODELS : provider === 'elevenlabs' ? ELEVENLABS_LLM_MODELS : VAPI_LLM_MODELS).map((m) => (
+                                        {llmModelsFor(provider).map((m) => (
                                             <SelectItem key={m.value} value={m.value}>
-                                                {m.label} — ${m.costPerMin.toFixed(3)}/min
+                                                {m.label} — {formatCostPerMin(m.costPerMin)}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
+                                {llmModel && !llmModelsFor(provider).some(m => m.value === llmModel) && (
+                                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                                        This agent uses {llmModel}, which is no longer offered. Pick a current model to keep editing reliably.
+                                    </p>
+                                )}
                             </div>
 
-                            {/* Cost Estimate (Retell + ElevenLabs) */}
-                            {(provider === 'retell' || provider === 'elevenlabs') && (() => {
-                                const isEL = provider === 'elevenlabs';
-                                const voiceCost = isEL
-                                    ? (ELEVENLABS_VOICE_MODELS.find(m => m.value === voiceModel)?.costPerMin ?? 0.04)
-                                    : (RETELL_VOICE_MODELS.find(m => m.value === voiceModel)?.costPerMin ?? 0.08);
-                                const llmCost = isEL
-                                    ? (ELEVENLABS_LLM_MODELS.find(m => m.value === llmModel)?.costPerMin ?? 0.005)
-                                    : (RETELL_LLM_MODELS.find(m => m.value === llmModel)?.costPerMin ?? 0.045);
-                                const telCost = TELEPHONY_COST_PER_MIN;
-                                const total = voiceCost + llmCost + telCost;
-                                return (
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
-                                        <Zap className="h-3.5 w-3.5 shrink-0" />
-                                        <span>Est. ~${total.toFixed(3)}/min</span>
-                                        <div className="relative group ml-auto" tabIndex={0} role="button" aria-label="Show cost breakdown">
-                                            <Info className="h-3.5 w-3.5 cursor-help text-muted-foreground/70 group-hover:text-foreground group-focus-within:text-foreground transition-colors" />
-                                            <div className="absolute bottom-full right-0 mb-2 w-52 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto transition-opacity z-50">
-                                                <p className="font-medium text-xs mb-2">Cost breakdown</p>
-                                                <div className="space-y-1 text-[11px]">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">Voice model</span>
-                                                        <span>${voiceCost.toFixed(3)}/min</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">LLM</span>
-                                                        <span>${llmCost.toFixed(3)}/min</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">Telephony</span>
-                                                        <span>${telCost.toFixed(3)}/min</span>
-                                                    </div>
-                                                    <div className="flex justify-between border-t pt-1 mt-1 font-medium">
-                                                        <span>Total</span>
-                                                        <span>${total.toFixed(3)}/min</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
+                            <CostEstimate
+                                provider={provider}
+                                voiceModel={voiceModel}
+                                llmModel={llmModel}
+                                className="bg-muted/50 rounded-md px-3 py-2"
+                            />
 
                             {/* Language */}
                             <div className="space-y-2">

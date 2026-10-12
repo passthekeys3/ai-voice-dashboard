@@ -7,6 +7,17 @@ import { fetchWithRetry } from '@/lib/retry';
 
 const VAPI_BASE_URL = 'https://api.vapi.ai';
 
+export interface VapiMessage {
+    role: string;
+    content: string;
+}
+
+export interface VapiServer {
+    url?: string;
+    timeoutSeconds?: number;
+    headers?: Record<string, string>;
+}
+
 export interface VapiAssistant {
     id: string;
     orgId: string;
@@ -20,8 +31,9 @@ export interface VapiAssistant {
     model?: {
         provider: string;
         model: string;
+        /** @deprecated Removed from Vapi's API; may still appear on old assistants. Write `messages` instead. */
         systemPrompt?: string;
-        messages?: Array<{ role: string; content: string }>;
+        messages?: VapiMessage[];
         temperature?: number;
     };
     transcriber?: {
@@ -31,8 +43,8 @@ export interface VapiAssistant {
     };
     firstMessage?: string;
     firstMessageMode?: string;
-    serverUrl?: string;
-    serverUrlSecret?: string;
+    /** Webhook target (replaces the removed top-level `serverUrl`) */
+    server?: VapiServer;
     metadata?: Record<string, unknown>;
     createdAt: string;
     updatedAt: string;
@@ -134,7 +146,7 @@ export async function createVapiAssistant(
         model?: VapiAssistant['model'];
         transcriber?: VapiAssistant['transcriber'];
         firstMessage?: string;
-        serverUrl?: string;
+        server?: VapiServer;
     }
 ): Promise<VapiAssistant> {
     return vapiFetch<VapiAssistant>(apiKey, '/assistant', {
@@ -155,9 +167,13 @@ export function extractVapiSystemPrompt(model?: VapiAssistant['model']): string 
     return model.systemPrompt || '';
 }
 
-/** Check whether the assistant uses the messages array format */
-export function usesVapiMessagesFormat(model?: VapiAssistant['model']): boolean {
-    return !!(model?.messages && model.messages.length > 0);
+/**
+ * Messages array with the system prompt set, keeping any non-system messages.
+ * Vapi removed the legacy `model.systemPrompt` field, so every prompt write goes here.
+ */
+export function withVapiSystemPrompt(messages: VapiMessage[] | undefined, prompt: string): VapiMessage[] {
+    const rest = (messages || []).filter(m => m.role !== 'system');
+    return [{ role: 'system', content: prompt }, ...rest];
 }
 
 export async function updateVapiAssistant(
@@ -169,7 +185,7 @@ export async function updateVapiAssistant(
         model: VapiAssistant['model'];
         transcriber: VapiAssistant['transcriber'];
         firstMessage: string;
-        serverUrl: string;
+        server: VapiServer;
     }>
 ): Promise<VapiAssistant> {
     return vapiFetch<VapiAssistant>(apiKey, `/assistant/${encodeURIComponent(assistantId)}`, {
@@ -218,8 +234,7 @@ export interface VapiPhoneNumber {
     provider: 'twilio' | 'vonage' | 'vapi';
     assistantId?: string;
     squadId?: string;
-    serverUrl?: string;
-    serverUrlSecret?: string;
+    server?: VapiServer;
     createdAt: string;
     updatedAt: string;
 }
@@ -241,7 +256,7 @@ export async function updateVapiPhoneNumber(
     config: Partial<{
         assistantId: string | null;
         squadId: string | null;
-        serverUrl: string;
+        server: VapiServer;
     }>
 ): Promise<VapiPhoneNumber> {
     return vapiFetch<VapiPhoneNumber>(apiKey, `/phone-number/${encodeURIComponent(phoneNumberId)}`, {

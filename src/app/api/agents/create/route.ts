@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-import { publishRetellAgent } from '@/lib/providers/retell';
+import { publishRetellAgent, retellModelFields } from '@/lib/providers/retell';
 import { resolveProviderApiKeys, autoSelectProvider, getProviderKey } from '@/lib/providers/resolve-keys';
 import type { VoiceProvider } from '@/types';
 import { createVapiAssistant } from '@/lib/providers/vapi';
 import { createBlandPathway } from '@/lib/providers/bland';
 import { createElevenLabsAgent } from '@/lib/providers/elevenlabs';
 import { safeParseJson } from '@/lib/validation';
-import { MAX_PROMPT_LENGTH, VOICE_PROVIDERS } from '@/lib/constants/config';
+import { MAX_PROMPT_LENGTH, VOICE_PROVIDERS, DEFAULT_MODELS, vapiModelProvider } from '@/lib/constants/config';
 import { isSubscriptionActive } from '@/lib/billing/tiers';
 
 const PROVIDER_API_TIMEOUT = 15_000;
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
                 body: JSON.stringify({
                     general_prompt: system_prompt || undefined,
                     begin_message: first_message || null,
-                    model: llm_model || 'gpt-4.1',
+                    ...retellModelFields(llm_model || DEFAULT_MODELS.retell.llm),
                     start_speaker: 'agent',
                 }),
                 signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
@@ -190,17 +190,14 @@ export async function POST(request: NextRequest) {
             }
 
             agentConfig.voice_id = voice_id;
-            agentConfig.voice_model = voice_model || 'eleven_v3';
-            agentConfig.llm_model = llm_model || 'gpt-4.1';
+            agentConfig.voice_model = voice_model || DEFAULT_MODELS.retell.voice;
+            agentConfig.llm_model = llm_model || DEFAULT_MODELS.retell.llm;
             agentConfig.system_prompt = system_prompt;
             agentConfig.first_message = first_message;
 
         } else if (provider === 'vapi') {
-            // Derive Vapi model provider from model name
-            const vapiModelName = llm_model || 'gpt-4o';
-            const vapiModelProvider = vapiModelName.startsWith('claude') ? 'anthropic'
-                : vapiModelName.startsWith('gemini') ? 'google'
-                : 'openai';
+            const vapiModelName = llm_model || DEFAULT_MODELS.vapi.llm;
+            const vapiProvider = vapiModelProvider(vapiModelName);
 
             // Create a Vapi assistant
             try {
@@ -208,13 +205,12 @@ export async function POST(request: NextRequest) {
                 const vapiConfig: Parameters<typeof createVapiAssistant>[1] = {
                     name: name.trim(),
                     model: {
-                        provider: vapiModelProvider,
+                        provider: vapiProvider,
                         model: vapiModelName,
-                        // Use messages array format (newer Vapi convention, consistent with agent-builder/apply)
                         ...(system_prompt ? { messages: [{ role: 'system', content: system_prompt }] } : {}),
                     },
                     firstMessage: first_message || undefined,
-                    serverUrl: `${appUrl}/api/webhooks/vapi`,
+                    server: { url: `${appUrl}/api/webhooks/vapi` },
                 };
                 // Include voice if provided (ElevenLabs default)
                 if (voice_id) {
@@ -233,7 +229,7 @@ export async function POST(request: NextRequest) {
             agentConfig.system_prompt = system_prompt;
             agentConfig.first_message = first_message;
             agentConfig.llm_model = vapiModelName;
-            agentConfig.llm_provider = vapiModelProvider;
+            agentConfig.llm_provider = vapiProvider;
             if (voice_id) {
                 agentConfig.voice_id = voice_id;
                 agentConfig.voice_provider = '11labs';
@@ -266,8 +262,8 @@ export async function POST(request: NextRequest) {
                     name: name.trim(),
                     prompt: system_prompt || undefined,
                     firstMessage: first_message || undefined,
-                    llmModel: llm_model || 'gemini-2.5-flash',
-                    voiceModel: voice_model || 'eleven_flash_v2',
+                    llmModel: llm_model || DEFAULT_MODELS.elevenlabs.llm,
+                    voiceModel: voice_model || DEFAULT_MODELS.elevenlabs.voice,
                     voiceId: voice_id || undefined,
                     webhookUrl: `${appUrl}/api/webhooks/elevenlabs`,
                 });
@@ -282,8 +278,8 @@ export async function POST(request: NextRequest) {
 
             agentConfig.system_prompt = system_prompt;
             agentConfig.first_message = first_message;
-            agentConfig.llm_model = llm_model || 'gemini-2.5-flash';
-            agentConfig.voice_model = voice_model || 'eleven_flash_v2';
+            agentConfig.llm_model = llm_model || DEFAULT_MODELS.elevenlabs.llm;
+            agentConfig.voice_model = voice_model || DEFAULT_MODELS.elevenlabs.voice;
             if (voice_id) agentConfig.voice_id = voice_id;
 
         } else {

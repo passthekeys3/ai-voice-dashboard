@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { VoiceProvider } from '@/types';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
-import { updateRetellAgent, getRetellAgent, getRetellLLM, updateRetellLLM, type UpdateRetellLLMParams } from '@/lib/providers/retell';
-import { getVapiAssistant, updateVapiAssistant, extractVapiSystemPrompt, usesVapiMessagesFormat } from '@/lib/providers/vapi';
+import { updateRetellAgent, getRetellAgent, getRetellLLM, updateRetellLLM, retellModelFields, retellLLMModel, type UpdateRetellLLMParams } from '@/lib/providers/retell';
+import { getVapiAssistant, updateVapiAssistant, extractVapiSystemPrompt, withVapiSystemPrompt } from '@/lib/providers/vapi';
+import { DEFAULT_MODELS, vapiModelProvider } from '@/lib/constants/config';
 import { getBlandPathway, updateBlandPathway } from '@/lib/providers/bland';
 import { getElevenLabsAgent, updateElevenLabsAgent } from '@/lib/providers/elevenlabs';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
@@ -65,7 +66,7 @@ export async function GET(
                     try {
                         const llm = await getRetellLLM(apiKey, llmId);
                         llmPrompt = llm.general_prompt || '';
-                        llmModel = llm.model || '';
+                        llmModel = retellLLMModel(llm);
                     } catch (err) {
                         console.error('Error fetching LLM:', err instanceof Error ? err.message : 'Unknown error');
                     }
@@ -224,7 +225,7 @@ export async function PATCH(
                 if (retellAgent.response_engine?.llm_id) {
                     const llmUpdate: UpdateRetellLLMParams = {};
                     if (body.prompt !== undefined) llmUpdate.general_prompt = body.prompt;
-                    if (body.llm_model !== undefined) llmUpdate.model = body.llm_model;
+                    if (body.llm_model !== undefined) Object.assign(llmUpdate, retellModelFields(body.llm_model));
                     if (Object.keys(llmUpdate).length > 0) {
                         await updateRetellLLM(apiKey, retellAgent.response_engine.llm_id, llmUpdate);
                     }
@@ -267,39 +268,25 @@ export async function PATCH(
                 // Fetch current assistant to preserve existing config structures
                 const vapiAssistant = await getVapiAssistant(apiKey, agent.external_id);
 
-                const updateData: Partial<{
-                    name: string;
-                    model: { provider: string; model: string; systemPrompt?: string; messages?: Array<{ role: string; content: string }>; temperature?: number };
-                    voice: { provider: string; voiceId: string; speed?: number; stability?: number };
-                    transcriber: { provider: string; model?: string; language?: string };
-                    firstMessage: string;
-                }> = {};
+                const updateData: Parameters<typeof updateVapiAssistant>[2] = {};
 
                 if (body.agent_name !== undefined) updateData.name = body.agent_name;
 
                 // Update model config (prompt, model selection, or both)
                 if (body.prompt !== undefined || body.model !== undefined || body.model_provider !== undefined) {
-                    const useMessages = usesVapiMessagesFormat(vapiAssistant.model);
                     const currentPrompt = extractVapiSystemPrompt(vapiAssistant.model);
                     const newPrompt = body.prompt !== undefined ? body.prompt : currentPrompt;
+                    const modelName = body.model !== undefined ? body.model : (vapiAssistant.model?.model || DEFAULT_MODELS.vapi.llm);
 
                     updateData.model = {
-                        provider: body.model_provider !== undefined ? body.model_provider : (vapiAssistant.model?.provider || 'openai'),
-                        model: body.model !== undefined ? body.model : (vapiAssistant.model?.model || 'gpt-4o'),
+                        // Vapi rejects a provider/model mismatch, so derive provider from the model
+                        provider: vapiModelProvider(modelName),
+                        model: modelName,
+                        // Always write messages: Vapi removed model.systemPrompt, so legacy
+                        // assistants are migrated to the messages format on first edit
+                        messages: withVapiSystemPrompt(vapiAssistant.model?.messages, newPrompt),
                         ...(vapiAssistant.model?.temperature !== undefined ? { temperature: vapiAssistant.model.temperature } : {}),
                     };
-
-                    if (useMessages) {
-                        // Assistant uses messages array format — update system message in place
-                        const existingMessages = vapiAssistant.model?.messages || [];
-                        const hasSystemMsg = existingMessages.some(m => m.role === 'system');
-                        updateData.model.messages = hasSystemMsg
-                            ? existingMessages.map(m => m.role === 'system' ? { ...m, content: newPrompt } : m)
-                            : [{ role: 'system', content: newPrompt }, ...existingMessages];
-                    } else {
-                        // Assistant uses legacy systemPrompt field
-                        updateData.model.systemPrompt = newPrompt;
-                    }
                 }
 
                 // Update voice config

@@ -8,6 +8,7 @@ import * as retell from './retell';
 import * as vapi from './vapi';
 import * as bland from './bland';
 import * as elevenlabs from './elevenlabs';
+import { DEFAULT_MODELS, vapiModelProvider } from '@/lib/constants/config';
 
 // Normalized agent structure
 export interface NormalizedAgent {
@@ -157,7 +158,7 @@ function createVapiClient(apiKey: string): VoiceProviderClient {
         config: {
             voice_id: assistant.voice?.voiceId,
             prompt: vapi.extractVapiSystemPrompt(assistant.model),
-            webhook_url: assistant.serverUrl,
+            webhook_url: assistant.server?.url,
             metadata: assistant.metadata,
         },
         createdAt: assistant.createdAt,
@@ -211,13 +212,13 @@ function createVapiClient(apiKey: string): VoiceProviderClient {
             const assistant = await vapi.createVapiAssistant(apiKey, {
                 name: config.name,
                 model: config.prompt ? {
-                    provider: 'openai',
-                    model: 'gpt-4o',
-                    systemPrompt: config.prompt,
+                    provider: vapiModelProvider(DEFAULT_MODELS.vapi.llm),
+                    model: DEFAULT_MODELS.vapi.llm,
+                    messages: vapi.withVapiSystemPrompt(undefined, config.prompt),
                 } : undefined,
                 // Ensure webhook delivery points to our Vapi webhook handler
-                serverUrl: process.env.NEXT_PUBLIC_APP_URL
-                    ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/vapi`
+                server: process.env.NEXT_PUBLIC_APP_URL
+                    ? { url: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/vapi` }
                     : undefined,
             });
             return normalizeAgent(assistant);
@@ -227,24 +228,13 @@ function createVapiClient(apiKey: string): VoiceProviderClient {
             const updateData: Record<string, unknown> = {};
             if (config.name !== undefined) updateData.name = config.name;
             if (config.prompt !== undefined) {
-                const useMessages = vapi.usesVapiMessagesFormat(currentAssistant.model);
-                const modelBase = {
-                    provider: currentAssistant.model?.provider || 'openai',
-                    model: currentAssistant.model?.model || 'gpt-4o',
+                const modelName = currentAssistant.model?.model || DEFAULT_MODELS.vapi.llm;
+                updateData.model = {
+                    provider: currentAssistant.model?.provider || vapiModelProvider(modelName),
+                    model: modelName,
+                    messages: vapi.withVapiSystemPrompt(currentAssistant.model?.messages, config.prompt),
                     ...(currentAssistant.model?.temperature !== undefined ? { temperature: currentAssistant.model.temperature } : {}),
                 };
-                if (useMessages) {
-                    const existingMessages = currentAssistant.model?.messages || [];
-                    const hasSystemMsg = existingMessages.some(m => m.role === 'system');
-                    updateData.model = {
-                        ...modelBase,
-                        messages: hasSystemMsg
-                            ? existingMessages.map(m => m.role === 'system' ? { ...m, content: config.prompt } : m)
-                            : [{ role: 'system', content: config.prompt! }, ...existingMessages],
-                    };
-                } else {
-                    updateData.model = { ...modelBase, systemPrompt: config.prompt };
-                }
             }
             if (config.voiceId !== undefined) {
                 updateData.voice = {

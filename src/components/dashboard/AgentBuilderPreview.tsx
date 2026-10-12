@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
     Bot, Mic, MessageSquare, Code2, ChevronDown, ChevronUp,
-    Rocket, Loader2, Zap, CheckCircle2, Phone, ExternalLink, Info,
+    Rocket, Loader2, Zap, CheckCircle2, Phone, ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +25,8 @@ import type { AgentDraft, BuilderContext } from '@/lib/agent-builder/types';
 import type { VoiceProvider } from '@/types';
 import type { WorkflowTemplate } from '@/lib/agent-builder/templates';
 import type { CreatedAgentData } from './AgentBuilder';
-import { RETELL_VOICE_MODELS, RETELL_LLM_MODELS, VAPI_LLM_MODELS, ELEVENLABS_LLM_MODELS, ELEVENLABS_VOICE_MODELS, TELEPHONY_COST_PER_MIN, PROVIDER_LABELS } from '@/lib/constants/config';
+import { PROVIDER_LABELS, defaultModelsFor, llmModelsFor, voiceModelsFor, formatCostPerMin, isRetellS2SModel } from '@/lib/constants/config';
+import { CostEstimate } from './CostEstimate';
 import Link from 'next/link';
 
 interface AgentBuilderPreviewProps {
@@ -258,21 +259,21 @@ export function AgentBuilderPreview({
                             />
                         </Section>
 
-                        {/* Voice Model (Retell + ElevenLabs) */}
-                        {(draft.provider === 'retell' || draft.provider === 'elevenlabs') && (
+                        {/* Voice Model (Retell + ElevenLabs; speech-to-speech LLMs bring their own voice) */}
+                        {voiceModelsFor(draft.provider).length > 0 && !isRetellS2SModel(draft.llmModel) && (
                             <Section icon={<Mic className="h-3.5 w-3.5" />} label="Voice Model">
                                 <Select
-                                    value={draft.voiceModel || (draft.provider === 'elevenlabs' ? 'eleven_flash_v2' : 'eleven_v3')}
+                                    value={draft.voiceModel || defaultModelsFor(draft.provider).voiceModel}
                                     onValueChange={(value: string) => onDraftUpdate({ voiceModel: value })}
                                 >
                                     <SelectTrigger className="text-sm">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {(draft.provider === 'elevenlabs' ? ELEVENLABS_VOICE_MODELS : RETELL_VOICE_MODELS).map((m) => (
+                                        {voiceModelsFor(draft.provider).map((m) => (
                                             <SelectItem key={m.value} value={m.value}>
                                                 <span>{m.label}</span>
-                                                <span className="text-muted-foreground ml-2 text-xs">${m.costPerMin.toFixed(3)}/min</span>
+                                                <span className="text-muted-foreground ml-2 text-xs">{formatCostPerMin(m.costPerMin)}</span>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -281,20 +282,20 @@ export function AgentBuilderPreview({
                         )}
 
                         {/* LLM Model (Retell + Vapi + ElevenLabs) */}
-                        {draft.provider !== 'bland' && (
+                        {llmModelsFor(draft.provider).length > 0 && (
                             <Section icon={<Bot className="h-3.5 w-3.5" />} label="LLM Model">
                                 <Select
-                                    value={draft.llmModel || (draft.provider === 'retell' ? 'gpt-4.1' : draft.provider === 'elevenlabs' ? 'gemini-2.5-flash' : 'gpt-4o')}
+                                    value={draft.llmModel || defaultModelsFor(draft.provider).llmModel}
                                     onValueChange={(value: string) => onDraftUpdate({ llmModel: value })}
                                 >
                                     <SelectTrigger className="text-sm">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {(draft.provider === 'retell' ? RETELL_LLM_MODELS : draft.provider === 'elevenlabs' ? ELEVENLABS_LLM_MODELS : VAPI_LLM_MODELS).map((m) => (
+                                        {llmModelsFor(draft.provider).map((m) => (
                                             <SelectItem key={m.value} value={m.value}>
                                                 <span>{m.label}</span>
-                                                <span className="text-muted-foreground ml-2 text-xs">${m.costPerMin.toFixed(3)}/min</span>
+                                                <span className="text-muted-foreground ml-2 text-xs">{formatCostPerMin(m.costPerMin)}</span>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -302,48 +303,12 @@ export function AgentBuilderPreview({
                             </Section>
                         )}
 
-                        {/* Cost Estimate */}
-                        {(draft.provider === 'retell' || draft.provider === 'elevenlabs') && (() => {
-                            const isEL = draft.provider === 'elevenlabs';
-                            const voiceCost = isEL
-                                ? (ELEVENLABS_VOICE_MODELS.find(m => m.value === draft.voiceModel)?.costPerMin ?? 0.04)
-                                : (RETELL_VOICE_MODELS.find(m => m.value === draft.voiceModel)?.costPerMin ?? 0.08);
-                            const llmCost = isEL
-                                ? (ELEVENLABS_LLM_MODELS.find(m => m.value === draft.llmModel)?.costPerMin ?? 0.005)
-                                : (RETELL_LLM_MODELS.find(m => m.value === draft.llmModel)?.costPerMin ?? 0.045);
-                            const telCost = TELEPHONY_COST_PER_MIN;
-                            const total = voiceCost + llmCost + telCost;
-                            return (
-                                <div className="flex items-center gap-2 px-1 py-1.5 text-xs text-muted-foreground">
-                                    <Zap className="h-3 w-3 shrink-0" />
-                                    <span>Est. ~${total.toFixed(3)}/min</span>
-                                    <div className="relative group ml-auto" tabIndex={0} role="button" aria-label="Show cost breakdown">
-                                        <Info className="h-3.5 w-3.5 cursor-help text-muted-foreground/70 group-hover:text-foreground group-focus-within:text-foreground transition-colors" />
-                                        <div className="absolute bottom-full right-0 mb-2 w-52 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto transition-opacity z-50">
-                                            <p className="font-medium text-xs mb-2">Cost breakdown</p>
-                                            <div className="space-y-1 text-[11px]">
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Voice model</span>
-                                                    <span>${voiceCost.toFixed(3)}/min</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">LLM</span>
-                                                    <span>${llmCost.toFixed(3)}/min</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Telephony</span>
-                                                    <span>${telCost.toFixed(3)}/min</span>
-                                                </div>
-                                                <div className="flex justify-between border-t pt-1 mt-1 font-medium">
-                                                    <span>Total</span>
-                                                    <span>${total.toFixed(3)}/min</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })()}
+                        <CostEstimate
+                            provider={draft.provider}
+                            voiceModel={draft.voiceModel || defaultModelsFor(draft.provider).voiceModel}
+                            llmModel={draft.llmModel || defaultModelsFor(draft.provider).llmModel}
+                            className="px-1 py-1.5"
+                        />
 
                         {/* First Message */}
                         <Section icon={<MessageSquare className="h-3.5 w-3.5" />} label="First Message">

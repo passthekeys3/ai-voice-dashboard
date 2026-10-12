@@ -4,6 +4,7 @@
  */
 
 import { fetchWithRetry } from '@/lib/retry';
+import { isRetellS2SModel } from '@/lib/constants/config';
 
 const RETELL_BASE_URL = 'https://api.retellai.com';
 const RETELL_API_TIMEOUT = 15_000;
@@ -42,7 +43,9 @@ export const REQUIRED_WEBHOOK_EVENTS = [
 
 export interface RetellLLM {
     llm_id: string;
-    model?: string;
+    model?: string | null;
+    /** Speech-to-speech model; set instead of `model`, never both */
+    s2s_model?: string | null;
     general_prompt?: string;
     begin_message?: string;
     inbound_dynamic_variables_webhook_url?: string;
@@ -305,7 +308,24 @@ export async function getRetellLLM(
 export interface UpdateRetellLLMParams {
     general_prompt?: string;
     begin_message?: string | null;
-    model?: string;
+    model?: string | null;
+    s2s_model?: string | null;
+}
+
+/**
+ * Retell takes text LLMs in `model` and speech-to-speech models in `s2s_model`,
+ * and rejects a request that sets both. Returns the pair with the unused one
+ * nulled, so switching an agent between kinds clears the old field.
+ */
+export function retellModelFields(model: string): { model: string | null; s2s_model: string | null } {
+    return isRetellS2SModel(model)
+        ? { model: null, s2s_model: model }
+        : { model, s2s_model: null };
+}
+
+/** The model an existing Retell LLM runs, whichever field it's stored in */
+export function retellLLMModel(llm: Pick<RetellLLM, 'model' | 's2s_model'>): string {
+    return llm.s2s_model || llm.model || '';
 }
 
 export async function updateRetellLLM(

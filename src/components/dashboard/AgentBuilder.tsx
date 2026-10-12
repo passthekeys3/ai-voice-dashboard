@@ -15,6 +15,7 @@ import type {
 import { getAvailableTemplates } from '@/lib/agent-builder/templates';
 import type { VoiceProvider } from '@/types';
 import { matchVoicesToDescription } from '@/lib/agent-builder/llm';
+import { defaultModelsFor } from '@/lib/constants/config';
 
 /** Data returned from the apply API after successful agent creation */
 export interface CreatedAgentData {
@@ -47,8 +48,7 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
         firstMessage: '',
         voiceId: '',
         voiceName: '',
-        voiceModel: 'eleven_v3',
-        llmModel: defaultProvider === 'retell' ? 'gpt-4.1' : 'gpt-4o',
+        ...defaultModelsFor(defaultProvider),
         language: 'en',
         integrations: [],
     });
@@ -330,8 +330,7 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
             if (updates.provider && updates.provider !== prev.provider) {
                 newDraft.voiceId = '';
                 newDraft.voiceName = '';
-                newDraft.voiceModel = updates.provider === 'retell' ? 'eleven_v3' : '';
-                newDraft.llmModel = updates.provider === 'retell' ? 'gpt-4.1' : 'gpt-4o';
+                Object.assign(newDraft, defaultModelsFor(updates.provider));
             }
 
             return newDraft;

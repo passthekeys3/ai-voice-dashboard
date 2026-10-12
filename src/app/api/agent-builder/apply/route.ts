@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getTemplateById, getTemplateActions } from '@/lib/agent-builder/templates';
-import { publishRetellAgent } from '@/lib/providers/retell';
+import { publishRetellAgent, retellModelFields } from '@/lib/providers/retell';
 import { createElevenLabsAgent } from '@/lib/providers/elevenlabs';
 import { createBlandPathway } from '@/lib/providers/bland';
 import { resolveProviderApiKeys, autoSelectProvider } from '@/lib/providers/resolve-keys';
 import { isValidUuid } from '@/lib/validation';
 import { withErrorHandling } from '@/lib/api/response';
-import { MAX_PROMPT_LENGTH, VOICE_PROVIDERS } from '@/lib/constants/config';
+import { MAX_PROMPT_LENGTH, VOICE_PROVIDERS, DEFAULT_MODELS, vapiModelProvider } from '@/lib/constants/config';
 const MAX_NAME_LENGTH = 200;
 const MAX_FIRST_MESSAGE_LENGTH = 1000;
 const MAX_VOICE_ID_LENGTH = 200;
@@ -160,7 +160,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
                 body: JSON.stringify({
                     general_prompt: safeSystemPrompt,
                     begin_message: safeFirstMessage || null,
-                    model: draft.llmModel || 'gpt-4.1',
+                    ...retellModelFields(draft.llmModel || DEFAULT_MODELS.retell.llm),
                     start_speaker: 'agent',
                 }),
                 signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
@@ -229,10 +229,8 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
                     voice: { provider: '11labs', voiceId: draft.voiceId },
                     firstMessage: safeFirstMessage || undefined,
                     model: {
-                        provider: (draft.llmModel?.startsWith('claude') ? 'anthropic'
-                            : draft.llmModel?.startsWith('gemini') ? 'google'
-                            : 'openai'),
-                        model: draft.llmModel || 'gpt-4o',
+                        provider: vapiModelProvider(draft.llmModel || DEFAULT_MODELS.vapi.llm),
+                        model: draft.llmModel || DEFAULT_MODELS.vapi.llm,
                         messages: [
                             {
                                 role: 'system',
@@ -240,7 +238,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
                             },
                         ],
                     },
-                    serverUrl: `${appUrl}/api/webhooks/vapi`,
+                    server: { url: `${appUrl}/api/webhooks/vapi` },
                 }),
                 signal: AbortSignal.timeout(PROVIDER_API_TIMEOUT),
             });
@@ -297,13 +295,15 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
             language: safeLanguage,
         };
         if (provider === 'retell') {
-            agentConfig.voice_model = draft.voiceModel || 'eleven_v3';
-            agentConfig.llm_model = draft.llmModel || 'gpt-4.1';
+            agentConfig.voice_model = draft.voiceModel || DEFAULT_MODELS.retell.voice;
+            agentConfig.llm_model = draft.llmModel || DEFAULT_MODELS.retell.llm;
         } else if (provider === 'vapi') {
             agentConfig.voice_provider = '11labs';
-            agentConfig.llm_model = draft.llmModel || 'gpt-4o';
-            agentConfig.llm_provider = draft.llmModel?.startsWith('claude') ? 'anthropic'
-                : draft.llmModel?.startsWith('gemini') ? 'google' : 'openai';
+            agentConfig.llm_model = draft.llmModel || DEFAULT_MODELS.vapi.llm;
+            agentConfig.llm_provider = vapiModelProvider(agentConfig.llm_model as string);
+        } else if (provider === 'elevenlabs') {
+            agentConfig.voice_model = draft.voiceModel || DEFAULT_MODELS.elevenlabs.voice;
+            agentConfig.llm_model = draft.llmModel || DEFAULT_MODELS.elevenlabs.llm;
         }
 
         const { data: agent, error: dbError } = await supabase

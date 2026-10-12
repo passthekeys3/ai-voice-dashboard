@@ -4,6 +4,7 @@
  */
 
 import { fetchWithRetry } from '@/lib/retry';
+import { DEFAULT_MODELS, ELEVENLABS_DEFAULT_VOICE_ID } from '@/lib/constants/config';
 
 const ELEVENLABS_BASE_URL = 'https://api.elevenlabs.io';
 
@@ -131,13 +132,13 @@ export async function createElevenLabsAgent(
                 language: config.language || 'en',
                 prompt: {
                     prompt: config.prompt || '',
-                    llm: config.llmModel || 'gemini-2.5-flash',
+                    llm: config.llmModel || DEFAULT_MODELS.elevenlabs.llm,
                     temperature: 0,
                 },
             },
             tts: {
-                model_id: config.voiceModel || 'eleven_flash_v2',
-                voice_id: config.voiceId || 'cjVigY5qzO86Huf0OWal',
+                model_id: config.voiceModel || DEFAULT_MODELS.elevenlabs.voice,
+                voice_id: config.voiceId || ELEVENLABS_DEFAULT_VOICE_ID,
                 stability: 0.5,
                 similarity_boost: 0.8,
             },

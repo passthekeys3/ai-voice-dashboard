@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
                             }
                         }
 
-                        // ─── Ensure Vapi serverUrl ───
+                        // ─── Ensure Vapi webhook (server.url) ───
                         if (provider === 'vapi' && process.env.NEXT_PUBLIC_APP_URL) {
                             try {
                                 const expectedServerUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/vapi`;
@@ -200,19 +200,22 @@ export async function POST(request: NextRequest) {
                                 let patchedCount = 0;
                                 for (const assistant of vapiAssistants) {
                                     if (!vapiExternalIds.has(assistant.id)) continue;
-                                    if (assistant.serverUrl === expectedServerUrl) continue;
+                                    if (assistant.server?.url === expectedServerUrl) continue;
                                     try {
-                                        await updateVapiAssistant(apiKey, assistant.id, { serverUrl: expectedServerUrl });
+                                        // Keep any existing server settings (headers, timeout); only the URL changes
+                                        await updateVapiAssistant(apiKey, assistant.id, {
+                                            server: { ...assistant.server, url: expectedServerUrl },
+                                        });
                                         patchedCount++;
                                     } catch (err) {
-                                        console.error(`[CRON SYNC] ${label}: failed to patch Vapi serverUrl for ${assistant.id}:`, err instanceof Error ? err.message : 'Unknown error');
+                                        console.error(`[CRON SYNC] ${label}: failed to patch Vapi server.url for ${assistant.id}:`, err instanceof Error ? err.message : 'Unknown error');
                                     }
                                 }
                                 if (patchedCount > 0) {
-                                    console.info(`[CRON SYNC] ${label}: patched serverUrl on ${patchedCount} Vapi assistants`);
+                                    console.info(`[CRON SYNC] ${label}: patched server.url on ${patchedCount} Vapi assistants`);
                                 }
                             } catch (err) {
-                                console.error(`[CRON SYNC] ${label}: failed to ensure Vapi serverUrl:`, err instanceof Error ? err.message : 'Unknown error');
+                                console.error(`[CRON SYNC] ${label}: failed to ensure Vapi server.url:`, err instanceof Error ? err.message : 'Unknown error');
                             }
                         }
 
