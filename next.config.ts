@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
-import { withSentryConfig } from '@sentry/nextjs';
+// v11 moved build-time config helpers to the /config entry point
+import { withSentryConfig } from '@sentry/nextjs/config';
 
 const securityHeaders = [
     { key: 'X-Frame-Options', value: 'DENY' },

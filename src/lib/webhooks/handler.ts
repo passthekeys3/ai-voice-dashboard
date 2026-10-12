@@ -54,8 +54,9 @@ export async function handleWebhookEvent(output: WebhookAdapterOutput): Promise<
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Step 8: Verify signature
-        if (!verifySignature(apiKey)) {
+        // Step 8: Verify signature. Await even sync verifiers: an un-awaited async
+        // verifier returns a Promise, which is truthy and would accept every request.
+        if (!(await verifySignature(apiKey))) {
             console.warn(
                 `[webhook] Signature verification failed for provider=${event.provider} call=${event.externalCallId}`
             );

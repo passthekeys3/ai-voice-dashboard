@@ -197,7 +197,8 @@ export const DELETE = withErrorHandling(async (
     if (client.stripe_subscription_id && process.env.STRIPE_SECRET_KEY && user.agency.stripe_connect_account_id) {
         try {
             const stripe = getStripe();
-            await stripe.subscriptions.cancel(client.stripe_subscription_id, {
+            // Request options (stripeAccount) go in the third argument; the second is API params
+            await stripe.subscriptions.cancel(client.stripe_subscription_id, {}, {
                 stripeAccount: user.agency.stripe_connect_account_id,
             });
         } catch (stripeErr) {

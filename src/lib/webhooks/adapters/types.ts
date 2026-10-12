@@ -41,5 +41,6 @@ export interface NormalizedWebhookEvent {
 export interface WebhookAdapterOutput {
     event: NormalizedWebhookEvent;
     earlyReturn?: NextResponse;
-    verifySignature: (apiKey: string) => boolean;
+    /** May be async (retell-sdk's verify returns a Promise); the handler always awaits it */
+    verifySignature: (apiKey: string) => boolean | Promise<boolean>;
 }

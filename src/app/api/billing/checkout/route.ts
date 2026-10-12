@@ -140,7 +140,8 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
         const session = await stripe.checkout.sessions.create({
             customer: customerId,
             mode: 'subscription',
-            payment_method_types: ['card'],
+            // Card only (payment_method_types was removed in API version endive)
+            allowed_payment_method_types: ['card'],
             line_items: lineItems,
             success_url: `${returnUrl}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${returnUrl}?checkout=canceled`,
