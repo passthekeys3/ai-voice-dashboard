@@ -80,7 +80,8 @@ export function LiveTranscript({ callId, provider: providerProp = 'retell', base
     const [autoScroll, setAutoScroll] = useState(true);
     const prevLineCountRef = useRef(0);
     const [isTyping, setIsTyping] = useState(false);
-    const lastActivityRef = useRef<number>(Date.now());
+    const [mountedAt] = useState(() => Date.now());
+    const lastActivityRef = useRef<number>(mountedAt);
     const isActiveRef = useRef(false);
     const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const newLineTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -86,7 +86,8 @@ export function ScheduledCallsList({ upcomingCalls, pastCalls }: ScheduledCallsL
         }
     };
 
-    const CallsTable = ({ calls, showActions = false }: { calls: ScheduledCall[]; showActions?: boolean }) => (
+    // Render function (not a component) so the table isn't remounted on every parent render
+    const renderCallsTable = (calls: ScheduledCall[], showActions = false) => (
         <>
             {/* Mobile card view */}
             <div className="md:hidden space-y-3">
@@ -274,7 +275,7 @@ export function ScheduledCallsList({ upcomingCalls, pastCalls }: ScheduledCallsL
                     </CardHeader>
                     <CardContent>
                         {upcomingCalls.length > 0 ? (
-                            <CallsTable calls={upcomingCalls} showActions />
+                            renderCallsTable(upcomingCalls, true)
                         ) : (
                             <p className="text-sm text-muted-foreground text-center py-4">
                                 No upcoming calls scheduled
@@ -294,7 +295,7 @@ export function ScheduledCallsList({ upcomingCalls, pastCalls }: ScheduledCallsL
                     </CardHeader>
                     <CardContent>
                         {pastCalls.length > 0 ? (
-                            <CallsTable calls={pastCalls} />
+                            renderCallsTable(pastCalls)
                         ) : (
                             <p className="text-sm text-muted-foreground text-center py-4">
                                 No past scheduled calls

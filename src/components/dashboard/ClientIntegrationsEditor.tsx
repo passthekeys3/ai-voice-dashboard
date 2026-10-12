@@ -293,7 +293,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
     };
 
     const handleOAuthConnect = (oauthUrl: string) => {
-        window.location.href = `${oauthUrl}?clientId=${clientId}`;
+        window.location.assign(`${oauthUrl}?clientId=${clientId}`);
     };
 
     const handleOAuthDisconnect = (integ: IntegrationMeta) => {
@@ -302,7 +302,7 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
 
     const confirmDisconnect = () => {
         if (!disconnectingInteg?.oauthUrl) return;
-        window.location.href = `${disconnectingInteg.oauthUrl}?action=disconnect&clientId=${clientId}`;
+        window.location.assign(`${disconnectingInteg.oauthUrl}?action=disconnect&clientId=${clientId}`);
     };
 
     if (loading) {
@@ -467,15 +467,15 @@ export function ClientIntegrationsEditor({ clientId, isPortal = false }: ClientI
                     <div className="space-y-4 py-4">
                         {(() => {
                             const fields = INTEGRATIONS.find(i => i.key === editingKey)?.fields || [];
-                            let lastSection: string | undefined;
-                            return fields.map((field) => {
-                                const showSection = field.section && field.section !== lastSection;
-                                if (field.section) lastSection = field.section;
+                            const firstSection = fields.find(f => f.section)?.section;
+                            return fields.map((field, i) => {
+                                const prevSection = [...fields.slice(0, i)].reverse().find(f => f.section)?.section;
+                                const showSection = field.section && field.section !== prevSection;
                                 return (
                                     <div key={field.name}>
                                         {showSection && (
                                             <>
-                                                {lastSection !== fields.find(f => f.section)?.section && <Separator />}
+                                                {field.section !== firstSection && <Separator />}
                                                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{field.section}</p>
                                             </>
                                         )}

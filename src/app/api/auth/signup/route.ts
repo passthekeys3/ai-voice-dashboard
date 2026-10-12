@@ -96,6 +96,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid promo code' }, { status: 400 });
         }
 
+        // A beta code past its end date would create an account whose trial is already over
+        const betaEndDate = betaEndDateStr ? new Date(betaEndDateStr + 'T23:59:59.999Z') : null;
+        if (isBeta && betaEndDate && (isNaN(betaEndDate.getTime()) || betaEndDate.getTime() <= Date.now())) {
+            return NextResponse.json(
+                { error: 'This promo code has expired. You can still sign up without it for a free trial.' },
+                { status: 400 }
+            );
+        }
+
         // Create user with admin client
         // email_confirm: true = auto-confirmed (no verification email needed)
         // email_confirm: false = unconfirmed (must verify via email before login)
@@ -131,8 +140,8 @@ export async function POST(request: NextRequest) {
         const trialDays = parseInt(process.env.TRIAL_DAYS || '7', 10);
 
         let trialEnd: Date;
-        if (isBeta && betaEndDateStr) {
-            trialEnd = new Date(betaEndDateStr + 'T23:59:59.999Z');
+        if (isBeta && betaEndDate) {
+            trialEnd = betaEndDate;
         } else {
             trialEnd = new Date();
             trialEnd.setDate(trialEnd.getDate() + trialDays);

@@ -59,10 +59,12 @@ export function AgentBuilder({ clients, phoneNumbers, context, availableProvider
     const [error, setError] = useState<string | null>(null);
 
     // Refs for latest state (avoids stale closures in async callbacks)
-    const messagesRef = useRef<BuilderMessage[]>([]);
-    messagesRef.current = messages;
+    const messagesRef = useRef<BuilderMessage[]>(messages);
     const draftRef = useRef<AgentDraft>(draft);
-    draftRef.current = draft;
+    useEffect(() => {
+        messagesRef.current = messages;
+        draftRef.current = draft;
+    }, [messages, draft]);
 
     // AbortController for cancelling in-flight stream requests
     const abortControllerRef = useRef<AbortController | null>(null);

@@ -162,14 +162,6 @@ export function ApiWebhooksConfig({
         };
     }, []);
 
-    // Fetch delivery log when dialog opens
-    useEffect(() => {
-        if (open && webhookUrl) {
-            fetchDeliveries();
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open]);
-
     const fetchDeliveries = async () => {
         setLoadingDeliveries(true);
         try {
@@ -184,6 +176,14 @@ export function ApiWebhooksConfig({
             setLoadingDeliveries(false);
         }
     };
+
+    // Fetch delivery log when dialog opens
+    useEffect(() => {
+        if (open && webhookUrl) {
+            fetchDeliveries();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
 
     const handleTestWebhook = async () => {
         setTesting(true);

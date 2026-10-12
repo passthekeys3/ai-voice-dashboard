@@ -22,6 +22,9 @@ const eslintConfig = defineConfig([
         varsIgnorePattern: "^_",
         caughtErrorsIgnorePattern: "^_",
       }],
+      // Introduced as an error in eslint-config-next 16.4. Existing hits are the
+      // setLoading-then-fetch pattern in data-loading effects; tracked for a later refactor.
+      "react-hooks/set-state-in-effect": "warn",
     },
   },
 ]);
