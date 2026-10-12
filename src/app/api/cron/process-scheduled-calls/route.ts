@@ -8,8 +8,11 @@ import { applyExperiment } from '@/lib/experiments/apply';
 import { resolveProviderApiKeys, getProviderKey } from '@/lib/providers/resolve-keys';
 import { isSubscriptionActive } from '@/lib/billing/tiers';
 
-// This endpoint should be called by a cron job every minute
-// Example: Vercel Cron, or external service like cron-job.org
+// Called every 5 minutes by Supabase pg_cron (migration 050), plus a daily
+// Vercel Cron safety net (Hobby plan allows at most daily crons).
+
+/** Calls this far past their scheduled time are marked missed instead of dialed */
+const MAX_LATENESS_MS = 36 * 60 * 60 * 1000;
 
 // POST /api/cron/process-scheduled-calls
 export async function POST(request: NextRequest) {
@@ -73,6 +76,25 @@ export async function POST(request: NextRequest) {
             }
 
             try {
+                // Don't dial calls long past their time (e.g. a backlog from a scheduler outage):
+                // calling someone a day or more after the appointment/follow-up was due does more
+                // harm than skipping it. The window still covers the daily Vercel safety-net run.
+                const lateByMs = Date.now() - new Date(call.scheduled_at).getTime();
+                if (lateByMs > MAX_LATENESS_MS) {
+                    const reason = `Missed: not run within ${MAX_LATENESS_MS / 3_600_000} hours of its scheduled time`;
+                    await supabase
+                        .from('scheduled_calls')
+                        .update({
+                            status: 'failed',
+                            error_message: reason,
+                            updated_at: new Date().toISOString(),
+                        })
+                        .eq('id', call.id);
+                    results.push({ id: call.id, status: 'failed', error: reason });
+                    console.warn(`Scheduled call ${call.id} skipped: ${Math.round(lateByMs / 3_600_000)}h late`);
+                    continue;
+                }
+
                 // Re-check calling window before initiating (handles DST changes, config changes)
                 const callingWindow = call.agent?.agencies?.calling_window;
                 const leadTimezone = call.lead_timezone;
@@ -242,3 +264,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
+
+// Vercel Cron invokes paths with GET (sending Authorization: Bearer $CRON_SECRET);
+// POST stays for manual runs and the Supabase pg_cron scheduler.
+export const GET = POST;

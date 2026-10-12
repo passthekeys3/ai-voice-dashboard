@@ -133,3 +133,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
+
+// Vercel Cron invokes paths with GET (sending Authorization: Bearer $CRON_SECRET);
+// POST stays for manual runs and the Supabase pg_cron scheduler.
+export const GET = POST;
