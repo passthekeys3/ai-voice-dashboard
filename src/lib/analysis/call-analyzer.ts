@@ -1,7 +1,7 @@
 /**
  * AI Call Analysis
  *
- * Uses Claude Haiku to analyze call transcripts and extract structured insights:
+ * Uses Claude Haiku (CLAUDE_FAST_MODEL) to analyze call transcripts and extract structured insights:
  * sentiment, topics, objections, action items, lead score, and outcome.
  *
  * Runs as a background task (via waitUntil) after completed calls.
@@ -9,11 +9,11 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { CLAUDE_FAST_MODEL, CLAUDE_EFFORT, logIfRefused } from '@/lib/ai/models';
 
-// Use Haiku for cost efficiency — transcripts can be long
-const CLAUDE_MODEL = 'claude-haiku-4-5';
-const MAX_TRANSCRIPT_CHARS = 30000; // ~7.5k tokens
-const MAX_OUTPUT_TOKENS = 512;      // Actual responses are ~200 tokens; reduced from 1024
+const MAX_TRANSCRIPT_CHARS = 30000; // ~10k tokens
+// Responses are ~250 tokens, but thinking counts toward this cap too
+const MAX_OUTPUT_TOKENS = 2048;
 const ANALYSIS_TIMEOUT_MS = 30000;  // 30 seconds
 
 let anthropicClient: Anthropic | null = null;
@@ -115,8 +115,9 @@ export async function analyzeCallTranscript(
 
         const response = await Promise.race([
             client.messages.create({
-                model: CLAUDE_MODEL,
+                model: CLAUDE_FAST_MODEL,
                 max_tokens: MAX_OUTPUT_TOKENS,
+                output_config: { effort: CLAUDE_EFFORT },
                 system: SYSTEM_PROMPT,
                 messages: [{ role: 'user', content: userPrompt }],
             }),
@@ -125,7 +126,9 @@ export async function analyzeCallTranscript(
             ),
         ]);
 
-        // Extract text from response
+        logIfRefused('call analysis', response.stop_reason);
+
+        // Extract text from response (may follow a thinking block)
         const textBlock = response.content.find(block => block.type === 'text');
         if (!textBlock || textBlock.type !== 'text') {
             return null;

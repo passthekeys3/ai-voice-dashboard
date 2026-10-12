@@ -10,9 +10,12 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import type { TestPersona, TranscriptMessage } from '@/types';
+import { CLAUDE_FAST_MODEL, CLAUDE_EFFORT, logIfRefused } from '@/lib/ai/models';
 
-const HAIKU_MODEL = 'claude-haiku-4-5';
-const MAX_TOKENS_PER_TURN = 256; // Keep responses concise like real speech
+// Replies stay short via the prompts; the cap also covers thinking, and an empty
+// reply ends the simulation, so it must leave room for both
+const MAX_TOKENS_PER_TURN = 1024;
+const CALLER_CONNECTED_CUE = '[A caller has just connected. Deliver your opening greeting.]';
 
 let anthropicClient: Anthropic | null = null;
 
@@ -93,13 +96,15 @@ export async function simulateConversation(params: {
     } else {
         try {
             const openingResponse = await client.messages.create({
-                model: HAIKU_MODEL,
+                model: CLAUDE_FAST_MODEL,
                 max_tokens: MAX_TOKENS_PER_TURN,
+                output_config: { effort: CLAUDE_EFFORT },
                 system: agentSystemPrompt,
-                messages: [{ role: 'user', content: '[A caller has just connected. Deliver your opening greeting.]' }],
+                messages: [{ role: 'user', content: CALLER_CONNECTED_CUE }],
             });
             totalInputTokens += openingResponse.usage.input_tokens;
             totalOutputTokens += openingResponse.usage.output_tokens;
+            logIfRefused('simulator (agent opening)', openingResponse.stop_reason);
 
             const textBlock = openingResponse.content.find(b => b.type === 'text');
             agentOpening = textBlock && textBlock.type === 'text' ? textBlock.text : 'Hello, how can I help you today?';
@@ -142,13 +147,15 @@ export async function simulateConversation(params: {
 
         try {
             const personaResponse = await client.messages.create({
-                model: HAIKU_MODEL,
+                model: CLAUDE_FAST_MODEL,
                 max_tokens: MAX_TOKENS_PER_TURN,
+                output_config: { effort: CLAUDE_EFFORT },
                 system: personaSystemPrompt,
                 messages: personaMessages,
             });
             totalInputTokens += personaResponse.usage.input_tokens;
             totalOutputTokens += personaResponse.usage.output_tokens;
+            logIfRefused('simulator (persona)', personaResponse.stop_reason);
 
             const personaTextBlock = personaResponse.content.find(b => b.type === 'text');
             personaText = personaTextBlock && personaTextBlock.type === 'text' ? personaTextBlock.text : '';
@@ -179,7 +186,8 @@ export async function simulateConversation(params: {
         }
 
         // --- Agent turn ---
-        const agentMessages: Anthropic.MessageParam[] = [];
+        // Open with the same cue that produced the greeting, so the history starts on a user turn
+        const agentMessages: Anthropic.MessageParam[] = [{ role: 'user', content: CALLER_CONNECTED_CUE }];
         for (const msg of transcript) {
             if (msg.role === 'caller') {
                 agentMessages.push({ role: 'user', content: msg.content });
@@ -190,13 +198,15 @@ export async function simulateConversation(params: {
 
         try {
             const agentResponse = await client.messages.create({
-                model: HAIKU_MODEL,
+                model: CLAUDE_FAST_MODEL,
                 max_tokens: MAX_TOKENS_PER_TURN,
+                output_config: { effort: CLAUDE_EFFORT },
                 system: agentSystemPrompt,
                 messages: agentMessages,
             });
             totalInputTokens += agentResponse.usage.input_tokens;
             totalOutputTokens += agentResponse.usage.output_tokens;
+            logIfRefused('simulator (agent)', agentResponse.stop_reason);
 
             const agentTextBlock = agentResponse.content.find(b => b.type === 'text');
             const agentText = agentTextBlock && agentTextBlock.type === 'text' ? agentTextBlock.text.trim() : '';

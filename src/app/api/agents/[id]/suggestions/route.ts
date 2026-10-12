@@ -3,6 +3,7 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { isValidUuid } from '@/lib/validation';
+import { CLAUDE_FAST_MODEL, CLAUDE_EFFORT, logIfRefused } from '@/lib/ai/models';
 
 const MIN_CALLS_FOR_SUGGESTIONS = 5;
 const MAX_CALLS_TO_ANALYZE = 20;
@@ -129,8 +130,9 @@ export async function GET(
         const client = getClient();
 
         const response = await client.messages.create({
-            model: 'claude-haiku-4-5',
-            max_tokens: 1024,
+            model: CLAUDE_FAST_MODEL,
+            max_tokens: 4096, // includes thinking
+            output_config: { effort: CLAUDE_EFFORT },
             system: `You are an expert at optimizing AI voice agent prompts. Analyze the agent's recent call data and current system prompt, then provide specific, actionable suggestions to improve performance.
 
 Respond with ONLY valid JSON:
@@ -155,6 +157,7 @@ Rules:
                 content: `Agent: ${agent.name}\n\nCurrent System Prompt:\n${String(currentPrompt).slice(0, 5000)}\n\nRecent Call Data (${calls.length} calls):\n${callSummaries}`,
             }],
         });
+        logIfRefused('prompt suggestions', response.stop_reason);
 
         const textBlock = response.content.find(b => b.type === 'text');
         if (!textBlock || textBlock.type !== 'text') {

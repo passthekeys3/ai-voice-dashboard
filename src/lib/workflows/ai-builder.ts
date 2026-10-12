@@ -9,9 +9,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import { APIError } from '@anthropic-ai/sdk';
 import type { WorkflowTrigger, WorkflowCondition, WorkflowAction } from '@/types';
 import { ALLOWED_ACTION_TYPES, ALLOWED_TRIGGERS } from '@/lib/workflows/constants';
+import { CLAUDE_FAST_MODEL, CLAUDE_EFFORT, logIfRefused } from '@/lib/ai/models';
 
-const CLAUDE_MODEL = 'claude-haiku-4-5';
-const MAX_OUTPUT_TOKENS = 4096;
+const MAX_OUTPUT_TOKENS = 8192; // includes thinking
 
 let anthropicClient: Anthropic | null = null;
 
@@ -249,8 +249,9 @@ export async function generateWorkflowStream(
     const userPrompt = buildWorkflowPrompt(message, context, agents);
 
     const stream = await client.messages.stream({
-        model: CLAUDE_MODEL,
+        model: CLAUDE_FAST_MODEL,
         max_tokens: MAX_OUTPUT_TOKENS,
+        output_config: { effort: CLAUDE_EFFORT },
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userPrompt }],
     });
@@ -271,6 +272,8 @@ export async function generateWorkflowStream(
                         );
                     }
                 }
+
+                logIfRefused('workflow builder', (await stream.finalMessage()).stop_reason);
 
                 // Parse the complete response
                 const parsed = parseWorkflowResponse(fullText);

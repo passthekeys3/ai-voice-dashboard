@@ -7,9 +7,9 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { CLAUDE_SMART_MODEL, CLAUDE_EFFORT, logIfRefused } from '@/lib/ai/models';
 
-const CLAUDE_MODEL = 'claude-sonnet-4-6';
-const MAX_OUTPUT_TOKENS = 4096;
+const MAX_OUTPUT_TOKENS = 8192; // includes thinking
 
 let anthropicClient: Anthropic | null = null;
 
@@ -70,8 +70,9 @@ export async function generateScenariosStream(
         : `Generate test scenarios for a voice agent with this system prompt:\n\n${agentPrompt}`;
 
     const stream = await client.messages.stream({
-        model: CLAUDE_MODEL,
+        model: CLAUDE_SMART_MODEL,
         max_tokens: MAX_OUTPUT_TOKENS,
+        output_config: { effort: CLAUDE_EFFORT },
         system: GENERATION_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userMessage }],
     });
@@ -91,6 +92,8 @@ export async function generateScenariosStream(
                         );
                     }
                 }
+
+                logIfRefused('scenario generator', (await stream.finalMessage()).stop_reason);
 
                 // Parse the complete response
                 const parsed = parseGeneratedCases(fullText);

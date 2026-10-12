@@ -9,10 +9,10 @@ import { APIError } from '@anthropic-ai/sdk';
 import { BUILDER_SYSTEM_PROMPT, buildMessages } from './prompts';
 import { MAX_PROMPT_LENGTH } from '@/lib/constants/config';
 import type { LLMBuilderResponse, Voice, VoiceCharacteristics, VoiceRecommendation } from './types';
+import { CLAUDE_SMART_MODEL, CLAUDE_EFFORT, logIfRefused } from '@/lib/ai/models';
 
 // --- Configuration constants ---
-const CLAUDE_MODEL = 'claude-sonnet-4-6';
-const MAX_OUTPUT_TOKENS = 4096;
+const MAX_OUTPUT_TOKENS = 8192; // includes thinking; full system prompts run long
 const TOP_VOICES_COUNT = 3;
 
 // Voice scoring weights
@@ -48,8 +48,9 @@ export async function generateAgentConfigStream(
     const messages = buildMessages(history, currentMessage, draft, context);
 
     const stream = await client.messages.stream({
-        model: CLAUDE_MODEL,
+        model: CLAUDE_SMART_MODEL,
         max_tokens: MAX_OUTPUT_TOKENS,
+        output_config: { effort: CLAUDE_EFFORT },
         system: BUILDER_SYSTEM_PROMPT,
         messages: messages.map(m => ({
             role: m.role,
@@ -73,6 +74,18 @@ export async function generateAgentConfigStream(
                             )
                         );
                     }
+                }
+
+                const finalMessage = await stream.finalMessage();
+                logIfRefused('agent builder', finalMessage.stop_reason);
+                if (finalMessage.stop_reason === 'refusal') {
+                    controller.enqueue(
+                        encoder.encode(
+                            JSON.stringify({ type: 'error', error: 'The AI declined this request. Try rephrasing what the agent should do.' }) + '\n'
+                        )
+                    );
+                    controller.close();
+                    return;
                 }
 
                 // Parse the complete response as JSON

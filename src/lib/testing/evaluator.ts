@@ -8,9 +8,9 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import type { TranscriptMessage, SuccessCriterion, CriterionResult } from '@/types';
+import { CLAUDE_SMART_MODEL, CLAUDE_EFFORT, logIfRefused } from '@/lib/ai/models';
 
-const CLAUDE_MODEL = 'claude-sonnet-4-6';
-const MAX_EVAL_TOKENS = 1024;
+const MAX_EVAL_TOKENS = 4096; // includes thinking
 
 let anthropicClient: Anthropic | null = null;
 
@@ -104,11 +104,13 @@ Simulated conversation:
 ${transcriptText}`;
 
         const response = await client.messages.create({
-            model: CLAUDE_MODEL,
+            model: CLAUDE_SMART_MODEL,
             max_tokens: MAX_EVAL_TOKENS,
+            output_config: { effort: CLAUDE_EFFORT },
             system: EVALUATION_SYSTEM_PROMPT,
             messages: [{ role: 'user', content: userPrompt }],
         });
+        logIfRefused('test evaluator', response.stop_reason);
 
         const textBlock = response.content.find(b => b.type === 'text');
         if (!textBlock || textBlock.type !== 'text') {
