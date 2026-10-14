@@ -35,7 +35,7 @@ export const actionTypes = [
     { value: 'send_slack', label: 'Send Slack Notification', description: 'Post a call notification to Slack' },
     // Calendly actions
     { value: 'calendly_check_availability', label: 'Check Availability (Calendly)', description: 'Check free/busy slots on Calendly' },
-    { value: 'calendly_create_booking_link', label: 'Create Booking Link (Calendly)', description: 'Generate a one-time scheduling link' },
+    { value: 'calendly_create_booking_link', label: 'Create Booking Link (Calendly)', description: 'Create a one-time scheduling link and text it to the caller via SMS' },
     { value: 'calendly_cancel_event', label: 'Cancel Event (Calendly)', description: 'Cancel a scheduled Calendly event' },
 ];
 

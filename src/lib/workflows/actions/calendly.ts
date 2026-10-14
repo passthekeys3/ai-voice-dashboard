@@ -4,7 +4,8 @@
 
 import type { WorkflowAction } from '@/types';
 import type { CallData, ActionHandlerResult, CalendlyConfig } from './types';
-import { resolveTemplate } from '../executor';
+import { resolveTemplate, safeParseInt } from '../executor';
+import { getSmsPreflightError, sendSms } from './communication';
 
 export async function handleCalendlyCheckAvailability(
     action: WorkflowAction,
@@ -37,9 +38,16 @@ export async function handleCalendlyCheckAvailability(
     return { success: true };
 }
 
+export const DEFAULT_BOOKING_LINK_MESSAGE = 'Thanks for calling! Book your appointment here: {{booking_url}}';
+
+/**
+ * Create a Calendly scheduling link and text it to the caller via SMS.
+ * The message template supports {{booking_url}} plus the usual call variables;
+ * if {{booking_url}} is missing from the template, the link is appended.
+ */
 export async function handleCalendlyCreateBookingLink(
     action: WorkflowAction,
-    _callData: CallData,
+    callData: CallData,
     calendlyConfig?: CalendlyConfig,
 ): Promise<ActionHandlerResult> {
     if (!calendlyConfig?.apiToken) {
@@ -54,17 +62,38 @@ export async function handleCalendlyCreateBookingLink(
         return { success: false, error: 'No Calendly event type configured. Set a default in Settings or specify in action config.' };
     }
 
+    // Check SMS delivery up front so we don't create a link nobody receives
+    const to = resolveTemplate(rawConfig.to || '{{from_number}}', callData);
+    if (!to) {
+        return { success: false, error: 'No phone number to text the booking link to' };
+    }
+    const smsError = getSmsPreflightError(to);
+    if (smsError) {
+        return { success: false, error: smsError };
+    }
+
     const linkResult = await createSchedulingLink(
         { apiToken: calendlyConfig.apiToken },
         eventTypeUri,
-        1, // max 1 booking per link
+        Math.max(1, safeParseInt(rawConfig.max_event_count, 1)),
     );
 
     if (linkResult.error || !linkResult.data) {
         return { success: false, error: linkResult.error || 'Failed to create scheduling link' };
     }
 
-    console.log(`Calendly booking link created: ${linkResult.data.booking_url}`);
+    const bookingUrl = linkResult.data.booking_url;
+    const template = rawConfig.message || DEFAULT_BOOKING_LINK_MESSAGE;
+    const message = template.includes('{{booking_url}}')
+        ? resolveTemplate(template, callData).replaceAll('{{booking_url}}', bookingUrl)
+        : `${resolveTemplate(template, callData)} ${bookingUrl}`;
+
+    const smsResult = await sendSms(to, message);
+    if (!smsResult.success) {
+        return { success: false, error: `Booking link created but SMS failed: ${smsResult.error}` };
+    }
+
+    console.log('Calendly booking link sent by SMS');
     return { success: true };
 }
 
