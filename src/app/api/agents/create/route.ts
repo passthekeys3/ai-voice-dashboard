@@ -7,6 +7,7 @@ import type { VoiceProvider } from '@/types';
 import { createVapiAssistant } from '@/lib/providers/vapi';
 import { createBlandPathway } from '@/lib/providers/bland';
 import { createElevenLabsAgent } from '@/lib/providers/elevenlabs';
+import { ensureElevenLabsWebhook } from '@/lib/providers/elevenlabs-webhook';
 import { safeParseJson } from '@/lib/validation';
 import { MAX_PROMPT_LENGTH, VOICE_PROVIDERS, DEFAULT_MODELS, vapiModelProvider } from '@/lib/constants/config';
 import { isSubscriptionActive } from '@/lib/billing/tiers';
@@ -265,7 +266,7 @@ export async function POST(request: NextRequest) {
                     llmModel: llm_model || DEFAULT_MODELS.elevenlabs.llm,
                     voiceModel: voice_model || DEFAULT_MODELS.elevenlabs.voice,
                     voiceId: voice_id || undefined,
-                    webhookUrl: `${appUrl}/api/webhooks/elevenlabs`,
+                    postCallWebhookId: await ensureElevenLabsWebhook(apiKey),
                 });
 
                 externalId = elAgent.agent_id;

@@ -363,32 +363,51 @@ function createElevenLabsClient(apiKey: string): VoiceProviderClient {
             : new Date().toISOString(),
     });
 
-    const normalizeCall = (conv: elevenlabs.ElevenLabsConversation): NormalizedCall => {
-        const durationSeconds = conv.duration_secs || 0;
+    const normalizeStatus = (status: elevenlabs.ElevenLabsConversation['status']): NormalizedCall['status'] => {
+        if (status === 'done') return 'completed';
+        if (status === 'failed') return 'failed';
+        if (status === 'in-progress' || status === 'processing') return 'in_progress';
+        return 'queued';
+    };
 
-        let status: NormalizedCall['status'] = 'queued';
-        if (conv.status === 'done') status = 'completed';
-        else if (conv.status === 'failed') status = 'failed';
-        else if (conv.status === 'processing') status = 'in_progress';
+    const toIso = (unixSecs?: number, offsetSecs = 0) =>
+        unixSecs ? new Date((unixSecs + offsetSecs) * 1000).toISOString() : undefined;
 
+    // List endpoint returns summaries (no transcript or cost)
+    const normalizeSummary = (conv: elevenlabs.ElevenLabsConversationSummary): NormalizedCall => {
+        const durationSeconds = conv.call_duration_secs || 0;
         return {
             externalId: conv.conversation_id,
             agentExternalId: conv.agent_id,
             provider: 'elevenlabs',
-            status,
-            direction: 'inbound', // ElevenLabs conversations are typically widget-initiated
+            status: normalizeStatus(conv.status),
+            direction: conv.direction ?? 'inbound',
             durationSeconds,
-            costCents: conv.cost ? Math.round(conv.cost * 100) : 0,
-            transcript: elevenlabs.flattenElevenLabsTranscript(conv.transcript),
-            summary: conv.analysis?.call_successful,
+            costCents: 0,
+            summary: conv.transcript_summary || undefined,
             sentiment: undefined,
-            startedAt: conv.start_time_unix_secs
-                ? new Date(conv.start_time_unix_secs * 1000).toISOString()
-                : new Date().toISOString(),
-            endedAt: conv.end_time_unix_secs
-                ? new Date(conv.end_time_unix_secs * 1000).toISOString()
-                : undefined,
-            metadata: conv.metadata,
+            startedAt: toIso(conv.start_time_unix_secs) ?? new Date().toISOString(),
+            endedAt: toIso(conv.start_time_unix_secs, durationSeconds),
+        };
+    };
+
+    const normalizeCall = (conv: elevenlabs.ElevenLabsConversation): NormalizedCall => {
+        const meta = conv.metadata ?? {};
+        const durationSeconds = meta.call_duration_secs || 0;
+        return {
+            externalId: conv.conversation_id,
+            agentExternalId: conv.agent_id,
+            provider: 'elevenlabs',
+            status: normalizeStatus(conv.status),
+            direction: meta.phone_call?.direction ?? 'inbound',
+            durationSeconds,
+            costCents: meta.cost_fiat ? Math.round(meta.cost_fiat * 100) : 0,
+            transcript: elevenlabs.flattenElevenLabsTranscript(conv.transcript),
+            summary: conv.analysis?.transcript_summary || undefined,
+            sentiment: undefined,
+            startedAt: toIso(meta.start_time_unix_secs) ?? new Date().toISOString(),
+            endedAt: toIso(meta.start_time_unix_secs, durationSeconds),
+            metadata: meta,
         };
     };
 
@@ -425,7 +444,7 @@ function createElevenLabsClient(apiKey: string): VoiceProviderClient {
                 agentId: filters?.agentId,
                 pageSize: filters?.limit || 100,
             });
-            return result.conversations.map(normalizeCall);
+            return result.conversations.map(normalizeSummary);
         },
         async getCall(callId) {
             const conv = await elevenlabs.getElevenLabsConversation(apiKey, callId);

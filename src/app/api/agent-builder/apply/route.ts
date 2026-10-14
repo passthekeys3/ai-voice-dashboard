@@ -4,6 +4,7 @@ import { getCurrentUser, isAgencyAdmin } from '@/lib/auth';
 import { getTemplateById, getTemplateActions } from '@/lib/agent-builder/templates';
 import { publishRetellAgent, retellModelFields } from '@/lib/providers/retell';
 import { createElevenLabsAgent } from '@/lib/providers/elevenlabs';
+import { ensureElevenLabsWebhook } from '@/lib/providers/elevenlabs-webhook';
 import { createBlandPathway } from '@/lib/providers/bland';
 import { resolveProviderApiKeys, autoSelectProvider } from '@/lib/providers/resolve-keys';
 import { isValidUuid } from '@/lib/validation';
@@ -263,7 +264,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
                 voiceModel: draft.voiceModel,
                 voiceId: draft.voiceId,
                 language: safeLanguage,
-                webhookUrl: `${appUrl}/api/webhooks/elevenlabs`,
+                postCallWebhookId: await ensureElevenLabsWebhook(apiKey),
             });
 
             externalId = elevenlabsAgent.agent_id;

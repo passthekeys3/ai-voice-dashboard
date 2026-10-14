@@ -46,6 +46,12 @@ export interface ElevenLabsAgent {
     };
     platform_settings?: {
         widget?: Record<string, unknown>;
+        workspace_overrides?: {
+            webhooks?: {
+                post_call_webhook_id?: string | null;
+                events?: string[];
+            };
+        };
     };
     metadata?: {
         created_at_unix_secs?: number;
@@ -53,31 +59,63 @@ export interface ElevenLabsAgent {
     };
 }
 
+export interface ElevenLabsTranscriptTurn {
+    role: 'agent' | 'user';
+    message?: string | null;
+    time_in_call_secs?: number;
+}
+
+export interface ElevenLabsAnalysis {
+    call_successful?: 'success' | 'failure' | 'unknown';
+    transcript_summary?: string;
+    evaluation_criteria_results?: Record<string, unknown>;
+    data_collection_results?: Record<string, unknown>;
+}
+
+export interface ElevenLabsPhoneCall {
+    direction?: 'inbound' | 'outbound';
+    agent_number?: string;
+    external_number?: string;
+    type?: string;
+}
+
+/** Full conversation (GET /v1/convai/conversations/{id}); also the `data` of post-call webhooks */
 export interface ElevenLabsConversation {
     conversation_id: string;
     agent_id: string;
-    status: 'processing' | 'done' | 'failed';
-    start_time_unix_secs?: number;
-    end_time_unix_secs?: number;
-    duration_secs?: number;
-    cost?: number;
-    transcript?: Array<{
-        role: 'agent' | 'user';
-        message: string;
-        time_in_call_secs?: number;
-    }>;
-    analysis?: {
-        evaluation_criteria_results?: Record<string, unknown>;
-        data_collection_results?: Record<string, unknown>;
-        call_successful?: string;
+    status: 'initiated' | 'in-progress' | 'processing' | 'done' | 'failed';
+    transcript?: ElevenLabsTranscriptTurn[];
+    metadata?: {
+        start_time_unix_secs?: number;
+        call_duration_secs?: number;
+        /** Total cost in USD */
+        cost_fiat?: number | null;
+        phone_call?: ElevenLabsPhoneCall | null;
+        termination_reason?: string;
+        [key: string]: unknown;
     };
-    metadata?: Record<string, unknown>;
+    analysis?: ElevenLabsAnalysis | null;
+    conversation_initiation_client_data?: {
+        dynamic_variables?: Record<string, unknown>;
+    };
+}
+
+/** Conversation summary returned by GET /v1/convai/conversations */
+export interface ElevenLabsConversationSummary {
+    conversation_id: string;
+    agent_id: string;
+    status: ElevenLabsConversation['status'];
+    start_time_unix_secs?: number;
+    call_duration_secs?: number;
+    call_successful?: ElevenLabsAnalysis['call_successful'];
+    transcript_summary?: string | null;
+    direction?: 'inbound' | 'outbound' | null;
 }
 
 export interface ElevenLabsListConversationsResponse {
-    conversations: ElevenLabsConversation[];
+    conversations: ElevenLabsConversationSummary[];
     has_more: boolean;
-    last_evaluated_key?: string;
+    next_cursor?: string | null;
 }
 
 // ── Fetch Wrapper ───────────────────────────────────────────
@@ -121,7 +159,8 @@ export async function createElevenLabsAgent(
         voiceModel?: string;
         voiceId?: string;
         language?: string;
-        webhookUrl?: string;
+        /** Workspace webhook (see ensureElevenLabsWebhook) that receives post-call data */
+        postCallWebhookId?: string | null;
     }
 ): Promise<ElevenLabsAgent> {
     const body: Record<string, unknown> = {
@@ -145,14 +184,8 @@ export async function createElevenLabsAgent(
         },
     };
 
-    // Set webhook URL if provided
-    if (config.webhookUrl) {
-        (body as Record<string, unknown>).platform_settings = {
-            webhook: {
-                url: config.webhookUrl,
-                events: ['conversation.ended'],
-            },
-        };
+    if (config.postCallWebhookId) {
+        body.platform_settings = postCallWebhookSettings(config.postCallWebhookId);
     }
 
     return elevenlabsFetch<ElevenLabsAgent>(apiKey, '/v1/convai/agents/create', {
@@ -250,6 +283,51 @@ export async function deleteElevenLabsAgent(
     });
 }
 
+// ── Post-call Webhooks ──────────────────────────────────────
+
+/** Post-call events we subscribe agents to: full transcript + failed outbound dials */
+export const ELEVENLABS_POST_CALL_EVENTS = ['transcript', 'call_initiation_failure'];
+
+/** platform_settings fragment that routes an agent's post-call webhooks to a workspace webhook */
+export function postCallWebhookSettings(webhookId: string) {
+    return {
+        workspace_overrides: {
+            webhooks: {
+                post_call_webhook_id: webhookId,
+                events: ELEVENLABS_POST_CALL_EVENTS,
+            },
+        },
+    };
+}
+
+/**
+ * Register an HMAC-signed workspace webhook. The secret is only returned here,
+ * so the caller must store it.
+ */
+export async function createElevenLabsWorkspaceWebhook(
+    apiKey: string,
+    config: { name: string; url: string },
+): Promise<{ webhook_id: string; webhook_secret: string | null }> {
+    return elevenlabsFetch(apiKey, '/v1/workspace/webhooks', {
+        method: 'POST',
+        body: JSON.stringify({
+            settings: { auth_type: 'hmac', name: config.name, webhook_url: config.url },
+        }),
+    });
+}
+
+/** Point an existing agent's post-call webhooks at a workspace webhook */
+export async function setElevenLabsAgentPostCallWebhook(
+    apiKey: string,
+    agentId: string,
+    webhookId: string,
+): Promise<void> {
+    await elevenlabsFetch<ElevenLabsAgent>(apiKey, `/v1/convai/agents/${encodeURIComponent(agentId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ platform_settings: postCallWebhookSettings(webhookId) }),
+    });
+}
+
 // ── Conversation (Call) Fetching ────────────────────────────
 
 export async function getElevenLabsConversation(
@@ -285,10 +363,12 @@ export async function listElevenLabsConversations(
  * Convert ElevenLabs transcript array to a flat string (Agent: ...\nUser: ...).
  */
 export function flattenElevenLabsTranscript(
-    transcript?: ElevenLabsConversation['transcript']
+    transcript?: ElevenLabsTranscriptTurn[]
 ): string {
     if (!transcript || transcript.length === 0) return '';
     return transcript
+        // Tool-call turns carry no message
+        .filter(t => t.message)
         .map(t => `${t.role === 'agent' ? 'Agent' : 'User'}: ${t.message}`)
         .join('\n');
 }

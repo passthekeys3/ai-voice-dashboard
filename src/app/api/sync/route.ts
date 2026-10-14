@@ -272,7 +272,9 @@ export async function POST() {
                         .from('calls')
                         .upsert(callsToUpsert, {
                             onConflict: 'external_id',
-                            ignoreDuplicates: false,
+                            // ElevenLabs' list endpoint returns summaries without transcript or
+                            // cost; only fill in calls the post-call webhook missed
+                            ignoreDuplicates: provider === 'elevenlabs',
                         });
 
                     if (callUpsertError) {

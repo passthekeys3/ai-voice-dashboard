@@ -4,6 +4,8 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { getProviderClient, type NormalizedAgent } from '@/lib/providers';
 import { listRetellAgents, ensureAgentWebhookConfig, REQUIRED_WEBHOOK_EVENTS } from '@/lib/providers/retell';
 import { listVapiAssistants, updateVapiAssistant } from '@/lib/providers/vapi';
+import { getElevenLabsAgent, setElevenLabsAgentPostCallWebhook } from '@/lib/providers/elevenlabs';
+import { ensureElevenLabsWebhook } from '@/lib/providers/elevenlabs-webhook';
 import type { VoiceProvider } from '@/types';
 import { decrypt } from '@/lib/crypto';
 import { PROVIDER_KEY_MAP, PROVIDER_KEY_SELECT, type ProviderKeyRow } from '@/lib/constants/config';
@@ -216,6 +218,31 @@ export async function POST(request: NextRequest) {
                                 }
                             } catch (err) {
                                 console.error(`[CRON SYNC] ${label}: failed to ensure Vapi server.url:`, err instanceof Error ? err.message : 'Unknown error');
+                            }
+                        }
+
+                        // ─── Ensure ElevenLabs post-call webhook ───
+                        // Agents created before webhooks were wired up (or outside the app) have none
+                        if (provider === 'elevenlabs') {
+                            try {
+                                const webhookId = await ensureElevenLabsWebhook(apiKey);
+                                let patchedCount = 0;
+                                for (const extAgent of externalAgents) {
+                                    if (!webhookId) break;
+                                    try {
+                                        const elAgent = await getElevenLabsAgent(apiKey, extAgent.externalId);
+                                        if (elAgent.platform_settings?.workspace_overrides?.webhooks?.post_call_webhook_id === webhookId) continue;
+                                        await setElevenLabsAgentPostCallWebhook(apiKey, extAgent.externalId, webhookId);
+                                        patchedCount++;
+                                    } catch (err) {
+                                        console.error(`[CRON SYNC] ${label}: failed to attach ElevenLabs webhook to ${extAgent.externalId}:`, err instanceof Error ? err.message : 'Unknown error');
+                                    }
+                                }
+                                if (patchedCount > 0) {
+                                    console.info(`[CRON SYNC] ${label}: attached post-call webhook to ${patchedCount} ElevenLabs agents`);
+                                }
+                            } catch (err) {
+                                console.error(`[CRON SYNC] ${label}: failed to ensure ElevenLabs webhooks:`, err instanceof Error ? err.message : 'Unknown error');
                             }
                         }
 
