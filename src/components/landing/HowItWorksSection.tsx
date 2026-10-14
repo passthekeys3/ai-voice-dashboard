@@ -18,7 +18,7 @@ const steps = [
     {
         label: 'Deploy',
         description:
-            'Make a test call, tweak anything, go live. Your agent starts handling real calls in under 30 minutes.',
+            'Make a test call, tweak anything, go live. Your agent starts handling real calls.',
         accent: 'border-amber-500 text-amber-600 dark:text-amber-400',
     },
 ];

@@ -8,7 +8,7 @@
 
 BuildVoiceAI covers four core workflows:
 
-- **Build**: Describe your agent in natural language. The system generates the conversation flow, selects a voice, and configures the phone number. Agents are typically live within 30 minutes.
+- **Build**: Describe your agent in natural language. The system generates the conversation flow, selects a voice, and configures the phone number. Test it with a call, then go live.
 - **Monitor**: View call volume, success rates, costs, and duration in a unified dashboard. Click any call to read the full transcript or listen to the recording.
 - **Automate**: Post-call workflows automatically update CRM contacts, create deals, book appointments, and send follow-ups. Integrates natively with GoHighLevel, HubSpot, Calendly, and Slack.
 - **Scale**: White-label the entire platform for agency clients. Clients get a branded dashboard — your logo, your domain, their data only. They never see BuildVoiceAI branding.
@@ -20,20 +20,20 @@ Four providers are supported: Retell AI, Vapi, Bland, and ElevenLabs. Agents can
 ## Integrations
 
 - CRM: GoHighLevel, HubSpot
-- Booking: Calendly
+- Calendars: Calendly, Google Calendar
 - Notifications: Slack
-- Phone numbers: Bring your own (Twilio) or purchase directly through the platform
+- Phone numbers: Purchase directly through the platform, or sync numbers already in your voice provider account
 
 ## Pricing
 
-All plans include a 14-day free trial. Self-Service (bring your own keys) and Managed (done-for-you) tiers available.
+All plans start with a 7-day free trial, no credit card required. Plans are priced by number of clients, and every plan includes unlimited agents. Self-Service plans use your own provider API keys (you pay the provider for minutes) or platform keys at $0.15/min. Managed plans are done-for-you and run on platform keys at $0.15/min. Extra clients are billed per client. Annual billing saves 2 months.
 
-- **Self-Service Starter — $67/month**: 3 clients, 3 agents, call analytics, email support.
-- **Self-Service Growth — $147/month**: 10 clients, 15 agents, CRM integrations, white-label portal, A/B testing.
-- **Self-Service Agency — $297/month**: 25 clients, unlimited agents, full white-label, API access, priority support.
-- **Managed Starter — $97/month**: 3 clients, 3 agents, platform-hosted keys, $0.15/min.
-- **Managed Growth — $197/month**: 10 clients, 15 agents, CRM integrations, $0.12/min.
-- **Managed Agency — $397/month**: 25 clients, unlimited agents, full white-label, $0.10/min.
+- **Self-Service Starter — $67/month**: 3 clients ($15/extra), AI agent builder, call analytics, workflow automation, email support.
+- **Self-Service Growth — $147/month**: 10 clients ($12/extra), adds GoHighLevel/HubSpot integrations, Stripe Connect client billing, white-label and custom domains, A/B experiments.
+- **Self-Service Agency — $297/month**: 25 clients ($10/extra), adds API access and priority support.
+- **Managed Starter — $97/month**: 3 clients ($20/extra), done-for-you agent setup, priority support.
+- **Managed Growth — $197/month**: 10 clients ($17/extra), adds done-for-you integrations, CRM integrations, Stripe Connect, white-label and custom domains.
+- **Managed Agency — $397/month**: 25 clients ($15/extra), done-for-you white-label setup, API access, dedicated support.
 
 ## Common use cases
 
@@ -47,7 +47,7 @@ All data is encrypted at rest and in transit. Call recordings and transcripts ar
 
 - [Homepage](https://buildvoiceai.com): Landing page with interactive agent builder demo
 - [Pricing](https://buildvoiceai.com/#pricing): Plan comparison and feature details
-- [Sign up](https://buildvoiceai.com/signup): Start a free 14-day trial
+- [Sign up](https://buildvoiceai.com/signup): Start a free 7-day trial
 - [Log in](https://buildvoiceai.com/login): Existing user access
 
 ## Optional

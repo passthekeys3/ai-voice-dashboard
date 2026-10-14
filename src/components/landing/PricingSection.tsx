@@ -199,7 +199,7 @@ export function PricingSection() {
                 <p
                     className={`text-center text-sm text-muted-foreground/60 mt-6 animate-on-scroll stagger-4 ${gridVisible ? 'is-visible' : ''}`}
                 >
-                    14-day trial on all plans · Pay yearly and save 2 months
+                    7-day free trial on all plans · Pay yearly and save 2 months
                 </p>
             </div>
         </section>

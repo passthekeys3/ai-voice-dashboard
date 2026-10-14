@@ -6,7 +6,7 @@
 
 BuildVoiceAI covers four core workflows:
 
-1. **Build**: Describe your agent in natural language. The system generates the conversation flow, selects a voice, and configures the phone number. Agents are typically live within 30 minutes.
+1. **Build**: Describe your agent in natural language. The system generates the conversation flow, selects a voice, and configures the phone number. Test it with a call, then go live.
 2. **Monitor**: View call volume, success rates, costs, and duration in a unified dashboard. Click any call to read the full transcript or listen to the recording. Live call monitoring shows transcripts in real-time.
 3. **Automate**: Post-call workflows automatically update CRM contacts, create deals, book appointments, and send follow-ups. Workflows are configurable per-agent with conditional logic.
 4. **Scale**: White-label the entire platform for agency clients. Clients get a branded dashboard — your logo, your domain, their data only. They never see BuildVoiceAI branding.
@@ -26,24 +26,19 @@ All providers support inbound and outbound calls, call recording, transcript gen
 
 - **GoHighLevel (GHL)**: OAuth per-client, contact sync, deal creation, call activity logging, appointment booking, tag management. Platform webhook with ED25519 signature verification.
 - **HubSpot**: OAuth per-client, contact sync, deal creation, call/meeting/note engagement logging, custom property support (ai_call_tags). Token refresh with singleton promise pattern.
-- **Calendly**: Coming soon — OAuth-based appointment scheduling.
-- **Slack**: Coming soon — Real-time call notifications and summaries.
+- **Calendly** and **Google Calendar**: Appointment scheduling from calls.
+- **Slack**: Call notifications and summaries.
 
 ## Pricing
 
-All plans include a 14-day free trial. No credit card required to start.
+All plans start with a 7-day free trial, no credit card required. Plans are priced by number of clients, and every plan includes unlimited agents. Self-Service plans use your own provider API keys (you pay the provider for minutes) or platform keys at $0.15/min. Managed plans are done-for-you and run on platform keys at $0.15/min. Extra clients are billed per client. Annual billing saves 2 months.
 
-### Self-Service Plans (bring your own API keys)
-- **Starter — $67/month**: 3 clients, 3 voice agents, call analytics, email support
-- **Growth — $147/month**: 10 clients, 15 voice agents, CRM integrations, white-label portal, A/B testing
-- **Agency — $297/month**: 25 clients, unlimited agents, full white-label, API access, priority support
-
-### Managed Plans (platform-hosted API keys, done-for-you setup)
-- **Starter — $97/month**: 3 clients, 3 agents, $0.15/min voice usage
-- **Growth — $197/month**: 10 clients, 15 agents, CRM integrations, $0.12/min voice usage
-- **Agency — $397/month**: 25 clients, unlimited agents, full white-label, $0.10/min voice usage
-
-Annual billing saves 2 months on all plans.
+- **Self-Service Starter — $67/month**: 3 clients ($15/extra), AI agent builder, call analytics, workflow automation, email support.
+- **Self-Service Growth — $147/month**: 10 clients ($12/extra), adds GoHighLevel/HubSpot integrations, Stripe Connect client billing, white-label and custom domains, A/B experiments.
+- **Self-Service Agency — $297/month**: 25 clients ($10/extra), adds API access and priority support.
+- **Managed Starter — $97/month**: 3 clients ($20/extra), done-for-you agent setup, priority support.
+- **Managed Growth — $197/month**: 10 clients ($17/extra), adds done-for-you integrations, CRM integrations, Stripe Connect, white-label and custom domains.
+- **Managed Agency — $397/month**: 25 clients ($15/extra), done-for-you white-label setup, API access, dedicated support.
 
 ## Common Use Cases
 
@@ -62,7 +57,7 @@ Annual billing saves 2 months on all plans.
 - Post-call workflow automation (CRM updates, appointments, notifications)
 - Real-time call analytics dashboard with timezone-aware date grouping
 - A/B experiment system for prompt optimization across variants
-- Phone number management (purchase, port, assign to agents)
+- Phone number management (purchase, sync from your provider, assign to agents)
 - Call recording playback and searchable transcript history
 - Agent safety guardrails with content category filtering
 - Call transfer tracking with full audit trail
@@ -107,7 +102,7 @@ Annual billing saves 2 months on all plans.
 - [Homepage](https://buildvoiceai.com): Landing page with interactive agent builder demo
 - [Pricing](https://buildvoiceai.com/#pricing): Plan comparison with Self-Service and Managed tiers
 - [Blog](https://buildvoiceai.com/blog): Guides, tutorials, and industry insights
-- [Sign up](https://buildvoiceai.com/signup): Start a free 14-day trial
+- [Sign up](https://buildvoiceai.com/signup): Start a free 7-day trial
 - [Privacy Policy](https://buildvoiceai.com/privacy): Data handling and security practices
 - [Terms of Service](https://buildvoiceai.com/terms): Platform usage terms and compliance obligations
 - [FAQ](https://buildvoiceai.com/#faq): Common questions about setup, integrations, and billing

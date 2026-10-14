@@ -16,7 +16,6 @@ interface Solution {
     description: string;
     metaDescription: string;
     icon: typeof Phone;
-    heroStat: { value: string; label: string };
     benefits: { title: string; description: string }[];
     useCases: string[];
     examplePrompt: string;
@@ -28,9 +27,8 @@ const SOLUTIONS: Record<string, Solution> = {
         title: 'AI Voice Agents for Dental Practices',
         headline: 'Never miss a patient call again',
         description: 'AI receptionists that book appointments, verify insurance, handle after-hours calls, and sync everything to your practice management system.',
-        metaDescription: 'AI voice agents for dental practices — automated appointment booking, insurance verification, after-hours call handling, and CRM integration. Live in 30 minutes.',
+        metaDescription: 'AI voice agents for dental practices — automated appointment booking, insurance verification, after-hours call handling, and CRM integration.',
         icon: Phone,
-        heroStat: { value: '68%', label: 'booking rate increase' },
         benefits: [
             { title: '24/7 appointment booking', description: 'Patients call any time and the AI books directly into your calendar. No more missed calls during lunch or after hours.' },
             { title: 'Insurance verification', description: 'The agent asks for insurance details, verifies coverage, and notes it in the patient record before the visit.' },
@@ -45,9 +43,8 @@ const SOLUTIONS: Record<string, Solution> = {
         title: 'AI Voice Agents for Real Estate',
         headline: 'Qualify leads while you close deals',
         description: 'AI agents that answer property inquiries, qualify buyers, schedule showings, and update your CRM — so you never lose a lead to voicemail.',
-        metaDescription: 'AI voice agents for real estate — automated lead qualification, property inquiries, showing scheduling, and CRM updates. Deploy in 30 minutes.',
+        metaDescription: 'AI voice agents for real estate — automated lead qualification, property inquiries, showing scheduling, and CRM updates.',
         icon: TrendingUp,
-        heroStat: { value: '3x', label: 'more leads qualified' },
         benefits: [
             { title: 'Instant lead response', description: 'Every inquiry gets answered immediately. The AI qualifies budget, timeline, and preferences before you ever pick up the phone.' },
             { title: 'Showing scheduler', description: 'The agent checks your availability and books property showings directly into your calendar.' },
@@ -64,7 +61,6 @@ const SOLUTIONS: Record<string, Solution> = {
         description: 'AI agents that make outbound follow-up calls, set appointments, re-engage cold leads, and log everything in your CRM.',
         metaDescription: 'AI voice agents for sales teams — automated outbound calls, appointment setting, lead re-engagement, and CRM logging. Start free trial.',
         icon: Users,
-        heroStat: { value: '40hrs', label: 'saved per month' },
         benefits: [
             { title: 'Outbound campaigns', description: 'Upload a list and the AI calls each lead with a personalized script. No more manual dialing.' },
             { title: 'Appointment setting', description: 'The agent pitches your offer, handles objections, and books qualified meetings on your calendar.' },
@@ -79,9 +75,8 @@ const SOLUTIONS: Record<string, Solution> = {
         title: 'AI Voice Agents for Customer Support',
         headline: 'Resolve calls faster, escalate smarter',
         description: 'AI agents that handle tier-1 support calls, answer FAQs, create tickets, and transfer complex issues to your team.',
-        metaDescription: 'AI voice agents for customer support — automated FAQ handling, ticket creation, smart escalation, and 24/7 availability. Deploy in 30 minutes.',
+        metaDescription: 'AI voice agents for customer support — automated FAQ handling, ticket creation, smart escalation, and 24/7 availability.',
         icon: Clock,
-        heroStat: { value: '70%', label: 'calls resolved by AI' },
         benefits: [
             { title: 'FAQ resolution', description: 'The agent answers common questions from your knowledge base — returns, billing, account status — without human involvement.' },
             { title: 'Smart escalation', description: 'When the AI detects frustration or complexity, it transfers to a human with full conversation context.' },
@@ -156,8 +151,7 @@ export default async function SolutionPage({
             '@type': 'BreadcrumbList',
             itemListElement: [
                 { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
-                { '@type': 'ListItem', position: 2, name: 'Solutions', item: `${SITE_URL}/solutions` },
-                { '@type': 'ListItem', position: 3, name: solution.title, item: `${SITE_URL}/solutions/${slug}` },
+                { '@type': 'ListItem', position: 2, name: solution.title, item: `${SITE_URL}/solutions/${slug}` },
             ],
         },
     };
@@ -197,14 +191,6 @@ export default async function SolutionPage({
                                 View Pricing
                             </Link>
                         </div>
-                    </div>
-                </section>
-
-                {/* Key Stat */}
-                <section className="pb-16 px-4 sm:px-6">
-                    <div className="max-w-sm mx-auto text-center rounded-xl border border-border p-8">
-                        <div className="text-4xl font-bold mb-1">{solution.heroStat.value}</div>
-                        <div className="text-sm text-muted-foreground">{solution.heroStat.label}</div>
                     </div>
                 </section>
 

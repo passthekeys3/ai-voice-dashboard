@@ -4,49 +4,7 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { useInView } from '@/hooks/useInView';
-
-const faqs = [
-    {
-        question: 'How long does it take to set up a voice agent?',
-        answer: 'Most agents are live within 30 minutes. Describe what your agent should do, pick a voice, and connect your phone number. The platform generates the conversation flow automatically.',
-    },
-    {
-        question: 'Can I use my own phone numbers?',
-        answer: 'Yes. You can bring existing numbers from Twilio or purchase new ones directly through the platform. Porting takes a few minutes.',
-    },
-    {
-        question: 'Which CRMs do you integrate with?',
-        answer: 'GoHighLevel and HubSpot are natively supported. When a call ends, the agent can update contacts, create deals, book appointments, and trigger workflows automatically. We also support Calendly and Slack.',
-    },
-    {
-        question: 'How does white-labeling work?',
-        answer: 'On the Growth and Agency plans, you get a fully branded dashboard — your logo, your colors, your domain. Your clients log into their own portal and only see their data. They never see BuildVoiceAI.',
-    },
-    {
-        question: 'What do the voices sound like?',
-        answer: 'The platform uses the latest neural voice models. Voices sound natural and conversational — not robotic. You can preview every voice before going live and choose from dozens of options across accents and tones.',
-    },
-    {
-        question: 'Is my data private and secure?',
-        answer: 'All data is encrypted at rest and in transit. Call recordings and transcripts are scoped per account with row-level security. We never share your data or use it to train models.',
-    },
-    {
-        question: 'What happens if the AI can\'t answer a question?',
-        answer: 'You define fallback behavior when building your agent. It can transfer to a human, take a message, or schedule a callback. You stay in control of every edge case.',
-    },
-    {
-        question: 'Can I try it before committing to a plan?',
-        answer: 'Every plan includes a 14-day free trial. You can build agents, make test calls, and explore the full platform before entering payment details.',
-    },
-    {
-        question: 'What happens if I go over my included minutes?',
-        answer: 'Overages are billed at per-minute rates that vary by voice provider — typically $0.05–$0.12/min. You can see real-time cost tracking in your dashboard and set monthly spending limits to avoid surprises.',
-    },
-    {
-        question: 'Is the platform HIPAA or SOC 2 compliant?',
-        answer: 'We take compliance seriously. Call data is encrypted at rest and in transit, and access controls are enforced at the row level. For healthcare or regulated industries, contact us to discuss BAA arrangements and our compliance roadmap.',
-    },
-];
+import { faqs } from './faq-data';
 
 function FAQItem({
     faq,
