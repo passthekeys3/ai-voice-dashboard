@@ -4,6 +4,8 @@ import { Navbar } from '@/components/landing/Navbar';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { DashboardDemo } from '@/components/landing/DashboardDemo';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
+import { WhySection } from '@/components/landing/WhySection';
+import { IndustriesSection } from '@/components/landing/IndustriesSection';
 import { faqs } from '@/components/landing/faq-data';
 import { getAllTierConfigs } from '@/lib/billing/tiers';
 
@@ -33,10 +35,7 @@ const organizationJsonLd = {
     logo: `${SITE_URL}/logo`,
     description:
         'BuildVoiceAI is a white-label AI voice agent platform that lets agencies and businesses build, deploy, and manage AI-powered phone agents from natural language descriptions.',
-    sameAs: [
-        'https://twitter.com/buildvoiceai',
-        'https://linkedin.com/company/buildvoiceai',
-    ],
+    sameAs: ['https://x.com/buildvoiceai'],
     areaServed: {
         '@type': 'Place',
         name: 'Worldwide',
@@ -191,6 +190,8 @@ export default function LandingPage() {
 
                 <div className="border-t border-border max-w-5xl mx-auto" />
 
+                <WhySection />
+                <IndustriesSection />
                 <PricingSection />
                 <FAQSection />
                 <AISummarySection />

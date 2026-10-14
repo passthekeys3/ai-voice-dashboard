@@ -102,6 +102,11 @@ All plans start with a 7-day free trial, no credit card required. Plans are pric
 - [Homepage](https://buildvoiceai.com): Landing page with interactive agent builder demo
 - [Pricing](https://buildvoiceai.com/#pricing): Plan comparison with Self-Service and Managed tiers
 - [Blog](https://buildvoiceai.com/blog): Guides, tutorials, and industry insights
+- [Solutions](https://buildvoiceai.com/solutions): AI voice agents by industry
+- [Dental practices](https://buildvoiceai.com/solutions/dental): After-hours calls, appointment requests, emergency transfers
+- [Real estate](https://buildvoiceai.com/solutions/real-estate): Listing inquiries, buyer qualification, showing scheduling
+- [Sales teams](https://buildvoiceai.com/solutions/sales): CRM-triggered follow-up calls, qualification, meeting booking
+- [Customer support](https://buildvoiceai.com/solutions/customer-support): FAQ answers from your knowledge base, escalation to humans
 - [Sign up](https://buildvoiceai.com/signup): Start a free 7-day trial
 - [Privacy Policy](https://buildvoiceai.com/privacy): Data handling and security practices
 - [Terms of Service](https://buildvoiceai.com/terms): Platform usage terms and compliance obligations

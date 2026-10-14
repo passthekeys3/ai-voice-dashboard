@@ -2,18 +2,30 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Logo } from '@/components/Logo';
+import { SOLUTION_LINKS, solutionHref } from '@/lib/marketing/solution-links';
 
+// Section links point at the homepage so they work from every page;
+// on the homepage itself they smooth-scroll instead.
 const navLinks = [
-    { label: 'How It Works', href: '#how-it-works' },
-    { label: 'Features', href: '#features' },
-    { label: 'Pricing', href: '#pricing' },
-    { label: 'FAQ', href: '#faq' },
+    { label: 'How It Works', href: '/#how-it-works' },
+    { label: 'Features', href: '/#features' },
+    { label: 'Pricing', href: '/#pricing' },
+    { label: 'FAQ', href: '/#faq' },
     { label: 'Blog', href: '/blog' },
     { label: 'Docs', href: 'https://docs.buildvoiceai.com', external: true },
 ];
+
+const linkClass = 'text-sm text-muted-foreground hover:text-foreground transition-colors';
 
 export function Navbar() {
     const [scrolled, setScrolled] = useState(false);
@@ -26,15 +38,26 @@ export function Navbar() {
     }, []);
 
     const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-        if (href.startsWith('#')) {
+        const hash = href.split('#')[1];
+        const el = hash ? document.getElementById(hash) : null;
+        if (el) {
             e.preventDefault();
-            const el = document.querySelector(href);
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth' });
-                setMobileOpen(false);
-            }
+            el.scrollIntoView({ behavior: 'smooth' });
         }
+        setMobileOpen(false);
     };
+
+    const renderLink = (link: (typeof navLinks)[number], className: string) => (
+        <a
+            key={link.href}
+            href={link.href}
+            onClick={(e) => !link.external && handleNavClick(e, link.href)}
+            {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+            className={className}
+        >
+            {link.label}
+        </a>
+    );
 
     return (
         <nav
@@ -50,18 +73,28 @@ export function Navbar() {
                         <Logo variant="full" size="sm" />
                     </Link>
 
-                    <div className="hidden md:flex items-center gap-6">
-                        {navLinks.map((link) => (
-                            <a
-                                key={link.href}
-                                href={link.href}
-                                onClick={(e) => !link.external && handleNavClick(e, link.href)}
-                                {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                {link.label}
-                            </a>
-                        ))}
+                    <div className="hidden lg:flex items-center gap-6">
+                        {navLinks.slice(0, 2).map((link) => renderLink(link, linkClass))}
+
+                        <DropdownMenu modal={false}>
+                            <DropdownMenuTrigger className={`${linkClass} inline-flex items-center gap-1 outline-none`}>
+                                Solutions
+                                <ChevronDown className="h-3.5 w-3.5" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-52">
+                                {SOLUTION_LINKS.map((solution) => (
+                                    <DropdownMenuItem key={solution.slug} asChild>
+                                        <Link href={solutionHref(solution.slug)}>{solution.label}</Link>
+                                    </DropdownMenuItem>
+                                ))}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link href="/solutions">All solutions</Link>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {navLinks.slice(2).map((link) => renderLink(link, linkClass))}
 
                         <div className="w-px h-4 bg-border" />
 
@@ -74,28 +107,37 @@ export function Navbar() {
                     </div>
 
                     <button
-                        className="md:hidden p-2 text-muted-foreground hover:text-foreground"
+                        className="lg:hidden p-2 text-muted-foreground hover:text-foreground"
                         onClick={() => setMobileOpen(!mobileOpen)}
                         aria-label="Toggle menu"
+                        aria-expanded={mobileOpen}
                     >
                         {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                     </button>
                 </div>
 
                 {mobileOpen && (
-                    <div className="md:hidden pb-6 border-t border-border/50 mt-3 pt-6">
+                    <div className="lg:hidden pb-6 border-t border-border/50 mt-3 pt-6 max-h-[calc(100dvh-5rem)] overflow-y-auto">
                         <div className="flex flex-col gap-3">
-                            {navLinks.map((link) => (
-                                <a
-                                    key={link.href}
-                                    href={link.href}
-                                    onClick={(e) => !link.external && handleNavClick(e, link.href)}
-                                    {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                                    className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
-                                >
-                                    {link.label}
-                                </a>
-                            ))}
+                            {navLinks.slice(0, 2).map((link) => renderLink(link, `${linkClass} py-1`))}
+                            <div className="py-1">
+                                <Link href="/solutions" onClick={() => setMobileOpen(false)} className={linkClass}>
+                                    Solutions
+                                </Link>
+                                <div className="mt-2 ml-3 flex flex-col gap-2 border-l border-border pl-3">
+                                    {SOLUTION_LINKS.map((solution) => (
+                                        <Link
+                                            key={solution.slug}
+                                            href={solutionHref(solution.slug)}
+                                            onClick={() => setMobileOpen(false)}
+                                            className={linkClass}
+                                        >
+                                            {solution.label}
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+                            {navLinks.slice(2).map((link) => renderLink(link, `${linkClass} py-1`))}
                             <div className="flex gap-2 mt-2">
                                 <Button variant="ghost" size="sm" asChild className="flex-1">
                                     <Link href="/login">Log in</Link>

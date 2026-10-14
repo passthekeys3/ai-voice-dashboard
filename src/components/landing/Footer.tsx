@@ -1,13 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { Twitter, Linkedin } from 'lucide-react';
+import { Twitter } from 'lucide-react';
 import { useInView } from '@/hooks/useInView';
 import { Logo } from '@/components/Logo';
+import { SOLUTION_LINKS, solutionHref } from '@/lib/marketing/solution-links';
 
 const productLinks = [
-    { label: 'Pricing', href: '#pricing' },
-    { label: 'Agent builder', href: '/signup' },
+    { label: 'How it works', href: '/#how-it-works' },
+    { label: 'Pricing', href: '/#pricing' },
+    { label: 'Log in', href: '/login' },
+    { label: 'Sign up', href: '/signup' },
+];
+
+const solutionLinks = [
+    ...SOLUTION_LINKS.map(({ slug, label }) => ({ label, href: solutionHref(slug) })),
+    { label: 'All solutions', href: '/solutions' },
 ];
 
 const resourceLinks = [
@@ -15,11 +23,6 @@ const resourceLinks = [
     { label: 'Documentation', href: 'https://docs.buildvoiceai.com', external: true },
     { label: 'Getting Started', href: 'https://docs.buildvoiceai.com/docs/getting-started', external: true },
     { label: 'API Reference', href: 'https://docs.buildvoiceai.com/docs/reference', external: true },
-];
-
-const companyLinks = [
-    { label: 'Log in', href: '/login' },
-    { label: 'Sign up', href: '/signup' },
 ];
 
 const legalLinks = [
@@ -43,22 +46,13 @@ export function Footer() {
                         </p>
                         <div className="flex items-center gap-3 pt-2">
                             <a
-                                href="https://twitter.com/buildvoiceai"
+                                href="https://x.com/buildvoiceai"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-muted-foreground hover:text-foreground transition-colors"
-                                aria-label="Follow BuildVoiceAI on Twitter"
+                                aria-label="Follow BuildVoiceAI on X"
                             >
                                 <Twitter className="h-4 w-4" />
-                            </a>
-                            <a
-                                href="https://linkedin.com/company/buildvoiceai"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-muted-foreground hover:text-foreground transition-colors"
-                                aria-label="Follow BuildVoiceAI on LinkedIn"
-                            >
-                                <Linkedin className="h-4 w-4" />
                             </a>
                         </div>
                     </div>
@@ -112,10 +106,10 @@ export function Footer() {
 
                     <div className={`animate-on-scroll stagger-4 ${isInView ? 'is-visible' : ''}`}>
                         <p className="text-xs font-medium text-foreground uppercase tracking-widest mb-3">
-                            Company
+                            Solutions
                         </p>
                         <ul className="space-y-2">
-                            {companyLinks.map((link) => (
+                            {solutionLinks.map((link) => (
                                 <li key={link.label}>
                                     <Link
                                         href={link.href}

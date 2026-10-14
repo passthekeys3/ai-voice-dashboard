@@ -47,6 +47,11 @@ All data is encrypted at rest and in transit. Call recordings and transcripts ar
 
 - [Homepage](https://buildvoiceai.com): Landing page with interactive agent builder demo
 - [Pricing](https://buildvoiceai.com/#pricing): Plan comparison and feature details
+- [Solutions](https://buildvoiceai.com/solutions): AI voice agents by industry
+- [Dental practices](https://buildvoiceai.com/solutions/dental): After-hours calls, appointment requests, emergency transfers
+- [Real estate](https://buildvoiceai.com/solutions/real-estate): Listing inquiries, buyer qualification, showing scheduling
+- [Sales teams](https://buildvoiceai.com/solutions/sales): CRM-triggered follow-up calls, qualification, meeting booking
+- [Customer support](https://buildvoiceai.com/solutions/customer-support): FAQ answers from your knowledge base, escalation to humans
 - [Sign up](https://buildvoiceai.com/signup): Start a free 7-day trial
 - [Log in](https://buildvoiceai.com/login): Existing user access
 
