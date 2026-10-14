@@ -251,7 +251,8 @@ const ACTION_FIELD_DEFINITIONS: Record<string, FieldDefinition[]> = {
     calendly_create_booking_link: [
         { key: 'event_type_uri', label: 'Event Type URI', type: 'input', placeholder: 'https://api.calendly.com/event_types/...', help: 'Leave empty to use agency default event type' },
         { key: 'max_event_count', label: 'Max Bookings', type: 'input', placeholder: '1', help: 'Maximum number of bookings allowed on this link' },
-        { key: 'name', label: 'Booking Link Name', type: 'input', placeholder: '{{agent_name}} Follow-Up', help: TEMPLATE_VARS_HELP },
+        { key: 'to', label: 'Recipient Phone Number', type: 'input', defaultValue: '{{from_number}}', placeholder: '{{from_number}} or +1234567890', help: "The link is texted via SMS. Use {{from_number}} for the caller's number (use {{to_number}} for outbound calls)" },
+        { key: 'message', label: 'SMS Message', type: 'textarea', placeholder: 'Thanks for calling! Book your appointment here: {{booking_url}}', rows: 3, help: `Leave empty for the default message. Use {{booking_url}} for the link (appended if omitted). ${TEMPLATE_VARS_HELP}` },
     ],
     calendly_cancel_event: [
         { key: 'cancel_reason', label: 'Cancellation Reason', type: 'input', placeholder: 'Cancelled via AI call' },

@@ -18,18 +18,38 @@ export async function handleSendSms(
         return { success: false, error: 'SMS recipient or message not configured' };
     }
 
+    return sendSms(to, message);
+}
+
+/**
+ * Check that an SMS can be sent to `to` (valid E.164 number, Twilio env vars set).
+ * Returns an error message, or null if sending is possible.
+ */
+export function getSmsPreflightError(to: string): string | null {
     // Validate phone number format (E.164: must start with +)
     if (!to.match(/^\+[1-9]\d{1,14}$/)) {
-        return { success: false, error: 'Invalid phone number format for SMS recipient' };
+        return 'Invalid phone number format for SMS recipient';
     }
 
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const fromNumber = process.env.TWILIO_PHONE_NUMBER;
-
-    if (!accountSid || !authToken || !fromNumber) {
-        return { success: false, error: 'Twilio not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER.' };
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
+        return 'Twilio not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER.';
     }
+
+    return null;
+}
+
+/**
+ * Send an SMS via the platform Twilio account
+ */
+export async function sendSms(to: string, message: string): Promise<ActionHandlerResult> {
+    const preflightError = getSmsPreflightError(to);
+    if (preflightError) {
+        return { success: false, error: preflightError };
+    }
+
+    const accountSid = process.env.TWILIO_ACCOUNT_SID!;
+    const authToken = process.env.TWILIO_AUTH_TOKEN!;
+    const fromNumber = process.env.TWILIO_PHONE_NUMBER!;
 
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
     const smsResponse = await fetch(twilioUrl, {

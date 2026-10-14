@@ -153,7 +153,7 @@ Only suggest if Google Calendar is connected:
 
 ### Calendly Actions
 Only suggest if Calendly is connected:
-- "calendly_create_booking_link" — Generate one-time booking link. Config: { "max_event_count": "1" }
+- "calendly_create_booking_link" — Create one-time booking link and text it to the caller via SMS. Config: { "max_event_count": "1", "to": "{{from_number}}", "message": "Thanks for calling! Book here: {{booking_url}}" }
 - "calendly_check_availability" — Check availability. Config: {}
 - "calendly_cancel_event" — Cancel event. Config: {}
 
